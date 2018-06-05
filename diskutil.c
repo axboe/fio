@@ -242,7 +242,8 @@ static void find_add_disk_slaves(struct thread_data *td, char *path,
 		    !strcmp(dirent->d_name, ".."))
 			continue;
 
-		sprintf(temppath, "%s/%s", slavesdir, dirent->d_name);
+		nowarn_snprintf(temppath, sizeof(temppath), "%s/%s", slavesdir,
+				dirent->d_name);
 		/* Can we always assume that the slaves device entries
 		 * are links to the real directories for the slave
 		 * devices?
@@ -255,9 +256,12 @@ static void find_add_disk_slaves(struct thread_data *td, char *path,
 		}
 		slavepath[linklen] = '\0';
 
-		sprintf(temppath, "%s/%s/dev", slavesdir, slavepath);
+		nowarn_snprintf(temppath, sizeof(temppath), "%s/%s/dev",
+				slavesdir, slavepath);
 		if (access(temppath, F_OK) != 0)
-			sprintf(temppath, "%s/%s/device/dev", slavesdir, slavepath);
+			nowarn_snprintf(temppath, sizeof(temppath),
+					"%s/%s/device/dev", slavesdir,
+					slavepath);
 		if (read_block_dev_entry(temppath, &majdev, &mindev)) {
 			perror("Error getting slave device numbers");
 			closedir(dirhandle);
@@ -271,7 +275,8 @@ static void find_add_disk_slaves(struct thread_data *td, char *path,
 		if (slavedu)
 			continue;
 
-		sprintf(temppath, "%s/%s", slavesdir, slavepath);
+		nowarn_snprintf(temppath, sizeof(temppath), "%s/%s", slavesdir,
+				slavepath);
 		__init_per_file_disk_util(td, majdev, mindev, temppath);
 		slavedu = disk_util_exists(majdev, mindev);
 

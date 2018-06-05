@@ -44,6 +44,7 @@
 #include "io_u_queue.h"
 #include "workqueue.h"
 #include "steadystate.h"
+#include "nowarn_snprintf.h"
 
 #ifdef CONFIG_SOLARISAIO
 #include <sys/asynch.h>
@@ -468,7 +469,9 @@ enum {
 			break;						\
 		(td)->error = ____e;					\
 		if (!(td)->first_error)					\
-			snprintf(td->verror, sizeof(td->verror), "file:%s:%d, func=%s, error=%s", __FILE__, __LINE__, (func), (msg));		\
+			nowarn_snprintf(td->verror, sizeof(td->verror),	\
+					"file:%s:%d, func=%s, error=%s", \
+					__FILE__, __LINE__, (func), (msg)); \
 	} while (0)
 
 
