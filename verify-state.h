@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <limits.h>
-#include "nowarn_snprintf.h"
+#include "lib/nowarn_snprintf.h"
 
 struct thread_rand32_state {
 	uint32_t s[4];
