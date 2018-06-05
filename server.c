@@ -1594,7 +1594,7 @@ void fio_server_send_gs(struct group_run_stats *rs)
 }
 
 void fio_server_send_job_options(struct flist_head *opt_list,
-				 unsigned int groupid)
+				 unsigned int gid)
 {
 	struct cmd_job_option pdu;
 	struct flist_head *entry;
@@ -1609,12 +1609,12 @@ void fio_server_send_job_options(struct flist_head *opt_list,
 		p = flist_entry(entry, struct print_option, list);
 		memset(&pdu, 0, sizeof(pdu));
 
-		if (groupid == -1U) {
+		if (gid == -1U) {
 			pdu.global = __cpu_to_le16(1);
 			pdu.groupid = 0;
 		} else {
 			pdu.global = 0;
-			pdu.groupid = cpu_to_le32(groupid);
+			pdu.groupid = cpu_to_le32(gid);
 		}
 		len = strlen(p->name);
 		if (len >= sizeof(pdu.name)) {

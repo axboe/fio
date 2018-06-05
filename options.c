@@ -1046,8 +1046,6 @@ static int parse_zoned_distribution(struct thread_data *td, const char *input,
 	}
 
 	if (parse_dryrun()) {
-		int i;
-
 		for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 			free(td->o.zone_split[i]);
 			td->o.zone_split[i] = NULL;

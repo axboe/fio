@@ -619,12 +619,12 @@ void setup_log(struct io_log **log, struct log_params *p,
 	}
 
 	if (l->td && l->td->o.io_submit_mode != IO_MODE_OFFLOAD) {
-		struct io_logs *p;
+		struct io_logs *__p;
 
-		p = calloc(1, sizeof(*l->pending));
-		p->max_samples = DEF_LOG_ENTRIES;
-		p->log = calloc(p->max_samples, log_entry_sz(l));
-		l->pending = p;
+		__p = calloc(1, sizeof(*l->pending));
+		__p->max_samples = DEF_LOG_ENTRIES;
+		__p->log = calloc(__p->max_samples, log_entry_sz(l));
+		l->pending = __p;
 	}
 
 	if (l->log_offset)
