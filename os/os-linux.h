@@ -403,7 +403,7 @@ static inline bool fio_fallocate(struct fio_file *f, uint64_t offset,
 				 uint64_t len)
 {
 	int ret;
-	ret = fallocate(f->fd, 0, 0, len);
+	ret = fallocate(f->fd, 0, offset, len);
 	if (ret == 0)
 		return true;
 
