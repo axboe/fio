@@ -315,7 +315,7 @@ void unlog_io_piece(struct thread_data *td, struct io_u *io_u)
 	td->io_hist_len--;
 }
 
-void trim_io_piece(struct thread_data *td, const struct io_u *io_u)
+void trim_io_piece(const struct io_u *io_u)
 {
 	struct io_piece *ipo = io_u->ipo;
 

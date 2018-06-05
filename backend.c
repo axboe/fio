@@ -461,7 +461,7 @@ int io_queue_event(struct thread_data *td, struct io_u *io_u, int *ret,
 				*bytes_issued += bytes;
 
 			if (!from_verify)
-				trim_io_piece(td, io_u);
+				trim_io_piece(io_u);
 
 			/*
 			 * zero read, fail
