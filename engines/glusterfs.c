@@ -28,16 +28,159 @@ struct fio_option gfapi_options[] = {
 	 .group = FIO_OPT_G_GFAPI,
 	 },
 	{
+	 .name = "single-instance",
+	 .lname = "Single glusterfs instance",
+	 .type = FIO_OPT_BOOL,
+	 .help = "Only one glusterfs instance",
+	 .off1 = offsetof(struct gf_options, gf_single_instance),
+	 .category = FIO_OPT_C_ENGINE,
+	 .group = FIO_OPT_G_GFAPI,
+	 },
+	{
 	 .name = NULL,
 	 },
 };
 
-int fio_gf_setup(struct thread_data *td)
+struct glfs_info {
+	struct flist_head	list;
+	char			*volume;
+	char			*brick;
+	glfs_t			*fs;
+	int			refcount;
+};
+
+static pthread_mutex_t glfs_lock = PTHREAD_MUTEX_INITIALIZER;
+static FLIST_HEAD(glfs_list_head);
+
+static glfs_t *fio_gf_new_fs(char *volume, char *brick)
 {
 	int r = 0;
+	glfs_t *fs;
+	struct stat sb = { 0, };
+
+	fs = glfs_new(volume);
+	if (!fs) {
+		log_err("glfs_new failed.\n");
+		goto out;
+	}
+	glfs_set_logging(fs, "/tmp/fio_gfapi.log", 7);
+	/* default to tcp */
+	r = glfs_set_volfile_server(fs, "tcp", brick, 0);
+	if (r) {
+		log_err("glfs_set_volfile_server failed.\n");
+		goto out;
+	}
+	r = glfs_init(fs);
+	if (r) {
+		log_err("glfs_init failed. Is glusterd running on brick?\n");
+		goto out;
+	}
+	sleep(2);
+	r = glfs_lstat(fs, ".", &sb);
+	if (r) {
+		log_err("glfs_lstat failed.\n");
+		goto out;
+	}
+
+out:
+	if (r) {
+		glfs_fini(fs);
+		fs = NULL;
+	}
+	return fs;
+}
+
+static glfs_t *fio_gf_get_glfs(struct gf_options *opt,
+			       char *volume, char *brick)
+{
+	struct glfs_info *glfs = NULL;
+	struct glfs_info *tmp;
+	struct flist_head *entry;
+
+	if (!opt->gf_single_instance)
+		return fio_gf_new_fs(volume, brick);
+
+	pthread_mutex_lock (&glfs_lock);
+
+	flist_for_each(entry, &glfs_list_head) {
+		tmp = flist_entry(entry, struct glfs_info, list);
+		if (!strcmp(volume, tmp->volume) &&
+		    !strcmp(brick, tmp->brick)) {
+			glfs = tmp;
+			break;
+		}
+	}
+
+	if (glfs) {
+		glfs->refcount++;
+	} else {
+		glfs = malloc(sizeof(*glfs));
+		if (!glfs)
+			goto out;
+		INIT_FLIST_HEAD(&glfs->list);
+		glfs->refcount = 0;
+		glfs->volume = strdup(volume);
+		glfs->brick = strdup(brick);
+		glfs->fs = fio_gf_new_fs(volume, brick);
+		if (!glfs->fs) {
+			free(glfs);
+			glfs = NULL;
+			goto out;
+		}
+
+		flist_add_tail(&glfs->list, &glfs_list_head);
+		glfs->refcount = 1;
+	}
+
+out:
+	pthread_mutex_unlock (&glfs_lock);
+
+	if (glfs)
+		return glfs->fs;
+	return NULL;
+}
+
+static void fio_gf_put_glfs(struct gf_options *opt, glfs_t *fs)
+{
+	struct glfs_info *glfs = NULL;
+	struct glfs_info *tmp;
+	struct flist_head *entry;
+
+	if (!opt->gf_single_instance) {
+		glfs_fini(fs);
+		return;
+	}
+
+	pthread_mutex_lock (&glfs_lock);
+
+	flist_for_each(entry, &glfs_list_head) {
+		tmp = flist_entry(entry, struct glfs_info, list);
+		if (tmp->fs == fs) {
+			glfs = tmp;
+			break;
+		}
+	}
+
+	if (!glfs) {
+		log_err("glfs not found to fini.\n");
+	} else {
+		glfs->refcount--;
+
+		if (glfs->refcount == 0) {
+			glfs_fini(glfs->fs);
+			free(glfs->volume);
+			free(glfs->brick);
+			flist_del(&glfs->list);
+		}
+	}
+
+	pthread_mutex_unlock (&glfs_lock);
+}
+
+int fio_gf_setup(struct thread_data *td)
+{
 	struct gf_data *g = NULL;
 	struct gf_options *opt = td->eo;
-	struct stat sb = { 0, };
 
 	dprint(FD_IO, "fio setup\n");
 
@@ -49,42 +192,20 @@ int fio_gf_setup(struct thread_data *td)
 		log_err("malloc failed.\n");
 		return -ENOMEM;
 	}
-	g->fs = NULL;
 	g->fd = NULL;
 	g->aio_events = NULL;
 
-	g->fs = glfs_new(opt->gf_vol);
-	if (!g->fs) {
-		log_err("glfs_new failed.\n");
+	g->fs = fio_gf_get_glfs(opt, opt->gf_vol, opt->gf_brick);
+	if (!g->fs)
 		goto cleanup;
-	}
-	glfs_set_logging(g->fs, "/tmp/fio_gfapi.log", 7);
-	/* default to tcp */
-	r = glfs_set_volfile_server(g->fs, "tcp", opt->gf_brick, 0);
-	if (r) {
-		log_err("glfs_set_volfile_server failed.\n");
-		goto cleanup;
-	}
-	r = glfs_init(g->fs);
-	if (r) {
-		log_err("glfs_init failed. Is glusterd running on brick?\n");
-		goto cleanup;
-	}
-	sleep(2);
-	r = glfs_lstat(g->fs, ".", &sb);
-	if (r) {
-		log_err("glfs_lstat failed.\n");
-		goto cleanup;
-	}
+
 	dprint(FD_FILE, "fio setup %p\n", g->fs);
 	td->io_ops_data = g;
 	return 0;
 cleanup:
-	if (g->fs)
-		glfs_fini(g->fs);
 	free(g);
 	td->io_ops_data = NULL;
-	return r;
+	return -EIO;
 }
 
 void fio_gf_cleanup(struct thread_data *td)
@@ -97,7 +218,7 @@ void fio_gf_cleanup(struct thread_data *td)
 		if (g->fd)
 			glfs_close(g->fd);
 		if (g->fs)
-			glfs_fini(g->fs);
+			fio_gf_put_glfs(td->eo, g->fs);
 		free(g);
 		td->io_ops_data = NULL;
 	}
