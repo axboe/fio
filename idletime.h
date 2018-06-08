@@ -58,4 +58,6 @@ extern void fio_idle_prof_stop(void);
 
 extern void show_idle_prof_stats(int, struct json_object *, struct buf_output *);
 
+extern void fio_idle_prof_cleanup(void);
+
 #endif

@@ -397,7 +397,7 @@ static double fio_idle_prof_cpu_stat(int cpu)
 	return p * 100.0;
 }
 
-static void fio_idle_prof_cleanup(void)
+void fio_idle_prof_cleanup(void)
 {
 	if (ipc.ipts) {
 		free(ipc.ipts);
@@ -471,10 +471,6 @@ void show_idle_prof_stats(int output, struct json_object *parent,
 			log_buf(out, " stddev=%3.2f\n", ipc.cali_stddev);
 		}
 
-		/* dynamic mem allocations can now be freed */
-		if (ipc.opt != IDLE_PROF_OPT_NONE)
-			fio_idle_prof_cleanup();
-
 		return;
 	}
 
@@ -498,7 +494,5 @@ void show_idle_prof_stats(int output, struct json_object *parent,
 
 		json_object_add_value_float(tmp, "unit_mean", ipc.cali_mean);
 		json_object_add_value_float(tmp, "unit_stddev", ipc.cali_stddev);
-		
-		fio_idle_prof_cleanup();
 	}
 }
