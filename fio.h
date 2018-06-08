@@ -144,6 +144,7 @@ enum {
 
 	RATE_PROCESS_LINEAR = 0,
 	RATE_PROCESS_POISSON = 1,
+	RATE_PROCESS_SKEW = 2,
 };
 
 enum {
@@ -319,6 +320,7 @@ struct thread_data {
 	struct timespec lastrate[DDIR_RWDIR_CNT];
 	int64_t last_usec[DDIR_RWDIR_CNT];
 	struct frand_state poisson_state[DDIR_RWDIR_CNT];
+	uint64_t rate_skew[DDIR_RWDIR_CNT];
 
 	/*
 	 * Enforced rate submission/completion workqueue

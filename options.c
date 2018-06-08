@@ -3481,6 +3481,11 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .oval = RATE_PROCESS_POISSON,
 			    .help = "Rate follows Poisson process",
 			  },
+			  {
+			    .ival = "skew",
+			    .oval = RATE_PROCESS_SKEW,
+			    .help = "Skew IOs for each job, while IO's still linear rate.",
+			  },
 		},
 		.parent = "rate",
 	},

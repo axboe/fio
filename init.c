@@ -545,6 +545,14 @@ static int __setup_rate(struct thread_data *td, enum fio_ddir ddir)
 		return -1;
 	}
 
+	if (td->o.rate_process == RATE_PROCESS_SKEW) {
+		td->rate_skew[ddir] = (uint64_t)bs * 1000000 / td->rate_bps[ddir]
+								/ td->o.num_related_jobs * td->subjob_number;
+		dprint(FD_RATE, "skew rate thd=%d, ddir=%d, subjob=%d, numjobs=%d, usskew=%llu\n",
+				td->thread_number, ddir, td->subjob_number,	td->o.num_related_jobs,
+				(unsigned long long)td->rate_skew[ddir]);
+	}
+
 	td->rate_next_io_time[ddir] = 0;
 	td->rate_io_issue_bytes[ddir] = 0;
 	td->last_usec[ddir] = 0;
@@ -1516,6 +1524,8 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		goto err;
 	}
 
+	if (!recursed)
+		o->num_related_jobs = o->numjobs;
 	if (setup_rate(td))
 		goto err;
 

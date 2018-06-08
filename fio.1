@@ -1999,13 +1999,26 @@ Comma\-separated values may be specified for reads, writes, and trims as
 described in \fBblocksize\fR.
 .TP
 .BI rate_process \fR=\fPstr
-This option controls how fio manages rated I/O submissions. The default is
-`linear', which submits I/O in a linear fashion with fixed delays between
-I/Os that gets adjusted based on I/O completion rates. If this is set to
-`poisson', fio will submit I/O based on a more real world random request
-flow, known as the Poisson process
+This option controls how fio manages rated I/O submissions:
+.RS
+.RS
+.TP
+.B linear (default)
+fio submits I/Os in a linear fashion with fixed delays between 
+I/Os that are adjusted based on I/O completion rates.
+.TP
+.B poisson
+fio will submit I/O based on a more real world random request flow, known as the Poisson process
 (\fIhttps://en.wikipedia.org/wiki/Poisson_point_process\fR). The lambda will be
 10^6 / IOPS for the given workload.
+.TP
+.B skew
+when numjobs > 1, fio submits I/Os in a linear fashion, but
+with I/Os from each subjob spread evenly within the calculated seconds
+per I/O (skewed between each job). Thus, the operations will not be 
+mostly synchronized between jobs (as occurs with the `linear` process).
+.RE
+.RE
 .TP
 .BI rate_ignore_thinktime \fR=\fPbool
 By default, fio will attempt to catch up to the specified rate setting, if any

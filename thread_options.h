@@ -272,6 +272,7 @@ struct thread_options {
 	unsigned int rate_iops_min[DDIR_RWDIR_CNT];
 	unsigned int rate_process;
 	unsigned int rate_ign_think;
+	unsigned int num_related_jobs;
 
 	char *ioscheduler;
 
@@ -547,7 +548,7 @@ struct thread_options_pack {
 	uint32_t rate_iops_min[DDIR_RWDIR_CNT];
 	uint32_t rate_process;
 	uint32_t rate_ign_think;
-	uint32_t pad;
+	uint32_t num_related_jobs;
 
 	uint8_t ioscheduler[FIO_TOP_STR_MAX];
 
