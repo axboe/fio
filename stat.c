@@ -2207,12 +2207,14 @@ static struct io_logs *get_cur_log(struct io_log *iolog)
 	 * submissions, flag 'td' as needing a log regrow and we'll take
 	 * care of it on the submission side.
 	 */
-	if (iolog->td->o.io_submit_mode == IO_MODE_OFFLOAD ||
+	if ((iolog->td && iolog->td->o.io_submit_mode == IO_MODE_OFFLOAD) ||
 	    !per_unit_log(iolog))
 		return regrow_log(iolog);
 
-	iolog->td->flags |= TD_F_REGROW_LOGS;
-	assert(iolog->pending->nr_samples < iolog->pending->max_samples);
+	if (iolog->td)
+		iolog->td->flags |= TD_F_REGROW_LOGS;
+	if (iolog->pending)
+		assert(iolog->pending->nr_samples < iolog->pending->max_samples);
 	return iolog->pending;
 }
 
