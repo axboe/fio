@@ -845,7 +845,22 @@ static long long usec_for_io(struct thread_data *td, enum fio_ddir ddir)
 		uint64_t secs = bytes / bps;
 		uint64_t remainder = bytes % bps;
 
-		return remainder * 1000000 / bps + secs * 1000000;
+		uint64_t usskew = 0;
+		if (td->o.rate_process == RATE_PROCESS_SKEW) {
+			/*
+			 * set skew only when in ramp, or if no ramp applies, because ramp expiration is only
+			 * recognized when a new io is submitted, and counters are reset.
+			 * When ios are already skewed between jobs, the ramp expiration is also skewed.
+			 * Continued skew additions causes subsequent operations to effectively be in sync again.
+			 */
+			if (td->o.ramp_time == 0 || in_ramp_time(td)) {
+				usskew = td->rate_skew[ddir];
+			}
+			dprint(FD_RATE, "skew rate thd=%d, ddir=%d, subjob=%d, usskew=%llu\n",
+					td->thread_number, ddir, td->subjob_number,	(unsigned long long)usskew);
+		}
+
+		return remainder * 1000000 / bps + secs * 1000000 + usskew;
 	}
 
 	return 0;
