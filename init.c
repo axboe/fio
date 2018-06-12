@@ -672,8 +672,8 @@ static int fixup_options(struct thread_data *td)
 		if (!o->start_delay_orig)
 			o->start_delay_orig = o->start_delay;
 		o->start_delay = rand_between(&td->delay_state,
-						td->o.start_delay_orig,
-						td->o.start_delay_high);
+						o->start_delay_orig,
+						o->start_delay_high);
 	}
 
 	if (o->norandommap && o->verify != VERIFY_NONE
