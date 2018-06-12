@@ -127,6 +127,24 @@ static inline int rand32_between(struct frand_state *state, int start, int end)
 	return start + (int) ((double)end * (r / (FRAND32_MAX + 1.0)));
 }
 
+static inline uint64_t rand64_between(struct frand_state *state, uint64_t start,
+				      uint64_t end)
+{
+	uint64_t r;
+
+	r = __rand64(&state->state64);
+	return start + (uint64_t) ((double)end * (r / (FRAND64_MAX + 1.0)));
+}
+
+static inline uint64_t rand_between(struct frand_state *state, uint64_t start,
+				    uint64_t end)
+{
+	if (state->use64)
+		return rand32_between(state, start, end);
+	else
+		return rand64_between(state, start, end);
+}
+
 extern void init_rand(struct frand_state *, bool);
 extern void init_rand_seed(struct frand_state *, unsigned int seed, bool);
 extern void __fill_random_buf(void *buf, unsigned int len, unsigned long seed);
