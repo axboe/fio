@@ -141,9 +141,9 @@ static inline uint64_t rand_between(struct frand_state *state, uint64_t start,
 				    uint64_t end)
 {
 	if (state->use64)
-		return start + rand64_upto(state, end - start);
+		return start + rand64_upto(state, 1 + end - start);
 	else
-		return start + rand32_upto(state, end - start);
+		return start + rand32_upto(state, 1 + end - start);
 }
 
 extern void init_rand(struct frand_state *, bool);
