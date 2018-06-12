@@ -117,32 +117,33 @@ static inline double __rand_0_1(struct frand_state *state)
 /*
  * Generate a random value between 'start' and 'end', both inclusive
  */
-static inline int rand32_between(struct frand_state *state, int start, int end)
+static inline uint32_t rand32_upto(struct frand_state *state, uint32_t end)
 {
 	uint32_t r;
 
 	assert(!state->use64);
 
 	r = __rand32(&state->state32);
-	return start + (int) ((double)end * (r / (FRAND32_MAX + 1.0)));
+	return (int) ((double)end * (r / (FRAND32_MAX + 1.0)));
 }
 
-static inline uint64_t rand64_between(struct frand_state *state, uint64_t start,
-				      uint64_t end)
+static inline uint64_t rand64_upto(struct frand_state *state, uint64_t end)
 {
 	uint64_t r;
 
+	assert(state->use64);
+
 	r = __rand64(&state->state64);
-	return start + (uint64_t) ((double)end * (r / (FRAND64_MAX + 1.0)));
+	return (uint64_t) ((double)end * (r / (FRAND64_MAX + 1.0)));
 }
 
 static inline uint64_t rand_between(struct frand_state *state, uint64_t start,
 				    uint64_t end)
 {
 	if (state->use64)
-		return rand32_between(state, start, end);
+		return start + rand64_upto(state, end - start);
 	else
-		return rand64_between(state, start, end);
+		return start + rand32_upto(state, end - start);
 }
 
 extern void init_rand(struct frand_state *, bool);

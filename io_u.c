@@ -168,7 +168,7 @@ bail:
 	/*
 	 * Generate a value, v, between 1 and 100, both inclusive
 	 */
-	v = rand32_between(&td->zone_state, 1, 100);
+	v = rand_between(&td->zone_state, 1, 100);
 
 	/*
 	 * Find our generated table. 'send' is the end block of this zone,
@@ -225,7 +225,7 @@ bail:
 	/*
 	 * Generate a value, v, between 1 and 100, both inclusive
 	 */
-	v = rand32_between(&td->zone_state, 1, 100);
+	v = rand_between(&td->zone_state, 1, 100);
 
 	zsi = &td->zone_state_index[ddir][v - 1];
 	stotal = zsi->size_perc_prev;
@@ -300,7 +300,7 @@ static bool should_do_random(struct thread_data *td, enum fio_ddir ddir)
 	if (td->o.perc_rand[ddir] == 100)
 		return true;
 
-	v = rand32_between(&td->seq_rand_state[ddir], 1, 100);
+	v = rand_between(&td->seq_rand_state[ddir], 1, 100);
 
 	return v <= td->o.perc_rand[ddir];
 }
@@ -589,7 +589,7 @@ static inline enum fio_ddir get_rand_ddir(struct thread_data *td)
 {
 	unsigned int v;
 
-	v = rand32_between(&td->rwmix_state, 1, 100);
+	v = rand_between(&td->rwmix_state, 1, 100);
 
 	if (v <= td->o.rwmix[DDIR_READ])
 		return DDIR_READ;
@@ -2069,7 +2069,7 @@ static struct frand_state *get_buf_state(struct thread_data *td)
 		return &td->buf_state;
 	}
 
-	v = rand32_between(&td->dedupe_state, 1, 100);
+	v = rand_between(&td->dedupe_state, 1, 100);
 
 	if (v <= td->o.dedupe_percentage)
 		return &td->buf_state_prev;

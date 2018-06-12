@@ -150,7 +150,7 @@ static enum fio_q_status fio_pvsyncio2_queue(struct thread_data *td,
 	fio_ro_check(td, io_u);
 
 	if (o->hipri &&
-	    (rand32_between(&sd->rand_state, 1, 100) <= o->hipri_percentage))
+	    (rand_between(&sd->rand_state, 1, 100) <= o->hipri_percentage))
 		flags |= RWF_HIPRI;
 
 	iov->iov_base = io_u->xfer_buf;
