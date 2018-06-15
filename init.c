@@ -594,6 +594,12 @@ static int fixup_options(struct thread_data *td)
 	struct thread_options *o = &td->o;
 	int ret = 0;
 
+	if (read_only && (td_write(td) || td_trim(td))) {
+		log_err("fio: trim and write operations are not allowed"
+			 " with the --readonly parameter.\n");
+		ret |= 1;
+	}
+
 #ifndef CONFIG_PSHARED
 	if (!o->use_thread) {
 		log_info("fio: this platform does not support process shared"
