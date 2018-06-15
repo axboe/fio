@@ -123,8 +123,13 @@ static int read_ini_data(int fd, void *data, size_t size)
 	char *p = data;
 	int ret = 0;
 	FILE *fp;
+	int dupfd;
 
-	fp = fdopen(dup(fd), "r");
+	dupfd = dup(fd);
+	if (dupfd < 0)
+		return errno;
+
+	fp = fdopen(dupfd, "r");
 	if (!fp)
 		return errno;
 
