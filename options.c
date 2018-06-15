@@ -1555,9 +1555,9 @@ static int rw_verify(const struct fio_option *o, void *data)
 {
 	struct thread_data *td = cb_data_to_td(data);
 
-	if (read_only && td_write(td)) {
-		log_err("fio: job <%s> has write bit set, but fio is in"
-			" read-only mode\n", td->o.name);
+	if (read_only && (td_write(td) || td_trim(td))) {
+		log_err("fio: job <%s> has write or trim bit set, but"
+			" fio is in read-only mode\n", td->o.name);
 		return 1;
 	}
 
