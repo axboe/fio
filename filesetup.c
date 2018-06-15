@@ -674,7 +674,8 @@ open_again:
 			from_hash = file_lookup_open(f, flags);
 	} else if (td_trim(td)) {
 		assert(!td_rw(td)); /* should have matched above */
-		flags |= O_RDWR;
+		if (!read_only)
+			flags |= O_RDWR;
 		from_hash = file_lookup_open(f, flags);
 	}
 
