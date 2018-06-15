@@ -118,6 +118,7 @@ static int read_data(int fd, void *data, size_t size)
 	return 0;
 }
 
+/* Returns 0 upon success and a value != 0 upon failure. */
 static int read_ini_data(int fd, void *data, size_t size)
 {
 	char *p = data;
@@ -130,8 +131,10 @@ static int read_ini_data(int fd, void *data, size_t size)
 		return errno;
 
 	fp = fdopen(dupfd, "r");
-	if (!fp)
+	if (!fp) {
+		close(dupfd);
 		return errno;
+	}
 
 	while (1) {
 		ssize_t len;
