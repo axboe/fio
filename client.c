@@ -130,8 +130,11 @@ static int read_ini_data(int fd, void *data, size_t size)
 		return errno;
 
 	fp = fdopen(dupfd, "r");
-	if (!fp)
-		return errno;
+	if (!fp) {
+		ret = errno;
+		close(dupfd);
+		goto out;
+	}
 
 	while (1) {
 		ssize_t len;
@@ -163,6 +166,7 @@ static int read_ini_data(int fd, void *data, size_t size)
 	}
 
 	fclose(fp);
+out:
 	return ret;
 }
 
