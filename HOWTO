@@ -163,12 +163,12 @@ Command line options
 
 .. option:: --readonly
 
-	Turn on safety read-only checks, preventing writes.  The ``--readonly``
-	option is an extra safety guard to prevent users from accidentally starting
-	a write workload when that is not desired.  Fio will only write if
-	`rw=write/randwrite/rw/randrw` is given.  This extra safety net can be used
-	as an extra precaution as ``--readonly`` will also enable a write check in
-	the I/O engine core to prevent writes due to unknown user space bug(s).
+	Turn on safety read-only checks, preventing writes and trims.  The
+	``--readonly`` option is an extra safety guard to prevent users from
+	accidentally starting a write or trim workload when that is not desired.
+	Fio will only modify the device under test if
+	`rw=write/randwrite/rw/randrw/trim/randtrim/trimwrite` is given.  This
+	safety net can be used as an extra precaution.
 
 .. option:: --eta=when
 

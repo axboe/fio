@@ -1,0 +1,5 @@
+[test]
+filename=${DUT}
+rw=randread
+time_based
+runtime=1s
