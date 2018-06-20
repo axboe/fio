@@ -126,6 +126,9 @@ static struct fio_option options[] = {
 #define MAX_10B_LBA  0xFFFFFFFFULL
 #define SCSI_TIMEOUT_MS 30000   // 30 second timeout; currently no method to override
 #define MAX_SB 64               // sense block maximum return size
+/*
+#define FIO_SGIO_DEBUG
+*/
 
 struct sgio_cmd {
 	unsigned char cdb[16];      // enhanced from 10 to support 16 byte commands
@@ -149,7 +152,9 @@ struct sgio_data {
 	int type_checked;
 	struct sgio_trim **trim_queues;
 	int current_queue;
+#ifdef FIO_SGIO_DEBUG
 	unsigned int *trim_queue_map;
+#endif
 };
 
 static inline bool sgio_unbuffered(struct thread_data *td)
@@ -329,13 +334,19 @@ re_read:
 
 			if (io_u->ddir == DDIR_TRIM) {
 				struct sgio_trim *st = sd->trim_queues[io_u->index];
+#ifdef FIO_SGIO_DEBUG
 				assert(st->trim_io_us[0] == io_u);
+				assert(sd->trim_queue_map[io_u->index] == io_u->index);
 				dprint(FD_IO, "sgio_getevents: reaping %d io_us from trim queue %d\n", st->unmap_range_count, io_u->index);
 				dprint(FD_IO, "sgio_getevents: reaped io_u %d and stored in events[%d]\n", io_u->index, i+trims);
+#endif
 				for (j = 1; j < st->unmap_range_count; j++) {
 					++trims;
 					sd->events[i + trims] = st->trim_io_us[j];
+#ifdef FIO_SGIO_DEBUG
 					dprint(FD_IO, "sgio_getevents: reaped io_u %d and stored in events[%d]\n", st->trim_io_us[j]->index, i+trims);
+					assert(sd->trim_queue_map[st->trim_io_us[j]->index] == io_u->index);
+#endif
 					if (hdr->info & SG_INFO_CHECK) {
 						/* record if an io error occurred, ignore resid */
 						memcpy(&st->trim_io_us[j]->hdr, hdr, sizeof(struct sg_io_hdr));
@@ -526,15 +537,19 @@ static int fio_sgio_prep(struct thread_data *td, struct io_u *io_u)
 			sd->current_queue = io_u->index;
 			st = sd->trim_queues[sd->current_queue];
 			hdr->dxferp = st->unmap_param;
+#ifdef FIO_SGIO_DEBUG
 			assert(sd->trim_queues[io_u->index]->unmap_range_count == 0);
 			dprint(FD_IO, "sg: creating new queue based on io_u %d\n", io_u->index);
+#endif
 		}
 		else
 			st = sd->trim_queues[sd->current_queue];
 
 		dprint(FD_IO, "sg: adding io_u %d to trim queue %d\n", io_u->index, sd->current_queue);
 		st->trim_io_us[st->unmap_range_count] = io_u;
+#ifdef FIO_SGIO_DEBUG
 		sd->trim_queue_map[io_u->index] = sd->current_queue;
+#endif
 
 		offset = 8 + 16 * st->unmap_range_count;
 		st->unmap_param[offset] = (unsigned char) ((lba >> 56) & 0xff);
@@ -597,8 +612,10 @@ static enum fio_q_status fio_sgio_queue(struct thread_data *td,
 
 			/* finish cdb setup for unmap because we are
 			** doing unmap commands synchronously */
+#ifdef FIO_SGIO_DEBUG
 			assert(st->unmap_range_count == 1);
 			assert(io_u == st->trim_io_us[0]);
+#endif
 			hdr = &io_u->hdr;
 
 			fio_sgio_unmap_setup(hdr, st);
@@ -799,7 +816,9 @@ static void fio_sgio_cleanup(struct thread_data *td)
 		free(sd->fd_flags);
 		free(sd->pfds);
 		free(sd->sgbuf);
+#ifdef FIO_SGIO_DEBUG
 		free(sd->trim_queue_map);
+#endif
 
 		for (i = 0; i < td->o.iodepth; i++) {
 			free(sd->trim_queues[i]->unmap_param);
@@ -828,7 +847,9 @@ static int fio_sgio_init(struct thread_data *td)
 
 	sd->trim_queues = calloc(td->o.iodepth, sizeof(struct sgio_trim *));
 	sd->current_queue = -1;
+#ifdef FIO_SGIO_DEBUG
 	sd->trim_queue_map = calloc(td->o.iodepth, sizeof(int));
+#endif
 	for (i = 0; i < td->o.iodepth; i++) {
 		sd->trim_queues[i] = calloc(1, sizeof(struct sgio_trim));
 		st = sd->trim_queues[i];
