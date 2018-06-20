@@ -5,6 +5,7 @@ struct gf_options {
 	void *pad;
 	char *gf_vol;
 	char *gf_brick;
+	int gf_single_instance;
 };
 
 struct gf_data {
