@@ -1120,7 +1120,9 @@ at past I/O history. This means that some blocks may not be read or written,
 and that some blocks may be read/written more than once. If this option is
 used with \fBverify\fR and multiple blocksizes (via \fBbsrange\fR),
 only intact blocks are verified, i.e., partially\-overwritten blocks are
-ignored.
+ignored.  With an async I/O engine and an I/O depth > 1, it is possible for
+the same block to be overwritten, which can cause verification errors.  Either
+do not use norandommap in this case, or also use the lfsr random generator.
 .TP
 .BI softrandommap \fR=\fPbool
 See \fBnorandommap\fR. If fio runs with the random block map enabled and
@@ -2370,6 +2372,11 @@ that the written data is also correctly read back. If the data direction
 given is a read or random read, fio will assume that it should verify a
 previously written file. If the data direction includes any form of write,
 the verify will be of the newly written data.
+.P
+To avoid false verification errors, do not use the norandommap option when
+verifying data with async I/O engines and I/O depths > 1.  Or use the
+norandommap and the lfsr random generator together to avoid writing to the
+same offset with muliple outstanding I/Os.
 .RE
 .TP
 .BI verify_offset \fR=\fPint
