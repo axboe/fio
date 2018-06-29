@@ -50,7 +50,7 @@
 
 static struct fio_sem *startup_sem;
 static struct flist_head *cgroup_list;
-static char *cgroup_mnt;
+static struct cgroup_mnt *cgroup_mnt;
 static int exit_value;
 static volatile int fio_abort;
 static unsigned int nr_process = 0;
@@ -1886,7 +1886,7 @@ err:
 	close_and_free_files(td);
 	cleanup_io_u(td);
 	close_ioengine(td);
-	cgroup_shutdown(td, &cgroup_mnt);
+	cgroup_shutdown(td, cgroup_mnt);
 	verify_free_state(td);
 
 	if (td->zone_state_index) {
@@ -2508,7 +2508,6 @@ int fio_backend(struct sk_out *sk_out)
 		cgroup_kill(cgroup_list);
 		sfree(cgroup_list);
 	}
-	sfree(cgroup_mnt);
 
 	fio_sem_remove(startup_sem);
 	stat_exit();
