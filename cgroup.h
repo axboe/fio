@@ -18,7 +18,7 @@ void cgroup_kill(struct flist_head *list);
 struct cgroup_mnt;
 
 static inline int cgroup_setup(struct thread_data *td, struct flist_head *list,
-			       struct cgroup_mount **mnt)
+			       struct cgroup_mnt **mnt)
 {
 	td_verror(td, EINVAL, "cgroup_setup");
 	return 1;
