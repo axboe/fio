@@ -303,6 +303,11 @@ static void handle_trace_discard(struct thread_data *td,
 	queue_io_piece(td, ipo);
 }
 
+static void dump_trace(struct blk_io_trace *t)
+{
+	log_err("blktrace: ignoring zero byte trace: action=%x\n", t->action);
+}
+
 static void handle_trace_fs(struct thread_data *td, struct blk_io_trace *t,
 			    unsigned long long ttime, unsigned long *ios,
 			    unsigned int *rw_bs)
@@ -323,7 +328,11 @@ static void handle_trace_fs(struct thread_data *td, struct blk_io_trace *t,
 			return;
 	}
 
-	assert(t->bytes);
+	if (!t->bytes) {
+		if (!fio_did_warn(FIO_WARN_BTRACE_ZERO))
+			dump_trace(t);
+		return;
+	}
 
 	if (t->bytes > rw_bs[rw])
 		rw_bs[rw] = t->bytes;
