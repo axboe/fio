@@ -541,10 +541,8 @@ static unsigned int get_next_buflen(struct thread_data *td, struct io_u *io_u,
 		r = __rand(&td->bsrange_state[ddir]);
 
 		if (!td->o.bssplit_nr[ddir]) {
-			buflen = 1 + (unsigned int) ((double) maxbs *
+			buflen = minbs + (unsigned int) ((double) maxbs *
 					(r / (frand_max + 1.0)));
-			if (buflen < minbs)
-				buflen = minbs;
 		} else {
 			long long perc = 0;
 			unsigned int i;
