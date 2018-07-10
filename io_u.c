@@ -832,15 +832,16 @@ static void __fill_io_u_zone(struct thread_data *td, struct io_u *io_u)
 		 * Wrap from the beginning, if we exceed the file size
 		 */
 		if (f->file_offset >= f->real_file_size)
-			f->file_offset = f->real_file_size - f->file_offset;
+			f->file_offset = get_start_offset(td, f);
+
 		f->last_pos[io_u->ddir] = f->file_offset;
 		td->io_skip_bytes += td->o.zone_skip;
 	}
 
 	/*
- 	 * If zone_size > zone_range, then maintain the same zone until
- 	 * zone_bytes >= zone_size.
- 	 */
+	 * If zone_size > zone_range, then maintain the same zone until
+	 * zone_bytes >= zone_size.
+	 */
 	if (f->last_pos[io_u->ddir] >= (f->file_offset + td->o.zone_range)) {
 		dprint(FD_IO, "io_u maintain zone offset=%" PRIu64 "/last_pos=%" PRIu64 "\n",
 				f->file_offset, f->last_pos[io_u->ddir]);
@@ -851,9 +852,8 @@ static void __fill_io_u_zone(struct thread_data *td, struct io_u *io_u)
 	 * For random: if 'norandommap' is not set and zone_size > zone_range,
 	 * map needs to be reset as it's done with zone_range everytime.
 	 */
-	if ((td->zone_bytes % td->o.zone_range) == 0) {
+	if ((td->zone_bytes % td->o.zone_range) == 0)
 		fio_file_reset(td, f);
-	}
 }
 
 static int fill_io_u(struct thread_data *td, struct io_u *io_u)
@@ -874,9 +874,8 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	/*
 	 * When file is zoned zone_range is always positive
 	 */
-	if (td->o.zone_range) {
+	if (td->o.zone_range)
 		__fill_io_u_zone(td, io_u);
-	}
 
 	/*
 	 * No log, let the seq/rand engine retrieve the next buflen and
