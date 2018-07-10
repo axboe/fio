@@ -107,6 +107,63 @@ static int test_multi(size_t size, unsigned int bit_off)
 	return err;
 }
 
+static int test_overlap(void)
+{
+	struct axmap *map;
+	int ret;
+
+	printf("Test overlaps...");
+	fflush(stdout);
+
+	map = axmap_new(200);
+
+	ret = axmap_set_nr(map, 102, 1);
+	if (ret != 1) {
+		printf("fail 102 1: %d\n", ret);
+		return 1;
+	}
+
+	ret = axmap_set_nr(map, 101, 3);
+	if (ret != 1) {
+		printf("fail 102 1: %d\n", ret);
+		return 1;
+	}
+
+	ret = axmap_set_nr(map, 106, 4);
+	if (ret != 4) {
+		printf("fail 106 4: %d\n", ret);
+		return 1;
+	}
+
+	ret = axmap_set_nr(map, 105, 3);
+	if (ret != 1) {
+		printf("fail 105 3: %d\n", ret);
+		return 1;
+	}
+
+	ret = axmap_set_nr(map, 120, 4);
+	if (ret != 4) {
+		printf("fail 120 4: %d\n", ret);
+		return 1;
+	}
+
+	ret = axmap_set_nr(map, 118, 2);
+	if (ret != 2) {
+		printf("fail 118 2: %d\n", ret);
+		return 1;
+	}
+
+	ret = axmap_set_nr(map, 118, 2);
+	if (ret != 0) {
+		printf("fail 118 2: %d\n", ret);
+		return 1;
+	}
+
+	printf("pass!\n");
+	axmap_free(map);
+	return 0;
+}
+
 int main(int argc, char *argv[])
 {
 	size_t size = (1UL << 23) - 200;
@@ -124,6 +181,8 @@ int main(int argc, char *argv[])
 		return 2;
 	if (test_multi(size, 17))
 		return 3;
+	if (test_overlap())
+		return 4;
 
 	return 0;
 }

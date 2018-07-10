@@ -225,7 +225,7 @@ T_ZIPF_OBJS += t/log.o lib/ieee754.o lib/rand.o lib/pattern.o lib/zipf.o \
 T_ZIPF_PROGS = t/fio-genzipf
 
 T_AXMAP_OBJS = t/axmap.o
-T_AXMAP_OBJS += lib/lfsr.o lib/axmap.o
+T_AXMAP_OBJS += lib/lfsr.o lib/axmap.o lib/hweight.o
 T_AXMAP_PROGS = t/axmap
 
 T_LFSR_TEST_OBJS = t/lfsr-test.o
