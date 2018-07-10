@@ -117,6 +117,30 @@ static int test_overlap(void)
 
 	map = axmap_new(200);
 
+	ret = axmap_set_nr(map, 16, 16);
+	if (ret != 16) {
+		printf("fail 0 16: %d\n", ret);
+		return 1;
+	}
+
+	ret = axmap_set_nr(map, 0, 32);
+	if (ret != 16) {
+		printf("fail 0 32: %d\n", ret);
+		return 1;
+	}
+
+	ret = axmap_set_nr(map, 48, 32);
+	if (ret != 32) {
+		printf("fail 48 32: %d\n", ret);
+		return 1;
+	}
+
+	ret = axmap_set_nr(map, 32, 32);
+	if (ret != 16) {
+		printf("fail 32 32: %d\n", ret);
+		return 1;
+	}
+
 	ret = axmap_set_nr(map, 102, 1);
 	if (ret != 1) {
 		printf("fail 102 1: %d\n", ret);
