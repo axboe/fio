@@ -192,6 +192,16 @@ static int test_overlap(void)
 			.ret	= 0,
 		},
 		{
+			.start	= 1100,
+			.nr	= 1,
+			.ret	= 1,
+		},
+		{
+			.start	= 1000,
+			.nr	= 256,
+			.ret	= 100,
+		},
+		{
 			.start	= 22684,
 			.nr	= 1,
 			.ret	= 1,
@@ -209,7 +219,7 @@ static int test_overlap(void)
 	int entries, i, ret, err = 0;
 
 	entries = 0;
-	for (i = 0; tests[i].start != 1U; i++) {
+	for (i = 0; tests[i].start != -1U; i++) {
 		unsigned int this = tests[i].start + tests[i].nr;
 
 		if (this > entries)
