@@ -192,6 +192,16 @@ static int test_overlap(void)
 			.ret	= 0,
 		},
 		{
+			.start	= 22684,
+			.nr	= 1,
+			.ret	= 1,
+		},
+		{
+			.start	= 22670,
+			.nr	= 60,
+			.ret	= 14,
+		},
+		{
 			.start	= -1U,
 		},
 	};
