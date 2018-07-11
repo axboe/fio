@@ -117,9 +117,19 @@ static int test_overlap(void)
 {
 	struct overlap_test tests[] = {
 		{
+			.start	= 0,
+			.nr	= 0,
+			.ret	= 0,
+		},
+		{
 			.start	= 16,
 			.nr	= 16,
 			.ret	= 16,
+		},
+		{
+			.start	= 16,
+			.nr	= 0,
+			.ret	= 0,
 		},
 		{
 			.start	= 0,
