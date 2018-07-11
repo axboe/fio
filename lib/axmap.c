@@ -227,15 +227,18 @@ static bool axmap_set_fn(struct axmap_level *al, unsigned long offset,
 	 * Mask off any potential overlap, only sets contig regions
 	 */
 	overlap = al->map[offset] & mask;
-	if (overlap == mask)
+	if (overlap == mask) {
+done:
+		data->set_bits = 0;
 		return true;
+	}
 
 	if (overlap) {
 		const int __bit = ffz(~overlap);
 
 		nr_bits = __bit - bit;
 		if (!nr_bits)
-			return true;
+			goto done;
 
 		mask = bit_masks[nr_bits] << bit;
 	}
@@ -300,7 +303,7 @@ unsigned int axmap_set_nr(struct axmap *axmap, uint64_t bit_nr,
 		unsigned int max_bits, this_set;
 
 		max_bits = BLOCKS_PER_UNIT - (bit_nr & BLOCKS_PER_UNIT_MASK);
-		if (max_bits < nr_bits)
+		if (nr_bits > max_bits)
 			data.nr_bits = max_bits;
 
 		this_set = data.nr_bits;
