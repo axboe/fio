@@ -173,8 +173,7 @@ static bool axmap_handler(struct axmap *axmap, uint64_t bit_nr,
 }
 
 static bool axmap_handler_topdown(struct axmap *axmap, uint64_t bit_nr,
-	bool (*func)(struct axmap_level *, unsigned long, unsigned int, void *),
-	void *data)
+	bool (*func)(struct axmap_level *, unsigned long, unsigned int, void *))
 {
 	struct axmap_level *al;
 	int i;
@@ -186,7 +185,7 @@ static bool axmap_handler_topdown(struct axmap *axmap, uint64_t bit_nr,
 
 		al = &axmap->levels[i];
 
-		if (func(al, offset, bit, data))
+		if (func(al, offset, bit, NULL))
 			return true;
 	}
 
@@ -329,7 +328,7 @@ static bool axmap_isset_fn(struct axmap_level *al, unsigned long offset,
 bool axmap_isset(struct axmap *axmap, uint64_t bit_nr)
 {
 	if (bit_nr <= axmap->nr_bits)
-		return axmap_handler_topdown(axmap, bit_nr, axmap_isset_fn, NULL);
+		return axmap_handler_topdown(axmap, bit_nr, axmap_isset_fn);
 
 	return false;
 }
