@@ -214,7 +214,8 @@ static int test_overlap(void)
 		}
 	}
 
-	printf("pass!\n");
+	if (!err)
+		printf("pass!\n");
 	axmap_free(map);
 	return err;
 }
