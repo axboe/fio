@@ -107,85 +107,106 @@ static int test_multi(size_t size, unsigned int bit_off)
 	return err;
 }
 
+struct overlap_test {
+	unsigned int start;
+	unsigned int nr;
+	unsigned int ret;
+};
+
 static int test_overlap(void)
 {
+	struct overlap_test tests[] = {
+		{
+			.start	= 16,
+			.nr	= 16,
+			.ret	= 16,
+		},
+		{
+			.start	= 0,
+			.nr	= 32,
+			.ret	= 16,
+		},
+		{
+			.start	= 48,
+			.nr	= 32,
+			.ret	= 32,
+		},
+		{
+			.start	= 32,
+			.nr	= 32,
+			.ret	= 16,
+		},
+		{
+			.start	= 102,
+			.nr	= 1,
+			.ret	= 1,
+		},
+		{
+			.start	= 101,
+			.nr	= 3,
+			.ret	= 1,
+		},
+		{
+			.start	= 106,
+			.nr	= 4,
+			.ret	= 4,
+		},
+		{
+			.start	= 105,
+			.nr	= 3,
+			.ret	= 1,
+		},
+		{
+			.start	= 120,
+			.nr	= 4,
+			.ret	= 4,
+		},
+		{
+			.start	= 118,
+			.nr	= 2,
+			.ret	= 2,
+		},
+		{
+			.start	= 118,
+			.nr	= 2,
+			.ret	= 0,
+		},
+		{
+			.start	= -1U,
+		},
+	};
 	struct axmap *map;
-	int ret;
+	int entries, i, ret, err = 0;
+
+	entries = 0;
+	for (i = 0; tests[i].start != 1U; i++) {
+		unsigned int this = tests[i].start + tests[i].nr;
+
+		if (this > entries)
+			entries = this;
+	}
 
 	printf("Test overlaps...");
 	fflush(stdout);
 
-	map = axmap_new(200);
+	map = axmap_new(entries);
 
-	ret = axmap_set_nr(map, 16, 16);
-	if (ret != 16) {
-		printf("fail 0 16: %d\n", ret);
-		return 1;
-	}
+	for (i = 0; tests[i].start != -1U; i++) {
+		struct overlap_test *t = &tests[i];
 
-	ret = axmap_set_nr(map, 0, 32);
-	if (ret != 16) {
-		printf("fail 0 32: %d\n", ret);
-		return 1;
-	}
-
-	ret = axmap_set_nr(map, 48, 32);
-	if (ret != 32) {
-		printf("fail 48 32: %d\n", ret);
-		return 1;
-	}
-
-	ret = axmap_set_nr(map, 32, 32);
-	if (ret != 16) {
-		printf("fail 32 32: %d\n", ret);
-		return 1;
-	}
-
-	ret = axmap_set_nr(map, 102, 1);
-	if (ret != 1) {
-		printf("fail 102 1: %d\n", ret);
-		return 1;
-	}
-
-	ret = axmap_set_nr(map, 101, 3);
-	if (ret != 1) {
-		printf("fail 102 1: %d\n", ret);
-		return 1;
-	}
-
-	ret = axmap_set_nr(map, 106, 4);
-	if (ret != 4) {
-		printf("fail 106 4: %d\n", ret);
-		return 1;
-	}
-
-	ret = axmap_set_nr(map, 105, 3);
-	if (ret != 1) {
-		printf("fail 105 3: %d\n", ret);
-		return 1;
-	}
-
-	ret = axmap_set_nr(map, 120, 4);
-	if (ret != 4) {
-		printf("fail 120 4: %d\n", ret);
-		return 1;
-	}
-
-	ret = axmap_set_nr(map, 118, 2);
-	if (ret != 2) {
-		printf("fail 118 2: %d\n", ret);
-		return 1;
-	}
-
-	ret = axmap_set_nr(map, 118, 2);
-	if (ret != 0) {
-		printf("fail 118 2: %d\n", ret);
-		return 1;
+		ret = axmap_set_nr(map, t->start, t->nr);
+		if (ret != t->ret) {
+			printf("fail\n");
+			printf("start=%u, nr=%d, ret=%d: %d\n", t->start, t->nr,
+								t->ret, ret);
+			err = 1;
+			break;
+		}
 	}
 
 	printf("pass!\n");
 	axmap_free(map);
-	return 0;
+	return err;
 }
 
 int main(int argc, char *argv[])
