@@ -175,7 +175,6 @@ static bool axmap_handler(struct axmap *axmap, uint64_t bit_nr,
 static bool axmap_handler_topdown(struct axmap *axmap, uint64_t bit_nr,
 	bool (*func)(struct axmap_level *, unsigned long, unsigned int, void *))
 {
-	struct axmap_level *al;
 	int i;
 
 	for (i = axmap->nr_levels - 1; i >= 0; i--) {
@@ -183,9 +182,7 @@ static bool axmap_handler_topdown(struct axmap *axmap, uint64_t bit_nr,
 		unsigned long offset = index >> UNIT_SHIFT;
 		unsigned int bit = index & BLOCKS_PER_UNIT_MASK;
 
-		al = &axmap->levels[i];
-
-		if (func(al, offset, bit, NULL))
+		if (func(&axmap->levels[i], offset, bit, NULL))
 			return true;
 	}
 
@@ -346,13 +343,8 @@ static uint64_t axmap_find_first_free(struct axmap *axmap, unsigned int level,
 	for (i = level; i >= 0; i--) {
 		struct axmap_level *al = &axmap->levels[i];
 
-		/*
-		 * Clear 'ret', this is a bug condition.
-		 */
-		if (index >= al->map_size) {
-			ret = -1ULL;
-			break;
-		}
+		if (index >= al->map_size)
+			goto err;
 
 		for (j = index; j < al->map_size; j++) {
 			if (al->map[j] == -1UL)
@@ -370,6 +362,7 @@ static uint64_t axmap_find_first_free(struct axmap *axmap, unsigned int level,
 	if (ret < axmap->nr_bits)
 		return ret;
 
+err:
 	return (uint64_t) -1ULL;
 }
 
