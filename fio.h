@@ -539,14 +539,14 @@ static inline void fio_ro_check(const struct thread_data *td, struct io_u *io_u)
 
 #define REAL_MAX_JOBS		4096
 
-static inline int should_fsync(struct thread_data *td)
+static inline bool should_fsync(struct thread_data *td)
 {
 	if (td->last_was_sync)
-		return 0;
+		return false;
 	if (td_write(td) || td->o.override_sync)
-		return 1;
+		return true;
 
-	return 0;
+	return false;
 }
 
 /*
