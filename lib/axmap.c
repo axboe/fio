@@ -156,10 +156,10 @@ static bool axmap_handler(struct axmap *axmap, uint64_t bit_nr,
 			  void *), void *data)
 {
 	struct axmap_level *al;
+	uint64_t index = bit_nr;
 	int i;
 
 	for (i = 0; i < axmap->nr_levels; i++) {
-		unsigned long index = ulog64(bit_nr, i);
 		unsigned long offset = index >> UNIT_SHIFT;
 		unsigned int bit = index & BLOCKS_PER_UNIT_MASK;
 
@@ -167,6 +167,9 @@ static bool axmap_handler(struct axmap *axmap, uint64_t bit_nr,
 
 		if (func(al, offset, bit, data))
 			return true;
+
+		if (index)
+			index >>= UNIT_SHIFT;
 	}
 
 	return false;
