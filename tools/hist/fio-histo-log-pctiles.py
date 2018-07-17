@@ -1,0 +1,673 @@
+#!/usr/bin/env python
+
+# module to parse fio histogram log files, not using pandas
+# runs in python v2 or v3
+# to get help with the CLI: $ python fio-histo-log-pctiles.py -h
+# this can be run standalone as a script but is callable
+# assumes all threads run for same time duration
+# assumes all threads are doing the same thing for the entire run
+
+# percentiles:
+#  0 - min latency
+#  50 - median
+#  100 - max latency
+
+# TO-DO: 
+#   separate read and write stats for randrw mixed workload
+#   report average latency if needed
+#   prove that it works (partially done with unit tests)
+
+# to run unit tests, set UNITTEST environment variable to anything
+# if you do this, don't pass normal CLI parameters to it
+# otherwise it runs the CLI
+
+import sys, os, math, copy
+from copy import deepcopy
+
+import unittest2
+
+msec_per_sec = 1000
+nsec_per_usec = 1000
+
+class FioHistoLogExc(Exception):
+    pass
+
+# if there is an error, print message, print syntax, and exit with error status
+
+def usage(msg):
+    print('ERROR: ' + msg)
+    print('usage: fio-histo-log-pctiles.py ')
+    print('  [ --fio-version 2|3 (default 3) ]')
+    print('  [ --bucket-groups positive-int (default 29) ]')
+    print('  [ --bucket-bits small-positive-int (default 6) ]')
+    print('  [ --percentiles p1,p2,...,pN ] (default 0,50,95,99,100)')
+    print('  [ --time-quantum positive-int (default 1 sec) ]')
+    print('  [ --output-unit msec|usec|nsec (default msec) ]')
+    print('  log-file1 log-file2 ...')
+    sys.exit(1)
+
+
+# convert histogram log file into a list of
+# (time_ms, direction, bsz, buckets) tuples where
+# - time_ms is the time in msec at which the log record was written
+# - direction is 0 (read) or 1 (write)
+# - bsz is block size (not used)
+# - buckets is a CSV list of counters that make up the histogram
+# caller decides if the expected number of counters are present
+
+
+def exception_suffix( record_num, pathname ):
+    return 'in histogram record %d file %s' % (record_num+1, pathname)
+
+# log file parser raises FioHistoLogExc exceptions
+# it returns histogram buckets in whatever unit fio uses
+
+def parse_hist_file(logfn, buckets_per_interval):
+    max_timestamp_ms = 0.0
+    
+    with open(logfn, 'r') as f:
+        records = [ l.strip() for l in f.readlines() ]
+    intervals = []
+    for k, r in enumerate(records):
+        if r == '':
+            continue
+        tokens = r.split(',')
+        try:
+            int_tokens = [ int(t) for t in tokens ]
+        except ValueError as e:
+            raise FioHistoLogExc('non-integer value %s' % exception_suffix(k+1, logfn))
+
+        neg_ints = list(filter( lambda tk : tk < 0, int_tokens ))
+        if len(neg_ints) > 0:
+            raise FioHistoLogExc('negative integer value %s' % exception_suffix(k+1, logfn))
+
+        if len(int_tokens) < 3:
+            raise FioHistoLogExc('too few numbers %s' % exception_suffix(k+1, logfn))
+
+        time_ms = int_tokens[0]
+        if time_ms > max_timestamp_ms:
+            max_timestamp_ms = time_ms
+
+        direction = int_tokens[1]
+        if direction != 0 and direction != 1:
+            raise FioHistoLogExc('invalid I/O direction %s' % exception_suffix(k+1, logfn))
+
+        bsz = int_tokens[2]
+        if bsz > (1 << 24):
+            raise FioHistoLogExc('block size too large %s' % exception_suffix(k+1, logfn))
+
+        buckets = int_tokens[3:]
+        if len(buckets) != buckets_per_interval:
+            raise FioHistoLogExc('%d buckets per interval but %d expected in %s' % 
+                    (len(buckets), buckets_per_interval, exception_suffix(k+1, logfn)))
+        intervals.append((time_ms, direction, bsz, buckets))
+    if len(intervals) == 0:
+        raise FioHistoLogExc('no records in %s' % logfn)
+    return (intervals, max_timestamp_ms)
+
+
+# compute time range for each bucket index in histogram record
+# see comments in https://github.com/axboe/fio/blob/master/stat.h
+# for description of bucket groups and buckets
+# fio v3 bucket ranges are in nanosec (since response times are measured in nanosec)
+# but we convert fio v3 nanosecs to floating-point microseconds
+
+def time_ranges(groups, counters_per_group, fio_version=3):
+    bucket_width = 1
+    bucket_base = 0
+    bucket_intervals = []
+    for g in range(0, groups):
+        for b in range(0, counters_per_group):
+            rmin = float(bucket_base)
+            rmax = rmin + bucket_width
+            if fio_version == 3:
+                rmin /= nsec_per_usec
+                rmax /= nsec_per_usec
+            bucket_intervals.append( [rmin, rmax] )
+            bucket_base += bucket_width
+        if g != 0:
+            bucket_width *= 2
+    return bucket_intervals
+
+
+# compute number of time quantum intervals in the test
+
+def get_time_intervals(time_quantum, max_timestamp_ms):
+    # round down to nearest second
+    max_timestamp = max_timestamp_ms // msec_per_sec
+    # round up to nearest whole multiple of time_quantum
+    time_interval_count = (max_timestamp + time_quantum) // time_quantum
+    end_time = time_interval_count * time_quantum
+    return (end_time, time_interval_count)
+
+# align raw histogram log data to time quantum so 
+# we can then combine histograms from different threads with addition
+# for randrw workload we count both reads and writes in same output bucket
+# but we separate reads and writes for purposes of calculating
+# end time for histogram record.
+# this requires us to weight a raw histogram bucket by the 
+# fraction of time quantum that the bucket overlaps the current
+# time quantum interval
+# for example, if we have a bucket with 515 samples for time interval
+# [ 1010, 2014 ] msec since start of test, and time quantum is 1 sec, then
+# for time quantum interval [ 1000, 2000 ] msec, the overlap is
+# (2000 - 1010) / (2000 - 1000) = 0.99
+# so the contribution of this bucket to this time quantum is
+# 515 x 0.99 = 509.85
+
+def align_histo_log(raw_histogram_log, time_quantum, bucket_count, max_timestamp_ms):
+
+    # slice up test time int intervals of time_quantum seconds
+
+    (end_time, time_interval_count) = get_time_intervals(time_quantum, max_timestamp_ms)
+    time_qtm_ms = time_quantum * msec_per_sec
+    end_time_ms = end_time * msec_per_sec
+    aligned_intervals = []
+    for j in range(0, time_interval_count):
+        aligned_intervals.append((
+            j * time_qtm_ms,
+            [ 0.0 for j in range(0, bucket_count) ] ))
+
+    log_record_count = len(raw_histogram_log)
+    for k, record in enumerate(raw_histogram_log):
+
+        # find next record with same direction to get end-time
+        # have to avoid going past end of array
+        # for fio randrw workload, 
+        # we have read and write records on same time interval
+        # sometimes read and write records are in opposite order
+        # assertion checks that next read/write record 
+        # can be separated by at most 2 other records
+
+        (time_msec, direction, sz, interval_buckets) = record
+        if k+1 < log_record_count:
+            (time_msec_end, direction2, _, _) = raw_histogram_log[k+1]
+            if direction2 != direction:
+                if k+2 < log_record_count:
+                    (time_msec_end, direction2, _, _) = raw_histogram_log[k+2]
+                    if direction2 != direction:
+                        if k+3 < log_record_count:
+                            (time_msec_end, direction2, _, _) = raw_histogram_log[k+3]
+                            assert direction2 == direction
+                        else:
+                            time_msec_end = end_time_ms
+                else:
+                    time_msec_end = end_time_ms
+        else:
+            time_msec_end = end_time_ms
+
+        # calculate first quantum that overlaps this histogram record 
+
+        qtm_start_ms = (time_msec // time_qtm_ms) * time_qtm_ms
+        qtm_end_ms = ((time_msec + time_qtm_ms) // time_qtm_ms) * time_qtm_ms
+        qtm_index = qtm_start_ms // time_qtm_ms
+
+        # for each quantum that overlaps this histogram record's time interval
+
+        while qtm_start_ms < time_msec_end:  # while quantum overlaps record
+
+            # calculate fraction of time that this quantum 
+            # overlaps histogram record's time interval
+            
+            overlap_start = max(qtm_start_ms, time_msec)
+            overlap_end = min(qtm_end_ms, time_msec_end)
+            weight = float(overlap_end - overlap_start)
+            weight /= (time_msec_end - time_msec)
+            (_,aligned_histogram) = aligned_intervals[qtm_index]
+            for bx, b in enumerate(interval_buckets):
+                weighted_bucket = weight * b
+                aligned_histogram[bx] += weighted_bucket
+
+            # advance to the next time quantum
+
+            qtm_start_ms += time_qtm_ms
+            qtm_end_ms += time_qtm_ms
+            qtm_index += 1
+
+    return aligned_intervals
+
+# add histogram in "source" to histogram in "target"
+# it is assumed that the 2 histograms are precisely time-aligned
+
+def add_to_histo_from( target, source ):
+    for b in range(0, len(source)):
+        target[b] += source[b]
+
+# compute percentiles
+# inputs:
+#   buckets: histogram bucket array 
+#   wanted: list of floating-pt percentiles to calculate
+#   time_ranges: [tmin,tmax) time interval for each bucket
+# returns None if no I/O reported.
+# otherwise we would be dividing by zero
+# think of buckets as probability distribution function
+# and this loop is integrating to get cumulative distribution function
+
+def get_pctiles(buckets, wanted, time_ranges):
+
+    # get total of IO requests done
+    total_ios = 0
+    for io_count in buckets:
+        total_ios += io_count
+
+    # don't return percentiles if no I/O was done during interval
+    if total_ios == 0.0:
+        return None
+
+    pctile_count = len(wanted)
+
+    # results returned as dictionary keyed by percentile
+    pctile_result = {}
+
+    # index of next percentile in list
+    pctile_index = 0
+
+    # next percentile
+    next_pctile = wanted[pctile_index]
+
+    # no one is interested in percentiles bigger than this but not 100.0
+    # this prevents floating-point error from preventing loop exit
+    almost_100 = 99.9999
+
+    total_so_far = 0
+    for b, io_count in enumerate(buckets):
+        total_so_far += io_count
+        pct_lt = 100.0 * float(total_so_far) / total_ios
+        # a single bucket could satisfy multiple pctiles
+        # so this must be a while loop
+        # consider both the 0-percentile (min latency)
+        # and 100-percentile (max latency) case here
+        while ((next_pctile == 100.0 and pct_lt >= almost_100) or
+               (next_pctile < 100.0  and pct_lt > next_pctile)):
+            # FIXME: interpolate between these fractions
+            range_max_time = time_ranges[b][1]
+            pctile_result[next_pctile] = range_max_time
+            pctile_index += 1
+            if pctile_index == pctile_count:
+                break
+            next_pctile = wanted[pctile_index]
+        if pctile_index == pctile_count:
+            break
+    assert pctile_index == pctile_count
+    return pctile_result
+
+
+# parse parameters 
+# returns a tuple of command line parameters
+# parameters have default values unless otherwise shown
+
+def parse_cli_params():
+    
+    # default values for input parameters
+
+    fio_version = 3        # we are using fio 3.x now
+    bucket_groups = None   # defaulting comes later
+    bucket_bits = 6        # default in fio 3.x
+    pctiles_wanted = [ 0, 50, 90, 95, 99, 100 ]
+    time_quantum = 1
+    output_unit = 'usec'
+
+    # parse command line parameters and display them
+    
+    argindex = 1
+    argct = len(sys.argv)
+    if argct < 2:
+        usage('must supply at least one histogram log file')
+    while argindex < argct:
+        if argct < argindex + 2:
+            break
+        pname = sys.argv[argindex]
+        pval = sys.argv[argindex+1]
+        if not pname.startswith('--'):
+            break
+        argindex += 2
+        pname = pname[2:]
+    
+        if pname == 'bucket-groups':
+            bucket_groups = int(pval)
+        elif pname == 'bucket-bits':
+            bucket_bits = int(pval)
+        elif pname == 'time-quantum':
+            time_quantum = int(pval)
+        elif pname == 'percentiles':
+            pctiles_wanted = [ float(p) for p in pval.split(',') ]
+        elif pname == 'output-unit':
+            if pval == 'msec' or pval == 'usec':
+                output_unit = pval
+            else:
+                usage('output-unit must be usec (microseconds) or msec (milliseconds)')
+        elif pname == 'fio-version':
+            if pval != '2' and pval != '3':
+                usage('invalid fio version, must be 2 or 3')
+            fio_version = int(pval)
+        else:
+            usage('invalid parameter name --%s' % pname)
+
+    if not bucket_groups:
+        # default changes based on fio version
+        if fio_version == 2:
+            bucket_groups = 19
+        else:
+            # default in fio 3.x
+            bucket_groups = 29
+
+    filename_list = sys.argv[argindex:]
+    for f in filename_list:
+        if not os.path.exists(f):
+            usage('file %s does not exist' % f)
+    return (bucket_groups, bucket_bits, fio_version, pctiles_wanted, 
+            filename_list, time_quantum, output_unit)
+
+
+# this is really the main program
+
+def compute_percentiles_from_logs():
+    (bucket_groups, bucket_bits, fio_version, pctiles_wanted, 
+     file_list, time_quantum, output_unit) = parse_cli_params()
+
+    print('bucket groups = %d' % bucket_groups)
+    print('bucket bits = %d' % bucket_bits)
+    print('time quantum = %d sec' % time_quantum)
+    print('percentiles = %s' % ','.join([ str(p) for p in pctiles_wanted ]))
+    buckets_per_group = 1 << bucket_bits
+    print('buckets per group = %d' % buckets_per_group)
+    buckets_per_interval = buckets_per_group * bucket_groups
+    print('buckets per interval = %d ' % buckets_per_interval)
+    bucket_index_range = range(0, buckets_per_interval)
+    if time_quantum == 0:
+        usage('time-quantum must be a positive number of seconds')
+    print('output unit = ' + output_unit)
+    if output_unit == 'msec':
+        time_divisor = 1000.0
+    elif output_unit == 'usec':
+        time_divisor = 1.0
+
+    # calculate response time interval associated with each histogram bucket
+
+    bucket_times = time_ranges(bucket_groups, buckets_per_group, fio_version=fio_version)
+
+    # construct template for each histogram bucket array with buckets all zeroes
+    # we just copy this for each new histogram
+
+    zeroed_buckets = [ 0.0 for r in bucket_index_range ]
+
+    # print CSV header just like fiologparser_hist does
+
+    header = 'msec, '
+    for p in pctiles_wanted:
+        header += '%3.1f, ' % p
+    print('time (millisec), percentiles in increasing order with values in ' + output_unit)
+    print(header)
+
+    # parse the histogram logs
+    # assumption: each bucket has a monotonically increasing time
+    # assumption: time ranges do not overlap for a single thread's records
+    # (exception: if randrw workload, then there is a read and a write 
+    # record for the same time interval)
+
+    max_timestamp_all_logs = 0
+    hist_files = {}
+    for fn in file_list:
+        try:
+            (hist_files[fn], max_timestamp_ms)  = parse_hist_file(fn, buckets_per_interval)
+        except FioHistoLogExc as e:
+            usage(str(e))
+        max_timestamp_all_logs = max(max_timestamp_all_logs, max_timestamp_ms)
+
+    (end_time, time_interval_count) = get_time_intervals(time_quantum, max_timestamp_all_logs)
+    all_threads_histograms = [ ((j*time_quantum*msec_per_sec), deepcopy(zeroed_buckets))
+                                for j in range(0, time_interval_count) ]
+
+    for logfn in hist_files.keys():
+        aligned_per_thread = align_histo_log(hist_files[logfn], 
+                                             time_quantum, 
+                                             buckets_per_interval, 
+                                             max_timestamp_all_logs)
+        for t in range(0, time_interval_count):
+            (_, all_threads_histo_t) = all_threads_histograms[t]
+            (_, log_histo_t) = aligned_per_thread[t]
+            pct = get_pctiles(log_histo_t, pctiles_wanted, bucket_times)
+            add_to_histo_from( all_threads_histo_t, log_histo_t )
+
+    print('percentiles for entire set of threads')
+    for (t_msec, all_threads_histo_t) in all_threads_histograms:
+        record = '%d, ' % t_msec
+        pct = get_pctiles(all_threads_histo_t, pctiles_wanted, bucket_times)
+        if not pct:
+            for w in pctiles_wanted:
+                record += ', '
+        else:
+            pct_keys = [ k for k in pct.keys() ]
+            pct_values = [ str(pct[wanted]/time_divisor) for wanted in sorted(pct_keys) ]
+            record += ', '.join(pct_values)
+        print(record)
+
+
+
+#end of MAIN PROGRAM
+
+
+
+##### below are unit tests ##############
+
+import tempfile, shutil
+from os.path import join
+should_not_get_here = False
+
+class Test(unittest2.TestCase):
+    tempdir = None
+
+    # a little less typing please
+    def A(self, boolean_val):
+        self.assertTrue(boolean_val)
+
+    # initialize unit test environment
+
+    @classmethod
+    def setUpClass(cls):
+        d = tempfile.mkdtemp()
+        Test.tempdir = d
+
+    # remove anything left by unit test environment
+    # unless user sets UNITTEST_LEAVE_FILES environment variable
+
+    @classmethod
+    def tearDownClass(cls):
+        if not os.getenv("UNITTEST_LEAVE_FILES"):
+            shutil.rmtree(cls.tempdir)
+
+    def setUp(self):
+        self.fn = join(Test.tempdir, self.id())
+
+    def test_a_add_histos(self):
+        a = [ 1.0, 2.0 ]
+        b = [ 1.5, 2.5 ]
+        add_to_histo_from( a, b )
+        self.A(a == [2.5, 4.5])
+        self.A(b == [1.5, 2.5])
+
+    def test_b1_parse_log(self):
+        with open(self.fn, 'w') as f:
+            f.write('1234, 0, 4096, 1, 2, 3, 4\n')
+            f.write('5678,1,16384,5,6,7,8 \n')
+        (raw_histo_log, max_timestamp) = parse_hist_file(self.fn, 4) # 4 buckets per interval
+        self.A(len(raw_histo_log) == 2 and max_timestamp == 5678)
+        (time_ms, direction, bsz, histo) = raw_histo_log[0]
+        self.A(time_ms == 1234 and direction == 0 and bsz == 4096 and histo == [ 1, 2, 3, 4 ])
+        (time_ms, direction, bsz, histo) = raw_histo_log[1]
+        self.A(time_ms == 5678 and direction == 1 and bsz == 16384 and histo == [ 5, 6, 7, 8 ])
+
+    def test_b2_parse_empty_log(self):
+        with open(self.fn, 'w') as f:
+            pass
+        try:
+            (raw_histo_log, max_timestamp_ms) = parse_hist_file(self.fn, 4)
+            self.A(should_not_get_here)
+        except FioHistoLogExc as e:
+            self.A(str(e).startswith('no records'))
+
+    def test_b3_parse_empty_records(self):
+        with open(self.fn, 'w') as f:
+            f.write('\n')
+            f.write('1234, 0, 4096, 1, 2, 3, 4\n')
+            f.write('5678,1,16384,5,6,7,8 \n')
+            f.write('\n')
+        (raw_histo_log, max_timestamp_ms) = parse_hist_file(self.fn, 4)
+        self.A(len(raw_histo_log) == 2 and max_timestamp_ms == 5678)
+        (time_ms, direction, bsz, histo) = raw_histo_log[0]
+        self.A(time_ms == 1234 and direction == 0 and bsz == 4096 and histo == [ 1, 2, 3, 4 ])
+        (time_ms, direction, bsz, histo) = raw_histo_log[1]
+        self.A(time_ms == 5678 and direction == 1 and bsz == 16384 and histo == [ 5, 6, 7, 8 ])
+
+    def test_b4_parse_non_int(self):
+        with open(self.fn, 'w') as f:
+            f.write('12, 0, 4096, 1a, 2, 3, 4\n')
+        try:
+            (raw_histo_log, _) = parse_hist_file(self.fn, 4)
+            self.A(False)
+        except FioHistoLogExc as e:
+            self.A(str(e).startswith('non-integer'))
+
+    def test_b5_parse_neg_int(self):
+        with open(self.fn, 'w') as f:
+            f.write('-12, 0, 4096, 1, 2, 3, 4\n')
+        try:
+            (raw_histo_log, _) = parse_hist_file(self.fn, 4)
+            self.A(False)
+        except FioHistoLogExc as e:
+            self.A(str(e).startswith('negative integer'))
+
+    def test_b6_parse_too_few_int(self):
+        with open(self.fn, 'w') as f:
+            f.write('0, 0\n')
+        try:
+            (raw_histo_log, _) = parse_hist_file(self.fn, 4)
+            self.A(False)
+        except FioHistoLogExc as e:
+            self.A(str(e).startswith('too few numbers'))
+
+    def test_b7_parse_invalid_direction(self):
+        with open(self.fn, 'w') as f:
+            f.write('100, 2, 4096, 1, 2, 3, 4\n')
+        try:
+            (raw_histo_log, _) = parse_hist_file(self.fn, 4)
+            self.A(False)
+        except FioHistoLogExc as e:
+            self.A(str(e).startswith('invalid I/O direction'))
+
+    def test_b8_parse_bsz_too_big(self):
+        with open(self.fn+'_good', 'w') as f:
+            f.write('100, 1, %d, 1, 2, 3, 4\n' % (1<<24))
+        (raw_histo_log, max_timestamp_ms) = parse_hist_file(self.fn+'_good', 4)
+        with open(self.fn+'_bad', 'w') as f:
+            f.write('100, 1, 20000000, 1, 2, 3, 4\n')
+        try:
+            (raw_histo_log, _) = parse_hist_file(self.fn+'_bad', 4)
+            self.A(False)
+        except FioHistoLogExc as e:
+            self.A(str(e).startswith('block size too large'))
+
+    def test_b9_parse_wrong_bucket_count(self):
+        with open(self.fn, 'w') as f:
+            f.write('100, 1, %d, 1, 2, 3, 4, 5\n' % (1<<24))
+        try:
+            (raw_histo_log, _) = parse_hist_file(self.fn, 4)
+            self.A(False)
+        except FioHistoLogExc as e:
+            self.A(str(e).__contains__('buckets per interval'))
+
+    def test_c1_time_ranges(self):
+        ranges = time_ranges(3, 2)  # fio_version defaults to 3
+        expected_ranges = [ # fio_version 3 is in nanoseconds
+                [0.000, 0.001], [0.001, 0.002],   # first group
+                [0.002, 0.003], [0.003, 0.004],   # second group same width
+                [0.004, 0.006], [0.006, 0.008]]   # subsequent groups double width
+        self.A(ranges == expected_ranges)
+        ranges = time_ranges(3, 2, fio_version=3)
+        self.A(ranges == expected_ranges)
+        ranges = time_ranges(3, 2, fio_version=2)
+        expected_ranges_v2 = [ [ 1000.0 * min_or_max for min_or_max in time_range ] 
+                               for time_range in expected_ranges ]
+        self.A(ranges == expected_ranges_v2)
+        # see fio V3 stat.h for why 29 groups and 2^6 buckets/group
+        normal_ranges_v3 = time_ranges(29, 64)
+        # for v3, bucket time intervals are measured in nanoseconds
+        self.A(len(normal_ranges_v3) == 29 * 64 and normal_ranges_v3[-1][1] == 64*(1<<(29-1))/1000.0)
+        normal_ranges_v2 = time_ranges(19, 64, fio_version=2)
+        # for v2, bucket time intervals are measured in microseconds so we have fewer buckets
+        self.A(len(normal_ranges_v2) == 19 * 64 and normal_ranges_v2[-1][1] == 64*(1<<(19-1)))
+
+    def test_d1_align_histo_log_1_quantum(self):
+        with open(self.fn, 'w') as f:
+            f.write('100, 1, 4096, 1, 2, 3, 4')
+        (raw_histo_log, max_timestamp_ms) = parse_hist_file(self.fn, 4)
+        self.A(max_timestamp_ms == 100)
+        aligned_log = align_histo_log(raw_histo_log, 5, 4, max_timestamp_ms)
+        self.A(len(aligned_log) == 1)
+        (time_ms0, h) = aligned_log[0]
+        self.A(time_ms0 == 0 and h == [1.0, 2.0, 3.0, 4.0])
+
+    # we need this to compare 2 lists of floating point numbers for equality
+    # because of floating-point imprecision
+
+    def compare_2_floats(self, x, y):
+        if x == 0.0 or y == 0.0:
+            return (x+y) < 0.0000001
+        else:
+            return (math.fabs(x-y)/x) < 0.00001
+                
+    def is_close(self, buckets, buckets_expected):
+        if len(buckets) != len(buckets_expected):
+            return False
+        compare_buckets = lambda k: self.compare_2_floats(buckets[k], buckets_expected[k])
+        indices_close = list(filter(compare_buckets, range(0, len(buckets))))
+        return len(indices_close) == len(buckets)
+
+    def test_d2_align_histo_log_2_quantum(self):
+        with open(self.fn, 'w') as f:
+            f.write('2000, 1, 4096, 1, 2, 3, 4\n')
+            f.write('7000, 1, 4096, 1, 2, 3, 4\n')
+        (raw_histo_log, max_timestamp_ms) = parse_hist_file(self.fn, 4)
+        self.A(max_timestamp_ms == 7000)
+        (_, _, _, raw_buckets1) = raw_histo_log[0]
+        (_, _, _, raw_buckets2) = raw_histo_log[1]
+        aligned_log = align_histo_log(raw_histo_log, 5, 4, max_timestamp_ms)
+        self.A(len(aligned_log) == 2)
+        (time_ms1, h1) = aligned_log[0]
+        (time_ms2, h2) = aligned_log[1]
+        # because first record is from time interval [2000, 7000]
+        # we weight it according
+        expect1 = [float(b) * 0.6 for b in raw_buckets1]
+        expect2 = [float(b) * 0.4 for b in raw_buckets1]
+        for e in range(0, len(expect2)):
+            expect2[e] += raw_buckets2[e]
+        self.A(time_ms1 == 0    and self.is_close(h1, expect1))
+        self.A(time_ms2 == 5000 and self.is_close(h2, expect2))
+
+    def test_e1_get_pctiles(self):
+        with open(self.fn, 'w') as f:
+            buckets = [ 100 for j in range(0, 128) ]
+            f.write('9000, 1, 4096, %s\n' % ', '.join([str(b) for b in buckets]))
+        (raw_histo_log, max_timestamp_ms) = parse_hist_file(self.fn, 128)
+        self.A(max_timestamp_ms == 9000)
+        aligned_log = align_histo_log(raw_histo_log, 5, 128, max_timestamp_ms)
+        time_intervals = time_ranges(4, 32)
+        # since buckets are all equal, then median is halfway through time_intervals
+        # and max latency interval is at end of time_intervals
+        self.A(time_intervals[64][1] == 0.066 and time_intervals[127][1] == 0.256)
+        pctiles_wanted = [ 0, 50, 100 ]
+        pct_vs_time = []
+        for (time_ms, histo) in aligned_log:
+            pct_vs_time.append(get_pctiles(histo, pctiles_wanted, time_intervals))
+        self.A(pct_vs_time[0] == None)  # no I/O in this time interval
+        expected_pctiles = { 0:0.001, 50:0.066, 100:0.256 }
+        self.A(pct_vs_time[1] == expected_pctiles)
+
+# we are using this module as a standalone program
+
+if __name__ == '__main__':
+    if os.getenv('UNITTEST'):
+        sys.exit(unittest2.main())
+    else:
+        compute_percentiles_from_logs()
+
