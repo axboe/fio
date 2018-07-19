@@ -269,19 +269,34 @@ def get_pctiles(buckets, wanted, time_ranges):
     # this prevents floating-point error from preventing loop exit
     almost_100 = 99.9999
 
+    # pct is the percentile corresponding to 
+    # all I/O requests up through bucket b
+    pct = 0.0
     total_so_far = 0
     for b, io_count in enumerate(buckets):
+        if io_count == 0:
+            continue
         total_so_far += io_count
-        pct_lt = 100.0 * float(total_so_far) / total_ios
+        # last_pct_lt is the percentile corresponding to 
+        # all I/O requests up to, but not including, bucket b
+        last_pct = pct
+        pct = 100.0 * float(total_so_far) / total_ios
         # a single bucket could satisfy multiple pctiles
         # so this must be a while loop
-        # consider both the 0-percentile (min latency)
-        # and 100-percentile (max latency) case here
-        while ((next_pctile == 100.0 and pct_lt >= almost_100) or
-               (next_pctile < 100.0  and pct_lt > next_pctile)):
-            # FIXME: interpolate between these fractions
+        # for 100-percentile (max latency) case, no bucket exceeds it 
+        # so we must stop there.
+        while ((next_pctile == 100.0 and pct >= almost_100) or
+               (next_pctile < 100.0  and pct > next_pctile)):
+            # interpolate between min and max time for bucket time interval
+            # we keep the time_ranges access inside this loop, 
+            # even though it could be above the loop,
+            # because in many cases we will not be even entering 
+            # the loop so we optimize out these accesses
             range_max_time = time_ranges[b][1]
-            pctile_result[next_pctile] = range_max_time
+            range_min_time = time_ranges[b][0]
+            offset_frac = (next_pctile - last_pct)/(pct - last_pct)
+            interpolation = range_min_time + (offset_frac*(range_max_time - range_min_time))
+            pctile_result[next_pctile] = interpolation
             pctile_index += 1
             if pctile_index == pctile_count:
                 break
@@ -426,7 +441,6 @@ def compute_percentiles_from_logs():
         for t in range(0, time_interval_count):
             (_, all_threads_histo_t) = all_threads_histograms[t]
             (_, log_histo_t) = aligned_per_thread[t]
-            pct = get_pctiles(log_histo_t, pctiles_wanted, bucket_times)
             add_to_histo_from( all_threads_histo_t, log_histo_t )
 
     print('percentiles for entire set of threads')
@@ -644,7 +658,8 @@ class Test(unittest2.TestCase):
         self.A(time_ms1 == 0    and self.is_close(h1, expect1))
         self.A(time_ms2 == 5000 and self.is_close(h2, expect2))
 
-    def test_e1_get_pctiles(self):
+    # what to expect if histogram buckets are all equal
+    def test_e1_get_pctiles_flat_histo(self):
         with open(self.fn, 'w') as f:
             buckets = [ 100 for j in range(0, 128) ]
             f.write('9000, 1, 4096, %s\n' % ', '.join([str(b) for b in buckets]))
@@ -660,8 +675,26 @@ class Test(unittest2.TestCase):
         for (time_ms, histo) in aligned_log:
             pct_vs_time.append(get_pctiles(histo, pctiles_wanted, time_intervals))
         self.A(pct_vs_time[0] == None)  # no I/O in this time interval
-        expected_pctiles = { 0:0.001, 50:0.066, 100:0.256 }
+        expected_pctiles = { 0:0.000, 50:0.064, 100:0.256 }
         self.A(pct_vs_time[1] == expected_pctiles)
+
+    # what to expect if just the highest histogram bucket is used
+    def test_e2_get_pctiles_highest_pct(self):
+        fio_v3_bucket_count = 29 * 64
+        with open(self.fn, 'w') as f:
+            # make a empty fio v3 histogram
+            buckets = [ 0 for j in range(0, fio_v3_bucket_count) ]
+            # add one I/O request to last bucket
+            buckets[-1] = 1
+            f.write('9000, 1, 4096, %s\n' % ', '.join([str(b) for b in buckets]))
+        (raw_histo_log, max_timestamp_ms) = parse_hist_file(self.fn, fio_v3_bucket_count)
+        self.A(max_timestamp_ms == 9000)
+        aligned_log = align_histo_log(raw_histo_log, 5, fio_v3_bucket_count, max_timestamp_ms)
+        (time_ms, histo) = aligned_log[1]
+        time_intervals = time_ranges(29, 64)
+        expected_pctiles = { 100.0:(64*(1<<28))/1000.0 }
+        pct = get_pctiles( histo, [ 100.0 ], time_intervals )
+        self.A(pct == expected_pctiles)
 
 # we are using this module as a standalone program
 
