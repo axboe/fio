@@ -23,7 +23,7 @@
 
 import sys, os, math, copy
 from copy import deepcopy
-
+import argparse
 import unittest2
 
 msec_per_sec = 1000
@@ -32,20 +32,11 @@ nsec_per_usec = 1000
 class FioHistoLogExc(Exception):
     pass
 
-# if there is an error, print message, print syntax, and exit with error status
+# if there is an error, print message, and exit with error status
 
-def usage(msg):
+def myabort(msg):
     print('ERROR: ' + msg)
-    print('usage: fio-histo-log-pctiles.py ')
-    print('  [ --fio-version 2|3 (default 3) ]')
-    print('  [ --bucket-groups positive-int (default 29) ]')
-    print('  [ --bucket-bits small-positive-int (default 6) ]')
-    print('  [ --percentiles p1,p2,...,pN ] (default 0,50,95,99,100)')
-    print('  [ --time-quantum positive-int (default 1 sec) ]')
-    print('  [ --output-unit msec|usec|nsec (default msec) ]')
-    print('  log-file1 log-file2 ...')
     sys.exit(1)
-
 
 # convert histogram log file into a list of
 # (time_ms, direction, bsz, buckets) tuples where
@@ -307,99 +298,61 @@ def get_pctiles(buckets, wanted, time_ranges):
     return pctile_result
 
 
-# parse parameters 
-# returns a tuple of command line parameters
-# parameters have default values unless otherwise shown
-
-def parse_cli_params():
-    
-    # default values for input parameters
-
-    fio_version = 3        # we are using fio 3.x now
-    bucket_groups = None   # defaulting comes later
-    bucket_bits = 6        # default in fio 3.x
-    pctiles_wanted = [ 0, 50, 90, 95, 99, 100 ]
-    time_quantum = 1
-    output_unit = 'usec'
-
-    # parse command line parameters and display them
-    
-    argindex = 1
-    argct = len(sys.argv)
-    if argct < 2:
-        usage('must supply at least one histogram log file')
-    while argindex < argct:
-        if argct < argindex + 2:
-            break
-        pname = sys.argv[argindex]
-        pval = sys.argv[argindex+1]
-        if not pname.startswith('--'):
-            break
-        argindex += 2
-        pname = pname[2:]
-    
-        if pname == 'bucket-groups':
-            bucket_groups = int(pval)
-        elif pname == 'bucket-bits':
-            bucket_bits = int(pval)
-        elif pname == 'time-quantum':
-            time_quantum = int(pval)
-        elif pname == 'percentiles':
-            pctiles_wanted = [ float(p) for p in pval.split(',') ]
-        elif pname == 'output-unit':
-            if pval == 'msec' or pval == 'usec':
-                output_unit = pval
-            else:
-                usage('output-unit must be usec (microseconds) or msec (milliseconds)')
-        elif pname == 'fio-version':
-            if pval != '2' and pval != '3':
-                usage('invalid fio version, must be 2 or 3')
-            fio_version = int(pval)
-        else:
-            usage('invalid parameter name --%s' % pname)
-
-    if not bucket_groups:
-        # default changes based on fio version
-        if fio_version == 2:
-            bucket_groups = 19
-        else:
-            # default in fio 3.x
-            bucket_groups = 29
-
-    filename_list = sys.argv[argindex:]
-    for f in filename_list:
-        if not os.path.exists(f):
-            usage('file %s does not exist' % f)
-    return (bucket_groups, bucket_bits, fio_version, pctiles_wanted, 
-            filename_list, time_quantum, output_unit)
-
-
 # this is really the main program
 
 def compute_percentiles_from_logs():
-    (bucket_groups, bucket_bits, fio_version, pctiles_wanted, 
-     file_list, time_quantum, output_unit) = parse_cli_params()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--fio-version", dest="fio_version", 
+        default="3", choices=[2,3], type=int, 
+        help="fio version (default=3)")
+    parser.add_argument("--bucket-groups", dest="bucket_groups", default="29", type=int, 
+        help="fio histogram bucket groups (default=29)")
+    parser.add_argument("--bucket-bits", dest="bucket_bits", 
+        default="6", type=int, 
+        help="fio histogram buckets-per-group bits (default=6 means 64 buckets/group)")
+    parser.add_argument("--percentiles", dest="pctiles_wanted", 
+        default="0 50 95 99 100", type=float, nargs='+',
+        help="fio histogram buckets-per-group bits (default=6 means 64 buckets/group)")
+    parser.add_argument("--time-quantum", dest="time_quantum", 
+        default="1", type=int,
+        help="time quantum in seconds (default=1)")
+    parser.add_argument("--output-unit", dest="output_unit", 
+        default="usec", type=str,
+        help="Latency percentile output unit: msec|usec|nsec (default usec)")
+    parser.add_argument("file_list", nargs='+')
+    args = parser.parse_args()
+    print(args)
 
-    print('bucket groups = %d' % bucket_groups)
-    print('bucket bits = %d' % bucket_bits)
-    print('time quantum = %d sec' % time_quantum)
-    print('percentiles = %s' % ','.join([ str(p) for p in pctiles_wanted ]))
-    buckets_per_group = 1 << bucket_bits
+    if not args.bucket_groups:
+        # default changes based on fio version
+        if fio_version == 2:
+            args.bucket_groups = 19
+        else:
+            # default in fio 3.x
+            args.bucket_groups = 29
+
+    # print parameters
+
+    print('bucket groups = %d' % args.bucket_groups)
+    print('bucket bits = %d' % args.bucket_bits)
+    print('time quantum = %d sec' % args.time_quantum)
+    print('percentiles = %s' % ','.join([ str(p) for p in args.pctiles_wanted ]))
+    buckets_per_group = 1 << args.bucket_bits
     print('buckets per group = %d' % buckets_per_group)
-    buckets_per_interval = buckets_per_group * bucket_groups
+    buckets_per_interval = buckets_per_group * args.bucket_groups
     print('buckets per interval = %d ' % buckets_per_interval)
     bucket_index_range = range(0, buckets_per_interval)
-    if time_quantum == 0:
-        usage('time-quantum must be a positive number of seconds')
-    print('output unit = ' + output_unit)
-    if output_unit == 'msec':
+    if args.time_quantum == 0:
+        print('ERROR: time-quantum must be a positive number of seconds')
+    print('output unit = ' + args.output_unit)
+    if args.output_unit == 'msec':
         time_divisor = 1000.0
-    elif output_unit == 'usec':
+    elif args.output_unit == 'usec':
         time_divisor = 1.0
 
     # calculate response time interval associated with each histogram bucket
 
-    bucket_times = time_ranges(bucket_groups, buckets_per_group, fio_version=fio_version)
+    bucket_times = time_ranges(args.bucket_groups, buckets_per_group, fio_version=args.fio_version)
 
     # construct template for each histogram bucket array with buckets all zeroes
     # we just copy this for each new histogram
@@ -409,9 +362,9 @@ def compute_percentiles_from_logs():
     # print CSV header just like fiologparser_hist does
 
     header = 'msec, '
-    for p in pctiles_wanted:
+    for p in args.pctiles_wanted:
         header += '%3.1f, ' % p
-    print('time (millisec), percentiles in increasing order with values in ' + output_unit)
+    print('time (millisec), percentiles in increasing order with values in ' + args.output_unit)
     print(header)
 
     # parse the histogram logs
@@ -422,20 +375,20 @@ def compute_percentiles_from_logs():
 
     max_timestamp_all_logs = 0
     hist_files = {}
-    for fn in file_list:
+    for fn in args.file_list:
         try:
             (hist_files[fn], max_timestamp_ms)  = parse_hist_file(fn, buckets_per_interval)
         except FioHistoLogExc as e:
-            usage(str(e))
+            myabort(str(e))
         max_timestamp_all_logs = max(max_timestamp_all_logs, max_timestamp_ms)
 
-    (end_time, time_interval_count) = get_time_intervals(time_quantum, max_timestamp_all_logs)
-    all_threads_histograms = [ ((j*time_quantum*msec_per_sec), deepcopy(zeroed_buckets))
+    (end_time, time_interval_count) = get_time_intervals(args.time_quantum, max_timestamp_all_logs)
+    all_threads_histograms = [ ((j*args.time_quantum*msec_per_sec), deepcopy(zeroed_buckets))
                                 for j in range(0, time_interval_count) ]
 
     for logfn in hist_files.keys():
         aligned_per_thread = align_histo_log(hist_files[logfn], 
-                                             time_quantum, 
+                                             args.time_quantum, 
                                              buckets_per_interval, 
                                              max_timestamp_all_logs)
         for t in range(0, time_interval_count):
@@ -443,12 +396,13 @@ def compute_percentiles_from_logs():
             (_, log_histo_t) = aligned_per_thread[t]
             add_to_histo_from( all_threads_histo_t, log_histo_t )
 
-    print('percentiles for entire set of threads')
+    # calculate percentiles across aggregate histogram for all threads
+
     for (t_msec, all_threads_histo_t) in all_threads_histograms:
         record = '%d, ' % t_msec
-        pct = get_pctiles(all_threads_histo_t, pctiles_wanted, bucket_times)
+        pct = get_pctiles(all_threads_histo_t, args.pctiles_wanted, bucket_times)
         if not pct:
-            for w in pctiles_wanted:
+            for w in args.pctiles_wanted:
                 record += ', '
         else:
             pct_keys = [ k for k in pct.keys() ]
