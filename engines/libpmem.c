@@ -499,7 +499,7 @@ static int fio_libpmem_init(struct thread_data *td)
 {
 	struct thread_options *o = &td->o;
 
-	dprint(FD_IO,"o->rw_min_bs %d \n o->fsync_blocks %d \n o->fdatasync_blocks %d \n",
+	dprint(FD_IO,"o->rw_min_bs %llu \n o->fsync_blocks %d \n o->fdatasync_blocks %d \n",
 			o->rw_min_bs,o->fsync_blocks,o->fdatasync_blocks);
 	dprint(FD_IO, "DEBUG fio_libpmem_init\n");
 
