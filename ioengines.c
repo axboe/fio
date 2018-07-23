@@ -279,7 +279,7 @@ out:
 enum fio_q_status td_io_queue(struct thread_data *td, struct io_u *io_u)
 {
 	const enum fio_ddir ddir = acct_ddir(io_u);
-	unsigned long buflen = io_u->xfer_buflen;
+	unsigned long long buflen = io_u->xfer_buflen;
 	enum fio_q_status ret;
 
 	dprint_io_u(io_u, "queue");

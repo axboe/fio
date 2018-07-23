@@ -619,8 +619,8 @@ static int block_state_category(int block_state)
 
 static int compare_block_infos(const void *bs1, const void *bs2)
 {
-	uint32_t block1 = *(uint32_t *)bs1;
-	uint32_t block2 = *(uint32_t *)bs2;
+	uint64_t block1 = *(uint64_t *)bs1;
+	uint64_t block2 = *(uint64_t *)bs2;
 	int state1 = BLOCK_INFO_STATE(block1);
 	int state2 = BLOCK_INFO_STATE(block2);
 	int bscat1 = block_state_category(state1);
@@ -2220,7 +2220,7 @@ static struct io_logs *get_cur_log(struct io_log *iolog)
 }
 
 static void __add_log_sample(struct io_log *iolog, union io_sample_data data,
-			     enum fio_ddir ddir, unsigned int bs,
+			     enum fio_ddir ddir, unsigned long long bs,
 			     unsigned long t, uint64_t offset)
 {
 	struct io_logs *cur_log;
@@ -2338,7 +2338,7 @@ static void _add_stat_to_log(struct io_log *iolog, unsigned long elapsed,
 static unsigned long add_log_sample(struct thread_data *td,
 				    struct io_log *iolog,
 				    union io_sample_data data,
-				    enum fio_ddir ddir, unsigned int bs,
+				    enum fio_ddir ddir, unsigned long long bs,
 				    uint64_t offset)
 {
 	unsigned long elapsed, this_window;
@@ -2400,7 +2400,7 @@ void finalize_logs(struct thread_data *td, bool unit_logs)
 		_add_stat_to_log(td->iops_log, elapsed, td->o.log_max != 0);
 }
 
-void add_agg_sample(union io_sample_data data, enum fio_ddir ddir, unsigned int bs)
+void add_agg_sample(union io_sample_data data, enum fio_ddir ddir, unsigned long long bs)
 {
 	struct io_log *iolog;
 
@@ -2430,7 +2430,8 @@ static void add_clat_percentile_sample(struct thread_stat *ts,
 }
 
 void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
-		     unsigned long long nsec, unsigned int bs, uint64_t offset)
+		     unsigned long long nsec, unsigned long long bs,
+		     uint64_t offset)
 {
 	unsigned long elapsed, this_window;
 	struct thread_stat *ts = &td->ts;
@@ -2489,7 +2490,7 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 }
 
 void add_slat_sample(struct thread_data *td, enum fio_ddir ddir,
-		     unsigned long usec, unsigned int bs, uint64_t offset)
+		     unsigned long usec, unsigned long long bs, uint64_t offset)
 {
 	struct thread_stat *ts = &td->ts;
 
@@ -2507,7 +2508,8 @@ void add_slat_sample(struct thread_data *td, enum fio_ddir ddir,
 }
 
 void add_lat_sample(struct thread_data *td, enum fio_ddir ddir,
-		    unsigned long long nsec, unsigned int bs, uint64_t offset)
+		    unsigned long long nsec, unsigned long long bs,
+		    uint64_t offset)
 {
 	struct thread_stat *ts = &td->ts;
 
@@ -2590,7 +2592,7 @@ static int __add_samples(struct thread_data *td, struct timespec *parent_tv,
 		add_stat_sample(&stat[ddir], rate);
 
 		if (log) {
-			unsigned int bs = 0;
+			unsigned long long bs = 0;
 
 			if (td->o.min_bs[ddir] == td->o.max_bs[ddir])
 				bs = td->o.min_bs[ddir];

@@ -10,12 +10,14 @@
 enum fio_opt_type {
 	FIO_OPT_INVALID = 0,
 	FIO_OPT_STR,
+	FIO_OPT_STR_ULL,
 	FIO_OPT_STR_MULTI,
 	FIO_OPT_STR_VAL,
 	FIO_OPT_STR_VAL_TIME,
 	FIO_OPT_STR_STORE,
 	FIO_OPT_RANGE,
 	FIO_OPT_INT,
+	FIO_OPT_ULL,
 	FIO_OPT_BOOL,
 	FIO_OPT_FLOAT_LIST,
 	FIO_OPT_STR_SET,
@@ -29,7 +31,7 @@ enum fio_opt_type {
  */
 struct value_pair {
 	const char *ival;		/* string option */
-	unsigned int oval;		/* output value */
+	unsigned long long oval;/* output value */
 	const char *help;		/* help text for sub option */
 	int orval;			/* OR value */
 	void *cb;			/* sub-option callback */
@@ -52,7 +54,7 @@ struct fio_option {
 	unsigned int off4;
 	unsigned int off5;
 	unsigned int off6;
-	unsigned int maxval;		/* max and min value */
+	unsigned long long maxval;		/* max and min value */
 	int minval;
 	double maxfp;			/* max and min floating value */
 	double minfp;

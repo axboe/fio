@@ -531,7 +531,7 @@ static void put_job(struct thread_data *td)
 
 static int __setup_rate(struct thread_data *td, enum fio_ddir ddir)
 {
-	unsigned int bs = td->o.min_bs[ddir];
+	unsigned long long bs = td->o.min_bs[ddir];
 
 	assert(ddir_rw(ddir));
 
@@ -891,7 +891,7 @@ static int fixup_options(struct thread_data *td)
 	 * If size is set but less than the min block size, complain
 	 */
 	if (o->size && o->size < td_min_bs(td)) {
-		log_err("fio: size too small, must not be less than minimum block size: %llu < %u\n",
+		log_err("fio: size too small, must not be less than minimum block size: %llu < %llu\n",
 			(unsigned long long) o->size, td_min_bs(td));
 		ret |= 1;
 	}

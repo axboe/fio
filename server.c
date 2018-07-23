@@ -1985,7 +1985,7 @@ int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
 			s->time		= cpu_to_le64(s->time);
 			s->data.val	= cpu_to_le64(s->data.val);
 			s->__ddir	= cpu_to_le32(s->__ddir);
-			s->bs		= cpu_to_le32(s->bs);
+			s->bs		= cpu_to_le64(s->bs);
 
 			if (log->log_offset) {
 				struct io_sample_offset *so = (void *) s;

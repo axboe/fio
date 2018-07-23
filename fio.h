@@ -736,17 +736,17 @@ static inline bool should_check_rate(struct thread_data *td)
 	return ddir_rw_sum(td->bytes_done) != 0;
 }
 
-static inline unsigned int td_max_bs(struct thread_data *td)
+static inline unsigned long long td_max_bs(struct thread_data *td)
 {
-	unsigned int max_bs;
+	unsigned long long max_bs;
 
 	max_bs = max(td->o.max_bs[DDIR_READ], td->o.max_bs[DDIR_WRITE]);
 	return max(td->o.max_bs[DDIR_TRIM], max_bs);
 }
 
-static inline unsigned int td_min_bs(struct thread_data *td)
+static inline unsigned long long td_min_bs(struct thread_data *td)
 {
-	unsigned int min_bs;
+	unsigned long long min_bs;
 
 	min_bs = min(td->o.min_bs[DDIR_READ], td->o.min_bs[DDIR_WRITE]);
 	return min(td->o.min_bs[DDIR_TRIM], min_bs);

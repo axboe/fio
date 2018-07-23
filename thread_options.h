@@ -29,7 +29,7 @@ enum fio_memtype {
 #define ZONESPLIT_MAX	256
 
 struct bssplit {
-	uint32_t bs;
+	uint64_t bs;
 	uint32_t perc;
 };
 
@@ -82,10 +82,10 @@ struct thread_options {
 	unsigned long long start_offset;
 	unsigned long long start_offset_align;
 
-	unsigned int bs[DDIR_RWDIR_CNT];
-	unsigned int ba[DDIR_RWDIR_CNT];
-	unsigned int min_bs[DDIR_RWDIR_CNT];
-	unsigned int max_bs[DDIR_RWDIR_CNT];
+	unsigned long long bs[DDIR_RWDIR_CNT];
+	unsigned long long ba[DDIR_RWDIR_CNT];
+	unsigned long long min_bs[DDIR_RWDIR_CNT];
+	unsigned long long max_bs[DDIR_RWDIR_CNT];
 	struct bssplit *bssplit[DDIR_RWDIR_CNT];
 	unsigned int bssplit_nr[DDIR_RWDIR_CNT];
 
@@ -164,7 +164,8 @@ struct thread_options {
 	unsigned int perc_rand[DDIR_RWDIR_CNT];
 
 	unsigned int hugepage_size;
-	unsigned int rw_min_bs;
+	unsigned long long rw_min_bs;
+	unsigned int pad2;
 	unsigned int thinktime;
 	unsigned int thinktime_spin;
 	unsigned int thinktime_blocks;
@@ -363,10 +364,10 @@ struct thread_options_pack {
 	uint64_t start_offset;
 	uint64_t start_offset_align;
 
-	uint32_t bs[DDIR_RWDIR_CNT];
-	uint32_t ba[DDIR_RWDIR_CNT];
-	uint32_t min_bs[DDIR_RWDIR_CNT];
-	uint32_t max_bs[DDIR_RWDIR_CNT];
+	uint64_t bs[DDIR_RWDIR_CNT];
+	uint64_t ba[DDIR_RWDIR_CNT];
+	uint64_t min_bs[DDIR_RWDIR_CNT];
+	uint64_t max_bs[DDIR_RWDIR_CNT];
 	struct bssplit bssplit[DDIR_RWDIR_CNT][BSSPLIT_MAX];
 	uint32_t bssplit_nr[DDIR_RWDIR_CNT];
 
@@ -443,7 +444,8 @@ struct thread_options_pack {
 	uint32_t perc_rand[DDIR_RWDIR_CNT];
 
 	uint32_t hugepage_size;
-	uint32_t rw_min_bs;
+	uint64_t rw_min_bs;
+	uint32_t pad2;
 	uint32_t thinktime;
 	uint32_t thinktime_spin;
 	uint32_t thinktime_blocks;

@@ -107,7 +107,7 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 {
 	int new_layout = 0, unlink_file = 0, flags;
 	unsigned long long left;
-	unsigned int bs;
+	unsigned long long bs;
 	char *b = NULL;
 
 	if (read_only) {
@@ -260,7 +260,7 @@ static bool pre_read_file(struct thread_data *td, struct fio_file *f)
 {
 	int r, did_open = 0, old_runstate;
 	unsigned long long left;
-	unsigned int bs;
+	unsigned long long bs;
 	bool ret = true;
 	char *b;
 
@@ -900,7 +900,7 @@ int setup_files(struct thread_data *td)
 	unsigned int i, nr_fs_extra = 0;
 	int err = 0, need_extend;
 	int old_state;
-	const unsigned int bs = td_min_bs(td);
+	const unsigned long long bs = td_min_bs(td);
 	uint64_t fs = 0;
 
 	dprint(FD_FILE, "setup files\n");

@@ -34,7 +34,7 @@ static enum fio_q_status fio_gf_queue(struct thread_data *td, struct io_u *io_u)
 	struct gf_data *g = td->io_ops_data;
 	int ret = 0;
 
-	dprint(FD_FILE, "fio queue len %lu\n", io_u->xfer_buflen);
+	dprint(FD_FILE, "fio queue len %llu\n", io_u->xfer_buflen);
 	fio_ro_check(td, io_u);
 
 	if (io_u->ddir == DDIR_READ)
@@ -50,7 +50,7 @@ static enum fio_q_status fio_gf_queue(struct thread_data *td, struct io_u *io_u)
 		io_u->error = EINVAL;
 		return FIO_Q_COMPLETED;
 	}
-	dprint(FD_FILE, "fio len %lu ret %d\n", io_u->xfer_buflen, ret);
+	dprint(FD_FILE, "fio len %llu ret %d\n", io_u->xfer_buflen, ret);
 	if (io_u->file && ret >= 0 && ddir_rw(io_u->ddir))
 		LAST_POS(io_u->file) = io_u->offset + ret;
 

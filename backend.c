@@ -454,7 +454,7 @@ int io_queue_event(struct thread_data *td, struct io_u *io_u, int *ret,
 			*ret = -io_u->error;
 			clear_io_u(td, io_u);
 		} else if (io_u->resid) {
-			int bytes = io_u->xfer_buflen - io_u->resid;
+			long long bytes = io_u->xfer_buflen - io_u->resid;
 			struct fio_file *f = io_u->file;
 
 			if (bytes_issued)
@@ -583,7 +583,7 @@ static bool in_flight_overlap(struct io_u_queue *q, struct io_u *io_u)
 
 			if (x1 < y2 && y1 < x2) {
 				overlap = true;
-				dprint(FD_IO, "in-flight overlap: %llu/%lu, %llu/%lu\n",
+				dprint(FD_IO, "in-flight overlap: %llu/%llu, %llu/%llu\n",
 						x1, io_u->buflen,
 						y1, check_io_u->buflen);
 				break;
@@ -1033,7 +1033,7 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 			log_io_piece(td, io_u);
 
 		if (td->o.io_submit_mode == IO_MODE_OFFLOAD) {
-			const unsigned long blen = io_u->xfer_buflen;
+			const unsigned long long blen = io_u->xfer_buflen;
 			const enum fio_ddir __ddir = acct_ddir(io_u);
 
 			if (td->error)
@@ -1199,7 +1199,7 @@ static void cleanup_io_u(struct thread_data *td)
 static int init_io_u(struct thread_data *td)
 {
 	struct io_u *io_u;
-	unsigned int max_bs, min_write;
+	unsigned long long max_bs, min_write;
 	int cl_align, i, max_units;
 	int data_xfer = 1, err;
 	char *p;
@@ -1234,7 +1234,7 @@ static int init_io_u(struct thread_data *td)
 		td->orig_buffer_size += page_mask + td->o.mem_align;
 
 	if (td->o.mem_type == MEM_SHMHUGE || td->o.mem_type == MEM_MMAPHUGE) {
-		unsigned long bs;
+		unsigned long long bs;
 
 		bs = td->orig_buffer_size + td->o.hugepage_size - 1;
 		td->orig_buffer_size = bs & ~(td->o.hugepage_size - 1);

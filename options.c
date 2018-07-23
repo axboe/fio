@@ -52,7 +52,7 @@ static int bs_cmp(const void *p1, const void *p2)
 
 struct split {
 	unsigned int nr;
-	unsigned int val1[ZONESPLIT_MAX];
+	unsigned long long val1[ZONESPLIT_MAX];
 	unsigned long long val2[ZONESPLIT_MAX];
 };
 
@@ -119,7 +119,7 @@ static int bssplit_ddir(struct thread_options *o, enum fio_ddir ddir, char *str,
 			bool data)
 {
 	unsigned int i, perc, perc_missing;
-	unsigned int max_bs, min_bs;
+	unsigned long long max_bs, min_bs;
 	struct split split;
 
 	memset(&split, 0, sizeof(split));
@@ -2112,7 +2112,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.name	= "bs",
 		.lname	= "Block size",
 		.alias	= "blocksize",
-		.type	= FIO_OPT_INT,
+		.type	= FIO_OPT_ULL,
 		.off1	= offsetof(struct thread_options, bs[DDIR_READ]),
 		.off2	= offsetof(struct thread_options, bs[DDIR_WRITE]),
 		.off3	= offsetof(struct thread_options, bs[DDIR_TRIM]),
@@ -2129,7 +2129,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.name	= "ba",
 		.lname	= "Block size align",
 		.alias	= "blockalign",
-		.type	= FIO_OPT_INT,
+		.type	= FIO_OPT_ULL,
 		.off1	= offsetof(struct thread_options, ba[DDIR_READ]),
 		.off2	= offsetof(struct thread_options, ba[DDIR_WRITE]),
 		.off3	= offsetof(struct thread_options, ba[DDIR_TRIM]),
@@ -2163,7 +2163,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	{
 		.name	= "bssplit",
 		.lname	= "Block size split",
-		.type	= FIO_OPT_STR,
+		.type	= FIO_OPT_STR_ULL,
 		.cb	= str_bssplit_cb,
 		.off1	= offsetof(struct thread_options, bssplit),
 		.help	= "Set a specific mix of block sizes",

@@ -1357,8 +1357,8 @@ static void client_flush_hist_samples(FILE *f, int hist_coarseness, void *sample
 		entry = s->data.plat_entry;
 		io_u_plat = entry->io_u_plat;
 
-		fprintf(f, "%lu, %u, %u, ", (unsigned long) s->time,
-						io_sample_ddir(s), s->bs);
+		fprintf(f, "%lu, %u, %llu, ", (unsigned long) s->time,
+						io_sample_ddir(s), (unsigned long long) s->bs);
 		for (j = 0; j < FIO_IO_U_PLAT_NR - stride; j += stride) {
 			fprintf(f, "%llu, ", (unsigned long long)hist_sum(j, stride, io_u_plat, NULL));
 		}
@@ -1647,7 +1647,7 @@ static struct cmd_iolog_pdu *convert_iolog(struct fio_net_cmd *cmd,
 		s->time		= le64_to_cpu(s->time);
 		s->data.val	= le64_to_cpu(s->data.val);
 		s->__ddir	= le32_to_cpu(s->__ddir);
-		s->bs		= le32_to_cpu(s->bs);
+		s->bs		= le64_to_cpu(s->bs);
 
 		if (ret->log_offset) {
 			struct io_sample_offset *so = (void *) s;

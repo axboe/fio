@@ -35,7 +35,7 @@ void log_io_u(const struct thread_data *td, const struct io_u *io_u)
 	if (!td->o.write_iolog_file)
 		return;
 
-	fprintf(td->iolog_f, "%s %s %llu %lu\n", io_u->file->file_name,
+	fprintf(td->iolog_f, "%s %s %llu %llu\n", io_u->file->file_name,
 						io_ddir_name(io_u->ddir),
 						io_u->offset, io_u->buflen);
 }
@@ -161,7 +161,7 @@ int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 			io_u->buflen = ipo->len;
 			io_u->file = td->files[ipo->fileno];
 			get_file(io_u->file);
-			dprint(FD_IO, "iolog: get %llu/%lu/%s\n", io_u->offset,
+			dprint(FD_IO, "iolog: get %llu/%llu/%s\n", io_u->offset,
 						io_u->buflen, io_u->file->file_name);
 			if (ipo->delay)
 				iolog_delay(td, ipo->delay);
@@ -737,8 +737,8 @@ static void flush_hist_samples(FILE *f, int hist_coarseness, void *samples,
 		entry_before = flist_first_entry(&entry->list, struct io_u_plat_entry, list);
 		io_u_plat_before = entry_before->io_u_plat;
 
-		fprintf(f, "%lu, %u, %u, ", (unsigned long) s->time,
-						io_sample_ddir(s), s->bs);
+		fprintf(f, "%lu, %u, %llu, ", (unsigned long) s->time,
+						io_sample_ddir(s), (unsigned long long) s->bs);
 		for (j = 0; j < FIO_IO_U_PLAT_NR - stride; j += stride) {
 			fprintf(f, "%llu, ", (unsigned long long)
 			        hist_sum(j, stride, io_u_plat, io_u_plat_before));
@@ -770,17 +770,17 @@ void flush_samples(FILE *f, void *samples, uint64_t sample_size)
 		s = __get_sample(samples, log_offset, i);
 
 		if (!log_offset) {
-			fprintf(f, "%lu, %" PRId64 ", %u, %u\n",
+			fprintf(f, "%lu, %" PRId64 ", %u, %llu\n",
 					(unsigned long) s->time,
 					s->data.val,
-					io_sample_ddir(s), s->bs);
+					io_sample_ddir(s), (unsigned long long) s->bs);
 		} else {
 			struct io_sample_offset *so = (void *) s;
 
-			fprintf(f, "%lu, %" PRId64 ", %u, %u, %llu\n",
+			fprintf(f, "%lu, %" PRId64 ", %u, %llu, %llu\n",
 					(unsigned long) s->time,
 					s->data.val,
-					io_sample_ddir(s), s->bs,
+					io_sample_ddir(s), (unsigned long long) s->bs,
 					(unsigned long long) so->offset);
 		}
 	}

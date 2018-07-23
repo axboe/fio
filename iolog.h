@@ -42,7 +42,7 @@ struct io_sample {
 	uint64_t time;
 	union io_sample_data data;
 	uint32_t __ddir;
-	uint32_t bs;
+	uint64_t bs;
 };
 
 struct io_sample_offset {
