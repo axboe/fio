@@ -2158,7 +2158,7 @@ static void usage(const char *name)
 	printf("  --showcmd\t\tTurn a job file into command line options\n");
 	printf("  --eta=when\t\tWhen ETA estimate should be printed\n");
 	printf("            \t\tMay be \"always\", \"never\" or \"auto\"\n");
-	printf("  --eta-newline=time\tForce a new line for every 'time'");
+	printf("  --eta-newline=t\tForce a new line for every 't'");
 	printf(" period passed\n");
 	printf("  --status-interval=t\tForce full status dump every");
 	printf(" 't' period passed\n");
