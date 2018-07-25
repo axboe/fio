@@ -49,18 +49,18 @@ extern "C" {
 #define min(a, b) MIN(a, b) /* glue for linux kernel source */
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 
-#define ALIGN(x,a) __ALIGN_MASK(x,(typeof(x))(a)-1)
+#define ALIGN(x,a) __ALIGN_MASK(x,(__typeof__(x))(a)-1)
 #define __ALIGN_MASK(x,mask) (((x)+(mask))&~(mask))
 
 #define min_t(t,x,y) ({ \
-	typeof((x)) _x = (x); \
-	typeof((y)) _y = (y); \
+	__typeof__((x)) _x = (x); \
+	__typeof__((y)) _y = (y); \
 	(_x < _y) ? _x : _y; \
 })
 
 #define max_t(t,x,y) ({ \
-	typeof((x)) _x = (x); \
-	typeof((y)) _y = (y); \
+	__typeof__((x)) _x = (x); \
+	__typeof__((y)) _y = (y); \
 	(_x > _y) ? _x : _y; \
 })
 

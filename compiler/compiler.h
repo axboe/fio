@@ -28,7 +28,7 @@
  */
 #define typecheck(type,x) \
 ({	type __dummy; \
-	typeof(x) __dummy2; \
+	__typeof__(x) __dummy2; \
 	(void)(&__dummy == &__dummy2); \
 	1; \
 })
@@ -70,7 +70,7 @@
 
 #ifdef FIO_INTERNAL
 #define ARRAY_SIZE(x)    (sizeof((x)) / (sizeof((x)[0])))
-#define FIELD_SIZE(s, f) (sizeof(((typeof(s))0)->f))
+#define FIELD_SIZE(s, f) (sizeof(((__typeof__(s))0)->f))
 #endif
 
 #endif
