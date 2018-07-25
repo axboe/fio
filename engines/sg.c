@@ -1110,6 +1110,23 @@ static char *fio_sgio_errdetails(struct io_u *io_u)
 			snprintf(msgchunk, MAXMSGCHUNK, "SG Driver: %d bytes out of %d not transferred. ", hdr->resid, hdr->dxfer_len);
 			strlcat(msg, msgchunk, MAXERRDETAIL);
 		}
+		if (hdr->cmdp) {
+			strlcat(msg, "cdb:", MAXERRDETAIL);
+			for (i = 0; i < hdr->cmd_len; i++) {
+				snprintf(msgchunk, MAXMSGCHUNK, " %02x", hdr->cmdp[i]);
+				strlcat(msg, msgchunk, MAXERRDETAIL);
+			}
+			strlcat(msg, ". ", MAXERRDETAIL);
+			if (io_u->ddir == DDIR_TRIM) {
+				unsigned char *param_list = hdr->dxferp;
+				strlcat(msg, "dxferp:", MAXERRDETAIL);
+				for (i = 0; i < hdr->dxfer_len; i++) {
+					snprintf(msgchunk, MAXMSGCHUNK, " %02x", param_list[i]);
+					strlcat(msg, msgchunk, MAXERRDETAIL);
+				}
+				strlcat(msg, ". ", MAXERRDETAIL);
+			}
+		}
 	}
 
 	if (!(hdr->info & SG_INFO_CHECK) && !strlen(msg))
