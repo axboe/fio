@@ -207,6 +207,8 @@ static enum fio_q_status fio_libaio_queue(struct thread_data *td,
 			return FIO_Q_BUSY;
 
 		do_io_u_trim(td, io_u);
+		io_u_mark_submit(td, 1);
+		io_u_mark_complete(td, 1);
 		return FIO_Q_COMPLETED;
 	}
 
