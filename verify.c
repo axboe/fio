@@ -1517,7 +1517,7 @@ int paste_blockoff(char *buf, unsigned int len, void *priv)
 	struct io_u *io = priv;
 	unsigned long long off;
 
-	typecheck(typeof(off), io->offset);
+	typecheck(__typeof__(off), io->offset);
 	off = cpu_to_le64((uint64_t)io->offset);
 	len = min(len, (unsigned int)sizeof(off));
 	memcpy(buf, &off, len);
