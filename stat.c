@@ -1295,13 +1295,8 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 	json_object_add_value_int(root, "majf", ts->majf);
 	json_object_add_value_int(root, "minf", ts->minf);
 
-
-	/* Calc % distribution of IO depths, usecond, msecond latency */
+	/* Calc % distribution of IO depths */
 	stat_calc_dist(ts->io_u_map, ddir_rw_sum(ts->total_io_u), io_u_dist);
-	stat_calc_lat_n(ts, io_u_lat_n);
-	stat_calc_lat_u(ts, io_u_lat_u);
-	stat_calc_lat_m(ts, io_u_lat_m);
-
 	tmp = json_create_object();
 	json_object_add_value_object(root, "iodepth_level", tmp);
 	/* Only show fixed 7 I/O depth levels*/
@@ -1313,6 +1308,44 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 			snprintf(name, 20, ">=%d", 1 << i);
 		json_object_add_value_float(tmp, (const char *)name, io_u_dist[i]);
 	}
+
+	/* Calc % distribution of submit IO depths */
+	stat_calc_dist(ts->io_u_submit, ts->total_submit, io_u_dist);
+	tmp = json_create_object();
+	json_object_add_value_object(root, "iodepth_submit", tmp);
+	/* Only show fixed 7 I/O depth levels*/
+	for (i = 0; i < 7; i++) {
+		char name[20];
+		if (i == 0)
+			snprintf(name, 20, "0");
+		else if (i < 6)
+			snprintf(name, 20, "%d", 1 << (i+1));
+		else
+			snprintf(name, 20, ">=%d", 1 << i);
+		json_object_add_value_float(tmp, (const char *)name, io_u_dist[i]);
+	}
+
+	/* Calc % distribution of completion IO depths */
+	stat_calc_dist(ts->io_u_complete, ts->total_complete, io_u_dist);
+	tmp = json_create_object();
+	json_object_add_value_object(root, "iodepth_complete", tmp);
+	/* Only show fixed 7 I/O depth levels*/
+	for (i = 0; i < 7; i++) {
+		char name[20];
+		if (i == 0)
+			snprintf(name, 20, "0");
+		else if (i < 6)
+			snprintf(name, 20, "%d", 1 << (i+1));
+		else
+			snprintf(name, 20, ">=%d", 1 << i);
+		json_object_add_value_float(tmp, (const char *)name, io_u_dist[i]);
+	}
+
+	/* Calc % distribution of nsecond, usecond, msecond latency */
+	stat_calc_dist(ts->io_u_map, ddir_rw_sum(ts->total_io_u), io_u_dist);
+	stat_calc_lat_n(ts, io_u_lat_n);
+	stat_calc_lat_u(ts, io_u_lat_u);
+	stat_calc_lat_m(ts, io_u_lat_m);
 
 	/* Nanosecond latency */
 	tmp = json_create_object();
