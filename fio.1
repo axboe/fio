@@ -757,7 +757,7 @@ Sequential reads.
 Sequential writes.
 .TP
 .B trim
-Sequential trims (Linux block devices only).
+Sequential trims (Linux block devices and SCSI character devices only).
 .TP
 .B randread
 Random reads.
@@ -766,7 +766,7 @@ Random reads.
 Random writes.
 .TP
 .B randtrim
-Random trims (Linux block devices only).
+Random trims (Linux block devices and SCSI character devices only).
 .TP
 .B rw,readwrite
 Sequential mixed reads and writes.
@@ -1524,7 +1524,8 @@ SCSI generic sg v3 I/O. May either be synchronous using the SG_IO
 ioctl, or if the target is an sg character device we use
 \fBread\fR\|(2) and \fBwrite\fR\|(2) for asynchronous
 I/O. Requires \fBfilename\fR option to specify either block or
-character devices. The sg engine includes engine specific options.
+character devices. This engine supports trim operations. The
+sg engine includes engine specific options.
 .TP
 .B null
 Doesn't transfer any data, just pretends to. This is mainly used to

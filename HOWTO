@@ -991,13 +991,15 @@ I/O type
 		**write**
 				Sequential writes.
 		**trim**
-				Sequential trims (Linux block devices only).
+				Sequential trims (Linux block devices and SCSI
+				character devices only).
 		**randread**
 				Random reads.
 		**randwrite**
 				Random writes.
 		**randtrim**
-				Random trims (Linux block devices only).
+				Random trims (Linux block devices and SCSI
+				character devices only).
 		**rw,readwrite**
 				Sequential mixed reads and writes.
 		**randrw**
@@ -1748,7 +1750,7 @@ I/O engine
 			ioctl, or if the target is an sg character device we use
 			:manpage:`read(2)` and :manpage:`write(2)` for asynchronous
 			I/O. Requires :option:`filename` option to specify either block or
-			character devices.
+			character devices. This engine supports trim operations.
 			The sg engine includes engine specific options.
 
 		**null**
@@ -2082,6 +2084,7 @@ with the caveat that when used on the command line, they must come after the
 	the force unit access (fua) flag. Default is 0.
 
 .. option:: sg_write_mode=str : [sg]
+
 	Specify the type of write commands to issue. This option can take three values:
 
 	**write**
