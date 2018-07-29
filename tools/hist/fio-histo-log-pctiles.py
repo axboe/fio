@@ -311,7 +311,7 @@ def compute_percentiles_from_logs():
         default="6", type=int, 
         help="fio histogram buckets-per-group bits (default=6 means 64 buckets/group)")
     parser.add_argument("--percentiles", dest="pctiles_wanted", 
-        default="0 50 95 99 100", type=float, nargs='+',
+        default=[ 0., 50., 95., 99., 100.], type=float, nargs='+',
         help="fio histogram buckets-per-group bits (default=6 means 64 buckets/group)")
     parser.add_argument("--time-quantum", dest="time_quantum", 
         default="1", type=int,
@@ -319,20 +319,17 @@ def compute_percentiles_from_logs():
     parser.add_argument("--output-unit", dest="output_unit", 
         default="usec", type=str,
         help="Latency percentile output unit: msec|usec|nsec (default usec)")
-    parser.add_argument("file_list", nargs='+')
+    parser.add_argument("file_list", nargs='+', 
+        help='list of files, preceded by " -- " if necessary')
     args = parser.parse_args()
-    print(args)
 
-    if not args.bucket_groups:
-        # default changes based on fio version
-        if fio_version == 2:
-            args.bucket_groups = 19
-        else:
-            # default in fio 3.x
-            args.bucket_groups = 29
+    # default changes based on fio version
+    if args.fio_version == 2:
+        args.bucket_groups = 19
 
     # print parameters
 
+    print('fio version = %d' % args.fio_version)
     print('bucket groups = %d' % args.bucket_groups)
     print('bucket bits = %d' % args.bucket_bits)
     print('time quantum = %d sec' % args.time_quantum)
