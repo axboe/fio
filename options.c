@@ -1889,6 +1889,17 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			  },
 
 #endif
+#ifdef CONFIG_IME
+			  { .ival = "ime_psync",
+			    .help = "DDN's IME synchronous IO engine",
+			  },
+			  { .ival = "ime_psyncv",
+			    .help = "DDN's IME synchronous IO engine using iovecs",
+			  },
+			  { .ival = "ime_aio",
+			    .help = "DDN's IME asynchronous IO engine",
+			  },
+#endif
 #ifdef CONFIG_LINUX_DEVDAX
 			  { .ival = "dev-dax",
 			    .help = "DAX Device based IO engine",

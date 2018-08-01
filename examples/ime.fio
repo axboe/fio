@@ -1,0 +1,51 @@
+# This jobfile performs basic write+read operations using
+# DDN's Infinite Memory Engine.
+
+[global]
+
+# Use as much jobs as possible to maximize performance
+numjobs=8
+
+# The filename should be uniform so that "read" jobs can read what
+# the "write" jobs have written.
+filename_format=fio-test-ime.$jobnum.$filenum
+
+size=25g
+bs=128k
+
+# These settings are useful for the asynchronous ime_aio engine:
+# by setting the io depth to twice the size of a "batch", we can
+# queue IOs while other IOs are "in-flight".
+iodepth=32
+iodepth_batch=16
+iodepth_batch_complete=16
+
+[write-psync]
+stonewall
+rw=write
+ioengine=ime_psync
+
+[read-psync]
+stonewall
+rw=read
+ioengine=ime_psync
+
+[write-psyncv]
+stonewall
+rw=write
+ioengine=ime_psyncv
+
+[read-psyncv]
+stonewall
+rw=read
+ioengine=ime_psyncv
+
+[write-aio]
+stonewall
+rw=write
+ioengine=ime_aio
+
+[read-aio]
+stonewall
+rw=read
+ioengine=ime_aio
