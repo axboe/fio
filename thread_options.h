@@ -246,6 +246,7 @@ struct thread_options {
 	fio_fp64_t percentile_list[FIO_IO_U_LIST_MAX_LEN];
 
 	char *read_iolog_file;
+	bool read_iolog_chunked;
 	char *write_iolog_file;
 
 	unsigned int write_bw_log;
