@@ -105,7 +105,7 @@ static struct io_u *fio_solarisaio_event(struct thread_data *td, int event)
 	return sd->aio_events[event];
 }
 
-static int fio_solarisaio_queue(struct thread_data fio_unused *td,
+static enum fio_q_status fio_solarisaio_queue(struct thread_data fio_unused *td,
 			      struct io_u *io_u)
 {
 	struct solarisaio_data *sd = td->io_ops_data;
