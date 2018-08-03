@@ -2324,6 +2324,12 @@ I/O replay
 	replay, the file needs to be turned into a blkparse binary data file first
 	(``blkparse <device> -o /dev/null -d file_for_fio.bin``).
 
+.. option:: read_iolog_chunked=bool
+
+	Determines how iolog is read. If false(default) entire :option:`read_iolog`
+	will be read at once. If selected true, input from iolog will be read
+	gradually. Useful when iolog is very large, or it is generated.
+
 .. option:: replay_no_stall=bool
 
 	When replaying I/O with :option:`read_iolog` the default behavior is to
