@@ -141,6 +141,8 @@ static int ipo_special(struct thread_data *td, struct io_piece *ipo)
 	return 1;
 }
 
+static bool read_iolog2(struct thread_data *td);
+
 int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 {
 	struct io_piece *ipo;
@@ -148,7 +150,13 @@ int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 
 	while (!flist_empty(&td->io_log_list)) {
 		int ret;
-
+		if (td->o.read_iolog_chunked) {
+			if (td->io_log_checkmark == td->io_log_current) {
+				if (!read_iolog2(td))
+					return 1;
+			}
+			td->io_log_current--;
+		}
 		ipo = flist_first_entry(&td->io_log_list, struct io_piece, list);
 		flist_del(&ipo->list);
 		remove_trim_entry(td, ipo);
@@ -345,7 +353,7 @@ void write_iolog_close(struct thread_data *td)
  * Read version 2 iolog data. It is enhanced to include per-file logging,
  * syncs, etc.
  */
-static bool read_iolog2(struct thread_data *td, FILE *f)
+static bool read_iolog2(struct thread_data *td)
 {
 	unsigned long long offset;
 	unsigned int bytes;
@@ -353,9 +361,28 @@ static bool read_iolog2(struct thread_data *td, FILE *f)
 	char *rfname, *fname, *act;
 	char *str, *p;
 	enum fio_ddir rw;
+	int64_t items_to_fetch = 0;
 
-	free_release_files(td);
-
+	if (td->o.read_iolog_chunked) {
+		if (td->io_log_highmark == 0) {
+			items_to_fetch = 10;
+		} else {
+			struct timespec now;
+			uint64_t elapsed;
+			uint64_t for_1s;
+			fio_gettime(&now, NULL);
+			elapsed = ntime_since(&td->io_log_highmark_time, &now);
+			for_1s = (td->io_log_highmark - td->io_log_current) * 1000000000 / elapsed;
+			items_to_fetch = for_1s - td->io_log_current;
+			if (items_to_fetch < 0)
+				items_to_fetch = 0;
+			td->io_log_highmark = td->io_log_current + items_to_fetch;
+			td->io_log_checkmark = (td->io_log_highmark + 1) / 2;
+			fio_gettime(&td->io_log_highmark_time, NULL);
+			if (items_to_fetch == 0)
+				return true;
+		}
+	}
 	/*
 	 * Read in the read iolog and store it, reuse the infrastructure
 	 * for doing verifications.
@@ -365,7 +392,7 @@ static bool read_iolog2(struct thread_data *td, FILE *f)
 	act = malloc(256+16);
 
 	reads = writes = waits = 0;
-	while ((p = fgets(str, 4096, f)) != NULL) {
+	while ((p = fgets(str, 4096, td->io_log_rfile)) != NULL) {
 		struct io_piece *ipo;
 		int r;
 
@@ -468,16 +495,37 @@ static bool read_iolog2(struct thread_data *td, FILE *f)
 		}
 
 		queue_io_piece(td, ipo);
+
+		if (td->o.read_iolog_chunked) {
+			td->io_log_current++;
+			items_to_fetch--;
+			if (items_to_fetch == 0)
+				break;
+		}
 	}
 
 	free(str);
 	free(act);
 	free(rfname);
 
+	if (td->o.read_iolog_chunked) {
+		td->io_log_highmark = td->io_log_current;
+		td->io_log_checkmark = (td->io_log_highmark + 1) / 2;
+		fio_gettime(&td->io_log_highmark_time, NULL);
+	}
+
 	if (writes && read_only) {
 		log_err("fio: <%s> skips replay of %d writes due to"
 			" read-only\n", td->o.name, writes);
 		writes = 0;
+	}
+
+	if (td->o.read_iolog_chunked) {
+		if (td->io_log_current == 0) {
+			return false;
+		}
+		td->o.td_ddir = TD_DDIR_RW;
+		return true;
 	}
 
 	if (!reads && !writes && !waits)
@@ -544,19 +592,20 @@ static bool init_iolog_read(struct thread_data *td)
 		fclose(f);
 		return false;
 	}
-
+	td->io_log_rfile = f;
 	/*
 	 * version 2 of the iolog stores a specific string as the
 	 * first line, check for that
 	 */
-	if (!strncmp(iolog_ver2, buffer, strlen(iolog_ver2)))
-		ret = read_iolog2(td, f);
+	if (!strncmp(iolog_ver2, buffer, strlen(iolog_ver2))) {
+		free_release_files(td);
+		ret = read_iolog2(td);
+	}
 	else {
 		log_err("fio: iolog version 1 is no longer supported\n");
 		ret = false;
 	}
 
-	fclose(f);
 	return ret;
 }
 

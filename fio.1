@@ -2057,6 +2057,11 @@ to replay a workload captured by blktrace. See
 replay, the file needs to be turned into a blkparse binary data file first
 (`blkparse <device> \-o /dev/null \-d file_for_fio.bin').
 .TP
+.BI read_iolog_chunked \fR=\fPbool
+Determines how iolog is read. If false (default) entire \fBread_iolog\fR will
+be read at once. If selected true, input from iolog will be read gradually.
+Useful when iolog is very large, or it is generated.
+.TP
 .BI replay_no_stall \fR=\fPbool
 When replaying I/O with \fBread_iolog\fR the default behavior is to
 attempt to respect the timestamps within the log and replay them with the

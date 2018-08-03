@@ -399,6 +399,11 @@ struct thread_data {
 	 * For IO replaying
 	 */
 	struct flist_head io_log_list;
+	FILE *io_log_rfile;
+	unsigned int io_log_current;
+	unsigned int io_log_checkmark;
+	unsigned int io_log_highmark;
+	struct timespec io_log_highmark_time;
 
 	/*
 	 * For tracking/handling discards

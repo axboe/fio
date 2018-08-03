@@ -966,8 +966,10 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 		 * Break if we exceeded the bytes. The exception is time
 		 * based runs, but we still need to break out of the loop
 		 * for those to run verification, if enabled.
+		 * Jobs read from iolog do not use this stop condition.
 		 */
 		if (bytes_issued >= total_bytes &&
+		    !td->o.read_iolog_file &&
 		    (!td->o.time_based ||
 		     (td->o.time_based && td->o.verify != VERIFY_NONE)))
 			break;
@@ -1909,6 +1911,8 @@ err:
 	 */
 	if (o->write_iolog_file)
 		write_iolog_close(td);
+	if (td->io_log_rfile)
+		fclose(td->io_log_rfile);
 
 	td_set_runstate(td, TD_EXITED);
 
