@@ -20,6 +20,13 @@
 #include "blktrace.h"
 #include "pshared.h"
 
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <arpa/inet.h>
+#include <sys/stat.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+
 static int iolog_flush(struct io_log *log);
 
 static const char iolog_ver2[] = "fio version 2 iolog";
@@ -485,16 +492,46 @@ static bool read_iolog2(struct thread_data *td, FILE *f)
 	return true;
 }
 
+static bool is_socket(const char *path)
+{
+	struct stat buf;
+	int r = stat(path, &buf);
+	if (r == -1)
+		return false;
+
+	return S_ISSOCK(buf.st_mode);
+}
+
+static int open_socket(const char *path)
+{
+	int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	struct sockaddr_un addr;
+	if (fd < 0)
+		return fd;
+	addr.sun_family = AF_UNIX;
+	strncpy(addr.sun_path, path, sizeof(addr.sun_path));
+	if (connect(fd, (const struct sockaddr *)&addr, strlen(path) + sizeof(addr.sun_family)) == 0)
+		return fd;
+	else
+		close(fd);
+	return -1;
+}
+
 /*
  * open iolog, check version, and call appropriate parser
  */
 static bool init_iolog_read(struct thread_data *td)
 {
 	char buffer[256], *p;
-	FILE *f;
+	FILE *f = NULL;
 	bool ret;
-
-	f = fopen(td->o.read_iolog_file, "r");
+	if (is_socket(td->o.read_iolog_file)) {
+		int fd = open_socket(td->o.read_iolog_file);
+		if (fd >= 0) {
+			f = fdopen(fd, "r");
+		}
+	} else
+		f = fopen(td->o.read_iolog_file, "r");
 	if (!f) {
 		perror("fopen read iolog");
 		return false;
