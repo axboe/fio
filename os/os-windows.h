@@ -74,6 +74,10 @@ int rand_r(unsigned *);
 /* Winsock doesn't support MSG_WAIT */
 #define OS_MSG_DONTWAIT	0
 
+#ifndef S_ISSOCK
+#define S_ISSOCK(x) 0
+#endif
+
 #define SIGCONT	0
 #define SIGUSR1	1
 #define SIGUSR2 2
