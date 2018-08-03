@@ -349,6 +349,34 @@ void write_iolog_close(struct thread_data *td)
 	td->iolog_buf = NULL;
 }
 
+static int64_t iolog_items_to_fetch(struct thread_data *td)
+{
+	struct timespec now;
+	uint64_t elapsed;
+	uint64_t for_1s;
+	int64_t items_to_fetch;
+
+	if (!td->io_log_highmark)
+		return 10;
+
+
+	fio_gettime(&now, NULL);
+	elapsed = ntime_since(&td->io_log_highmark_time, &now);
+	if (elapsed) {
+		for_1s = (td->io_log_highmark - td->io_log_current) * 1000000000 / elapsed;
+		items_to_fetch = for_1s - td->io_log_current;
+		if (items_to_fetch < 0)
+			items_to_fetch = 0;
+	} else
+		items_to_fetch = 0;
+
+	td->io_log_highmark = td->io_log_current + items_to_fetch;
+	td->io_log_checkmark = (td->io_log_highmark + 1) / 2;
+	fio_gettime(&td->io_log_highmark_time, NULL);
+
+	return items_to_fetch;
+}
+
 /*
  * Read version 2 iolog data. It is enhanced to include per-file logging,
  * syncs, etc.
@@ -364,31 +392,11 @@ static bool read_iolog2(struct thread_data *td)
 	int64_t items_to_fetch = 0;
 
 	if (td->o.read_iolog_chunked) {
-		if (td->io_log_highmark == 0) {
-			items_to_fetch = 10;
-		} else {
-			struct timespec now;
-			uint64_t elapsed;
-			uint64_t for_1s;
-
-			fio_gettime(&now, NULL);
-			elapsed = ntime_since(&td->io_log_highmark_time, &now);
-			if (elapsed) {
-				for_1s = (td->io_log_highmark - td->io_log_current) * 1000000000 / elapsed;
-				items_to_fetch = for_1s - td->io_log_current;
-			} else
-				items_to_fetch = 0;
-			if (items_to_fetch < 0)
-				items_to_fetch = 0;
-
-			td->io_log_highmark = td->io_log_current + items_to_fetch;
-			td->io_log_checkmark = (td->io_log_highmark + 1) / 2;
-			fio_gettime(&td->io_log_highmark_time, NULL);
-
-			if (items_to_fetch == 0)
-				return true;
-		}
+		items_to_fetch = iolog_items_to_fetch(td);
+		if (!items_to_fetch)
+			return true;
 	}
+
 	/*
 	 * Read in the read iolog and store it, reuse the infrastructure
 	 * for doing verifications.
