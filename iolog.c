@@ -370,15 +370,21 @@ static bool read_iolog2(struct thread_data *td)
 			struct timespec now;
 			uint64_t elapsed;
 			uint64_t for_1s;
+
 			fio_gettime(&now, NULL);
 			elapsed = ntime_since(&td->io_log_highmark_time, &now);
-			for_1s = (td->io_log_highmark - td->io_log_current) * 1000000000 / elapsed;
-			items_to_fetch = for_1s - td->io_log_current;
+			if (elapsed) {
+				for_1s = (td->io_log_highmark - td->io_log_current) * 1000000000 / elapsed;
+				items_to_fetch = for_1s - td->io_log_current;
+			} else
+				items_to_fetch = 0;
 			if (items_to_fetch < 0)
 				items_to_fetch = 0;
+
 			td->io_log_highmark = td->io_log_current + items_to_fetch;
 			td->io_log_checkmark = (td->io_log_highmark + 1) / 2;
 			fio_gettime(&td->io_log_highmark_time, NULL);
+
 			if (items_to_fetch == 0)
 				return true;
 		}
