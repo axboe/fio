@@ -258,7 +258,7 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 	{
 		.name		= (char *) "status-interval",
 		.has_arg	= required_argument,
-		.val		= 'L',
+		.val		= 'L' | FIO_CLIENT_FLAG,
 	},
 	{
 		.name		= (char *) "trigger-file",
