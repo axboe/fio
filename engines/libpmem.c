@@ -424,10 +424,10 @@ static int fio_libpmem_prep(struct thread_data *td, struct io_u *io_u)
 	/*
 	 * It fits within existing mapping, use it
 	 */
-	dprint(FD_IO," io_u->offset %lld : fdd->libpmem_off %ld : "
-			"io_u->buflen %ld : fdd->libpmem_sz %ld\n",
-			io_u->offset, fdd->libpmem_off,
-			io_u->buflen, fdd->libpmem_sz);
+	dprint(FD_IO," io_u->offset %llu : fdd->libpmem_off %llu : "
+			"io_u->buflen %llu : fdd->libpmem_sz %llu\n",
+			io_u->offset, (unsigned long long) fdd->libpmem_off,
+			io_u->buflen, (unsigned long long) fdd->libpmem_sz);
 
 	if (io_u->offset >= fdd->libpmem_off &&
 	    (io_u->offset + io_u->buflen <=
