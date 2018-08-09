@@ -431,6 +431,14 @@ void td_io_commit(struct thread_data *td)
 
 int td_io_open_file(struct thread_data *td, struct fio_file *f)
 {
+	if (fio_file_closing(f)) {
+		/*
+		 * Open translates to undo closing.
+		 */
+		fio_file_clear_closing(f);
+		get_file(f);
+		return 0;
+	}
 	assert(!fio_file_open(f));
 	assert(f->fd == -1);
 	assert(td->io_ops->open_file);
@@ -539,11 +547,6 @@ int td_io_close_file(struct thread_data *td, struct fio_file *f)
 	 * mark as closing, do real close when last io on it has completed
 	 */
 	fio_file_set_closing(f);
-
-	disk_util_dec(f->du);
-
-	if (td->o.file_lock_mode != FILE_LOCK_NONE)
-		unlock_file_all(td, f);
 
 	return put_file(td, f);
 }

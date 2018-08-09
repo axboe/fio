@@ -1201,19 +1201,10 @@ static void cleanup_io_u(struct thread_data *td)
 static int init_io_u(struct thread_data *td)
 {
 	struct io_u *io_u;
-	unsigned long long max_bs, min_write;
 	int cl_align, i, max_units;
-	int data_xfer = 1, err;
-	char *p;
+	int err;
 
 	max_units = td->o.iodepth;
-	max_bs = td_max_bs(td);
-	min_write = td->o.min_bs[DDIR_WRITE];
-	td->orig_buffer_size = (unsigned long long) max_bs
-					* (unsigned long long) max_units;
-
-	if (td_ioengine_flagged(td, FIO_NOIO) || !(td_read(td) || td_write(td)))
-		data_xfer = 0;
 
 	err = 0;
 	err += !io_u_rinit(&td->io_u_requeues, td->o.iodepth);
@@ -1224,6 +1215,70 @@ static int init_io_u(struct thread_data *td)
 		log_err("fio: failed setting up IO queues\n");
 		return 1;
 	}
+
+	cl_align = os_cache_line_size();
+
+	for (i = 0; i < max_units; i++) {
+		void *ptr;
+
+		if (td->terminate)
+			return 1;
+
+		ptr = fio_memalign(cl_align, sizeof(*io_u));
+		if (!ptr) {
+			log_err("fio: unable to allocate aligned memory\n");
+			break;
+		}
+
+		io_u = ptr;
+		memset(io_u, 0, sizeof(*io_u));
+		INIT_FLIST_HEAD(&io_u->verify_list);
+		dprint(FD_MEM, "io_u alloc %p, index %u\n", io_u, i);
+
+		io_u->index = i;
+		io_u->flags = IO_U_F_FREE;
+		io_u_qpush(&td->io_u_freelist, io_u);
+
+		/*
+		 * io_u never leaves this stack, used for iteration of all
+		 * io_u buffers.
+		 */
+		io_u_qpush(&td->io_u_all, io_u);
+
+		if (td->io_ops->io_u_init) {
+			int ret = td->io_ops->io_u_init(td, io_u);
+
+			if (ret) {
+				log_err("fio: failed to init engine data: %d\n", ret);
+				return 1;
+			}
+		}
+	}
+
+	init_io_u_buffers(td);
+
+	if (init_file_completion_logging(td, max_units))
+		return 1;
+
+	return 0;
+}
+
+int init_io_u_buffers(struct thread_data *td)
+{
+	struct io_u *io_u;
+	unsigned long long max_bs, min_write;
+	int i, max_units;
+	int data_xfer = 1;
+	char *p;
+
+	max_units = td->o.iodepth;
+	max_bs = td_max_bs(td);
+	min_write = td->o.min_bs[DDIR_WRITE];
+	td->orig_buffer_size = (unsigned long long) max_bs
+					* (unsigned long long) max_units;
+
+	if (td_ioengine_flagged(td, FIO_NOIO) || !(td_read(td) || td_write(td)))
+		data_xfer = 0;
 
 	/*
 	 * if we may later need to do address alignment, then add any
@@ -1256,23 +1311,8 @@ static int init_io_u(struct thread_data *td)
 	else
 		p = td->orig_buffer;
 
-	cl_align = os_cache_line_size();
-
 	for (i = 0; i < max_units; i++) {
-		void *ptr;
-
-		if (td->terminate)
-			return 1;
-
-		ptr = fio_memalign(cl_align, sizeof(*io_u));
-		if (!ptr) {
-			log_err("fio: unable to allocate aligned memory\n");
-			break;
-		}
-
-		io_u = ptr;
-		memset(io_u, 0, sizeof(*io_u));
-		INIT_FLIST_HEAD(&io_u->verify_list);
+		io_u = td->io_u_all.io_us[i];
 		dprint(FD_MEM, "io_u alloc %p, index %u\n", io_u, i);
 
 		if (data_xfer) {
@@ -1289,31 +1329,8 @@ static int init_io_u(struct thread_data *td)
 				fill_verify_pattern(td, io_u->buf, max_bs, io_u, 0, 0);
 			}
 		}
-
-		io_u->index = i;
-		io_u->flags = IO_U_F_FREE;
-		io_u_qpush(&td->io_u_freelist, io_u);
-
-		/*
-		 * io_u never leaves this stack, used for iteration of all
-		 * io_u buffers.
-		 */
-		io_u_qpush(&td->io_u_all, io_u);
-
-		if (td->io_ops->io_u_init) {
-			int ret = td->io_ops->io_u_init(td, io_u);
-
-			if (ret) {
-				log_err("fio: failed to init engine data: %d\n", ret);
-				return 1;
-			}
-		}
-
 		p += max_bs;
 	}
-
-	if (init_file_completion_logging(td, max_units))
-		return 1;
 
 	return 0;
 }

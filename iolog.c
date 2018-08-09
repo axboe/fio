@@ -389,6 +389,7 @@ static bool read_iolog2(struct thread_data *td)
 	char *rfname, *fname, *act;
 	char *str, *p;
 	enum fio_ddir rw;
+	bool realloc = false;
 	int64_t items_to_fetch = 0;
 
 	if (td->o.read_iolog_chunked) {
@@ -501,8 +502,10 @@ static bool read_iolog2(struct thread_data *td)
 			ipo_bytes_align(td->o.replay_align, ipo);
 
 			ipo->len = bytes;
-			if (rw != DDIR_INVAL && bytes > td->o.max_bs[rw])
+			if (rw != DDIR_INVAL && bytes > td->o.max_bs[rw]) {
+				realloc = true;
 				td->o.max_bs[rw] = bytes;
+			}
 			ipo->fileno = fileno;
 			ipo->file_action = file_action;
 			td->o.size += bytes;
@@ -539,6 +542,12 @@ static bool read_iolog2(struct thread_data *td)
 			return false;
 		}
 		td->o.td_ddir = TD_DDIR_RW;
+		if (realloc && td->orig_buffer)
+		{
+			io_u_quiesce(td);
+			free_io_mem(td);
+			init_io_u_buffers(td);
+		}
 		return true;
 	}
 
