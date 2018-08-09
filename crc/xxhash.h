@@ -107,9 +107,9 @@ XXH32() :
 // Advanced Hash Functions
 //****************************
 
-void*         XXH32_init   (unsigned int seed);
+void*         XXH32_init   (uint32_t seed);
 XXH_errorcode XXH32_update (void* state, const void* input, int len);
-unsigned int  XXH32_digest (void* state);
+uint32_t XXH32_digest (void* state);
 
 /*
 These functions calculate the xxhash of an input provided in several small packets,
@@ -135,7 +135,7 @@ Memory will be freed by XXH32_digest().
 
 
 int           XXH32_sizeofState(void);
-XXH_errorcode XXH32_resetState(void* state, unsigned int seed);
+XXH_errorcode XXH32_resetState(void* state, uint32_t seed);
 
 #define       XXH32_SIZEOFSTATE 48
 typedef struct { long long ll[(XXH32_SIZEOFSTATE+(sizeof(long long)-1))/sizeof(long long)]; } XXH32_stateSpace_t;
@@ -151,7 +151,7 @@ use the structure XXH32_stateSpace_t, which will ensure that memory space is lar
 */
 
 
-unsigned int XXH32_intermediateDigest (void* state);
+uint32_t XXH32_intermediateDigest (void* state);
 /*
 This function does the same as XXH32_digest(), generating a 32-bit hash,
 but preserve memory context.
