@@ -518,6 +518,63 @@ bool calc_thread_status(struct jobs_eta *je, int force)
 	return true;
 }
 
+static int gen_eta_str(struct jobs_eta *je, char *p, size_t left,
+		       char **rate_str, char **iops_str)
+{
+	bool has_r = je->rate[DDIR_READ] || je->iops[DDIR_READ];
+	bool has_w = je->rate[DDIR_WRITE] || je->iops[DDIR_WRITE];
+	bool has_t = je->rate[DDIR_TRIM] || je->iops[DDIR_TRIM];
+	int l = 0;
+
+	if (!has_r && !has_w && !has_t)
+		return 0;
+
+	if (has_r) {
+		l += snprintf(p + l, left - l, "[r=%s", rate_str[DDIR_READ]);
+		if (!has_w)
+			l += snprintf(p + l, left - l, "]");
+	}
+	if (has_w) {
+		if (has_r)
+			l += snprintf(p + l, left - l, ",");
+		else
+			l += snprintf(p + l, left - l, "[");
+		l += snprintf(p + l, left - l, "w=%s", rate_str[DDIR_WRITE]);
+		if (!has_t)
+			l += snprintf(p + l, left - l, "]");
+	}
+	if (has_t) {
+		if (has_r || has_w)
+			l += snprintf(p + l, left - l, ",");
+		else if (!has_r && !has_w)
+			l += snprintf(p + l, left - l, "[");
+		l += snprintf(p + l, left - l, "t=%s]", rate_str[DDIR_TRIM]);
+	}
+	if (has_r) {
+		l += snprintf(p + l, left - l, "[r=%s", iops_str[DDIR_READ]);
+		if (!has_w)
+			l += snprintf(p + l, left - l, " IOPS]");
+	}
+	if (has_w) {
+		if (has_r)
+			l += snprintf(p + l, left - l, ",");
+		else
+			l += snprintf(p + l, left - l, "[");
+		l += snprintf(p + l, left - l, "w=%s", iops_str[DDIR_WRITE]);
+		if (!has_t)
+			l += snprintf(p + l, left - l, " IOPS]");
+	}
+	if (has_t) {
+		if (has_r || has_w)
+			l += snprintf(p + l, left - l, ",");
+		else if (!has_r && !has_w)
+			l += snprintf(p + l, left - l, "[");
+		l += snprintf(p + l, left - l, "t=%s IOPS]", iops_str[DDIR_TRIM]);
+	}
+
+	return l;
+}
+
 void display_thread_status(struct jobs_eta *je)
 {
 	static struct timespec disp_eta_new_line;
@@ -592,21 +649,10 @@ void display_thread_status(struct jobs_eta *je)
 		}
 
 		left = sizeof(output) - (p - output) - 1;
+		l = snprintf(p, left, ": [%s][%s]", je->run_str, perc_str);
+		l += gen_eta_str(je, p + l, left - l, rate_str, iops_str);
+		l += snprintf(p + l, left - l, "[eta %s]", eta_str);
 
-		if (je->rate[DDIR_TRIM] || je->iops[DDIR_TRIM])
-			l = snprintf(p, left,
-				": [%s][%s][r=%s,w=%s,t=%s][r=%s,w=%s,t=%s IOPS][eta %s]",
-				je->run_str, perc_str, rate_str[DDIR_READ],
-				rate_str[DDIR_WRITE], rate_str[DDIR_TRIM],
-				iops_str[DDIR_READ], iops_str[DDIR_WRITE],
-				iops_str[DDIR_TRIM], eta_str);
-		else
-			l = snprintf(p, left,
-				": [%s][%s][r=%s,w=%s][r=%s,w=%s IOPS][eta %s]",
-				je->run_str, perc_str,
-				rate_str[DDIR_READ], rate_str[DDIR_WRITE],
-				iops_str[DDIR_READ], iops_str[DDIR_WRITE],
-				eta_str);
 		/* If truncation occurred adjust l so p is on the null */
 		if (l >= left)
 			l = left - 1;
