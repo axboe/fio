@@ -724,15 +724,22 @@ false.
 .BI unlink_each_loop \fR=\fPbool
 Unlink job files after each iteration or loop. Default: false.
 .TP
-.BI zonesize \fR=\fPint
-Divide a file into zones of the specified size. See \fBzoneskip\fR.
+Fio supports strided data access. After having read \fBzonesize\fR bytes from an area that is \fBzonerange\fR bytes big, \fBzoneskip\fR bytes are skipped.
 .TP
 .BI zonerange \fR=\fPint
-Give size of an I/O zone. See \fBzoneskip\fR.
+Size of a single zone in which I/O occurs.
+.TP
+.BI zonesize \fR=\fPint
+Number of bytes to transfer before skipping \fBzoneskip\fR bytes. If this
+parameter is smaller than \fBzonerange\fR then only a fraction of each zone
+with \fBzonerange\fR bytes will be accessed.  If this parameter is larger than
+\fBzonerange\fR then each zone will be accessed multiple times before skipping
+to the next zone.
 .TP
 .BI zoneskip \fR=\fPint
-Skip the specified number of bytes when \fBzonesize\fR data has been
-read. The two zone options can be used to only do I/O on zones of a file.
+Skip the specified number of bytes after \fBzonesize\fR bytes of data have been
+transferred.
+
 .SS "I/O type"
 .TP
 .BI direct \fR=\fPbool
