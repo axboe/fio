@@ -168,7 +168,8 @@ Set this \fIcommand\fR as local trigger.
 Set this \fIcommand\fR as remote trigger.
 .TP
 .BI \-\-aux\-path \fR=\fPpath
-Use this \fIpath\fR for fio state generated files.
+Use the directory specified by \fIpath\fP for generated state files instead
+of the current working directory.
 .SH "JOB FILE FORMAT"
 Any parameters following the options will be assumed to be job files, unless
 they match a job file parameter. Multiple job files can be listed and each job
@@ -523,12 +524,15 @@ separating the names with a ':' character. These directories will be
 assigned equally distributed to job clones created by \fBnumjobs\fR as
 long as they are using generated filenames. If specific \fBfilename\fR(s) are
 set fio will use the first listed directory, and thereby matching the
-\fBfilename\fR semantic which generates a file each clone if not specified, but
-let all clones use the same if set.
+\fBfilename\fR semantic (which generates a file for each clone if not
+specified, but lets all clones use the same file if set).
 .RS
 .P
 See the \fBfilename\fR option for information on how to escape ':' and '\'
 characters within the directory path itself.
+.P
+Note: To control the directory fio will use for internal state files
+use \fB\-\-aux\-path\fR.
 .RE
 .TP
 .BI filename \fR=\fPstr

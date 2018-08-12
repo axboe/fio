@@ -283,7 +283,8 @@ Command line options
 
 .. option:: --aux-path=path
 
-	Use this `path` for fio state generated files.
+	Use the directory specified by `path` for generated state files instead
+	of the current working directory.
 
 Any parameters following the options will be assumed to be job files, unless
 they match a job file parameter. Multiple job files can be listed and each job
@@ -748,11 +749,14 @@ Target file/device
 	assigned equally distributed to job clones created by :option:`numjobs` as
 	long as they are using generated filenames. If specific `filename(s)` are
 	set fio will use the first listed directory, and thereby matching the
-	`filename` semantic which generates a file each clone if not specified, but
-	let all clones use the same if set.
+	`filename` semantic (which generates a file for each clone if not
+	specified, but lets all clones use the same file if set).
 
 	See the :option:`filename` option for information on how to escape "``:``" and
 	"``\``" characters within the directory path itself.
+
+	Note: To control the directory fio will use for internal state files
+	use :option:`--aux-path`.
 
 .. option:: filename=str
 
