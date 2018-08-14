@@ -1608,6 +1608,15 @@ I/O engine supporting direct access to Ceph Rados Block Devices
 (RBD) via librbd without the need to use the kernel rbd driver. This
 ioengine defines engine specific options.
 .TP
+.B http
+I/O engine supporting GET/PUT requests over HTTP(S) with libcurl to
+a WebDAV or S3 endpoint.  This ioengine defines engine specific options.
+
+This engine only supports direct IO of iodepth=1; you need to scale this
+via numjobs. blocksize defines the size of the objects to be created.
+
+TRIM is translated to object deletion.
+.TP
 .B gfapi
 Using GlusterFS libgfapi sync interface to direct access to
 GlusterFS volumes without having to go through FUSE. This ioengine
@@ -1809,6 +1818,37 @@ by default.
 .BI (rbd,rados)busy_poll \fR=\fPbool
 Poll store instead of waiting for completion. Usually this provides better
 throughput at cost of higher(up to 100%) CPU utilization.
+.TP
+.BI (http)http_host \fR=\fPstr
+Hostname to connect to. For S3, this could be the bucket name. Default
+is \fBlocalhost\fR
+.TP
+.BI (http)http_user \fR=\fPstr
+Username for HTTP authentication.
+.TP
+.BI (http)http_pass \fR=\fPstr
+Password for HTTP authentication.
+.TP
+.BI (http)https \fR=\fPbool
+Whether to use HTTPS instead of plain HTTP. Default is \fB0\fR.
+.TP
+.BI (http)http_s3 \fR=\fPbool
+Include S3 specific HTTP headers such as authenticating requests with
+AWS Signature Version 4. Default is \fB0\fR.
+.TP
+.BI (http)http_s3_region \fR=\fPstr
+The S3 region/zone to include in the request. Default is \fBus-east-1\fR.
+.TP
+.BI (http)http_s3_key \fR=\fPstr
+The S3 secret key.
+.TP
+.BI (http)http_s3_keyid \fR=\fPstr
+The S3 key/access id.
+.TP
+.BI (http)http_verbose \fR=\fPint
+Enable verbose requests from libcurl. Useful for debugging. 1 turns on
+verbose logging from libcurl, 2 additionally enables HTTP IO tracing.
+Default is \fB0\fR
 .TP
 .BI (mtd)skip_bad \fR=\fPbool
 Skip operations against known bad blocks.

@@ -1835,6 +1835,15 @@ I/O engine
 			(RBD) via librbd without the need to use the kernel rbd driver. This
 			ioengine defines engine specific options.
 
+		**http**
+			I/O engine supporting GET/PUT requests over HTTP(S) with libcurl to
+			a WebDAV or S3 endpoint.  This ioengine defines engine specific options.
+
+			This engine only supports direct IO of iodepth=1; you need to scale this
+			via numjobs. blocksize defines the size of the objects to be created.
+
+			TRIM is translated to object deletion.
+
 		**gfapi**
 			Using GlusterFS libgfapi sync interface to direct access to
 			GlusterFS volumes without having to go through FUSE.  This ioengine
@@ -2114,6 +2123,47 @@ with the caveat that when used on the command line, they must come after the
 		for each command but only the first 512 bytes will be used and
 		transferred to the device. The writefua option is ignored with this
 		selection.
+
+.. option:: http_host=str : [http]
+
+	Hostname to connect to. For S3, this could be the bucket hostname.
+	Default is **localhost**
+
+.. option:: http_user=str : [http]
+
+	Username for HTTP authentication.
+
+.. option:: http_pass=str : [http]
+
+	Password for HTTP authentication.
+
+.. option:: https=bool : [http]
+
+	Enable HTTPS instead of http. Default is **0**
+
+.. option:: http_s3=bool : [http]
+
+	Enable S3 specific HTTP headers such as authenticating requests
+	with AWS Signature Version 4. Default is **0**
+
+.. option:: http_s3_region=str : [http]
+
+	The S3 region/zone string.
+	Default is **us-east-1**
+
+.. option:: http_s3_key=str : [http]
+
+	The S3 secret key.
+
+.. option:: http_s3_keyid=str : [http]
+
+	The S3 key/access id.
+
+.. option:: http_verbose=int : [http]
+
+	Enable verbose requests from libcurl. Useful for debugging. 1
+	turns on verbose logging from libcurl, 2 additionally enables
+	HTTP IO tracing. Default is **0**
 
 I/O depth
 ~~~~~~~~~
