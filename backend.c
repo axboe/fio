@@ -47,6 +47,7 @@
 #include "rate-submit.h"
 #include "helper_thread.h"
 #include "pshared.h"
+#include "zone-dist.h"
 
 static struct fio_sem *startup_sem;
 static struct flist_head *cgroup_list;
@@ -1592,6 +1593,8 @@ static void *thread_main(void *data)
 		goto err;
 	}
 
+	td_zone_gen_index(td);
+
 	/*
 	 * Do this early, we don't want the compress threads to be limited
 	 * to the same CPUs as the IO workers. So do this before we set
@@ -1907,15 +1910,7 @@ err:
 	close_ioengine(td);
 	cgroup_shutdown(td, cgroup_mnt);
 	verify_free_state(td);
-
-	if (td->zone_state_index) {
-		int i;
-
-		for (i = 0; i < DDIR_RWDIR_CNT; i++)
-			free(td->zone_state_index[i]);
-		free(td->zone_state_index);
-		td->zone_state_index = NULL;
-	}
+	td_zone_free_index(td);
 
 	if (fio_option_is_set(o, cpumask)) {
 		ret = fio_cpuset_exit(&o->cpumask);

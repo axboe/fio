@@ -959,48 +959,6 @@ static int zone_split_ddir(struct thread_options *o, enum fio_ddir ddir,
 	return 0;
 }
 
-static void __td_zone_gen_index(struct thread_data *td, enum fio_ddir ddir)
-{
-	unsigned int i, j, sprev, aprev;
-	uint64_t sprev_sz;
-
-	td->zone_state_index[ddir] = malloc(sizeof(struct zone_split_index) * 100);
-
-	sprev_sz = sprev = aprev = 0;
-	for (i = 0; i < td->o.zone_split_nr[ddir]; i++) {
-		struct zone_split *zsp = &td->o.zone_split[ddir][i];
-
-		for (j = aprev; j < aprev + zsp->access_perc; j++) {
-			struct zone_split_index *zsi = &td->zone_state_index[ddir][j];
-
-			zsi->size_perc = sprev + zsp->size_perc;
-			zsi->size_perc_prev = sprev;
-
-			zsi->size = sprev_sz + zsp->size;
-			zsi->size_prev = sprev_sz;
-		}
-
-		aprev += zsp->access_perc;
-		sprev += zsp->size_perc;
-		sprev_sz += zsp->size;
-	}
-}
-
-/*
- * Generate state table for indexes, so we don't have to do it inline from
- * the hot IO path
- */
-static void td_zone_gen_index(struct thread_data *td)
-{
-	int i;
-
-	td->zone_state_index = malloc(DDIR_RWDIR_CNT *
-					sizeof(struct zone_split_index *));
-
-	for (i = 0; i < DDIR_RWDIR_CNT; i++)
-		__td_zone_gen_index(td, i);
-}
-
 static int parse_zoned_distribution(struct thread_data *td, const char *input,
 				    bool absolute)
 {
