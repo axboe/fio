@@ -1013,9 +1013,7 @@ static int parse_zoned_distribution(struct thread_data *td, const char *input,
 		return ret;
 	}
 
-	if (!ret)
-		td_zone_gen_index(td);
-	else {
+	if (ret) {
 		for (i = 0; i < DDIR_RWDIR_CNT; i++)
 			td->o.zone_split_nr[i] = 0;
 	}
