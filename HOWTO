@@ -952,18 +952,24 @@ Target file/device
 
 	Unlink job files after each iteration or loop.  Default: false.
 
-.. option:: zonesize=int
-
-	Divide a file into zones of the specified size. See :option:`zoneskip`.
-
 .. option:: zonerange=int
 
-	Give size of an I/O zone.  See :option:`zoneskip`.
+	Size of a single zone in which I/O occurs. See also :option:`zonesize`
+	and :option:`zoneskip`.
+
+.. option:: zonesize=int
+
+	Number of bytes to transfer before skipping :option:`zoneskip`
+	bytes. If this parameter is smaller than :option:`zonerange` then only
+	a fraction of each zone with :option:`zonerange` bytes will be
+	accessed.  If this parameter is larger than :option:`zonerange` then
+	each zone will be accessed multiple times before skipping
 
 .. option:: zoneskip=int
 
-	Skip the specified number of bytes when :option:`zonesize` data has been
-	read. The two zone options can be used to only do I/O on zones of a file.
+	Skip the specified number of bytes when :option:`zonesize` data have
+	been transferred. The three zone options can be used to do strided I/O
+	on a file.
 
 
 I/O type
