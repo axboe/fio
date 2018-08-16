@@ -4,8 +4,8 @@ rw=randwrite
 name=test
 direct=1
 http_verbose=0
-http_s3=0
-https=0
+http_mode=webdav
+https=off
 http_host=localhost
 filename_format=/dav/bucket.$jobnum
 group_reporting

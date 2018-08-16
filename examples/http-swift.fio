@@ -1,0 +1,32 @@
+[global]
+ioengine=http
+rw=randwrite
+name=test
+direct=1
+http_verbose=0
+http_mode=swift
+https=on
+# This is the hostname and port portion of the public access link for
+# the container:
+http_host=swift.srv.openstack.local:8081
+filename_format=/swift/v1/fio-test/bucket.$jobnum
+group_reporting
+bs=64k
+size=1M
+# Currently, fio cannot yet generate the Swift Auth-Token itself.
+# You need to set this prior to running fio via
+# eval $(openstack token issue -f shell --prefix SWIFT_) ; export SWIFT_id
+http_swift_auth_token=${SWIFT_id}
+
+[create]
+numjobs=1
+rw=randwrite
+io_size=256k
+verify=sha256
+
+# This will delete all created objects again
+[trim]
+stonewall
+numjobs=1
+rw=trim
+io_size=64k

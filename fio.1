@@ -1829,12 +1829,14 @@ Username for HTTP authentication.
 .BI (http)http_pass \fR=\fPstr
 Password for HTTP authentication.
 .TP
-.BI (http)https \fR=\fPbool
-Whether to use HTTPS instead of plain HTTP. Default is \fB0\fR.
+.BI (http)https \fR=\fPstr
+Whether to use HTTPS instead of plain HTTP. \fRon\fP enables HTTPS;
+\fRinsecure\fP will enable HTTPS, but disable SSL peer verification (use
+with caution!).  Default is \fBoff\fR.
 .TP
-.BI (http)http_s3 \fR=\fPbool
-Include S3 specific HTTP headers such as authenticating requests with
-AWS Signature Version 4. Default is \fB0\fR.
+.BI (http)http_mode \fR=\fPstr
+Which HTTP access mode to use: webdav, swift, or s3. Default is
+\fBwebdav\fR.
 .TP
 .BI (http)http_s3_region \fR=\fPstr
 The S3 region/zone to include in the request. Default is \fBus-east-1\fR.
@@ -1844,6 +1846,10 @@ The S3 secret key.
 .TP
 .BI (http)http_s3_keyid \fR=\fPstr
 The S3 key/access id.
+.TP
+.BI (http)http_swift_auth_token \fR=\fPstr
+The Swift auth token. See the example configuration file on how to
+retrieve this.
 .TP
 .BI (http)http_verbose \fR=\fPint
 Enable verbose requests from libcurl. Useful for debugging. 1 turns on
