@@ -1573,27 +1573,12 @@ print_config "IPv6 helpers" "$ipv6"
 if test "$http" != "yes" ; then
   http="no"
 fi
-cat > $TMPC << EOF
-#include <curl/curl.h>
-#include <openssl/hmac.h>
-
-int main(int argc, char **argv)
-{
-  CURL *curl;
-  HMAC_CTX *ctx;
-
-  curl = curl_easy_init();
-  curl_easy_cleanup(curl);
-
-  ctx = HMAC_CTX_new();
-  HMAC_CTX_reset(ctx);
-  HMAC_CTX_free(ctx);
-  return 0;
-}
-EOF
-if test "$disable_http" != "yes"  && compile_prog "" "-lcurl -lssl -lcrypto" "curl"; then
-  LIBS="-lcurl -lssl -lcrypto $LIBS"
-  http="yes"
+if test "$disable_http" != "yes"  && $(pkg-config --exists libcurl openssl); then
+  # http engine currently requires opaque HMAC_CTX present in openssl >= 1.1
+  if $(pkg-config --atleast-version=1.1.0 openssl); then
+    LIBS="$(pkg-config --libs libcurl openssl) $LIBS"
+    http="yes"
+  fi
 fi
 print_config "http engine" "$http"
 
