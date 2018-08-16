@@ -498,7 +498,7 @@ static int fio_http_setup(struct thread_data *td)
 {
 	struct http_data *http = NULL;
 	struct http_options *o = td->eo;
-	int r;
+
 	/* allocate engine specific structure to deal with libhttp. */
 	http = calloc(1, sizeof(*http));
 	if (!http) {
@@ -531,7 +531,7 @@ static int fio_http_setup(struct thread_data *td)
 	return 0;
 cleanup:
 	fio_http_cleanup(td);
-	return r;
+	return 1;
 }
 
 static int fio_http_open(struct thread_data *td, struct fio_file *f)
