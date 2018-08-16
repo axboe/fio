@@ -2137,14 +2137,16 @@ with the caveat that when used on the command line, they must come after the
 
 	Password for HTTP authentication.
 
-.. option:: https=bool : [http]
+.. option:: https=str : [http]
 
-	Enable HTTPS instead of http. Default is **0**
+	Enable HTTPS instead of http. *on* enables HTTPS; *insecure*
+	will enable HTTPS, but disable SSL peer verification (use with
+	caution!). Default is **off**
 
-.. option:: http_s3=bool : [http]
+.. option:: http_mode=str : [http]
 
-	Enable S3 specific HTTP headers such as authenticating requests
-	with AWS Signature Version 4. Default is **0**
+	Which HTTP access mode to use: *webdav*, *swift*, or *s3*.
+	Default is **webdav**
 
 .. option:: http_s3_region=str : [http]
 
@@ -2158,6 +2160,11 @@ with the caveat that when used on the command line, they must come after the
 .. option:: http_s3_keyid=str : [http]
 
 	The S3 key/access id.
+
+.. option:: http_swift_auth_token=str : [http]
+
+	The Swift auth token. See the example configuration file on how
+	to retrieve this.
 
 .. option:: http_verbose=int : [http]
 

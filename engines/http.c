@@ -25,9 +25,20 @@
 #include <curl/curl.h>
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
+#include <openssl/md5.h>
 #include "fio.h"
 #include "../optgroup.h"
 
+
+enum {
+	FIO_HTTP_WEBDAV	    = 0,
+	FIO_HTTP_S3	    = 1,
+	FIO_HTTP_SWIFT	    = 2,
+
+	FIO_HTTPS_OFF	    = 0,
+	FIO_HTTPS_ON	    = 1,
+	FIO_HTTPS_INSECURE  = 2,
+};
 
 struct http_data {
 	CURL *curl;
@@ -35,15 +46,16 @@ struct http_data {
 
 struct http_options {
 	void *pad;
-	int  https;
+	unsigned int https;
 	char *host;
 	char *user;
 	char *pass;
 	char *s3_key;
 	char *s3_keyid;
 	char *s3_region;
+	char *swift_auth_token;
 	int verbose;
-	int s3;
+	unsigned int mode;
 };
 
 struct http_curl_stream {
@@ -56,10 +68,24 @@ static struct fio_option options[] = {
 	{
 		.name     = "https",
 		.lname    = "https",
-		.type     = FIO_OPT_BOOL,
+		.type     = FIO_OPT_STR,
 		.help     = "Enable https",
 		.off1     = offsetof(struct http_options, https),
-		.def      = "0",
+		.def      = "off",
+		.posval = {
+			  { .ival = "off",
+			    .oval = FIO_HTTPS_OFF,
+			    .help = "No HTTPS",
+			  },
+			  { .ival = "on",
+			    .oval = FIO_HTTPS_ON,
+			    .help = "Enable HTTPS",
+			  },
+			  { .ival = "insecure",
+			    .oval = FIO_HTTPS_INSECURE,
+			    .help = "Enable HTTPS, disable peer verification",
+			  },
+		},
 		.category = FIO_OPT_C_ENGINE,
 		.group    = FIO_OPT_G_HTTP,
 	},
@@ -112,6 +138,16 @@ static struct fio_option options[] = {
 		.group    = FIO_OPT_G_HTTP,
 	},
 	{
+		.name     = "http_swift_auth_token",
+		.lname    = "Swift auth token",
+		.type     = FIO_OPT_STR_STORE,
+		.help     = "OpenStack Swift auth token",
+		.off1     = offsetof(struct http_options, swift_auth_token),
+		.def	  = "",
+		.category = FIO_OPT_C_ENGINE,
+		.group    = FIO_OPT_G_HTTP,
+	},
+	{
 		.name     = "http_s3_region",
 		.lname    = "S3 region",
 		.type     = FIO_OPT_STR_STORE,
@@ -122,18 +158,32 @@ static struct fio_option options[] = {
 		.group    = FIO_OPT_G_HTTP,
 	},
 	{
-		.name     = "http_s3",
-		.lname    = "S3 extensions",
-		.type     = FIO_OPT_BOOL,
-		.help     = "Whether to enable S3 specific headers",
-		.off1     = offsetof(struct http_options, s3),
-		.def	  = "0",
+		.name     = "http_mode",
+		.lname    = "Request mode to use",
+		.type     = FIO_OPT_STR,
+		.help     = "Whether to use WebDAV, Swift, or S3",
+		.off1     = offsetof(struct http_options, mode),
+		.def	  = "webdav",
+		.posval = {
+			  { .ival = "webdav",
+			    .oval = FIO_HTTP_WEBDAV,
+			    .help = "WebDAV server",
+			  },
+			  { .ival = "s3",
+			    .oval = FIO_HTTP_S3,
+			    .help = "S3 storage backend",
+			  },
+			  { .ival = "swift",
+			    .oval = FIO_HTTP_SWIFT,
+			    .help = "OpenStack Swift storage",
+			  },
+		},
 		.category = FIO_OPT_C_ENGINE,
 		.group    = FIO_OPT_G_HTTP,
 	},
 	{
 		.name     = "http_verbose",
-		.lname    = "CURL verbosity",
+		.lname    = "HTTP verbosity level",
 		.type     = FIO_OPT_INT,
 		.help     = "increase http engine verbosity",
 		.off1     = offsetof(struct http_options, verbose),
@@ -202,6 +252,14 @@ static char *_gen_hex_sha256(const char *p, size_t len)
 
 	SHA256((unsigned char*)p, len, hash);
 	return _conv_hex(hash, SHA256_DIGEST_LENGTH);
+}
+
+static char *_gen_hex_md5(const char *p, size_t len)
+{
+	unsigned char hash[MD5_DIGEST_LENGTH];
+
+	MD5((unsigned char*)p, len, hash);
+	return _conv_hex(hash, MD5_DIGEST_LENGTH);
 }
 
 static void _hmac(unsigned char *md, void *key, int key_len, char *data) {
@@ -349,6 +407,29 @@ static void _add_aws_auth_header(CURL *curl, struct curl_slist *slist, struct ht
 	free(signature);
 }
 
+static void _add_swift_header(CURL *curl, struct curl_slist *slist, struct http_options *o,
+		int op, const char *uri, char *buf, size_t len)
+{
+	char *dsha = NULL;
+	char s[512];
+
+	if (op == DDIR_WRITE) {
+		dsha = _gen_hex_md5(buf, len);
+	}
+	/* Surpress automatic Accept: header */
+	slist = curl_slist_append(slist, "Accept:");
+
+	snprintf(s, sizeof(s), "etag: %s", dsha);
+	slist = curl_slist_append(slist, s);
+
+	snprintf(s, sizeof(s), "x-auth-token: %s", o->swift_auth_token);
+	slist = curl_slist_append(slist, s);
+
+	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
+
+	free(dsha);
+}
+
 static void fio_http_cleanup(struct thread_data *td)
 {
 	struct http_data *http = td->io_ops_data;
@@ -413,16 +494,23 @@ static enum fio_q_status fio_http_queue(struct thread_data *td,
 
 	fio_ro_check(td, io_u);
 	memset(&_curl_stream, 0, sizeof(_curl_stream));
-	snprintf(object, sizeof(object), "%s_%llu_%llu", td->files[0]->file_name, io_u->offset, io_u->xfer_buflen);
-	snprintf(url, sizeof(url), "%s://%s%s", o->https ? "https" : "http", o->host, object);
+	snprintf(object, sizeof(object), "%s_%llu_%llu", td->files[0]->file_name,
+		io_u->offset, io_u->xfer_buflen);
+	if (o->https == FIO_HTTPS_OFF)
+		snprintf(url, sizeof(url), "http://%s%s", o->host, object);
+	else
+		snprintf(url, sizeof(url), "https://%s%s", o->host, object);
 	curl_easy_setopt(http->curl, CURLOPT_URL, url);
 	_curl_stream.buf = io_u->xfer_buf;
 	_curl_stream.max = io_u->xfer_buflen;
 	curl_easy_setopt(http->curl, CURLOPT_SEEKDATA, &_curl_stream);
 	curl_easy_setopt(http->curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)io_u->xfer_buflen);
 
-	if (o->s3)
+	if (o->mode == FIO_HTTP_S3)
 		_add_aws_auth_header(http->curl, slist, o, io_u->ddir, object,
+			io_u->xfer_buf, io_u->xfer_buflen);
+	else if (o->mode == FIO_HTTP_SWIFT)
+		_add_swift_header(http->curl, slist, o, io_u->ddir, object,
 			io_u->xfer_buf, io_u->xfer_buflen);
 
 	if (io_u->ddir == DDIR_WRITE) {
@@ -514,6 +602,10 @@ static int fio_http_setup(struct thread_data *td)
 	curl_easy_setopt(http->curl, CURLOPT_NOPROGRESS, 1L);
 	curl_easy_setopt(http->curl, CURLOPT_FOLLOWLOCATION, 1L);
 	curl_easy_setopt(http->curl, CURLOPT_PROTOCOLS, CURLPROTO_HTTP|CURLPROTO_HTTPS);
+	if (o->https == FIO_HTTPS_INSECURE) {
+		curl_easy_setopt(http->curl, CURLOPT_SSL_VERIFYPEER, 0L);
+		curl_easy_setopt(http->curl, CURLOPT_SSL_VERIFYHOST, 0L);
+	}
 	curl_easy_setopt(http->curl, CURLOPT_READFUNCTION, _http_read);
 	curl_easy_setopt(http->curl, CURLOPT_WRITEFUNCTION, _http_write);
 	curl_easy_setopt(http->curl, CURLOPT_SEEKFUNCTION, _http_seek);
