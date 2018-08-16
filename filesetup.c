@@ -1551,7 +1551,7 @@ int add_file(struct thread_data *td, const char *fname, int numjob, int inc)
 	int cur_files = td->files_index;
 	char file_name[PATH_MAX];
 	struct fio_file *f;
-	int len = 0;
+	int len = 0, chars;
 
 	dprint(FD_FILE, "add file %s\n", fname);
 
@@ -1559,7 +1559,9 @@ int add_file(struct thread_data *td, const char *fname, int numjob, int inc)
 		len = set_name_idx(file_name, PATH_MAX, td->o.directory, numjob,
 					td->o.unique_filename);
 
-	sprintf(file_name + len, "%s", fname);
+	assert (len < PATH_MAX);
+	chars = snprintf(file_name + len, PATH_MAX - len, "%s", fname);
+	assert(chars < PATH_MAX);
 
 	if (strchr(fname, FIO_OS_PATH_SEPARATOR) &&
 	    !(td->flags & TD_F_DIRS_CREATED) &&
@@ -1839,8 +1841,18 @@ void dup_files(struct thread_data *td, struct thread_data *org)
  */
 int get_fileno(struct thread_data *td, const char *fname)
 {
+	char file_name[PATH_MAX];
 	struct fio_file *f;
 	unsigned int i;
+
+	if (td->o.directory) {
+		int len, chars;
+		len = set_name_idx(file_name, PATH_MAX, td->o.directory, td->subjob_number, false);
+		assert (len < PATH_MAX);
+		chars = snprintf(file_name + len, PATH_MAX - len, "%s", fname);
+		assert(chars < PATH_MAX);
+		fname = file_name;
+	}
 
 	for_each_file(td, f, i)
 		if (!strcmp(f->file_name, fname))
