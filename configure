@@ -1574,11 +1574,11 @@ if test "$http" != "yes" ; then
   http="no"
 fi
 if test "$disable_http" != "yes"  && $(pkg-config --exists libcurl openssl); then
-  # http engine currently requires opaque HMAC_CTX present in openssl >= 1.1
   if $(pkg-config --atleast-version=1.1.0 openssl); then
-    LIBS="$(pkg-config --libs libcurl openssl) $LIBS"
-    http="yes"
+    output_sym "CONFIG_HAVE_OPAQUE_HMAC_CTX"
   fi
+  LIBS="$(pkg-config --libs libcurl openssl) $LIBS"
+  http="yes"
 fi
 print_config "http engine" "$http"
 

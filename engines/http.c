@@ -205,14 +205,25 @@ static char *_gen_hex_sha256(const char *p, size_t len)
 }
 
 static void _hmac(unsigned char *md, void *key, int key_len, char *data) {
+#ifndef CONFIG_HAVE_OPAQUE_HMAC_CTX
+	HMAC_CTX _ctx;
+#endif
 	HMAC_CTX *ctx;
 	unsigned int hmac_len;
 
+#ifdef CONFIG_HAVE_OPAQUE_HMAC_CTX
 	ctx = HMAC_CTX_new();
+#else
+	ctx = &_ctx;
+#endif
 	HMAC_Init_ex(ctx, key, key_len, EVP_sha256(), NULL);
 	HMAC_Update(ctx, (unsigned char*)data, strlen(data));
 	HMAC_Final(ctx, md, &hmac_len);
+#ifdef CONFIG_HAVE_OPAQUE_HMAC_CTX
 	HMAC_CTX_free(ctx);
+#else
+	HMAC_CTX_cleanup(ctx);
+#endif
 }
 
 static int _curl_trace(CURL *handle, curl_infotype type,
