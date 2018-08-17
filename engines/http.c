@@ -546,7 +546,7 @@ static enum fio_q_status fio_http_queue(struct thread_data *td,
 	} else if (io_u->ddir == DDIR_TRIM) {
 		curl_easy_setopt(http->curl, CURLOPT_HTTPGET, 1L);
 		curl_easy_setopt(http->curl, CURLOPT_CUSTOMREQUEST, "DELETE");
-		curl_easy_setopt(http->curl, CURLOPT_INFILESIZE_LARGE, 0);
+		curl_easy_setopt(http->curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)0);
 		curl_easy_setopt(http->curl, CURLOPT_READDATA, NULL);
 		curl_easy_setopt(http->curl, CURLOPT_WRITEDATA, NULL);
 		res = curl_easy_perform(http->curl);
@@ -608,7 +608,7 @@ static int fio_http_setup(struct thread_data *td)
 	}
 	curl_easy_setopt(http->curl, CURLOPT_READFUNCTION, _http_read);
 	curl_easy_setopt(http->curl, CURLOPT_WRITEFUNCTION, _http_write);
-	curl_easy_setopt(http->curl, CURLOPT_SEEKFUNCTION, _http_seek);
+	curl_easy_setopt(http->curl, CURLOPT_SEEKFUNCTION, &_http_seek);
 	if (o->user && o->pass) {
 		curl_easy_setopt(http->curl, CURLOPT_USERNAME, o->user);
 		curl_easy_setopt(http->curl, CURLOPT_PASSWORD, o->pass);
