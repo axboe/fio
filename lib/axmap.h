@@ -8,7 +8,6 @@ struct axmap;
 struct axmap *axmap_new(unsigned long nr_bits);
 void axmap_free(struct axmap *bm);
 
-void axmap_clear(struct axmap *axmap, uint64_t bit_nr);
 void axmap_set(struct axmap *axmap, uint64_t bit_nr);
 unsigned int axmap_set_nr(struct axmap *axmap, uint64_t bit_nr, unsigned int nr_bits);
 bool axmap_isset(struct axmap *axmap, uint64_t bit_nr);

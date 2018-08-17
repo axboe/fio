@@ -35,8 +35,6 @@
 #define BLOCKS_PER_UNIT		(1U << UNIT_SHIFT)
 #define BLOCKS_PER_UNIT_MASK	(BLOCKS_PER_UNIT - 1)
 
-#define firstfree_valid(b)	((b)->first_free != (uint64_t) -1)
-
 static const unsigned long bit_masks[] = {
 	0x0000000000000000, 0x0000000000000001, 0x0000000000000003, 0x0000000000000007,
 	0x000000000000000f, 0x000000000000001f, 0x000000000000003f, 0x000000000000007f,
@@ -68,7 +66,6 @@ struct axmap_level {
 struct axmap {
 	unsigned int nr_levels;
 	struct axmap_level *levels;
-	uint64_t first_free;
 	uint64_t nr_bits;
 };
 
@@ -89,8 +86,6 @@ void axmap_reset(struct axmap *axmap)
 
 		memset(al->map, 0, al->map_size * sizeof(unsigned long));
 	}
-
-	axmap->first_free = 0;
 }
 
 void axmap_free(struct axmap *axmap)
@@ -192,24 +187,6 @@ static bool axmap_handler_topdown(struct axmap *axmap, uint64_t bit_nr,
 	return false;
 }
 
-static bool axmap_clear_fn(struct axmap_level *al, unsigned long offset,
-			   unsigned int bit, void *unused)
-{
-	if (!(al->map[offset] & (1UL << bit)))
-		return true;
-
-	al->map[offset] &= ~(1UL << bit);
-	return false;
-}
-
-void axmap_clear(struct axmap *axmap, uint64_t bit_nr)
-{
-	axmap_handler(axmap, bit_nr, axmap_clear_fn, NULL);
-
-	if (bit_nr < axmap->first_free)
-		axmap->first_free = bit_nr;
-}
-
 struct axmap_set_data {
 	unsigned int nr_bits;
 	unsigned int set_bits;
@@ -261,10 +238,6 @@ static void __axmap_set(struct axmap *axmap, uint64_t bit_nr,
 			 struct axmap_set_data *data)
 {
 	unsigned int set_bits, nr_bits = data->nr_bits;
-
-	if (axmap->first_free >= bit_nr &&
-	    axmap->first_free < bit_nr + data->nr_bits)
-		axmap->first_free = -1ULL;
 
 	if (bit_nr > axmap->nr_bits)
 		return;
