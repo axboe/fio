@@ -1901,6 +1901,22 @@ I/O engine
 			mounted with DAX on a persistent memory device through the PMDK
 			libpmem library.
 
+		**ime_psync**
+			Synchronous read and write using DDN's Infinite Memory Engine (IME).
+			This engine is very basic and issues calls to IME whenever an IO is
+			queued.
+
+		**ime_psyncv**
+			Synchronous read and write using DDN's Infinite Memory Engine (IME).
+			This engine uses iovecs and will try to stack as much IOs as possible
+			(if the IOs are "contiguous" and the IO depth is not exceeded)
+			before issuing a call to IME.
+
+		**ime_aio**
+			Asynchronous read and write using DDN's Infinite Memory Engine (IME).
+			This engine will try to stack as much IOs as possible by creating
+			requests for IME. FIO will then decide when to commit these requests.
+
 I/O engine specific parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

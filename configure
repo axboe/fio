@@ -202,6 +202,8 @@ for opt do
   ;;
   --disable-native) disable_native="yes"
   ;;
+  --with-ime=*) ime_path="$optarg"
+  ;;
   --help)
     show_help="yes"
     ;;
@@ -233,6 +235,7 @@ if test "$show_help" = "yes" ; then
   echo "--disable-optimizations Don't enable compiler optimizations"
   echo "--enable-cuda           Enable GPUDirect RDMA support"
   echo "--disable-native        Don't build for native host"
+  echo "--with-ime=             Install path for DDN's Infinite Memory Engine"
   exit $exit_val
 fi
 
@@ -1963,6 +1966,29 @@ print_config "PMDK dev-dax engine" "$devdax"
 print_config "PMDK libpmem engine" "$pmem"
 
 ##########################################
+# Check whether we support DDN's IME
+if test "$libime" != "yes" ; then
+  libime="no"
+fi
+cat > $TMPC << EOF
+#include <ime_native.h>
+int main(int argc, char **argv)
+{
+  int rc;
+  ime_native_init();
+  rc = ime_native_finalize();
+  return 0;
+}
+EOF
+if compile_prog "-I${ime_path}/include" "-L${ime_path}/lib -lim_client" "libime"; then
+  libime="yes"
+  CFLAGS="-I${ime_path}/include $CFLAGS"
+  LDFLAGS="-Wl,-rpath ${ime_path}/lib -L${ime_path}/lib $LDFLAGS"
+  LIBS="-lim_client $LIBS"
+fi
+print_config "DDN's Infinite Memory Engine" "$libime"
+
+##########################################
 # Check if we have lex/yacc available
 yacc="no"
 yacc_is_bison="no"
@@ -2454,6 +2480,9 @@ if test "$devdax" = "yes" ; then
 fi
 if test "$pmem" = "yes" ; then
   output_sym "CONFIG_LIBPMEM"
+fi
+if test "$libime" = "yes" ; then
+  output_sym "CONFIG_IME"
 fi
 if test "$arith" = "yes" ; then
   output_sym "CONFIG_ARITHMETIC"
