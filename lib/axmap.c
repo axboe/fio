@@ -336,99 +336,119 @@ bool axmap_isset(struct axmap *axmap, uint64_t bit_nr)
 	return false;
 }
 
-static uint64_t axmap_find_first_free(struct axmap *axmap, unsigned int level,
-				       uint64_t index)
+/*
+ * Find the first free bit that is at least as large as bit_nr.  Return
+ * -1 if no free bit is found before the end of the map.
+ */
+static uint64_t axmap_find_first_free(struct axmap *axmap, uint64_t bit_nr)
 {
-	uint64_t ret = -1ULL;
-	unsigned long j;
 	int i;
+	unsigned long temp;
+	unsigned int bit;
+	uint64_t offset, base_index, index;
+	struct axmap_level *al;
 
-	/*
-	 * Start at the bottom, then converge towards first free bit at the top
-	 */
-	for (i = level; i >= 0; i--) {
-		struct axmap_level *al = &axmap->levels[i];
+	index = 0;
+	for (i = axmap->nr_levels - 1; i >= 0; i--) {
+		al = &axmap->levels[i];
 
-		if (index >= al->map_size)
-			goto err;
+		/* Shift previously calculated index for next level */
+		index <<= UNIT_SHIFT;
 
-		for (j = index; j < al->map_size; j++) {
-			if (al->map[j] == -1UL)
-				continue;
+		/*
+		 * Start from an index that's at least as large as the
+		 * originally passed in bit number.
+		 */
+		base_index = bit_nr >> (UNIT_SHIFT * i);
+		if (index < base_index)
+			index = base_index;
 
-			/*
-			 * First free bit here is our index into the first
-			 * free bit at the next higher level
-			 */
-			ret = index = (j << UNIT_SHIFT) + ffz(al->map[j]);
-			break;
+		/* Get the offset and bit for this level */
+		offset = index >> UNIT_SHIFT;
+		bit = index & BLOCKS_PER_UNIT_MASK;
+
+		/*
+		 * If the previous level had unused bits in its last
+		 * word, the offset could be bigger than the map at
+		 * this level. That means no free bits exist before the
+		 * end of the map, so return -1.
+		 */
+		if (offset >= al->map_size)
+			return -1ULL;
+
+		/* Check the first word starting with the specific bit */
+		temp = ~bit_masks[bit] & ~al->map[offset];
+		if (temp)
+			goto found;
+
+		/*
+		 * No free bit in the first word, so iterate
+		 * looking for a word with one or more free bits.
+		 */
+		for (offset++; offset < al->map_size; offset++) {
+			temp = ~al->map[offset];
+			if (temp)
+				goto found;
 		}
+
+		/* Did not find a free bit */
+		return -1ULL;
+
+found:
+		/* Compute the index of the free bit just found */
+		index = (offset << UNIT_SHIFT) + ffz(~temp);
 	}
 
-	if (ret < axmap->nr_bits)
-		return ret;
+	/* If found an unused bit in the last word of level 0, return -1 */
+	if (index >= axmap->nr_bits)
+		return -1ULL;
 
-err:
-	return (uint64_t) -1ULL;
-}
-
-static uint64_t axmap_first_free(struct axmap *axmap)
-{
-	if (!firstfree_valid(axmap))
-		axmap->first_free = axmap_find_first_free(axmap, axmap->nr_levels - 1, 0);
-
-	return axmap->first_free;
-}
-
-struct axmap_next_free_data {
-	unsigned int level;
-	unsigned long offset;
-	uint64_t bit;
-};
-
-static bool axmap_next_free_fn(struct axmap_level *al, unsigned long offset,
-			       unsigned int bit, void *__data)
-{
-	struct axmap_next_free_data *data = __data;
-	uint64_t mask = ~bit_masks[(data->bit + 1) & BLOCKS_PER_UNIT_MASK];
-
-	if (!(mask & ~al->map[offset]))
-		return false;
-
-	if (al->map[offset] != -1UL) {
-		data->level = al->level;
-		data->offset = offset;
-		return true;
-	}
-
-	data->bit = (data->bit + BLOCKS_PER_UNIT - 1) / BLOCKS_PER_UNIT;
-	return false;
+	return index;
 }
 
 /*
  * 'bit_nr' is already set. Find the next free bit after this one.
+ * Return -1 if no free bits found.
  */
 uint64_t axmap_next_free(struct axmap *axmap, uint64_t bit_nr)
 {
-	struct axmap_next_free_data data = { .level = -1U, .bit = bit_nr, };
 	uint64_t ret;
+	uint64_t next_bit = bit_nr + 1;
+	unsigned long temp;
+	uint64_t offset;
+	unsigned int bit;
 
-	if (firstfree_valid(axmap) && bit_nr < axmap->first_free)
-		return axmap->first_free;
+	if (bit_nr >= axmap->nr_bits)
+		return -1ULL;
 
-	if (!axmap_handler(axmap, bit_nr, axmap_next_free_fn, &data))
-		return axmap_first_free(axmap);
+	/* If at the end of the map, wrap-around */
+	if (next_bit == axmap->nr_bits)
+		next_bit = 0;
 
-	assert(data.level != -1U);
+	offset = next_bit >> UNIT_SHIFT;
+	bit = next_bit & BLOCKS_PER_UNIT_MASK;
 
 	/*
-	 * In the rare case that the map is unaligned, we might end up
-	 * finding an offset that's beyond the valid end. For that case,
-	 * find the first free one, the map is practically full.
+	 * As an optimization, do a quick check for a free bit
+	 * in the current word at level 0. If not found, do
+	 * a topdown search.
 	 */
-	ret = axmap_find_first_free(axmap, data.level, data.offset);
-	if (ret != -1ULL)
-		return ret;
+	temp = ~bit_masks[bit] & ~axmap->levels[0].map[offset];
+	if (temp) {
+		ret = (offset << UNIT_SHIFT) + ffz(~temp);
 
-	return axmap_first_free(axmap);
+		/* Might have found an unused bit at level 0 */
+		if (ret >= axmap->nr_bits)
+			ret = -1ULL;
+	} else
+		ret = axmap_find_first_free(axmap, next_bit);
+
+	/*
+	 * If there are no free bits starting at next_bit and going
+	 * to the end of the map, wrap around by searching again
+	 * starting at bit 0.
+	 */
+	if (ret == -1ULL && next_bit != 0)
+		ret = axmap_find_first_free(axmap, 0);
+	return ret;
 }
