@@ -111,17 +111,20 @@ static void fio_ime_queue_incr (struct ime_data *ime_d)
 	ime_d->head = (ime_d->head + 1) % ime_d->depth;
 	ime_d->queued++;
 }
+
 static void fio_ime_queue_red (struct ime_data *ime_d)
 {
 	ime_d->tail = (ime_d->tail + 1) % ime_d->depth;
 	ime_d->queued--;
 	ime_d->events--;
 }
+
 static void fio_ime_queue_commit (struct ime_data *ime_d, int iovcnt)
 {
 	ime_d->cur_commit = (ime_d->cur_commit + iovcnt) % ime_d->depth;
 	ime_d->events += iovcnt;
 }
+
 static void fio_ime_queue_reset (struct ime_data *ime_d)
 {
 	ime_d->head = 0;
@@ -131,7 +134,6 @@ static void fio_ime_queue_reset (struct ime_data *ime_d)
 	ime_d->events = 0;
 }
 
-
 /**************************************************************
  *                   General IME functions
  *             (needed for both sync and async IOs)
@@ -140,10 +142,13 @@ static void fio_ime_queue_reset (struct ime_data *ime_d)
 static char *fio_set_ime_filename(char* filename)
 {
 	static __thread char ime_filename[PATH_MAX];
-	if (snprintf(ime_filename, PATH_MAX, "%s%s", DEFAULT_IME_FILE_PREFIX, filename) < PATH_MAX)
+	int ret;
+
+	ret = snprintf(ime_filename, PATH_MAX, "%s%s", DEFAULT_IME_FILE_PREFIX, filename);
+	if (ret < PATH_MAX)
 		return ime_filename;
-	else
-		return NULL;
+
+	return NULL;
 }
 
 static int fio_ime_get_file_size(struct thread_data *td, struct fio_file *f)
@@ -200,11 +205,9 @@ static int fio_ime_open_file(struct thread_data *td, struct fio_file *f)
 
 		if (td->o.allow_create)
 			flags |= O_CREAT;
-	}
-	else if (td_read(td)) {
+	} else if (td_read(td)) {
 		flags |= O_RDONLY;
-	}
-	else {
+	} else {
 		/* We should never go here. */
 		td_verror(td, EINVAL, "Unsopported open mode");
 		return 1;
@@ -247,8 +250,7 @@ static int fio_ime_open_file(struct thread_data *td, struct fio_file *f)
 		}
 		if (f->real_file_size < desired_fs)
 			f->real_file_size = desired_fs;
-	}
-	else if (td_read(td) && f->real_file_size < desired_fs) {
+	} else if (td_read(td) && f->real_file_size < desired_fs) {
 		ime_native_close(f->fd);
 		log_err("error: can't read %lu bytes from file with "
 						"%lu bytes\n", desired_fs, f->real_file_size);
@@ -273,19 +275,20 @@ static int fio_ime_close_file(struct thread_data fio_unused *td, struct fio_file
 
 static int fio_ime_unlink_file(struct thread_data *td, struct fio_file *f)
 {
+	char *ime_filename = fio_set_ime_filename(f->file_name);
 	int ret;
 
-	char *ime_filename = fio_set_ime_filename(f->file_name);
 	if (ime_filename == NULL)
 		return 1;
-	ret = unlink(ime_filename);
 
+	ret = unlink(ime_filename);
 	return ret < 0 ? errno : 0;
 }
 
 static struct io_u *fio_ime_event(struct thread_data *td, int event)
 {
 	struct ime_data *ime_d = td->io_ops_data;
+
 	return ime_d->event_io_us[event];
 }
 
@@ -453,8 +456,7 @@ static enum fio_q_status fio_ime_psyncv_queue(struct thread_data *td,
 			ime_d->queued, ime_d->events);
 		fio_ime_psyncv_enqueue(ime_d, io_u);
 		return FIO_Q_QUEUED;
-	}
-	else if (io_u->ddir == DDIR_SYNC) {
+	} else if (io_u->ddir == DDIR_SYNC) {
 		if (ime_native_fsync(io_u->file->fd) < 0) {
 			io_u->error = errno;
 			td_verror(td, io_u->error, "fsync");
@@ -679,8 +681,7 @@ static enum fio_q_status fio_ime_aio_queue(struct thread_data *td,
 
 		fio_ime_aio_enqueue(ime_d, io_u);
 		return FIO_Q_QUEUED;
-	}
-	else if (io_u->ddir == DDIR_SYNC) {
+	} else if (io_u->ddir == DDIR_SYNC) {
 		if (ime_native_fsync(io_u->file->fd) < 0) {
 			io_u->error = errno;
 			td_verror(td, io_u->error, "fsync");
@@ -762,9 +763,8 @@ static int fio_ime_aio_getevents(struct thread_data *td, unsigned int min,
 			}
 		} else {
 			pthread_mutex_lock(&ioreq->status_mutex);
-			while (ioreq->status == FIO_IME_IN_PROGRESS) {
+			while (ioreq->status == FIO_IME_IN_PROGRESS)
 				pthread_cond_wait(&ioreq->cond_endio, &ioreq->status_mutex);
-			}
 			pthread_mutex_unlock(&ioreq->status_mutex);
 		}
 
@@ -893,7 +893,7 @@ static void fio_exit fio_ime_unregister(void)
 	unregister_ioengine(&ioengine_prw);
 	unregister_ioengine(&ioengine_pvrw);
 	unregister_ioengine(&ioengine_aio);
-	if (fio_ime_is_initialized && ime_native_finalize() < 0) {
+
+	if (fio_ime_is_initialized && ime_native_finalize() < 0)
 		log_err("Warning: IME did not finalize properly\n");
-	}
 }
