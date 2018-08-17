@@ -447,7 +447,7 @@ static bool read_iolog2(struct thread_data *td)
 					dprint(FD_FILE, "iolog: ignoring"
 						" re-add of file %s\n", fname);
 				} else {
-					fileno = add_file(td, fname, 0, 1);
+					fileno = add_file(td, fname, td->subjob_number, 1);
 					file_action = FIO_LOG_ADD_FILE;
 				}
 				continue;
@@ -596,13 +596,17 @@ static bool init_iolog_read(struct thread_data *td)
 	char buffer[256], *p;
 	FILE *f = NULL;
 	bool ret;
-	if (is_socket(td->o.read_iolog_file)) {
-		int fd = open_socket(td->o.read_iolog_file);
+	char* fname = get_name_by_idx(td->o.read_iolog_file, td->subjob_number);
+	dprint(FD_IO, "iolog: name=%s\n", fname);
+
+	if (is_socket(fname)) {
+		int fd = open_socket(fname);
 		if (fd >= 0) {
 			f = fdopen(fd, "r");
 		}
 	} else
-		f = fopen(td->o.read_iolog_file, "r");
+		f = fopen(fname, "r");
+	free(fname);
 	if (!f) {
 		perror("fopen read iolog");
 		return false;
