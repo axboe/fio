@@ -1240,6 +1240,23 @@ int set_name_idx(char *target, size_t tlen, char *input, int index,
 	return len;
 }
 
+char* get_name_by_idx(char *input, int index)
+{
+	unsigned int cur_idx;
+	char *fname, *str, *p;
+
+	p = str = strdup(input);
+
+	index %= get_max_name_idx(input);
+	for (cur_idx = 0; cur_idx <= index; cur_idx++)
+		fname = get_next_name(&str);
+
+	fname = strdup(fname);
+	free(p);
+
+	return fname;
+}
+
 static int str_filename_cb(void *data, const char *input)
 {
 	struct thread_data *td = cb_data_to_td(data);
