@@ -75,7 +75,7 @@ struct io_u {
 
 	struct io_piece *ipo;
 
-	unsigned int resid;
+	unsigned long long resid;
 	unsigned int error;
 
 	/*
