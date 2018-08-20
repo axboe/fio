@@ -2409,6 +2409,10 @@ I/O replay
 	:manpage:`blktrace(8)` for how to capture such logging data. For blktrace
 	replay, the file needs to be turned into a blkparse binary data file first
 	(``blkparse <device> -o /dev/null -d file_for_fio.bin``).
+	You can specify a number of files by separating the names with a ':'
+	character. See the :option:`filename` option for information on how to
+	escape ':' and '\' characters within the file names. These files will
+	be sequentially assigned to job clones created by :option:`numjobs`.
 
 .. option:: read_iolog_chunked=bool
 
