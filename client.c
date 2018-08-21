@@ -1058,6 +1058,9 @@ static void handle_ts(struct fio_client *client, struct fio_net_cmd *cmd)
 	struct flist_head *opt_list = NULL;
 	struct json_object *tsobj;
 
+	if (output_format & FIO_OUTPUT_TERSE)
+		return;
+
 	if (client->opt_lists && p->ts.thread_number <= client->jobs)
 		opt_list = &client->opt_lists[p->ts.thread_number - 1];
 
@@ -1093,6 +1096,9 @@ static void handle_ts(struct fio_client *client, struct fio_net_cmd *cmd)
 static void handle_gs(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 	struct group_run_stats *gs = (struct group_run_stats *) cmd->payload;
+
+	if (output_format & FIO_OUTPUT_TERSE)
+		return;
 
 	if (output_format & FIO_OUTPUT_NORMAL)
 		show_group_stats(gs, NULL);
@@ -1140,7 +1146,7 @@ static void handle_text(struct fio_client *client, struct fio_net_cmd *cmd)
 
 	name = client->name ? client->name : client->hostname;
 
-	if (!client->skip_newline)
+	if (!client->skip_newline && !(output_format & FIO_OUTPUT_TERSE))
 		fprintf(f_out, "<%s> ", name);
 	ret = fwrite(buf, pdu->buf_len, 1, f_out);
 	fflush(f_out);
@@ -1184,6 +1190,9 @@ static void handle_du(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 	struct cmd_du_pdu *du = (struct cmd_du_pdu *) cmd->payload;
 
+	if (output_format & FIO_OUTPUT_TERSE)
+		return;
+
 	if (!client->disk_stats_shown) {
 		client->disk_stats_shown = true;
 		log_info("\nDisk stats (read/write):\n");
@@ -1195,8 +1204,6 @@ static void handle_du(struct fio_client *client, struct fio_net_cmd *cmd)
 		duobj = json_array_last_value_object(du_array);
 		json_object_add_client_info(duobj, client);
 	}
-	if (output_format & FIO_OUTPUT_TERSE)
-		print_disk_util(&du->dus, &du->agg, 1, NULL);
 	if (output_format & FIO_OUTPUT_NORMAL)
 		print_disk_util(&du->dus, &du->agg, 0, NULL);
 }
@@ -1455,6 +1462,9 @@ static void handle_probe(struct fio_client *client, struct fio_net_cmd *cmd)
 	struct cmd_probe_reply_pdu *probe = (struct cmd_probe_reply_pdu *) cmd->payload;
 	const char *os, *arch;
 	char bit[16];
+
+	if (output_format & FIO_OUTPUT_TERSE)
+		return;
 
 	os = fio_get_os_string(probe->os);
 	if (!os)
