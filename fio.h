@@ -522,6 +522,7 @@ extern int fio_clock_source_set;
 extern int warnings_fatal;
 extern int terse_version;
 extern int is_backend;
+extern int is_local_backend;
 extern int nr_clients;
 extern int log_syslog;
 extern int status_interval;
@@ -533,6 +534,13 @@ extern long long trigger_timeout;
 extern char *aux_path;
 
 extern struct thread_data *threads;
+
+static inline bool is_running_backend(void)
+{
+	if (is_backend || is_local_backend)
+		return true;
+	return false;
+}
 
 extern bool eta_time_within_slack(unsigned int time);
 

@@ -1205,7 +1205,7 @@ static void show_thread_status_terse_all(struct thread_stat *ts,
 		log_buf(out, ";%3.2f%%", io_u_lat_m[i]);
 
 	/* disk util stats, if any */
-	if (ver >= 3)
+	if (ver >= 3 && is_running_backend())
 		show_disk_util(1, NULL, out);
 
 	/* Additional output if continue_on_error set - default off*/

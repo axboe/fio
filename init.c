@@ -63,6 +63,7 @@ char *exec_profile = NULL;
 int warnings_fatal = 0;
 int terse_version = 3;
 int is_backend = 0;
+int is_local_backend = 0;
 int nr_clients = 0;
 int log_syslog = 0;
 
