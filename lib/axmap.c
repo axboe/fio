@@ -268,29 +268,16 @@ static bool axmap_set_fn(struct axmap_level *al, unsigned long offset,
 static void __axmap_set(struct axmap *axmap, uint64_t bit_nr,
 			 struct axmap_set_data *data)
 {
-	unsigned int set_bits, nr_bits = data->nr_bits;
+	unsigned int nr_bits = data->nr_bits;
 
 	if (bit_nr > axmap->nr_bits)
 		return;
 	else if (bit_nr + nr_bits > axmap->nr_bits)
 		nr_bits = axmap->nr_bits - bit_nr;
 
-	set_bits = 0;
-	while (nr_bits) {
-		axmap_handler(axmap, bit_nr, axmap_set_fn, data);
-		set_bits += data->set_bits;
+	assert(nr_bits <= BLOCKS_PER_UNIT);
 
-		if (!data->set_bits ||
-		    data->set_bits != (BLOCKS_PER_UNIT - nr_bits))
-			break;
-
-		nr_bits -= data->set_bits;
-		bit_nr += data->set_bits;
-
-		data->nr_bits = nr_bits;
-	}
-
-	data->set_bits = set_bits;
+	axmap_handler(axmap, bit_nr, axmap_set_fn, data);
 }
 
 void axmap_set(struct axmap *axmap, uint64_t bit_nr)
