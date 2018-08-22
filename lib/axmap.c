@@ -83,14 +83,6 @@ struct axmap {
 	uint64_t nr_bits;
 };
 
-static inline unsigned long ulog64(unsigned long val, unsigned int log)
-{
-	while (log-- && val)
-		val >>= UNIT_SHIFT;
-
-	return val;
-}
-
 /* Remove all elements from the @axmap set */
 void axmap_reset(struct axmap *axmap)
 {
@@ -202,7 +194,7 @@ static bool axmap_handler_topdown(struct axmap *axmap, uint64_t bit_nr,
 	int i;
 
 	for (i = axmap->nr_levels - 1; i >= 0; i--) {
-		unsigned long index = ulog64(bit_nr, i);
+		unsigned long index = bit_nr >> (UNIT_SHIFT * i);
 		unsigned long offset = index >> UNIT_SHIFT;
 		unsigned int bit = index & BLOCKS_PER_UNIT_MASK;
 
