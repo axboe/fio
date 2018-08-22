@@ -128,6 +128,8 @@ struct axmap *axmap_new(unsigned long nr_bits)
 
 	axmap->nr_levels = levels;
 	axmap->levels = calloc(axmap->nr_levels, sizeof(struct axmap_level));
+	if (!axmap->levels)
+		goto free_axmap;
 	axmap->nr_bits = nr_bits;
 
 	for (i = 0; i < axmap->nr_levels; i++) {
@@ -137,19 +139,21 @@ struct axmap *axmap_new(unsigned long nr_bits)
 		al->map_size = (nr_bits + BLOCKS_PER_UNIT - 1) >> UNIT_SHIFT;
 		al->map = malloc(al->map_size * sizeof(unsigned long));
 		if (!al->map)
-			goto err;
+			goto free_levels;
 
 		nr_bits = (nr_bits + BLOCKS_PER_UNIT - 1) >> UNIT_SHIFT;
 	}
 
 	axmap_reset(axmap);
 	return axmap;
-err:
+
+free_levels:
 	for (i = 0; i < axmap->nr_levels; i++)
-		if (axmap->levels[i].map)
-			free(axmap->levels[i].map);
+		free(axmap->levels[i].map);
 
 	free(axmap->levels);
+
+free_axmap:
 	free(axmap);
 	return NULL;
 }
