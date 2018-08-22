@@ -57,12 +57,26 @@ static const unsigned long bit_masks[] = {
 #endif
 };
 
+/**
+ * struct axmap_level - a bitmap used to implement struct axmap
+ * @level: Level index. Each map has at least one level with index zero. The
+ *	higher the level index, the fewer bits a struct axmap_level contains.
+ * @map_size: Number of elements of the @map array.
+ * @map: A bitmap with @map_size elements.
+ */
 struct axmap_level {
 	int level;
 	unsigned long map_size;
 	unsigned long *map;
 };
 
+/**
+ * struct axmap - a set that can store numbers 0 .. @nr_bits - 1
+ * @nr_level: Number of elements of the @levels array.
+ * @levels: struct axmap_level array in which lower levels contain more bits
+ *	than higher levels.
+ * @nr_bits: One more than the highest value stored in the set.
+ */
 struct axmap {
 	unsigned int nr_levels;
 	struct axmap_level *levels;
@@ -77,6 +91,7 @@ static inline unsigned long ulog64(unsigned long val, unsigned int log)
 	return val;
 }
 
+/* Remove all elements from the @axmap set */
 void axmap_reset(struct axmap *axmap)
 {
 	int i;
@@ -102,6 +117,7 @@ void axmap_free(struct axmap *axmap)
 	free(axmap);
 }
 
+/* Allocate memory for a set that can store the numbers 0 .. @nr_bits - 1. */
 struct axmap *axmap_new(unsigned long nr_bits)
 {
 	struct axmap *axmap;
@@ -146,6 +162,11 @@ err:
 	return NULL;
 }
 
+/*
+ * Call @func for each level, starting at level zero, until a level is found
+ * for which @func returns true. Return false if none of the @func calls
+ * returns true.
+ */
 static bool axmap_handler(struct axmap *axmap, uint64_t bit_nr,
 			  bool (*func)(struct axmap_level *, unsigned long, unsigned int,
 			  void *), void *data)
@@ -170,6 +191,11 @@ static bool axmap_handler(struct axmap *axmap, uint64_t bit_nr,
 	return false;
 }
 
+/*
+ * Call @func for each level, starting at the highest level, until a level is
+ * found for which @func returns true. Return false if none of the @func calls
+ * returns true.
+ */
 static bool axmap_handler_topdown(struct axmap *axmap, uint64_t bit_nr,
 	bool (*func)(struct axmap_level *, unsigned long, unsigned int, void *))
 {
@@ -192,6 +218,11 @@ struct axmap_set_data {
 	unsigned int set_bits;
 };
 
+/*
+ * Set at most @__data->nr_bits bits in @al at offset @offset. Do not exceed
+ * the boundary of the element at offset @offset. Return the number of bits
+ * that have been set in @__data->set_bits if @al->level == 0.
+ */
 static bool axmap_set_fn(struct axmap_level *al, unsigned long offset,
 			 unsigned int bit, void *__data)
 {
@@ -230,10 +261,20 @@ done:
 	if (!al->level)
 		data->set_bits = nr_bits;
 
+	/* For the next level */
 	data->nr_bits = 1;
+
 	return al->map[offset] != -1UL;
 }
 
+/*
+ * Set up to @data->nr_bits starting from @bit_nr in @axmap. Start at
+ * @bit_nr. If that bit has not yet been set then set it and continue until
+ * either @data->nr_bits have been set or a 1 bit is found. Store the number
+ * of bits that have been set in @data->set_bits. It is guaranteed that all
+ * bits that have been requested to set fit in the same unsigned long word of
+ * level 0 of @axmap.
+ */
 static void __axmap_set(struct axmap *axmap, uint64_t bit_nr,
 			 struct axmap_set_data *data)
 {
@@ -269,6 +310,12 @@ void axmap_set(struct axmap *axmap, uint64_t bit_nr)
 	__axmap_set(axmap, bit_nr, &data);
 }
 
+/*
+ * Set up to @nr_bits starting from @bit in @axmap. Start at @bit. If that
+ * bit has not yet been set then set it and continue until either @nr_bits
+ * have been set or a 1 bit is found. Return the number of bits that have been
+ * set.
+ */
 unsigned int axmap_set_nr(struct axmap *axmap, uint64_t bit_nr,
 			  unsigned int nr_bits)
 {
