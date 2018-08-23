@@ -241,6 +241,8 @@ static bool axmap_set_fn(struct axmap_level *al, unsigned long offset,
 
 	if (overlap) {
 		nr_bits = ffz(~overlap) - bit;
+		if (!nr_bits)
+			return true;
 		mask = bit_masks[nr_bits] << bit;
 	}
 
