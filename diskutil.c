@@ -701,7 +701,7 @@ void show_disk_util(int terse, struct json_object *parent,
 	struct disk_util *du;
 	bool do_json;
 
-	if (!disk_util_sem)
+	if (!is_running_backend())
 		return;
 
 	fio_sem_down(disk_util_sem);

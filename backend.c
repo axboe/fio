@@ -2481,6 +2481,8 @@ int fio_backend(struct sk_out *sk_out)
 	}
 
 	startup_sem = fio_sem_init(FIO_SEM_LOCKED);
+	if (!sk_out)
+		is_local_backend = true;
 	if (startup_sem == NULL)
 		return 1;
 
