@@ -244,7 +244,6 @@ static bool axmap_set_fn(struct axmap_level *al, unsigned long offset,
 		mask = bit_masks[nr_bits] << bit;
 	}
 
-	assert(mask);
 	assert(!(al->map[offset] & mask));
 	al->map[offset] |= mask;
 
