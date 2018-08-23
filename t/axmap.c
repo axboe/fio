@@ -371,7 +371,7 @@ static int test_overlap(void)
 			entries = this;
 	}
 
-	printf("Test overlaps...");
+	printf("Test overlaps...\n");
 	fflush(stdout);
 
 	map = axmap_new(entries);
@@ -379,18 +379,16 @@ static int test_overlap(void)
 	for (i = 0; tests[i].start != -1U; i++) {
 		struct overlap_test *t = &tests[i];
 
+		printf("\tstart=%6u, nr=%3u: ", t->start, t->nr);
 		ret = axmap_set_nr(map, t->start, t->nr);
 		if (ret != t->ret) {
-			printf("fail\n");
-			printf("start=%u, nr=%d, ret=%d: %d\n", t->start, t->nr,
-								t->ret, ret);
+			printf("%3d (FAIL, wanted %d)\n", ret, t->ret);
 			err = 1;
 			break;
 		}
+		printf("%3d (PASS)\n", ret);
 	}
 
-	if (!err)
-		printf("pass!\n");
 	axmap_free(map);
 	return err;
 }
