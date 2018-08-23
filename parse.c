@@ -959,6 +959,7 @@ static int handle_option(const struct fio_option *o, const char *__ptr,
 		if (ptr &&
 		    (o->type != FIO_OPT_STR_STORE) &&
 		    (o->type != FIO_OPT_STR) &&
+		    (o->type != FIO_OPT_STR_ULL) &&
 		    (o->type != FIO_OPT_FLOAT_LIST)) {
 			ptr2 = strchr(ptr, ',');
 			if (ptr2 && *(ptr2 + 1) == '\0')
@@ -1372,9 +1373,6 @@ static void option_init(struct fio_option *o)
 		o->category = FIO_OPT_C_GENERAL;
 		o->group = FIO_OPT_G_INVALID;
 	}
-	if (o->type == FIO_OPT_STR || o->type == FIO_OPT_STR_STORE ||
-	    o->type == FIO_OPT_STR_MULTI)
-		return;
 }
 
 /*
