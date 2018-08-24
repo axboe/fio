@@ -64,7 +64,7 @@ static uint64_t last_block(struct thread_data *td, struct fio_file *f,
 	if (max_size > f->real_file_size)
 		max_size = f->real_file_size;
 
-	if (td->o.zone_range)
+	if (td->o.zone_mode == ZONE_MODE_STRIDED && td->o.zone_range)
 		max_size = td->o.zone_range;
 
 	if (td->o.min_bs[ddir] > td->o.ba[ddir])
@@ -815,9 +815,13 @@ void requeue_io_u(struct thread_data *td, struct io_u **io_u)
 	*io_u = NULL;
 }
 
-static void __fill_io_u_zone(struct thread_data *td, struct io_u *io_u)
+static void setup_strided_zone_mode(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
+
+	assert(td->o.zone_mode == ZONE_MODE_STRIDED);
+	assert(td->o.zone_size);
+	assert(td->o.zone_range);
 
 	/*
 	 * See if it's time to switch to a new zone
@@ -869,11 +873,8 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	if (!ddir_rw(io_u->ddir))
 		goto out;
 
-	/*
-	 * When file is zoned zone_range is always positive
-	 */
-	if (td->o.zone_range)
-		__fill_io_u_zone(td, io_u);
+	if (td->o.zone_mode == ZONE_MODE_STRIDED)
+		setup_strided_zone_mode(td, io_u);
 
 	/*
 	 * No log, let the seq/rand engine retrieve the next buflen and

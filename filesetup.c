@@ -1142,9 +1142,6 @@ int setup_files(struct thread_data *td)
 	if (err)
 		goto err_out;
 
-	if (!o->zone_size)
-		o->zone_size = o->size;
-
 	/*
 	 * iolog already set the total io size, if we read back
 	 * stored entries.

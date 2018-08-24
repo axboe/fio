@@ -618,17 +618,29 @@ static int fixup_options(struct thread_data *td)
 		ret |= warnings_fatal;
 	}
 
+	if (o->zone_mode == ZONE_MODE_NONE && o->zone_size) {
+		log_err("fio: --zonemode=none and --zonesize are not compatible.\n");
+		ret |= 1;
+	}
+
+	if (o->zone_mode == ZONE_MODE_NOT_SPECIFIED) {
+		if (o->zone_size)
+			o->zone_mode = ZONE_MODE_STRIDED;
+		else
+			o->zone_mode = ZONE_MODE_NONE;
+	}
+
 	/*
-	 * only really works with 1 file
+	 * Strided zone mode only really works with 1 file.
 	 */
-	if (o->zone_size && o->open_files > 1)
-		o->zone_size = 0;
+	if (o->zone_mode == ZONE_MODE_STRIDED && o->open_files > 1)
+		o->zone_mode = ZONE_MODE_NONE;
 
 	/*
 	 * If zone_range isn't specified, backward compatibility dictates it
 	 * should be made equal to zone_size.
 	 */
-	if (o->zone_size && !o->zone_range)
+	if (o->zone_mode == ZONE_MODE_STRIDED && !o->zone_range)
 		o->zone_range = o->zone_size;
 
 	/*

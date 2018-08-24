@@ -10,6 +10,14 @@
 #include "lib/pattern.h"
 #include "td_error.h"
 
+enum fio_zone_mode {
+	ZONE_MODE_NOT_SPECIFIED	= 0,
+	ZONE_MODE_NONE		= 1,
+	ZONE_MODE_STRIDED	= 2, /* perform I/O in one zone at a time */
+	/* perform I/O across multiple zones simultaneously */
+	ZONE_MODE_ZBD		= 3,
+};
+
 /*
  * What type of allocation to use for io buffers
  */
@@ -188,6 +196,7 @@ struct thread_options {
 	unsigned long long zone_range;
 	unsigned long long zone_size;
 	unsigned long long zone_skip;
+	enum fio_zone_mode zone_mode;
 	unsigned long long lockmem;
 	enum fio_memtype mem_type;
 	unsigned int mem_align;
@@ -601,6 +610,8 @@ struct thread_options_pack {
 
 	uint32_t allow_create;
 	uint32_t allow_mounted_write;
+
+	uint32_t zone_mode;
 } __attribute__((packed));
 
 extern void convert_thread_options_to_cpu(struct thread_options *o, struct thread_options_pack *top);

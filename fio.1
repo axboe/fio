@@ -724,21 +724,43 @@ false.
 .BI unlink_each_loop \fR=\fPbool
 Unlink job files after each iteration or loop. Default: false.
 .TP
-Fio supports strided data access. After having read \fBzonesize\fR bytes from an area that is \fBzonerange\fR bytes big, \fBzoneskip\fR bytes are skipped.
+.BI zonemode \fR=\fPstr
+Accepted values are:
+.RS
+.RS
+.TP
+.B none
+The \fBzonerange\fR, \fBzonesize\fR and \fBzoneskip\fR parameters are ignored.
+.TP
+.B strided
+I/O happens in a single zone until \fBzonesize\fR bytes have been transferred.
+After that number of bytes has been transferred processing of the next zone
+starts.
+.TP
+.B zbd
+Zoned block device mode. I/O happens sequentially in each zone, even if random
+I/O has been selected. Random I/O happens across all zones instead of being
+restricted to a single zone.
+.RE
+.RE
 .TP
 .BI zonerange \fR=\fPint
-Size of a single zone in which I/O occurs.
+Size of a single zone. See also \fBzonesize\fR and \fBzoneskip\fR.
 .TP
 .BI zonesize \fR=\fPint
-Number of bytes to transfer before skipping \fBzoneskip\fR bytes. If this
-parameter is smaller than \fBzonerange\fR then only a fraction of each zone
-with \fBzonerange\fR bytes will be accessed.  If this parameter is larger than
-\fBzonerange\fR then each zone will be accessed multiple times before skipping
-to the next zone.
+For \fBzonemode\fR=strided, this is the number of bytes to transfer before
+skipping \fBzoneskip\fR bytes. If this parameter is smaller than
+\fBzonerange\fR then only a fraction of each zone with \fBzonerange\fR bytes
+will be accessed.  If this parameter is larger than \fBzonerange\fR then each
+zone will be accessed multiple times before skipping to the next zone.
+
+For \fBzonemode\fR=zbd, this is the size of a single zone. The \fBzonerange\fR
+parameter is ignored in this mode.
 .TP
 .BI zoneskip \fR=\fPint
-Skip the specified number of bytes after \fBzonesize\fR bytes of data have been
-transferred.
+For \fBzonemode\fR=strided, the number of bytes to skip after \fBzonesize\fR
+bytes of data have been transferred. This parameter must be zero for
+\fBzonemode\fR=zbd.
 
 .SS "I/O type"
 .TP

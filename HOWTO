@@ -952,24 +952,50 @@ Target file/device
 
 	Unlink job files after each iteration or loop.  Default: false.
 
+.. option:: zonemode=str
+
+	Accepted values are:
+
+		**none**
+				The :option:`zonerange`, :option:`zonesize` and
+				:option:`zoneskip` parameters are ignored.
+		**strided**
+				I/O happens in a single zone until
+				:option:`zonesize` bytes have been transferred.
+				After that number of bytes has been
+				transferred processing of the next zone
+				starts.
+		**zbd**
+				Zoned block device mode. I/O happens
+				sequentially in each zone, even if random I/O
+				has been selected. Random I/O happens across
+				all zones instead of being restricted to a
+				single zone. The :option:`zoneskip` parameter
+				is ignored. :option:`zonerange` and
+				:option:`zonesize` must be identical.
+
 .. option:: zonerange=int
 
-	Size of a single zone in which I/O occurs. See also :option:`zonesize`
-	and :option:`zoneskip`.
+	Size of a single zone. See also :option:`zonesize` and
+	:option:`zoneskip`.
 
 .. option:: zonesize=int
 
-	Number of bytes to transfer before skipping :option:`zoneskip`
-	bytes. If this parameter is smaller than :option:`zonerange` then only
-	a fraction of each zone with :option:`zonerange` bytes will be
-	accessed.  If this parameter is larger than :option:`zonerange` then
-	each zone will be accessed multiple times before skipping
+	For :option:`zonemode` =strided, this is the number of bytes to
+	transfer before skipping :option:`zoneskip` bytes. If this parameter
+	is smaller than :option:`zonerange` then only a fraction of each zone
+	with :option:`zonerange` bytes will be accessed.  If this parameter is
+	larger than :option:`zonerange` then each zone will be accessed
+	multiple times before skipping to the next zone.
+
+	For :option:`zonemode` =zbd, this is the size of a single zone. The
+	:option:`zonerange` parameter is ignored in this mode.
 
 .. option:: zoneskip=int
 
-	Skip the specified number of bytes when :option:`zonesize` data have
-	been transferred. The three zone options can be used to do strided I/O
-	on a file.
+	For :option:`zonemode` =strided, the number of bytes to skip after
+	:option:`zonesize` bytes of data have been transferred. This parameter
+	must be zero for :option:`zonemode` =zbd.
 
 
 I/O type
