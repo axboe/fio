@@ -761,6 +761,11 @@ void put_file_log(struct thread_data *td, struct fio_file *f)
 
 void put_io_u(struct thread_data *td, struct io_u *io_u)
 {
+	if (io_u->post_submit) {
+		io_u->post_submit(io_u, io_u->error == 0);
+		io_u->post_submit = NULL;
+	}
+
 	if (td->parent)
 		td = td->parent;
 
@@ -1303,6 +1308,11 @@ static long set_io_u_file(struct thread_data *td, struct io_u *io_u)
 
 		if (!fill_io_u(td, io_u))
 			break;
+
+		if (io_u->post_submit) {
+			io_u->post_submit(io_u, false);
+			io_u->post_submit = NULL;
+		}
 
 		put_file_log(td, f);
 		td_io_close_file(td, f);

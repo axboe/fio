@@ -93,6 +93,12 @@ struct io_u {
 	};
 
 	/*
+	 * Post-submit callback. Used by the ZBD code. @success == true means
+	 * that the I/O operation has been queued or completed successfully.
+	 */
+	void (*post_submit)(const struct io_u *, bool success);
+
+	/*
 	 * Callback for io completion
 	 */
 	int (*end_io)(struct thread_data *, struct io_u **);
