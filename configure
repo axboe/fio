@@ -2195,6 +2195,24 @@ if compile_prog "" "" "valgrind_dev"; then
 fi
 print_config "Valgrind headers" "$valgrind_dev"
 
+##########################################
+# <linux/blkzoned.h> probe
+if test "$linux_blkzoned" != "yes" ; then
+  linux_blkzoned="no"
+fi
+cat > $TMPC << EOF
+#include <linux/blkzoned.h>
+int main(int argc, char **argv)
+{
+  return 0;
+}
+EOF
+if compile_prog "" "" "linux_blkzoned"; then
+  linux_blkzoned="yes"
+fi
+print_config "Zoned block device support" "$linux_blkzoned"
+
+##########################################
 # check march=armv8-a+crc+crypto
 if test "$march_armv8_a_crc_crypto" != "yes" ; then
   march_armv8_a_crc_crypto="no"
@@ -2518,6 +2536,9 @@ if test "$disable_opt" = "yes" ; then
 fi
 if test "$valgrind_dev" = "yes"; then
   output_sym "CONFIG_VALGRIND_DEV"
+fi
+if test "$linux_blkzoned" = "yes" ; then
+  output_sym "CONFIG_LINUX_BLKZONED"
 fi
 if test "$zlib" = "no" ; then
   echo "Consider installing zlib-dev (zlib-devel, some fio features depend on it."
