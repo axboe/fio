@@ -211,6 +211,9 @@ struct thread_stat {
 	uint32_t first_error;
 	uint64_t total_err_count;
 
+	/* ZBD stats */
+	uint64_t nr_zone_resets;
+
 	uint64_t nr_block_infos;
 	uint32_t block_infos[MAX_NR_BLOCK_INFOS];
 

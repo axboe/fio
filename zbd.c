@@ -594,6 +594,8 @@ static int zbd_reset_range(struct thread_data *td, const struct fio_file *f,
 		pthread_mutex_unlock(&z->mutex);
 	}
 
+	td->ts.nr_zone_resets += ze - zb;
+
 	return ret;
 }
 
@@ -968,4 +970,14 @@ eof:
 	if (zb)
 		pthread_mutex_unlock(&zb->mutex);
 	return io_u_eof;
+}
+
+/* Return a string with ZBD statistics */
+char *zbd_write_status(const struct thread_stat *ts)
+{
+	char *res;
+
+	if (asprintf(&res, "; %ld zone resets", ts->nr_zone_resets) < 0)
+		return NULL;
+	return res;
 }

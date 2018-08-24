@@ -14,6 +14,7 @@
 #include "lib/output_buffer.h"
 #include "helper_thread.h"
 #include "smalloc.h"
+#include "zbd.h"
 
 #define LOG_MSEC_SLACK	1
 
@@ -419,7 +420,7 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	unsigned long runt;
 	unsigned long long min, max, bw, iops;
 	double mean, dev;
-	char *io_p, *bw_p, *bw_p_alt, *iops_p;
+	char *io_p, *bw_p, *bw_p_alt, *iops_p, *zbd_w_st = NULL;
 	int i2p;
 
 	if (ddir_sync(ddir)) {
@@ -450,12 +451,16 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 
 	iops = (1000 * (uint64_t)ts->total_io_u[ddir]) / runt;
 	iops_p = num2str(iops, ts->sig_figs, 1, 0, N2S_NONE);
+	if (ddir == DDIR_WRITE)
+		zbd_w_st = zbd_write_status(ts);
 
-	log_buf(out, "  %s: IOPS=%s, BW=%s (%s)(%s/%llumsec)\n",
+	log_buf(out, "  %s: IOPS=%s, BW=%s (%s)(%s/%llumsec)%s\n",
 			rs->unified_rw_rep ? "mixed" : str[ddir],
 			iops_p, bw_p, bw_p_alt, io_p,
-			(unsigned long long) ts->runtime[ddir]);
+			(unsigned long long) ts->runtime[ddir],
+			zbd_w_st ? : "");
 
+	free(zbd_w_st);
 	free(io_p);
 	free(bw_p);
 	free(bw_p_alt);
@@ -1655,6 +1660,7 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src,
 	dst->total_run_time += src->total_run_time;
 	dst->total_submit += src->total_submit;
 	dst->total_complete += src->total_complete;
+	dst->nr_zone_resets += src->nr_zone_resets;
 }
 
 void init_group_run_stat(struct group_run_stats *gs)
@@ -2337,6 +2343,7 @@ void reset_io_stats(struct thread_data *td)
 
 	ts->total_submit = 0;
 	ts->total_complete = 0;
+	ts->nr_zone_resets = 0;
 }
 
 static void __add_stat_to_log(struct io_log *iolog, enum fio_ddir ddir,
