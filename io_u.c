@@ -41,9 +41,12 @@ static uint64_t mark_random_map(struct thread_data *td, struct io_u *io_u,
 
 	block = (offset - f->file_offset) / (uint64_t) min_bs;
 	nr_blocks = (buflen + min_bs - 1) / min_bs;
+	assert(nr_blocks > 0);
 
-	if (!(io_u->flags & IO_U_F_BUSY_OK))
+	if (!(io_u->flags & IO_U_F_BUSY_OK)) {
 		nr_blocks = axmap_set_nr(f->io_axmap, block, nr_blocks);
+		assert(nr_blocks > 0);
+	}
 
 	if ((nr_blocks * min_bs) < buflen)
 		buflen = nr_blocks * min_bs;
