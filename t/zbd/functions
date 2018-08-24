@@ -1,0 +1,106 @@
+#!/bin/bash
+
+# To do: switch to blkzone once blkzone reset works correctly.
+blkzone=
+#blkzone=$(type -p blkzone 2>/dev/null)
+zbc_report_zones=$(type -p zbc_report_zones 2>/dev/null)
+zbc_reset_zone=$(type -p zbc_reset_zone 2>/dev/null)
+if [ -z "${blkzone}" ] &&
+       { [ -z "${zbc_report_zones}" ] || [ -z "${zbc_reset_zone}" ]; }; then
+    echo "Error: neither blkzone nor zbc_report_zones is available"
+    exit 1
+fi
+
+# Reports the starting sector and length of the first sequential zone of device
+# $1.
+first_sequential_zone() {
+    local dev=$1
+
+    if [ -n "${blkzone}" ]; then
+	${blkzone} report "$dev" |
+	    sed -n 's/^[[:blank:]]*start:[[:blank:]]\([0-9a-zA-Z]*\),[[:blank:]]len[[:blank:]]\([0-9a-zA-Z]*\),.*type:[[:blank:]]2(.*/\1 \2/p' |
+	    {
+		read -r starting_sector length &&
+		    # Convert from hex to decimal
+		    echo $((starting_sector)) $((length))
+	    }
+    else
+	${zbc_report_zones} "$dev" |
+	    sed -n 's/^Zone [0-9]*: type 0x2 .*, sector \([0-9]*\), \([0-9]*\) sectors,.*$/\1 \2/p' |
+	    head -n1
+    fi
+}
+
+max_open_zones() {
+    local dev=$1
+
+    if [ -n "${blkzone}" ]; then
+	# To do: query the maximum number of open zones using sg_raw
+	return 1
+    else
+	${zbc_report_zones} "$dev" |
+	    sed -n 's/^[[:blank:]]*Maximum number of open sequential write required zones:[[:blank:]]*//p'
+    fi
+}
+
+# Reset the write pointer of one zone on device $1 at offset $2. The offset
+# must be specified in units of 512 byte sectors. Offset -1 means reset all
+# zones.
+reset_zone() {
+    local dev=$1 offset=$2 sectors
+
+    if [ -n "${blkzone}" ]; then
+	if [ "$offset" -lt 0 ]; then
+	    sectors=$(<"/sys/class/block/${dev#/dev/}/size")
+	    ${blkzone} reset -o "${offset}" -l "$sectors" "$dev"
+	else
+	    ${blkzone} reset -o "${offset}" -c 1 "$dev"
+	fi
+    else
+	if [ "$offset" -lt 0 ]; then
+	    ${zbc_reset_zone} -all "$dev" "${offset}" >/dev/null
+	else
+	    ${zbc_reset_zone} -sector "$dev" "${offset}" >/dev/null
+	fi
+    fi
+}
+
+# Extract the number of bytes that have been transferred from a line like
+# READ: bw=6847KiB/s (7011kB/s), 6847KiB/s-6847KiB/s (7011kB/s-7011kB/s), io=257MiB (269MB), run=38406-38406msec
+fio_io() {
+    sed -n 's/^[[:blank:]]*'"$1"'.*, io=\([^[:blank:]]*\).*/\1/p' |
+	tail -n 1 |
+	(
+	    read -r io;
+	    # Parse <number>.<number><suffix> into n1, n2 and s. See also
+	    # num2str().
+	    shopt -s extglob
+	    n1=${io%${io##*([0-9])}}
+	    s=${io#${io%%*([a-zA-Z])}}
+	    n2=${io#${n1}}
+	    n2=${n2#.}
+	    n2=${n2%$s}000
+	    n2=${n2:0:3}
+	    case "$s" in
+		KiB) m=10;;
+		MiB) m=20;;
+		GiB) m=30;;
+		B)   m=0;;
+		*)   return 1;;
+	    esac
+	    [ -n "$n1" ] || return 1
+	    echo $(((n1 << m) + (n2 << m) / 1000))
+	)
+}
+
+fio_read() {
+    fio_io 'READ:'
+}
+
+fio_written() {
+    fio_io 'WRITE:'
+}
+
+fio_reset_count() {
+    sed -n 's/^.*write:[^;]*; \([0-9]*\) zone resets$/\1/p'
+}
