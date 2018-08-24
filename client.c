@@ -32,6 +32,7 @@ static void handle_stop(struct fio_client *client);
 static void handle_start(struct fio_client *client, struct fio_net_cmd *cmd);
 
 static void convert_text(struct fio_net_cmd *cmd);
+static void client_display_thread_status(struct jobs_eta *je);
 
 struct client_ops fio_client_ops = {
 	.text		= handle_text,
@@ -40,7 +41,7 @@ struct client_ops fio_client_ops = {
 	.group_stats	= handle_gs,
 	.stop		= handle_stop,
 	.start		= handle_start,
-	.eta		= display_thread_status,
+	.eta		= client_display_thread_status,
 	.probe		= handle_probe,
 	.eta_msec	= FIO_CLIENT_DEF_ETA_MSEC,
 	.client_type	= FIO_CLIENT_TYPE_CLI,
@@ -1195,7 +1196,8 @@ static void handle_du(struct fio_client *client, struct fio_net_cmd *cmd)
 
 	if (!client->disk_stats_shown) {
 		client->disk_stats_shown = true;
-		log_info("\nDisk stats (read/write):\n");
+		if (!(output_format & FIO_OUTPUT_JSON))
+			log_info("\nDisk stats (read/write):\n");
 	}
 
 	if (output_format & FIO_OUTPUT_JSON) {
@@ -1477,9 +1479,10 @@ static void handle_probe(struct fio_client *client, struct fio_net_cmd *cmd)
 	sprintf(bit, "%d-bit", probe->bpp * 8);
 	probe->flags = le64_to_cpu(probe->flags);
 
-	log_info("hostname=%s, be=%u, %s, os=%s, arch=%s, fio=%s, flags=%lx\n",
-		probe->hostname, probe->bigendian, bit, os, arch,
-		probe->fio_version, (unsigned long) probe->flags);
+	if (!(output_format & FIO_OUTPUT_JSON))
+		log_info("hostname=%s, be=%u, %s, os=%s, arch=%s, fio=%s, flags=%lx\n",
+			probe->hostname, probe->bigendian, bit, os, arch,
+			probe->fio_version, (unsigned long) probe->flags);
 
 	if (!client->name)
 		client->name = strdup((char *) probe->hostname);
@@ -2111,4 +2114,10 @@ int fio_handle_clients(struct client_ops *ops)
 
 	free(pfds);
 	return retval || error_clients;
+}
+
+static void client_display_thread_status(struct jobs_eta *je)
+{
+	if (!(output_format & FIO_OUTPUT_JSON))
+		display_thread_status(je);
 }
