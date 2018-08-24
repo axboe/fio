@@ -724,21 +724,79 @@ false.
 .BI unlink_each_loop \fR=\fPbool
 Unlink job files after each iteration or loop. Default: false.
 .TP
-Fio supports strided data access. After having read \fBzonesize\fR bytes from an area that is \fBzonerange\fR bytes big, \fBzoneskip\fR bytes are skipped.
+.BI zonemode \fR=\fPstr
+Accepted values are:
+.RS
+.RS
+.TP
+.B none
+The \fBzonerange\fR, \fBzonesize\fR and \fBzoneskip\fR parameters are ignored.
+.TP
+.B strided
+I/O happens in a single zone until \fBzonesize\fR bytes have been transferred.
+After that number of bytes has been transferred processing of the next zone
+starts.
+.TP
+.B zbd
+Zoned block device mode. I/O happens sequentially in each zone, even if random
+I/O has been selected. Random I/O happens across all zones instead of being
+restricted to a single zone.
+.RE
+.RE
 .TP
 .BI zonerange \fR=\fPint
-Size of a single zone in which I/O occurs.
+Size of a single zone. See also \fBzonesize\fR and \fBzoneskip\fR.
 .TP
 .BI zonesize \fR=\fPint
-Number of bytes to transfer before skipping \fBzoneskip\fR bytes. If this
-parameter is smaller than \fBzonerange\fR then only a fraction of each zone
-with \fBzonerange\fR bytes will be accessed.  If this parameter is larger than
-\fBzonerange\fR then each zone will be accessed multiple times before skipping
-to the next zone.
+For \fBzonemode\fR=strided, this is the number of bytes to transfer before
+skipping \fBzoneskip\fR bytes. If this parameter is smaller than
+\fBzonerange\fR then only a fraction of each zone with \fBzonerange\fR bytes
+will be accessed.  If this parameter is larger than \fBzonerange\fR then each
+zone will be accessed multiple times before skipping to the next zone.
+
+For \fBzonemode\fR=zbd, this is the size of a single zone. The \fBzonerange\fR
+parameter is ignored in this mode.
 .TP
 .BI zoneskip \fR=\fPint
-Skip the specified number of bytes after \fBzonesize\fR bytes of data have been
-transferred.
+For \fBzonemode\fR=strided, the number of bytes to skip after \fBzonesize\fR
+bytes of data have been transferred. This parameter must be zero for
+\fBzonemode\fR=zbd.
+
+.TP
+.BI read_beyond_wp \fR=\fPbool
+This parameter applies to \fBzonemode=zbd\fR only.
+
+Zoned block devices are block devices that consist of multiple zones. Each
+zone has a type, e.g. conventional or sequential. A conventional zone can be
+written at any offset that is a multiple of the block size. Sequential zones
+must be written sequentially. The position at which a write must occur is
+called the write pointer. A zoned block device can be either drive
+managed, host managed or host aware. For host managed devices the host must
+ensure that writes happen sequentially. Fio recognizes host managed devices
+and serializes writes to sequential zones for these devices.
+
+If a read occurs in a sequential zone beyond the write pointer then the zoned
+block device will complete the read without reading any data from the storage
+medium. Since such reads lead to unrealistically high bandwidth and IOPS
+numbers fio only reads beyond the write pointer if explicitly told to do
+so. Default: false.
+.TP
+.BI max_open_zones \fR=\fPint
+When running a random write test across an entire drive many more zones will be
+open than in a typical application workload. Hence this command line option
+that allows to limit the number of open zones. The number of open zones is
+defined as the number of zones to which write commands are issued.
+.TP
+.BI zone_reset_threshold \fR=\fPfloat
+A number between zero and one that indicates the ratio of logical blocks with
+data to the total number of logical blocks in the test above which zones
+should be reset periodically.
+.TP
+.BI zone_reset_frequency \fR=\fPfloat
+A number between zero and one that indicates how often a zone reset should be
+issued if the zone reset threshold has been exceeded. A zone reset is
+submitted after each (1 / zone_reset_frequency) write requests. This and the
+previous parameter can be used to simulate garbage collection activity.
 
 .SS "I/O type"
 .TP

@@ -18,6 +18,7 @@
 
 #include "fio.h"
 #include "diskutil.h"
+#include "zbd.h"
 
 static FLIST_HEAD(engine_list);
 
@@ -319,6 +320,10 @@ enum fio_q_status td_io_queue(struct thread_data *td, struct io_u *io_u)
 	}
 
 	ret = td->io_ops->queue(td, io_u);
+	if (ret != FIO_Q_BUSY && io_u->post_submit) {
+		io_u->post_submit(io_u, io_u->error == 0);
+		io_u->post_submit = NULL;
+	}
 
 	unlock_file(td, io_u->file);
 
@@ -348,6 +353,13 @@ enum fio_q_status td_io_queue(struct thread_data *td, struct io_u *io_u)
 		log_info("fio: first direct IO errored. File system may not "
 			 "support direct IO, or iomem_align= is bad, or "
 			 "invalid block size. Try setting direct=0.\n");
+	}
+
+	if (zbd_unaligned_write(io_u->error) &&
+	    td->io_issues[io_u->ddir & 1] == 1 &&
+	    td->o.zone_mode != ZONE_MODE_ZBD) {
+		log_info("fio: first I/O failed. If %s is a zoned block device, consider --zonemode=zbd\n",
+			 io_u->file->file_name);
 	}
 
 	if (!td->io_ops->commit) {

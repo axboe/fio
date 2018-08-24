@@ -223,6 +223,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->zone_range = le64_to_cpu(top->zone_range);
 	o->zone_size = le64_to_cpu(top->zone_size);
 	o->zone_skip = le64_to_cpu(top->zone_skip);
+	o->zone_mode = le32_to_cpu(top->zone_mode);
 	o->lockmem = le64_to_cpu(top->lockmem);
 	o->offset_increment = le64_to_cpu(top->offset_increment);
 	o->number_ios = le64_to_cpu(top->number_ios);
@@ -548,6 +549,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->zone_range = __cpu_to_le64(o->zone_range);
 	top->zone_size = __cpu_to_le64(o->zone_size);
 	top->zone_skip = __cpu_to_le64(o->zone_skip);
+	top->zone_mode = __cpu_to_le32(o->zone_mode);
 	top->lockmem = __cpu_to_le64(o->lockmem);
 	top->ddir_seq_add = __cpu_to_le64(o->ddir_seq_add);
 	top->file_size_low = __cpu_to_le64(o->file_size_low);

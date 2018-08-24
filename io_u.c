@@ -10,6 +10,7 @@
 #include "err.h"
 #include "lib/pow2.h"
 #include "minmax.h"
+#include "zbd.h"
 
 struct io_completion_data {
 	int nr;				/* input */
@@ -31,21 +32,27 @@ static bool random_map_free(struct fio_file *f, const uint64_t block)
 /*
  * Mark a given offset as used in the map.
  */
-static void mark_random_map(struct thread_data *td, struct io_u *io_u)
+static uint64_t mark_random_map(struct thread_data *td, struct io_u *io_u,
+				uint64_t offset, uint64_t buflen)
 {
 	unsigned long long min_bs = td->o.min_bs[io_u->ddir];
 	struct fio_file *f = io_u->file;
 	unsigned long long nr_blocks;
 	uint64_t block;
 
-	block = (io_u->offset - f->file_offset) / (uint64_t) min_bs;
-	nr_blocks = (io_u->buflen + min_bs - 1) / min_bs;
+	block = (offset - f->file_offset) / (uint64_t) min_bs;
+	nr_blocks = (buflen + min_bs - 1) / min_bs;
+	assert(nr_blocks > 0);
 
-	if (!(io_u->flags & IO_U_F_BUSY_OK))
+	if (!(io_u->flags & IO_U_F_BUSY_OK)) {
 		nr_blocks = axmap_set_nr(f->io_axmap, block, nr_blocks);
+		assert(nr_blocks > 0);
+	}
 
-	if ((nr_blocks * min_bs) < io_u->buflen)
-		io_u->buflen = nr_blocks * min_bs;
+	if ((nr_blocks * min_bs) < buflen)
+		buflen = nr_blocks * min_bs;
+
+	return buflen;
 }
 
 static uint64_t last_block(struct thread_data *td, struct fio_file *f,
@@ -64,7 +71,7 @@ static uint64_t last_block(struct thread_data *td, struct fio_file *f,
 	if (max_size > f->real_file_size)
 		max_size = f->real_file_size;
 
-	if (td->o.zone_range)
+	if (td->o.zone_mode == ZONE_MODE_STRIDED && td->o.zone_range)
 		max_size = td->o.zone_range;
 
 	if (td->o.min_bs[ddir] > td->o.ba[ddir])
@@ -761,6 +768,11 @@ void put_file_log(struct thread_data *td, struct fio_file *f)
 
 void put_io_u(struct thread_data *td, struct io_u *io_u)
 {
+	if (io_u->post_submit) {
+		io_u->post_submit(io_u, io_u->error == 0);
+		io_u->post_submit = NULL;
+	}
+
 	if (td->parent)
 		td = td->parent;
 
@@ -815,9 +827,13 @@ void requeue_io_u(struct thread_data *td, struct io_u **io_u)
 	*io_u = NULL;
 }
 
-static void __fill_io_u_zone(struct thread_data *td, struct io_u *io_u)
+static void setup_strided_zone_mode(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
+
+	assert(td->o.zone_mode == ZONE_MODE_STRIDED);
+	assert(td->o.zone_size);
+	assert(td->o.zone_range);
 
 	/*
 	 * See if it's time to switch to a new zone
@@ -857,6 +873,8 @@ static void __fill_io_u_zone(struct thread_data *td, struct io_u *io_u)
 static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 {
 	bool is_random;
+	uint64_t offset;
+	enum io_u_action ret;
 
 	if (td_ioengine_flagged(td, FIO_NOIO))
 		goto out;
@@ -869,11 +887,8 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	if (!ddir_rw(io_u->ddir))
 		goto out;
 
-	/*
-	 * When file is zoned zone_range is always positive
-	 */
-	if (td->o.zone_range)
-		__fill_io_u_zone(td, io_u);
+	if (td->o.zone_mode == ZONE_MODE_STRIDED)
+		setup_strided_zone_mode(td, io_u);
 
 	/*
 	 * No log, let the seq/rand engine retrieve the next buflen and
@@ -890,6 +905,13 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 		return 1;
 	}
 
+	offset = io_u->offset;
+	if (td->o.zone_mode == ZONE_MODE_ZBD) {
+		ret = zbd_adjust_block(td, io_u);
+		if (ret == io_u_eof)
+			return 1;
+	}
+
 	if (io_u->offset + io_u->buflen > io_u->file->real_file_size) {
 		dprint(FD_IO, "io_u %p, off=0x%llx + len=0x%llx exceeds file size=0x%llx\n",
 			io_u,
@@ -902,7 +924,7 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	 * mark entry before potentially trimming io_u
 	 */
 	if (td_random(td) && file_randommap(td, io_u->file))
-		mark_random_map(td, io_u);
+		io_u->buflen = mark_random_map(td, io_u, offset, io_u->buflen);
 
 out:
 	dprint_io_u(io_u, "fill");
@@ -1302,6 +1324,11 @@ static long set_io_u_file(struct thread_data *td, struct io_u *io_u)
 
 		if (!fill_io_u(td, io_u))
 			break;
+
+		if (io_u->post_submit) {
+			io_u->post_submit(io_u, false);
+			io_u->post_submit = NULL;
+		}
 
 		put_file_log(td, f);
 		td_io_close_file(td, f);
