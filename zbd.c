@@ -589,6 +589,9 @@ static int zbd_reset_range(struct thread_data *td, const struct fio_file *f,
 	ze = &f->zbd_info->zone_info[zone_idx_e];
 	for (z = zb; z < ze; z++) {
 		pthread_mutex_lock(&z->mutex);
+		pthread_mutex_lock(&f->zbd_info->mutex);
+		f->zbd_info->sectors_with_data -= z->wp - z->start;
+		pthread_mutex_unlock(&f->zbd_info->mutex);
 		z->wp = z->start;
 		z->verify_block = 0;
 		pthread_mutex_unlock(&z->mutex);
@@ -687,10 +690,65 @@ static int zbd_reset_zones(struct thread_data *td, struct fio_file *f,
 	return res;
 }
 
+/*
+ * Reset zbd_info.write_cnt, the counter that counts down towards the next
+ * zone reset.
+ */
+static void zbd_reset_write_cnt(const struct thread_data *td,
+				const struct fio_file *f)
+{
+	assert(0 <= td->o.zrf.u.f && td->o.zrf.u.f <= 1);
+
+	pthread_mutex_lock(&f->zbd_info->mutex);
+	f->zbd_info->write_cnt = td->o.zrf.u.f ?
+		min(1.0 / td->o.zrf.u.f, 0.0 + UINT_MAX) : UINT_MAX;
+	pthread_mutex_unlock(&f->zbd_info->mutex);
+}
+
+static bool zbd_dec_and_reset_write_cnt(const struct thread_data *td,
+					const struct fio_file *f)
+{
+	uint32_t write_cnt = 0;
+
+	pthread_mutex_lock(&f->zbd_info->mutex);
+	assert(f->zbd_info->write_cnt);
+	if (f->zbd_info->write_cnt)
+		write_cnt = --f->zbd_info->write_cnt;
+	if (write_cnt == 0)
+		zbd_reset_write_cnt(td, f);
+	pthread_mutex_unlock(&f->zbd_info->mutex);
+
+	return write_cnt == 0;
+}
+
+/* Check whether the value of zbd_info.sectors_with_data is correct. */
+static void check_swd(const struct thread_data *td, const struct fio_file *f)
+{
+#if 0
+	struct fio_zone_info *zb, *ze, *z;
+	uint64_t swd;
+
+	zb = &f->zbd_info->zone_info[zbd_zone_idx(f, f->file_offset)];
+	ze = &f->zbd_info->zone_info[zbd_zone_idx(f, f->file_offset +
+						  f->io_size)];
+	swd = 0;
+	for (z = zb; z < ze; z++) {
+		pthread_mutex_lock(&z->mutex);
+		swd += z->wp - z->start;
+	}
+	pthread_mutex_lock(&f->zbd_info->mutex);
+	assert(f->zbd_info->sectors_with_data == swd);
+	pthread_mutex_unlock(&f->zbd_info->mutex);
+	for (z = zb; z < ze; z++)
+		pthread_mutex_unlock(&z->mutex);
+#endif
+}
+
 void zbd_file_reset(struct thread_data *td, struct fio_file *f)
 {
-	struct fio_zone_info *zb, *ze;
+	struct fio_zone_info *zb, *ze, *z;
 	uint32_t zone_idx_e;
+	uint64_t swd = 0;
 
 	if (!f->zbd_info)
 		return;
@@ -698,6 +756,16 @@ void zbd_file_reset(struct thread_data *td, struct fio_file *f)
 	zb = &f->zbd_info->zone_info[zbd_zone_idx(f, f->file_offset)];
 	zone_idx_e = zbd_zone_idx(f, f->file_offset + f->io_size);
 	ze = &f->zbd_info->zone_info[zone_idx_e];
+	for (z = zb ; z < ze; z++) {
+		pthread_mutex_lock(&z->mutex);
+		swd += z->wp - z->start;
+	}
+	pthread_mutex_lock(&f->zbd_info->mutex);
+	f->zbd_info->sectors_with_data = swd;
+	pthread_mutex_unlock(&f->zbd_info->mutex);
+	for (z = zb ; z < ze; z++)
+		pthread_mutex_unlock(&z->mutex);
+	dprint(FD_ZBD, "%s(%s): swd = %ld\n", __func__, f->file_name, swd);
 	/*
 	 * If data verification is enabled reset the affected zones before
 	 * writing any data to avoid that a zone reset has to be issued while
@@ -706,6 +774,7 @@ void zbd_file_reset(struct thread_data *td, struct fio_file *f)
 	zbd_reset_zones(td, f, zb, ze, td->o.verify != VERIFY_NONE &&
 			(td->o.td_ddir & TD_DDIR_WRITE) &&
 			td->runstate != TD_VERIFYING);
+	zbd_reset_write_cnt(td, f);
 }
 
 /* The caller must hold f->zbd_info->mutex. */
@@ -1007,6 +1076,14 @@ static void zbd_post_submit(const struct io_u *io_u, bool success)
 	switch (io_u->ddir) {
 	case DDIR_WRITE:
 		zone_end = min(end, (z + 1)->start);
+		pthread_mutex_lock(&zbd_info->mutex);
+		/*
+		 * z->wp > zone_end means that one or more I/O errors
+		 * have occurred.
+		 */
+		if (z->wp <= zone_end)
+			zbd_info->sectors_with_data += zone_end - z->wp;
+		pthread_mutex_unlock(&zbd_info->mutex);
 		z->wp = zone_end;
 		break;
 	case DDIR_TRIM:
@@ -1121,6 +1198,15 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 				goto eof;
 			zone_idx_b = zb - f->zbd_info->zone_info;
 		}
+		/* Check whether the zone reset threshold has been exceeded */
+		if (td->o.zrf.u.f) {
+			check_swd(td, f);
+			if ((f->zbd_info->sectors_with_data << 9) >=
+			    f->io_size * td->o.zrt.u.f &&
+			    zbd_dec_and_reset_write_cnt(td, f)) {
+				zb->reset_zone = 1;
+			}
+		}
 		/* Reset the zone pointer if necessary */
 		if (zb->reset_zone || zbd_zone_full(f, zb, min_bs)) {
 			assert(td->o.verify == VERIFY_NONE);
@@ -1135,6 +1221,7 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 			zb->reset_zone = 0;
 			if (zbd_reset_zone(td, f, zb) < 0)
 				goto eof;
+			check_swd(td, f);
 		}
 		/* Make writes occur at the write pointer */
 		assert(!zbd_zone_full(f, zb, min_bs));

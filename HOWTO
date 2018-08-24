@@ -1025,6 +1025,20 @@ Target file/device
 	number of open zones is defined as the number of zones to which write
 	commands are issued.
 
+.. option:: zone_reset_threshold=float
+
+	A number between zero and one that indicates the ratio of logical
+	blocks with data to the total number of logical blocks in the test
+	above which zones should be reset periodically.
+
+.. option:: zone_reset_frequency=float
+
+	A number between zero and one that indicates how often a zone reset
+	should be issued if the zone reset threshold has been exceeded. A zone
+	reset is submitted after each (1 / zone_reset_frequency) write
+	requests. This and the previous parameter can be used to simulate
+	garbage collection activity.
+
 
 I/O type
 ~~~~~~~~
