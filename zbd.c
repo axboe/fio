@@ -708,17 +708,228 @@ void zbd_file_reset(struct thread_data *td, struct fio_file *f)
 			td->runstate != TD_VERIFYING);
 }
 
+/* The caller must hold f->zbd_info->mutex. */
+static bool is_zone_open(const struct thread_data *td, const struct fio_file *f,
+			 unsigned int zone_idx)
+{
+	struct zoned_block_device_info *zbdi = f->zbd_info;
+	int i;
+
+	assert(td->o.max_open_zones <= ARRAY_SIZE(zbdi->open_zones));
+	assert(zbdi->num_open_zones <= td->o.max_open_zones);
+
+	for (i = 0; i < zbdi->num_open_zones; i++)
+		if (zbdi->open_zones[i] == zone_idx)
+			return true;
+
+	return false;
+}
+
+/*
+ * Open a ZBD zone if it was not yet open. Returns true if either the zone was
+ * already open or if opening a new zone is allowed. Returns false if the zone
+ * was not yet open and opening a new zone would cause the zone limit to be
+ * exceeded.
+ */
+static bool zbd_open_zone(struct thread_data *td, const struct io_u *io_u,
+			  uint32_t zone_idx)
+{
+	const uint32_t min_bs = td->o.min_bs[DDIR_WRITE];
+	const struct fio_file *f = io_u->file;
+	struct fio_zone_info *z = &f->zbd_info->zone_info[zone_idx];
+	bool res = true;
+
+	if (z->cond == BLK_ZONE_COND_OFFLINE)
+		return false;
+
+	/*
+	 * Skip full zones with data verification enabled because resetting a
+	 * zone causes data loss and hence causes verification to fail.
+	 */
+	if (td->o.verify != VERIFY_NONE && zbd_zone_full(f, z, min_bs))
+		return false;
+
+	/* Zero means no limit */
+	if (!td->o.max_open_zones)
+		return true;
+
+	pthread_mutex_lock(&f->zbd_info->mutex);
+	if (is_zone_open(td, f, zone_idx))
+		goto out;
+	res = false;
+	if (f->zbd_info->num_open_zones >= td->o.max_open_zones)
+		goto out;
+	dprint(FD_ZBD, "%s: opening zone %d\n", f->file_name, zone_idx);
+	f->zbd_info->open_zones[f->zbd_info->num_open_zones++] = zone_idx;
+	z->open = 1;
+	res = true;
+
+out:
+	pthread_mutex_unlock(&f->zbd_info->mutex);
+	return res;
+}
+
+/* The caller must hold f->zbd_info->mutex */
+static void zbd_close_zone(struct thread_data *td, const struct fio_file *f,
+			   unsigned int open_zone_idx)
+{
+	uint32_t zone_idx;
+
+	assert(open_zone_idx < f->zbd_info->num_open_zones);
+	zone_idx = f->zbd_info->open_zones[open_zone_idx];
+	memmove(f->zbd_info->open_zones + open_zone_idx,
+		f->zbd_info->open_zones + open_zone_idx + 1,
+		(FIO_MAX_OPEN_ZBD_ZONES - (open_zone_idx + 1)) *
+		sizeof(f->zbd_info->open_zones[0]));
+	f->zbd_info->num_open_zones--;
+	f->zbd_info->zone_info[zone_idx].open = 0;
+}
+
+/*
+ * Modify the offset of an I/O unit that does not refer to an open zone such
+ * that it refers to an open zone. Close an open zone and open a new zone if
+ * necessary. This algorithm can only work correctly if all write pointers are
+ * a multiple of the fio block size. The caller must neither hold z->mutex
+ * nor f->zbd_info->mutex. Returns with z->mutex held upon success.
+ */
+struct fio_zone_info *zbd_convert_to_open_zone(struct thread_data *td,
+					       struct io_u *io_u)
+{
+	const uint32_t min_bs = td->o.min_bs[io_u->ddir];
+	const struct fio_file *f = io_u->file;
+	struct fio_zone_info *z;
+	unsigned int open_zone_idx = -1;
+	uint32_t zone_idx, new_zone_idx;
+	int i;
+
+	assert(is_valid_offset(f, io_u->offset));
+
+	if (td->o.max_open_zones) {
+		/*
+		 * This statement accesses f->zbd_info->open_zones[] on purpose
+		 * without locking.
+		 */
+		zone_idx = f->zbd_info->open_zones[(io_u->offset -
+						    f->file_offset) *
+				f->zbd_info->num_open_zones / f->io_size];
+	} else {
+		zone_idx = zbd_zone_idx(f, io_u->offset);
+	}
+	dprint(FD_ZBD, "%s(%s): starting from zone %d (offset %lld, buflen %lld)\n",
+	       __func__, f->file_name, zone_idx, io_u->offset, io_u->buflen);
+
+	/*
+	 * Since z->mutex is the outer lock and f->zbd_info->mutex the inner
+	 * lock it can happen that the state of the zone with index zone_idx
+	 * has changed after 'z' has been assigned and before f->zbd_info->mutex
+	 * has been obtained. Hence the loop.
+	 */
+	for (;;) {
+		z = &f->zbd_info->zone_info[zone_idx];
+
+		pthread_mutex_lock(&z->mutex);
+		pthread_mutex_lock(&f->zbd_info->mutex);
+		if (td->o.max_open_zones == 0)
+			goto examine_zone;
+		if (f->zbd_info->num_open_zones == 0) {
+			pthread_mutex_unlock(&f->zbd_info->mutex);
+			pthread_mutex_unlock(&z->mutex);
+			dprint(FD_ZBD, "%s(%s): no zones are open\n",
+			       __func__, f->file_name);
+			return NULL;
+		}
+		open_zone_idx = (io_u->offset - f->file_offset) *
+			f->zbd_info->num_open_zones / f->io_size;
+		assert(open_zone_idx < f->zbd_info->num_open_zones);
+		new_zone_idx = f->zbd_info->open_zones[open_zone_idx];
+		if (new_zone_idx == zone_idx)
+			break;
+		zone_idx = new_zone_idx;
+		pthread_mutex_unlock(&f->zbd_info->mutex);
+		pthread_mutex_unlock(&z->mutex);
+	}
+
+	/* Both z->mutex and f->zbd_info->mutex are held. */
+
+examine_zone:
+	if ((z->wp << 9) + min_bs <= ((z+1)->start << 9)) {
+		pthread_mutex_unlock(&f->zbd_info->mutex);
+		goto out;
+	}
+	dprint(FD_ZBD, "%s(%s): closing zone %d\n", __func__, f->file_name,
+	       zone_idx);
+	if (td->o.max_open_zones)
+		zbd_close_zone(td, f, open_zone_idx);
+	pthread_mutex_unlock(&f->zbd_info->mutex);
+
+	/* Only z->mutex is held. */
+
+	/* Zone 'z' is full, so try to open a new zone. */
+	for (i = f->io_size / f->zbd_info->zone_size; i > 0; i--) {
+		zone_idx++;
+		pthread_mutex_unlock(&z->mutex);
+		z++;
+		if (!is_valid_offset(f, z->start << 9)) {
+			/* Wrap-around. */
+			zone_idx = zbd_zone_idx(f, f->file_offset);
+			z = &f->zbd_info->zone_info[zone_idx];
+		}
+		assert(is_valid_offset(f, z->start << 9));
+		pthread_mutex_lock(&z->mutex);
+		if (z->open)
+			continue;
+		if (zbd_open_zone(td, io_u, zone_idx))
+			goto out;
+	}
+
+	/* Only z->mutex is held. */
+
+	/* Check whether the write fits in any of the already opened zones. */
+	pthread_mutex_lock(&f->zbd_info->mutex);
+	for (i = 0; i < f->zbd_info->num_open_zones; i++) {
+		zone_idx = f->zbd_info->open_zones[i];
+		pthread_mutex_unlock(&f->zbd_info->mutex);
+		pthread_mutex_unlock(&z->mutex);
+
+		z = &f->zbd_info->zone_info[zone_idx];
+
+		pthread_mutex_lock(&z->mutex);
+		if ((z->wp << 9) + min_bs <= ((z+1)->start << 9))
+			goto out;
+		pthread_mutex_lock(&f->zbd_info->mutex);
+	}
+	pthread_mutex_unlock(&f->zbd_info->mutex);
+	pthread_mutex_unlock(&z->mutex);
+	dprint(FD_ZBD, "%s(%s): did not open another zone\n", __func__,
+	       f->file_name);
+	return NULL;
+
+out:
+	dprint(FD_ZBD, "%s(%s): returning zone %d\n", __func__, f->file_name,
+	       zone_idx);
+	io_u->offset = z->start << 9;
+	return z;
+}
+
 /* The caller must hold z->mutex. */
-static void zbd_replay_write_order(struct thread_data *td, struct io_u *io_u,
-				   struct fio_zone_info *z)
+static struct fio_zone_info *zbd_replay_write_order(struct thread_data *td,
+						    struct io_u *io_u,
+						    struct fio_zone_info *z)
 {
 	const struct fio_file *f = io_u->file;
 	const uint32_t min_bs = td->o.min_bs[DDIR_WRITE];
+
+	if (!zbd_open_zone(td, io_u, z - f->zbd_info->zone_info)) {
+		pthread_mutex_unlock(&z->mutex);
+		z = zbd_convert_to_open_zone(td, io_u);
+		assert(z);
+	}
 
 	if (z->verify_block * min_bs >= f->zbd_info->zone_size)
 		log_err("%s: %d * %d >= %ld\n", f->file_name, z->verify_block,
 			min_bs, f->zbd_info->zone_size);
 	io_u->offset = (z->start << 9) + z->verify_block++ * min_bs;
+	return z;
 }
 
 /*
@@ -861,7 +1072,7 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 	switch (io_u->ddir) {
 	case DDIR_READ:
 		if (td->runstate == TD_VERIFYING) {
-			zbd_replay_write_order(td, io_u, zb);
+			zb = zbd_replay_write_order(td, io_u, zb);
 			goto accept;
 		}
 		/*
@@ -903,6 +1114,13 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 	case DDIR_WRITE:
 		if (io_u->buflen > (f->zbd_info->zone_size << 9))
 			goto eof;
+		if (!zbd_open_zone(td, io_u, zone_idx_b)) {
+			pthread_mutex_unlock(&zb->mutex);
+			zb = zbd_convert_to_open_zone(td, io_u);
+			if (!zb)
+				goto eof;
+			zone_idx_b = zb - f->zbd_info->zone_info;
+		}
 		/* Reset the zone pointer if necessary */
 		if (zb->reset_zone || zbd_zone_full(f, zb, min_bs)) {
 			assert(td->o.verify == VERIFY_NONE);

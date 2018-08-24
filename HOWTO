@@ -1017,6 +1017,14 @@ Target file/device
 	bandwidth and IOPS numbers fio only reads beyond the write pointer if
 	explicitly told to do so. Default: false.
 
+.. option:: max_open_zones=int
+
+	When running a random write test across an entire drive many more
+	zones will be open than in a typical application workload. Hence this
+	command line option that allows to limit the number of open zones. The
+	number of open zones is defined as the number of zones to which write
+	commands are issued.
+
 
 I/O type
 ~~~~~~~~

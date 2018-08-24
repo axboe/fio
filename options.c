@@ -3307,6 +3307,18 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_INVALID,
 	},
 	{
+		.name	= "max_open_zones",
+		.lname	= "Maximum number of open zones",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct thread_options, max_open_zones),
+		.maxval	= FIO_MAX_OPEN_ZBD_ZONES,
+		.help	= "Limit random writes to SMR drives to the specified"
+			  " number of sequential zones",
+		.def	= "0",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
 		.name	= "lockmem",
 		.lname	= "Lock memory",
 		.type	= FIO_OPT_STR_VAL,

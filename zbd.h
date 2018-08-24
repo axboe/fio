@@ -8,6 +8,7 @@
 #define FIO_ZBD_H
 
 #include <inttypes.h>
+#include "fio.h"	/* FIO_MAX_OPEN_ZBD_ZONES */
 #ifdef CONFIG_LINUX_BLKZONED
 #include <linux/blkzoned.h>
 #endif
@@ -56,12 +57,15 @@ struct fio_zone_info {
 /**
  * zoned_block_device_info - zoned block device characteristics
  * @model: Device model.
- * @mutex: Protects the modifiable members in this structure (refcount).
+ * @mutex: Protects the modifiable members in this structure (refcount and
+ *		num_open_zones).
  * @zone_size: size of a single zone in units of 512 bytes
  * @zone_size_log2: log2 of the zone size in bytes if it is a power of 2 or 0
  *		if the zone size is not a power of 2.
  * @nr_zones: number of zones
  * @refcount: number of fio files that share this structure
+ * @num_open_zones: number of open zones
+ * @open_zones: zone numbers of open zones
  * @zone_info: description of the individual zones
  *
  * Only devices for which all zones have the same size are supported.
@@ -75,6 +79,8 @@ struct zoned_block_device_info {
 	uint32_t		zone_size_log2;
 	uint32_t		nr_zones;
 	uint32_t		refcount;
+	uint32_t		num_open_zones;
+	uint32_t		open_zones[FIO_MAX_OPEN_ZBD_ZONES];
 	struct fio_zone_info	zone_info[0];
 };
 

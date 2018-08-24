@@ -780,6 +780,12 @@ block device will complete the read without reading any data from the storage
 medium. Since such reads lead to unrealistically high bandwidth and IOPS
 numbers fio only reads beyond the write pointer if explicitly told to do
 so. Default: false.
+.TP
+.BI max_open_zones \fR=\fPint
+When running a random write test across an entire drive many more zones will be
+open than in a typical application workload. Hence this command line option
+that allows to limit the number of open zones. The number of open zones is
+defined as the number of zones to which write commands are issued.
 
 .SS "I/O type"
 .TP
