@@ -334,6 +334,9 @@ struct thread_options {
 
 	unsigned int allow_create;
 	unsigned int allow_mounted_write;
+
+	/* Parameters that affect zonemode=zbd */
+	unsigned int read_beyond_wp;
 };
 
 #define FIO_TOP_STR_MAX		256

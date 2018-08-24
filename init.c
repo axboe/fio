@@ -623,6 +623,11 @@ static int fixup_options(struct thread_data *td)
 		ret |= 1;
 	}
 
+	if (o->zone_mode == ZONE_MODE_STRIDED && !o->zone_size) {
+		log_err("fio: --zonesize must be specified when using --zonemode=strided.\n");
+		ret |= 1;
+	}
+
 	if (o->zone_mode == ZONE_MODE_NOT_SPECIFIED) {
 		if (o->zone_size)
 			o->zone_mode = ZONE_MODE_STRIDED;

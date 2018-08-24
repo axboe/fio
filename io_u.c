@@ -10,6 +10,7 @@
 #include "err.h"
 #include "lib/pow2.h"
 #include "minmax.h"
+#include "zbd.h"
 
 struct io_completion_data {
 	int nr;				/* input */
@@ -872,6 +873,8 @@ static void setup_strided_zone_mode(struct thread_data *td, struct io_u *io_u)
 static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 {
 	bool is_random;
+	uint64_t offset;
+	enum io_u_action ret;
 
 	if (td_ioengine_flagged(td, FIO_NOIO))
 		goto out;
@@ -902,6 +905,13 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 		return 1;
 	}
 
+	offset = io_u->offset;
+	if (td->o.zone_mode == ZONE_MODE_ZBD) {
+		ret = zbd_adjust_block(td, io_u);
+		if (ret == io_u_eof)
+			return 1;
+	}
+
 	if (io_u->offset + io_u->buflen > io_u->file->real_file_size) {
 		dprint(FD_IO, "io_u %p, off=0x%llx + len=0x%llx exceeds file size=0x%llx\n",
 			io_u,
@@ -914,8 +924,7 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	 * mark entry before potentially trimming io_u
 	 */
 	if (td_random(td) && file_randommap(td, io_u->file))
-		io_u->buflen = mark_random_map(td, io_u, io_u->offset,
-					       io_u->buflen);
+		io_u->buflen = mark_random_map(td, io_u, offset, io_u->buflen);
 
 out:
 	dprint_io_u(io_u, "fill");

@@ -762,6 +762,25 @@ For \fBzonemode\fR=strided, the number of bytes to skip after \fBzonesize\fR
 bytes of data have been transferred. This parameter must be zero for
 \fBzonemode\fR=zbd.
 
+.TP
+.BI read_beyond_wp \fR=\fPbool
+This parameter applies to \fBzonemode=zbd\fR only.
+
+Zoned block devices are block devices that consist of multiple zones. Each
+zone has a type, e.g. conventional or sequential. A conventional zone can be
+written at any offset that is a multiple of the block size. Sequential zones
+must be written sequentially. The position at which a write must occur is
+called the write pointer. A zoned block device can be either drive
+managed, host managed or host aware. For host managed devices the host must
+ensure that writes happen sequentially. Fio recognizes host managed devices
+and serializes writes to sequential zones for these devices.
+
+If a read occurs in a sequential zone beyond the write pointer then the zoned
+block device will complete the read without reading any data from the storage
+medium. Since such reads lead to unrealistically high bandwidth and IOPS
+numbers fio only reads beyond the write pointer if explicitly told to do
+so. Default: false.
+
 .SS "I/O type"
 .TP
 .BI direct \fR=\fPbool
