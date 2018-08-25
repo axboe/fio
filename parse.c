@@ -120,19 +120,22 @@ static void show_option_values(const struct fio_option *o)
 static void show_option_help(const struct fio_option *o, int is_err)
 {
 	const char *typehelp[] = {
-		"invalid",
-		"string (opt=bla)",
-		"string (opt=bla)",
-		"string with possible k/m/g postfix (opt=4k)",
-		"string with time postfix (opt=10s)",
-		"string (opt=bla)",
-		"string with dual range (opt=1k-4k,4k-8k)",
-		"integer value (opt=100)",
-		"boolean value (opt=1)",
-		"list of floating point values separated by ':' (opt=5.9:7.8)",
-		"no argument (opt)",
-		"deprecated",
-		"unsupported",
+		[FIO_OPT_INVALID]	  = "invalid",
+		[FIO_OPT_STR]		  = "string (opt=bla)",
+		[FIO_OPT_STR_ULL]	  = "string (opt=bla)",
+		[FIO_OPT_STR_MULTI]	  = "string with possible k/m/g postfix (opt=4k)",
+		[FIO_OPT_STR_VAL]	  = "string (opt=bla)",
+		[FIO_OPT_STR_VAL_TIME]	  = "string with time postfix (opt=10s)",
+		[FIO_OPT_STR_STORE]	  = "string (opt=bla)",
+		[FIO_OPT_RANGE]		  = "one to three ranges (opt=1k-4k[,4k-8k[,1k-8k]])",
+		[FIO_OPT_INT]		  = "integer value (opt=100)",
+		[FIO_OPT_ULL]		  = "integer value (opt=100)",
+		[FIO_OPT_BOOL]		  = "boolean value (opt=1)",
+		[FIO_OPT_FLOAT_LIST]	  = "list of floating point values separated by ':' (opt=5.9:7.8)",
+		[FIO_OPT_STR_SET]	  = "empty or boolean value ([0|1])",
+		[FIO_OPT_DEPRECATED]	  = "deprecated",
+		[FIO_OPT_SOFT_DEPRECATED] = "deprecated",
+		[FIO_OPT_UNSUPPORTED]	  = "unsupported",
 	};
 	ssize_t (*logger)(const char *format, ...);
 
