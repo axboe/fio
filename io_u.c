@@ -768,6 +768,8 @@ void put_file_log(struct thread_data *td, struct fio_file *f)
 
 void put_io_u(struct thread_data *td, struct io_u *io_u)
 {
+	const bool needs_lock = td_async_processing(td);
+
 	if (io_u->post_submit) {
 		io_u->post_submit(io_u, io_u->error == 0);
 		io_u->post_submit = NULL;
@@ -776,7 +778,8 @@ void put_io_u(struct thread_data *td, struct io_u *io_u)
 	if (td->parent)
 		td = td->parent;
 
-	td_io_u_lock(td);
+	if (needs_lock)
+		__td_io_u_lock(td);
 
 	if (io_u->file && !(io_u->flags & IO_U_F_NO_FILE_PUT))
 		put_file_log(td, io_u->file);
@@ -790,7 +793,9 @@ void put_io_u(struct thread_data *td, struct io_u *io_u)
 	}
 	io_u_qpush(&td->io_u_freelist, io_u);
 	td_io_u_free_notify(td);
-	td_io_u_unlock(td);
+
+	if (needs_lock)
+		__td_io_u_unlock(td);
 }
 
 void clear_io_u(struct thread_data *td, struct io_u *io_u)
@@ -801,6 +806,7 @@ void clear_io_u(struct thread_data *td, struct io_u *io_u)
 
 void requeue_io_u(struct thread_data *td, struct io_u **io_u)
 {
+	const bool needs_lock = td_async_processing(td);
 	struct io_u *__io_u = *io_u;
 	enum fio_ddir ddir = acct_ddir(__io_u);
 
@@ -809,7 +815,8 @@ void requeue_io_u(struct thread_data *td, struct io_u **io_u)
 	if (td->parent)
 		td = td->parent;
 
-	td_io_u_lock(td);
+	if (needs_lock)
+		__td_io_u_lock(td);
 
 	io_u_set(td, __io_u, IO_U_F_FREE);
 	if ((__io_u->flags & IO_U_F_FLIGHT) && ddir_rw(ddir))
@@ -823,7 +830,10 @@ void requeue_io_u(struct thread_data *td, struct io_u **io_u)
 
 	io_u_rpush(&td->io_u_requeues, __io_u);
 	td_io_u_free_notify(td);
-	td_io_u_unlock(td);
+
+	if (needs_lock)
+		__td_io_u_unlock(td);
+
 	*io_u = NULL;
 }
 
@@ -1504,13 +1514,15 @@ bool queue_full(const struct thread_data *td)
 
 struct io_u *__get_io_u(struct thread_data *td)
 {
+	const bool needs_lock = td_async_processing(td);
 	struct io_u *io_u = NULL;
 	int ret;
 
 	if (td->stop_io)
 		return NULL;
 
-	td_io_u_lock(td);
+	if (needs_lock)
+		__td_io_u_lock(td);
 
 again:
 	if (!io_u_rempty(&td->io_u_requeues))
@@ -1547,7 +1559,9 @@ again:
 		goto again;
 	}
 
-	td_io_u_unlock(td);
+	if (needs_lock)
+		__td_io_u_unlock(td);
+
 	return io_u;
 }
 

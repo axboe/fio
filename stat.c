@@ -2475,11 +2475,13 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 		     unsigned long long nsec, unsigned long long bs,
 		     uint64_t offset)
 {
+	const bool needs_lock = td_async_processing(td);
 	unsigned long elapsed, this_window;
 	struct thread_stat *ts = &td->ts;
 	struct io_log *iolog = td->clat_hist_log;
 
-	td_io_u_lock(td);
+	if (needs_lock)
+		__td_io_u_lock(td);
 
 	add_stat_sample(&ts->clat_stat[ddir], nsec);
 
@@ -2528,37 +2530,43 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 		}
 	}
 
-	td_io_u_unlock(td);
+	if (needs_lock)
+		__td_io_u_unlock(td);
 }
 
 void add_slat_sample(struct thread_data *td, enum fio_ddir ddir,
 		     unsigned long usec, unsigned long long bs, uint64_t offset)
 {
+	const bool needs_lock = td_async_processing(td);
 	struct thread_stat *ts = &td->ts;
 
 	if (!ddir_rw(ddir))
 		return;
 
-	td_io_u_lock(td);
+	if (needs_lock)
+		__td_io_u_lock(td);
 
 	add_stat_sample(&ts->slat_stat[ddir], usec);
 
 	if (td->slat_log)
 		add_log_sample(td, td->slat_log, sample_val(usec), ddir, bs, offset);
 
-	td_io_u_unlock(td);
+	if (needs_lock)
+		__td_io_u_unlock(td);
 }
 
 void add_lat_sample(struct thread_data *td, enum fio_ddir ddir,
 		    unsigned long long nsec, unsigned long long bs,
 		    uint64_t offset)
 {
+	const bool needs_lock = td_async_processing(td);
 	struct thread_stat *ts = &td->ts;
 
 	if (!ddir_rw(ddir))
 		return;
 
-	td_io_u_lock(td);
+	if (needs_lock)
+		__td_io_u_lock(td);
 
 	add_stat_sample(&ts->lat_stat[ddir], nsec);
 
@@ -2569,12 +2577,14 @@ void add_lat_sample(struct thread_data *td, enum fio_ddir ddir,
 	if (ts->lat_percentiles)
 		add_clat_percentile_sample(ts, nsec, ddir);
 
-	td_io_u_unlock(td);
+	if (needs_lock)
+		__td_io_u_unlock(td);
 }
 
 void add_bw_sample(struct thread_data *td, struct io_u *io_u,
 		   unsigned int bytes, unsigned long long spent)
 {
+	const bool needs_lock = td_async_processing(td);
 	struct thread_stat *ts = &td->ts;
 	unsigned long rate;
 
@@ -2583,7 +2593,8 @@ void add_bw_sample(struct thread_data *td, struct io_u *io_u,
 	else
 		rate = 0;
 
-	td_io_u_lock(td);
+	if (needs_lock)
+		__td_io_u_lock(td);
 
 	add_stat_sample(&ts->bw_stat[io_u->ddir], rate);
 
@@ -2592,7 +2603,9 @@ void add_bw_sample(struct thread_data *td, struct io_u *io_u,
 			       bytes, io_u->offset);
 
 	td->stat_io_bytes[io_u->ddir] = td->this_io_bytes[io_u->ddir];
-	td_io_u_unlock(td);
+
+	if (needs_lock)
+		__td_io_u_unlock(td);
 }
 
 static int __add_samples(struct thread_data *td, struct timespec *parent_tv,
@@ -2601,6 +2614,7 @@ static int __add_samples(struct thread_data *td, struct timespec *parent_tv,
 			 struct io_stat *stat, struct io_log *log,
 			 bool is_kb)
 {
+	const bool needs_lock = td_async_processing(td);
 	unsigned long spent, rate;
 	enum fio_ddir ddir;
 	unsigned long next, next_log;
@@ -2611,7 +2625,8 @@ static int __add_samples(struct thread_data *td, struct timespec *parent_tv,
 	if (spent < avg_time && avg_time - spent >= LOG_MSEC_SLACK)
 		return avg_time - spent;
 
-	td_io_u_lock(td);
+	if (needs_lock)
+		__td_io_u_lock(td);
 
 	/*
 	 * Compute both read and write rates for the interval.
@@ -2648,7 +2663,8 @@ static int __add_samples(struct thread_data *td, struct timespec *parent_tv,
 
 	timespec_add_msec(parent_tv, avg_time);
 
-	td_io_u_unlock(td);
+	if (needs_lock)
+		__td_io_u_unlock(td);
 
 	if (spent <= avg_time)
 		next = avg_time;
@@ -2668,9 +2684,11 @@ static int add_bw_samples(struct thread_data *td, struct timespec *t)
 void add_iops_sample(struct thread_data *td, struct io_u *io_u,
 		     unsigned int bytes)
 {
+	const bool needs_lock = td_async_processing(td);
 	struct thread_stat *ts = &td->ts;
 
-	td_io_u_lock(td);
+	if (needs_lock)
+		__td_io_u_lock(td);
 
 	add_stat_sample(&ts->iops_stat[io_u->ddir], 1);
 
@@ -2679,7 +2697,9 @@ void add_iops_sample(struct thread_data *td, struct io_u *io_u,
 			       bytes, io_u->offset);
 
 	td->stat_io_blocks[io_u->ddir] = td->this_io_blocks[io_u->ddir];
-	td_io_u_unlock(td);
+
+	if (needs_lock)
+		__td_io_u_unlock(td);
 }
 
 static int add_iops_samples(struct thread_data *td, struct timespec *t)

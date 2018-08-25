@@ -774,16 +774,14 @@ static inline bool td_async_processing(struct thread_data *td)
  * We currently only need to do locking if we have verifier threads
  * accessing our internal structures too
  */
-static inline void td_io_u_lock(struct thread_data *td)
+static inline void __td_io_u_lock(struct thread_data *td)
 {
-	if (td_async_processing(td))
-		pthread_mutex_lock(&td->io_u_lock);
+	pthread_mutex_lock(&td->io_u_lock);
 }
 
-static inline void td_io_u_unlock(struct thread_data *td)
+static inline void __td_io_u_unlock(struct thread_data *td)
 {
-	if (td_async_processing(td))
-		pthread_mutex_unlock(&td->io_u_lock);
+	pthread_mutex_unlock(&td->io_u_lock);
 }
 
 static inline void td_io_u_free_notify(struct thread_data *td)

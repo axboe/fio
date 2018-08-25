@@ -208,6 +208,7 @@ void steadystate_check(void)
 
 	prev_groupid = -1;
 	for_each_td(td, i) {
+		const bool needs_lock = td_async_processing(td);
 		struct steadystate_data *ss = &td->ss;
 
 		if (!ss->dur || td->runstate <= TD_SETTING_UP ||
@@ -235,12 +236,16 @@ void steadystate_check(void)
 				ss->state |= FIO_SS_RAMP_OVER;
 		}
 
-		td_io_u_lock(td);
+		if (needs_lock)
+			__td_io_u_lock(td);
+
 		for (ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++) {
 			td_iops += td->io_blocks[ddir];
 			td_bytes += td->io_bytes[ddir];
 		}
-		td_io_u_unlock(td);
+
+		if (needs_lock)
+			__td_io_u_unlock(td);
 
 		rate_time = mtime_since(&ss->prev_time, &now);
 		memcpy(&ss->prev_time, &now, sizeof(now));
