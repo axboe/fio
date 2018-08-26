@@ -580,7 +580,10 @@ static int open_socket(const char *path)
 	if (fd < 0)
 		return fd;
 	addr.sun_family = AF_UNIX;
-	strncpy(addr.sun_path, path, sizeof(addr.sun_path));
+	if (snprintf(addr.sun_path, sizeof(addr.sun_path), "%s", path) >=
+	    sizeof(addr.sun_path))
+		log_err("%s: path name %s is too long for a Unix socket\n",
+			__func__, path);
 	if (connect(fd, (const struct sockaddr *)&addr, strlen(path) + sizeof(addr.sun_family)) == 0)
 		return fd;
 	else
