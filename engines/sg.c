@@ -675,36 +675,37 @@ static int fio_sgio_commit(struct thread_data *td)
 
 	ret = fio_sgio_rw_doio(io_u->file, io_u, 0);
 
-	if (ret < 0)
-		for (i = 0; i < st->unmap_range_count; i++)
-			st->trim_io_us[i]->error = errno;
-	else if (hdr->status)
+	if (ret < 0 || hdr->status) {
+		int error;
+
+		if (ret < 0)
+			error = errno;
+		else {
+			error = EIO;
+			ret = -EIO;
+		}
+
 		for (i = 0; i < st->unmap_range_count; i++) {
-			st->trim_io_us[i]->resid = hdr->resid;
-			st->trim_io_us[i]->error = EIO;
+			st->trim_io_us[i]->error = error;
+			clear_io_u(td, st->trim_io_us[i]);
+			if (hdr->status)
+				st->trim_io_us[i]->resid = hdr->resid;
 		}
-	else {
-		if (fio_fill_issue_time(td)) {
-			fio_gettime(&now, NULL);
-			for (i = 0; i < st->unmap_range_count; i++) {
-				struct io_u *io_u = st->trim_io_us[i];
 
-				memcpy(&io_u->issue_time, &now, sizeof(now));
-				io_u_queued(td, io_u);
-			}
-		}
-		io_u_mark_submit(td, st->unmap_range_count);
-	}
-
-	if (io_u->error) {
-		td_verror(td, io_u->error, "xfer");
-		return 0;
-	}
-
-	if (ret == FIO_Q_QUEUED)
-		return 0;
-	else
+		td_verror(td, error, "xfer");
 		return ret;
+	}
+
+	if (fio_fill_issue_time(td)) {
+		fio_gettime(&now, NULL);
+		for (i = 0; i < st->unmap_range_count; i++) {
+			memcpy(&st->trim_io_us[i]->issue_time, &now, sizeof(now));
+			io_u_queued(td, io_u);
+		}
+	}
+	io_u_mark_submit(td, st->unmap_range_count);
+
+	return 0;
 }
 
 static struct io_u *fio_sgio_event(struct thread_data *td, int event)
