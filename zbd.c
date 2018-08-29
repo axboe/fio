@@ -31,7 +31,7 @@ static uint32_t zbd_zone_idx(const struct fio_file *f, uint64_t offset)
 {
 	uint32_t zone_idx;
 
-	if (f->zbd_info->zone_size_log2)
+	if (f->zbd_info->zone_size_log2 > 0)
 		zone_idx = offset >> f->zbd_info->zone_size_log2;
 	else
 		zone_idx = (offset >> 9) / f->zbd_info->zone_size;
