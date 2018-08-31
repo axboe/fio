@@ -1539,7 +1539,7 @@ static struct cmd_iolog_pdu *convert_iolog_gz(struct fio_net_cmd *cmd,
 #ifdef CONFIG_ZLIB
 	struct cmd_iolog_pdu *ret;
 	z_stream stream;
-	uint32_t nr_samples;
+	uint64_t nr_samples;
 	size_t total;
 	char *p;
 
