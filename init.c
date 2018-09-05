@@ -1542,7 +1542,9 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			.log_gz = o->log_gz,
 			.log_gz_store = o->log_gz_store,
 		};
-		const char *pre = o->lat_log_file ? o->lat_log_file : o->name;
+		const char *pre =
+			(o->lat_log_file && strcmp(o->lat_log_file, "") != 0) ?
+				o->lat_log_file : o->name;
 		const char *suf;
 
 		if (p.log_gz_store)
@@ -1561,6 +1563,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		gen_log_name(logname, sizeof(logname), "clat", pre,
 				td->thread_number, suf, o->per_job_logs);
 		setup_log(&td->clat_log, &p, logname);
+
 	}
 
 	if (o->write_hist_log) {
@@ -1574,7 +1577,9 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			.log_gz = o->log_gz,
 			.log_gz_store = o->log_gz_store,
 		};
-		const char *pre = o->hist_log_file ? o->hist_log_file : o->name;
+		const char *pre =
+			(o->hist_log_file && strcmp(o->hist_log_file, "") != 0) ?
+				o->hist_log_file : o->name;
 		const char *suf;
 
 #ifndef CONFIG_ZLIB
@@ -1605,7 +1610,9 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			.log_gz = o->log_gz,
 			.log_gz_store = o->log_gz_store,
 		};
-		const char *pre = o->bw_log_file ? o->bw_log_file : o->name;
+		const char *pre =
+			(o->bw_log_file && strcmp(o->bw_log_file, "") != 0) ?
+				o->bw_log_file : o->name;
 		const char *suf;
 
 		if (fio_option_is_set(o, bw_avg_time))
@@ -1636,7 +1643,9 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			.log_gz = o->log_gz,
 			.log_gz_store = o->log_gz_store,
 		};
-		const char *pre = o->iops_log_file ? o->iops_log_file : o->name;
+		const char *pre =
+			(o->iops_log_file && strcmp(o->iops_log_file, "") != 0) ?
+				o->iops_log_file : o->name;
 		const char *suf;
 
 		if (fio_option_is_set(o, iops_avg_time))
