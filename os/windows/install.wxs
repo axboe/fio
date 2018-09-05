@@ -61,7 +61,7 @@
 	<Property Id="ARPURLINFOABOUT" Value="http://git.kernel.dk/cgit/fio/" />
 	<Property Id='ARPCONTACT'>fio@vger.kernel.org</Property>
 	<Property Id='ARPHELPLINK'>http://www.spinics.net/lists/fio/</Property>
-	<Property Id='ARPURLUPDATEINFO'>http://bluestop.org/fio/</Property>
+	<Property Id='ARPURLUPDATEINFO'>https://bluestop.org/fio/</Property>
 
 	<WixVariable Id="WixUILicenseRtf" Value="eula.rtf" />
 
