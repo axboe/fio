@@ -194,7 +194,10 @@ Command line options
 	Force a full status dump of cumulative (from job start) values at `time`
 	intervals. This option does *not* provide per-period measurements. So
 	values such as bandwidth are running averages. When the time unit is omitted,
-	`time` is interpreted in seconds.
+	`time` is interpreted in seconds. Note that using this option with
+	``--output-format=json`` will yield output that technically isn't valid
+	json, since the output will be collated sets of valid json. It will need
+	to be split into valid sets of json after the run.
 
 .. option:: --section=name
 
