@@ -1419,6 +1419,17 @@ static bool wait_for_ok(const char *jobname, struct thread_options *o)
 }
 
 /*
+ * Treat an empty log file name the same as a one not given
+ */
+static const char *make_log_name(const char *logname, const char *jobname)
+{
+	if (logname && strcmp(logname, ""))
+		return logname;
+
+	return jobname;
+}
+
+/*
  * Adds a job to the list of things todo. Sanitizes the various options
  * to make sure we don't have conflicts, and initializes various
  * members of td.
@@ -1542,9 +1553,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			.log_gz = o->log_gz,
 			.log_gz_store = o->log_gz_store,
 		};
-		const char *pre =
-			(o->lat_log_file && strcmp(o->lat_log_file, "") != 0) ?
-				o->lat_log_file : o->name;
+		const char *pre = make_log_name(o->lat_log_file, o->name);
 		const char *suf;
 
 		if (p.log_gz_store)
@@ -1577,9 +1586,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			.log_gz = o->log_gz,
 			.log_gz_store = o->log_gz_store,
 		};
-		const char *pre =
-			(o->hist_log_file && strcmp(o->hist_log_file, "") != 0) ?
-				o->hist_log_file : o->name;
+		const char *pre = make_log_name(o->hist_log_file, o->name);
 		const char *suf;
 
 #ifndef CONFIG_ZLIB
@@ -1610,9 +1617,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			.log_gz = o->log_gz,
 			.log_gz_store = o->log_gz_store,
 		};
-		const char *pre =
-			(o->bw_log_file && strcmp(o->bw_log_file, "") != 0) ?
-				o->bw_log_file : o->name;
+		const char *pre = make_log_name(o->bw_log_file, o->name);
 		const char *suf;
 
 		if (fio_option_is_set(o, bw_avg_time))
@@ -1643,9 +1648,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			.log_gz = o->log_gz,
 			.log_gz_store = o->log_gz_store,
 		};
-		const char *pre =
-			(o->iops_log_file && strcmp(o->iops_log_file, "") != 0) ?
-				o->iops_log_file : o->name;
+		const char *pre = make_log_name(o->iops_log_file, o->name);
 		const char *suf;
 
 		if (fio_option_is_set(o, iops_avg_time))
