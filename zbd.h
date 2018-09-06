@@ -95,8 +95,6 @@ int zbd_init(struct thread_data *td);
 void zbd_file_reset(struct thread_data *td, struct fio_file *f);
 bool zbd_unaligned_write(int error_code);
 enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u);
-int zbd_do_trim(struct thread_data *td, const struct io_u *io_u);
-void zbd_update_wp(struct thread_data *td, const struct io_u *io_u);
 char *zbd_write_status(const struct thread_stat *ts);
 #else
 static inline void zbd_free_zone_info(struct fio_file *f)
@@ -121,16 +119,6 @@ static inline enum io_u_action zbd_adjust_block(struct thread_data *td,
 						struct io_u *io_u)
 {
 	return io_u_accept;
-}
-
-static inline int zbd_do_trim(struct thread_data *td, const struct io_u *io_u)
-{
-	return 1;
-}
-
-static inline void zbd_update_wp(struct thread_data *td,
-				 const struct io_u *io_u)
-{
 }
 
 static inline char *zbd_write_status(const struct thread_stat *ts)
