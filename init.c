@@ -1694,18 +1694,18 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 				}
 
 				buf_output_init(&out);
-				log_buf(&out, "%s: (g=%d): rw=%s, ", td->o.name,
+				__log_buf(&out, "%s: (g=%d): rw=%s, ", td->o.name,
 							td->groupid,
 							ddir_str(o->td_ddir));
 
 				if (o->bs_is_seq_rand)
-					log_buf(&out, "bs=(R) %s-%s, (W) %s-%s, bs_is_seq_rand, ",
+					__log_buf(&out, "bs=(R) %s-%s, (W) %s-%s, bs_is_seq_rand, ",
 							c1, c2, c3, c4);
 				else
-					log_buf(&out, "bs=(R) %s-%s, (W) %s-%s, (T) %s-%s, ",
+					__log_buf(&out, "bs=(R) %s-%s, (W) %s-%s, (T) %s-%s, ",
 							c1, c2, c3, c4, c5, c6);
 
-				log_buf(&out, "ioengine=%s, iodepth=%u\n",
+				__log_buf(&out, "ioengine=%s, iodepth=%u\n",
 						td->io_ops->name, o->iodepth);
 				log_info_buf(out.buf, out.buflen);
 
