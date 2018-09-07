@@ -74,6 +74,8 @@ struct fio_client {
 
 	struct client_file *files;
 	unsigned int nr_files;
+
+	struct buf_output buf;
 };
 
 typedef void (client_cmd_op)(struct fio_client *, struct fio_net_cmd *);

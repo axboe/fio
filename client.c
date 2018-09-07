@@ -238,6 +238,9 @@ void fio_put_client(struct fio_client *client)
 	if (--client->refs)
 		return;
 
+	log_info_buf(client->buf.buf, client->buf.buflen);
+	buf_output_free(&client->buf);
+
 	free(client->hostname);
 	if (client->argv)
 		free(client->argv);
@@ -356,9 +359,7 @@ void fio_client_add_cmd_option(void *cookie, const char *opt)
 	}
 }
 
-struct fio_client *fio_client_add_explicit(struct client_ops *ops,
-					   const char *hostname, int type,
-					   int port)
+static struct fio_client *get_new_client(void)
 {
 	struct fio_client *client;
 
@@ -370,6 +371,19 @@ struct fio_client *fio_client_add_explicit(struct client_ops *ops,
 	INIT_FLIST_HEAD(&client->arg_list);
 	INIT_FLIST_HEAD(&client->eta_list);
 	INIT_FLIST_HEAD(&client->cmd_list);
+
+	buf_output_init(&client->buf);
+
+	return client;
+}
+
+struct fio_client *fio_client_add_explicit(struct client_ops *ops,
+					   const char *hostname, int type,
+					   int port)
+{
+	struct fio_client *client;
+
+	client = get_new_client();
 
 	client->hostname = strdup(hostname);
 
@@ -446,14 +460,7 @@ int fio_client_add(struct client_ops *ops, const char *hostname, void **cookie)
 		}
 	}
 
-	client = malloc(sizeof(*client));
-	memset(client, 0, sizeof(*client));
-
-	INIT_FLIST_HEAD(&client->list);
-	INIT_FLIST_HEAD(&client->hash_list);
-	INIT_FLIST_HEAD(&client->arg_list);
-	INIT_FLIST_HEAD(&client->eta_list);
-	INIT_FLIST_HEAD(&client->cmd_list);
+	client = get_new_client();
 
 	if (fio_server_parse_string(hostname, &client->hostname,
 					&client->is_sock, &client->port,
@@ -1067,7 +1074,7 @@ static void handle_ts(struct fio_client *client, struct fio_net_cmd *cmd)
 	if (client->opt_lists && p->ts.thread_number <= client->jobs)
 		opt_list = &client->opt_lists[p->ts.thread_number - 1];
 
-	tsobj = show_thread_status(&p->ts, &p->rs, opt_list, NULL);
+	tsobj = show_thread_status(&p->ts, &p->rs, opt_list, &client->buf);
 	client->did_stat = true;
 	if (tsobj) {
 		json_object_add_client_info(tsobj, client);
@@ -1088,7 +1095,7 @@ static void handle_ts(struct fio_client *client, struct fio_net_cmd *cmd)
 
 	if (++sum_stat_nr == sum_stat_clients) {
 		strcpy(client_ts.name, "All clients");
-		tsobj = show_thread_status(&client_ts, &client_gs, NULL, NULL);
+		tsobj = show_thread_status(&client_ts, &client_gs, NULL, &client->buf);
 		if (tsobj) {
 			json_object_add_client_info(tsobj, client);
 			json_array_add_value_object(clients_array, tsobj);
@@ -1101,7 +1108,7 @@ static void handle_gs(struct fio_client *client, struct fio_net_cmd *cmd)
 	struct group_run_stats *gs = (struct group_run_stats *) cmd->payload;
 
 	if (output_format & FIO_OUTPUT_NORMAL)
-		show_group_stats(gs, NULL);
+		show_group_stats(gs, &client->buf);
 }
 
 static void handle_job_opt(struct fio_client *client, struct fio_net_cmd *cmd)
@@ -1193,27 +1200,24 @@ static void convert_dus(struct disk_util_stat *dus)
 static void handle_du(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 	struct cmd_du_pdu *du = (struct cmd_du_pdu *) cmd->payload;
-	struct buf_output out;
-
-	buf_output_init(&out);
 
 	if (!client->disk_stats_shown) {
 		client->disk_stats_shown = true;
 		if (!(output_format & FIO_OUTPUT_JSON))
-			__log_buf(&out, "\nDisk stats (read/write):\n");
+			__log_buf(&client->buf, "\nDisk stats (read/write):\n");
 	}
 
 	if (output_format & FIO_OUTPUT_JSON) {
 		struct json_object *duobj;
+
 		json_array_add_disk_util(&du->dus, &du->agg, du_array);
 		duobj = json_array_last_value_object(du_array);
 		json_object_add_client_info(duobj, client);
 	}
 	if (output_format & FIO_OUTPUT_TERSE)
-		print_disk_util(&du->dus, &du->agg, 1, &out);
+		print_disk_util(&du->dus, &du->agg, 1, &client->buf);
 	if (output_format & FIO_OUTPUT_NORMAL)
-		print_disk_util(&du->dus, &du->agg, 0, &out);
-	buf_output_free(&out);
+		print_disk_util(&du->dus, &du->agg, 0, &client->buf);
 }
 
 static void convert_jobs_eta(struct jobs_eta *je)
