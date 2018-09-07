@@ -1144,13 +1144,16 @@ static void handle_text(struct fio_client *client, struct fio_net_cmd *cmd)
 	const char *buf = (const char *) pdu->buf;
 	const char *name;
 	int fio_unused ret;
+	struct buf_output out;
+
+	buf_output_init(&out);
 
 	name = client->name ? client->name : client->hostname;
 
 	if (!client->skip_newline && !(output_format & FIO_OUTPUT_TERSE))
-		fprintf(f_out, "<%s> ", name);
-	ret = fwrite(buf, pdu->buf_len, 1, f_out);
-	fflush(f_out);
+		log_buf(&out, "<%s> ", name);
+	log_buf(&out, "%s", buf);
+	log_info_buf(out.buf, out.buflen);
 	client->skip_newline = strchr(buf, '\n') == NULL;
 }
 
