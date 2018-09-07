@@ -1928,8 +1928,6 @@ void __show_run_stats(void)
 		if (is_backend) {
 			fio_server_send_job_options(opt_lists[i], i);
 			fio_server_send_ts(ts, rs);
-			if (output_format & FIO_OUTPUT_TERSE)
-				show_thread_status_terse(ts, rs, &output[__FIO_OUTPUT_TERSE]);
 		} else {
 			if (output_format & FIO_OUTPUT_TERSE)
 				show_thread_status_terse(ts, rs, &output[__FIO_OUTPUT_TERSE]);
