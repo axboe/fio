@@ -200,17 +200,21 @@ static void fio_client_json_fini(void)
 {
 	struct buf_output out;
 
-	if (!(output_format & FIO_OUTPUT_JSON))
+	if (!root)
 		return;
 
 	buf_output_init(&out);
+
 	__log_buf(&out, "\n");
 	json_print_object(root, &out);
 	__log_buf(&out, "\n");
 	log_info_buf(out.buf, out.buflen);
+
 	buf_output_free(&out);
+
 	json_free_object(root);
 	root = NULL;
+	job_opt_object = NULL;
 	clients_array = NULL;
 	du_array = NULL;
 }
@@ -1201,11 +1205,8 @@ static void handle_du(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 	struct cmd_du_pdu *du = (struct cmd_du_pdu *) cmd->payload;
 
-	if (!client->disk_stats_shown) {
+	if (!client->disk_stats_shown)
 		client->disk_stats_shown = true;
-		if (!(output_format & FIO_OUTPUT_JSON))
-			__log_buf(&client->buf, "\nDisk stats (read/write):\n");
-	}
 
 	if (output_format & FIO_OUTPUT_JSON) {
 		struct json_object *duobj;
@@ -1213,11 +1214,12 @@ static void handle_du(struct fio_client *client, struct fio_net_cmd *cmd)
 		json_array_add_disk_util(&du->dus, &du->agg, du_array);
 		duobj = json_array_last_value_object(du_array);
 		json_object_add_client_info(duobj, client);
-	}
-	if (output_format & FIO_OUTPUT_TERSE)
+	} else if (output_format & FIO_OUTPUT_TERSE)
 		print_disk_util(&du->dus, &du->agg, 1, &client->buf);
-	if (output_format & FIO_OUTPUT_NORMAL)
+	else if (output_format & FIO_OUTPUT_NORMAL) {
+		__log_buf(&client->buf, "\nDisk stats (read/write):\n");
 		print_disk_util(&du->dus, &du->agg, 0, &client->buf);
+	}
 }
 
 static void convert_jobs_eta(struct jobs_eta *je)
@@ -1486,10 +1488,11 @@ static void handle_probe(struct fio_client *client, struct fio_net_cmd *cmd)
 	sprintf(bit, "%d-bit", probe->bpp * 8);
 	probe->flags = le64_to_cpu(probe->flags);
 
-	if (!(output_format & FIO_OUTPUT_JSON))
+	if (output_format & FIO_OUTPUT_NORMAL) {
 		log_info("hostname=%s, be=%u, %s, os=%s, arch=%s, fio=%s, flags=%lx\n",
 			probe->hostname, probe->bigendian, bit, os, arch,
 			probe->fio_version, (unsigned long) probe->flags);
+	}
 
 	if (!client->name)
 		client->name = strdup((char *) probe->hostname);
