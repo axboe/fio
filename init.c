@@ -1681,6 +1681,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 				char *c1, *c2, *c3, *c4;
 				char *c5 = NULL, *c6 = NULL;
 				int i2p = is_power_of_2(o->kb_base);
+				struct buf_output out;
 
 				c1 = num2str(o->min_bs[DDIR_READ], o->sig_figs, 1, i2p, N2S_BYTE);
 				c2 = num2str(o->max_bs[DDIR_READ], o->sig_figs, 1, i2p, N2S_BYTE);
@@ -1692,19 +1693,21 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 					c6 = num2str(o->max_bs[DDIR_TRIM], o->sig_figs, 1, i2p, N2S_BYTE);
 				}
 
-				log_info("%s: (g=%d): rw=%s, ", td->o.name,
+				buf_output_init(&out);
+				log_buf(&out, "%s: (g=%d): rw=%s, ", td->o.name,
 							td->groupid,
 							ddir_str(o->td_ddir));
 
 				if (o->bs_is_seq_rand)
-					log_info("bs=(R) %s-%s, (W) %s-%s, bs_is_seq_rand, ",
+					log_buf(&out, "bs=(R) %s-%s, (W) %s-%s, bs_is_seq_rand, ",
 							c1, c2, c3, c4);
 				else
-					log_info("bs=(R) %s-%s, (W) %s-%s, (T) %s-%s, ",
+					log_buf(&out, "bs=(R) %s-%s, (W) %s-%s, (T) %s-%s, ",
 							c1, c2, c3, c4, c5, c6);
 
-				log_info("ioengine=%s, iodepth=%u\n",
+				log_buf(&out, "ioengine=%s, iodepth=%u\n",
 						td->io_ops->name, o->iodepth);
+				log_info_buf(out.buf, out.buflen);
 
 				free(c1);
 				free(c2);
