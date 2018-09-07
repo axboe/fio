@@ -1708,6 +1708,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 				__log_buf(&out, "ioengine=%s, iodepth=%u\n",
 						td->io_ops->name, o->iodepth);
 				log_info_buf(out.buf, out.buflen);
+				buf_output_free(&out);
 
 				free(c1);
 				free(c2);

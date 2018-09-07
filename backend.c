@@ -2228,6 +2228,7 @@ static void run_threads(struct sk_out *sk_out)
 		}
 		__log_buf(&out, "\n");
 		log_info_buf(out.buf, out.buflen);
+		buf_output_free(&out);
 	}
 
 	todo = thread_number;
