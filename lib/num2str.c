@@ -72,7 +72,7 @@ char *num2str(uint64_t num, int maxlen, int base, int pow2, enum n2s_unit units)
 	 * Divide by K/Ki until string length of num <= maxlen.
 	 */
 	modulo = -1U;
-	while (post_index < sizeof(sistr)) {
+	while (post_index < ARRAY_SIZE(sistr)) {
 		sprintf(tmp, "%llu", (unsigned long long) num);
 		if (strlen(tmp) <= maxlen)
 			break;
