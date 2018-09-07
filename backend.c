@@ -2216,17 +2216,17 @@ static void run_threads(struct sk_out *sk_out)
 		struct buf_output out;
 
 		buf_output_init(&out);
-		log_buf(&out, "Starting ");
+		__log_buf(&out, "Starting ");
 		if (nr_thread)
-			log_buf(&out, "%d thread%s", nr_thread,
+			__log_buf(&out, "%d thread%s", nr_thread,
 						nr_thread > 1 ? "s" : "");
 		if (nr_process) {
 			if (nr_thread)
-				log_buf(&out, " and ");
-			log_buf(&out, "%d process%s", nr_process,
+				__log_buf(&out, " and ");
+			__log_buf(&out, "%d process%s", nr_process,
 						nr_process > 1 ? "es" : "");
 		}
-		log_buf(&out, "\n");
+		__log_buf(&out, "\n");
 		log_info_buf(out.buf, out.buflen);
 	}
 

@@ -1151,8 +1151,8 @@ static void handle_text(struct fio_client *client, struct fio_net_cmd *cmd)
 	name = client->name ? client->name : client->hostname;
 
 	if (!client->skip_newline && !(output_format & FIO_OUTPUT_TERSE))
-		log_buf(&out, "<%s> ", name);
-	log_buf(&out, "%s", buf);
+		__log_buf(&out, "<%s> ", name);
+	__log_buf(&out, "%s", buf);
 	log_info_buf(out.buf, out.buflen);
 	client->skip_newline = strchr(buf, '\n') == NULL;
 }
