@@ -86,9 +86,6 @@ endif
 ifdef CONFIG_GUASI
   SOURCE += engines/guasi.c
 endif
-ifdef CONFIG_FUSION_AW
-  SOURCE += engines/fusion-aw.c
-endif
 ifdef CONFIG_SOLARISAIO
   SOURCE += engines/solarisaio.c
 endif

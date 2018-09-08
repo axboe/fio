@@ -75,9 +75,6 @@
                   <File Source="..\..\examples\ftruncate.fio" />
                 </Component>
                 <Component>
-                  <File Source="..\..\examples\fusion-aw-sync.fio" />
-                </Component>
-                <Component>
                   <File Source="..\..\examples\gfapi.fio" />
                 </Component>
                 <Component>
@@ -198,7 +195,6 @@
             <ComponentRef Id="flow.fio" />
             <ComponentRef Id="fsx.fio" />
             <ComponentRef Id="ftruncate.fio"/>
-            <ComponentRef Id="fusion_aw_sync.fio" />
             <ComponentRef Id="gfapi.fio" />
             <ComponentRef Id="gpudirect_rdmaio_client.fio"/>
             <ComponentRef Id="gpudirect_rdmaio_server.fio"/>

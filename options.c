@@ -1828,11 +1828,6 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .help = "RDMA IO engine",
 			  },
 #endif
-#ifdef CONFIG_FUSION_AW
-			  { .ival = "fusion-aw-sync",
-			    .help = "Fusion-io atomic write engine",
-			  },
-#endif
 #ifdef CONFIG_LINUX_EXT4_MOVE_EXTENT
 			  { .ival = "e4defrag",
 			    .help = "ext4 defrag engine",

@@ -1149,28 +1149,6 @@ fi
 print_config "GUASI" "$guasi"
 
 ##########################################
-# fusion-aw probe
-if test "$fusion_aw" != "yes" ; then
-  fusion_aw="no"
-fi
-cat > $TMPC << EOF
-#include <nvm/nvm_primitives.h>
-int main(int argc, char **argv)
-{
-  nvm_version_t ver_info;
-  nvm_handle_t handle;
-
-  handle = nvm_get_handle(0, &ver_info);
-  return nvm_atomic_write(handle, 0, 0, 0);
-}
-EOF
-if compile_prog "" "-L/usr/lib/fio -L/usr/lib/nvm -lnvm-primitives -ldl -lpthread" "fusion-aw"; then
-  LIBS="-L/usr/lib/fio -L/usr/lib/nvm -lnvm-primitives -ldl -lpthread $LIBS"
-  fusion_aw="yes"
-fi
-print_config "Fusion-io atomic engine" "$fusion_aw"
-
-##########################################
 # libnuma probe
 if test "$libnuma" != "yes" ; then
   libnuma="no"
@@ -2404,9 +2382,6 @@ if test "$linux_splice" = "yes" ; then
 fi
 if test "$guasi" = "yes" ; then
   output_sym "CONFIG_GUASI"
-fi
-if test "$fusion_aw" = "yes" ; then
-  output_sym "CONFIG_FUSION_AW"
 fi
 if test "$libnuma_v2" = "yes" ; then
   output_sym "CONFIG_LIBNUMA"
