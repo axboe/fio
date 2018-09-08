@@ -45,22 +45,22 @@
                   <File Source="..\..\examples\filecreate-ioengine.fio" />
                 </Component>
                 <Component>
-                  <File Source="..\..\examples\fio-rand-read.job" />
+                  <File Source="..\..\examples\fio-rand-read.fio" />
                 </Component>
                 <Component>
-                  <File Source="..\..\examples\fio-rand-RW.job" />
+                  <File Source="..\..\examples\fio-rand-RW.fio" />
                 </Component>
                 <Component>
-                  <File Source="..\..\examples\fio-rand-write.job" />
+                  <File Source="..\..\examples\fio-rand-write.fio" />
                 </Component>
                 <Component>
-                  <File Source="..\..\examples\fio-seq-read.job" />
+                  <File Source="..\..\examples\fio-seq-read.fio" />
                 </Component>
                 <Component>
-                  <File Source="..\..\examples\fio-seq-RW.job" />
+                  <File Source="..\..\examples\fio-seq-RW.fio" />
                 </Component>
                 <Component>
-                  <File Source="..\..\examples\fio-seq-write.job" />
+                  <File Source="..\..\examples\fio-seq-write.fio" />
                 </Component>
                 <Component>
                   <File Source="..\..\examples\fixed-rate-submission.fio" />
@@ -188,12 +188,12 @@
             <ComponentRef Id="enospc_pressure.fio" />
             <ComponentRef Id="falloc.fio" />
             <ComponentRef Id="filecreate_ioengine.fio"/>
-            <ComponentRef Id="fio_rand_read.job"/>
-            <ComponentRef Id="fio_rand_RW.job"/>
-            <ComponentRef Id="fio_rand_write.job"/>
-            <ComponentRef Id="fio_seq_read.job"/>
-            <ComponentRef Id="fio_seq_RW.job"/>
-            <ComponentRef Id="fio_seq_write.job"/>
+            <ComponentRef Id="fio_rand_read.fio"/>
+            <ComponentRef Id="fio_rand_RW.fio"/>
+            <ComponentRef Id="fio_rand_write.fio"/>
+            <ComponentRef Id="fio_seq_read.fio"/>
+            <ComponentRef Id="fio_seq_RW.fio"/>
+            <ComponentRef Id="fio_seq_write.fio"/>
             <ComponentRef Id="fixed_rate_submission.fio" />
             <ComponentRef Id="flow.fio" />
             <ComponentRef Id="fsx.fio" />
