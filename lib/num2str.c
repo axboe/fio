@@ -30,7 +30,7 @@ char *num2str(uint64_t num, int maxlen, int base, int pow2, enum n2s_unit units)
 		[N2S_BYTEPERSEC]= "B/s",
 		[N2S_BITPERSEC]	= "bit/s"
 	};
-	const unsigned int thousand[] = { 1000, 1024 };
+	const unsigned int thousand = pow2 ? 1024 : 1000;
 	unsigned int modulo;
 	int post_index, carry = 0;
 	char tmp[32], fmt[32];
@@ -49,7 +49,7 @@ char *num2str(uint64_t num, int maxlen, int base, int pow2, enum n2s_unit units)
 		unitprefix = sistr;
 
 	for (post_index = 0; base > 1; post_index++)
-		base /= thousand[!!pow2];
+		base /= thousand;
 
 	switch (units) {
 	case N2S_NONE:
@@ -72,14 +72,14 @@ char *num2str(uint64_t num, int maxlen, int base, int pow2, enum n2s_unit units)
 	 * Divide by K/Ki until string length of num <= maxlen.
 	 */
 	modulo = -1U;
-	while (post_index < sizeof(sistr)) {
+	while (post_index < ARRAY_SIZE(sistr)) {
 		sprintf(tmp, "%llu", (unsigned long long) num);
 		if (strlen(tmp) <= maxlen)
 			break;
 
-		modulo = num % thousand[!!pow2];
-		num /= thousand[!!pow2];
-		carry = modulo >= thousand[!!pow2] / 2;
+		modulo = num % thousand;
+		num /= thousand;
+		carry = modulo >= thousand / 2;
 		post_index++;
 	}
 
@@ -110,9 +110,9 @@ done:
 	 * Fill in everything and return the result.
 	 */
 	assert(maxlen - strlen(tmp) - 1 > 0);
-	assert(modulo < thousand[!!pow2]);
+	assert(modulo < thousand);
 	sprintf(fmt, "%%.%df", (int)(maxlen - strlen(tmp) - 1));
-	sprintf(tmp, fmt, (double)modulo / (double)thousand[!!pow2]);
+	sprintf(tmp, fmt, (double)modulo / (double)thousand);
 
 	sprintf(buf, "%llu.%s%s%s", (unsigned long long) num, &tmp[2],
 			unitprefix[post_index], unitstr[units]);
