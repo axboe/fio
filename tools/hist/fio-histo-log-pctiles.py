@@ -24,7 +24,12 @@
 import sys, os, math, copy
 from copy import deepcopy
 import argparse
-import unittest2
+
+unittest2_imported = True
+try:
+    import unittest2
+except ImportError:
+    unittest2_imported = False
 
 msec_per_sec = 1000
 nsec_per_usec = 1000
@@ -412,14 +417,14 @@ def compute_percentiles_from_logs():
 #end of MAIN PROGRAM
 
 
-
 ##### below are unit tests ##############
 
-import tempfile, shutil
-from os.path import join
-should_not_get_here = False
+if unittest2_imported:
+  import tempfile, shutil
+  from os.path import join
+  should_not_get_here = False
 
-class Test(unittest2.TestCase):
+  class Test(unittest2.TestCase):
     tempdir = None
 
     # a little less typing please
@@ -651,7 +656,10 @@ class Test(unittest2.TestCase):
 
 if __name__ == '__main__':
     if os.getenv('UNITTEST'):
-        sys.exit(unittest2.main())
+        if unittest2_imported:
+            sys.exit(unittest2.main())
+        else:
+            raise Exception('you must install unittest2 module to run unit test')
     else:
         compute_percentiles_from_logs()
 
