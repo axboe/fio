@@ -115,6 +115,8 @@ def parse_hist_file(logfn, buckets_per_interval, log_hist_msec):
     elif len(intervals) > 1:
         (second_timestamp, _, _, _) = intervals[1]
         start_time = first_timestamp - (second_timestamp - first_timestamp)
+    else:
+        raise FioHistoLogExc('no way to estimate test start time')
     (end_timestamp, _, _, _) = intervals[-1]
 
     return (intervals, start_time, end_timestamp)
