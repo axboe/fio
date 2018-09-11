@@ -126,7 +126,7 @@ static int io_workqueue_init_worker_fn(struct submit_worker *sw)
 	clear_io_state(td, 1);
 
 	td_set_runstate(td, TD_RUNNING);
-	td->flags |= TD_F_CHILD;
+	td->flags |= TD_F_CHILD | TD_F_NEED_LOCK;
 	td->parent = parent;
 	return 0;
 
