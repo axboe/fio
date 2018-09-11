@@ -55,6 +55,7 @@ int win_to_posix_error(DWORD winerr)
 	case ERROR_NOT_SAME_DEVICE:		return EXDEV;
 	case ERROR_WRITE_PROTECT:		return EROFS;
 	case ERROR_BAD_UNIT:			return ENODEV;
+	case ERROR_NOT_READY:			return EAGAIN;
 	case ERROR_SHARING_VIOLATION:	return EACCES;
 	case ERROR_LOCK_VIOLATION:		return EACCES;
 	case ERROR_SHARING_BUFFER_EXCEEDED:	return ENOLCK;
@@ -110,6 +111,9 @@ int win_to_posix_error(DWORD winerr)
 	case ERROR_DISK_FULL:			return ENOSPC;
 	case ERROR_NOACCESS:			return EFAULT;
 	case ERROR_FILE_INVALID:		return ENXIO;
+	default:
+		log_err("fio: windows error %d not handled\n", winerr);
+		return EIO;
 	}
 
 	return winerr;
