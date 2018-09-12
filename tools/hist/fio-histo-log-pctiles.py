@@ -64,6 +64,8 @@ def parse_hist_file(logfn, buckets_per_interval):
     with open(logfn, 'r') as f:
         records = [ l.strip() for l in f.readlines() ]
     intervals = []
+    last_time_ms = -1
+    last_direction = -1
     for k, r in enumerate(records):
         if r == '':
             continue
@@ -96,6 +98,15 @@ def parse_hist_file(logfn, buckets_per_interval):
         if len(buckets) != buckets_per_interval:
             raise FioHistoLogExc('%d buckets per interval but %d expected in %s' % 
                     (len(buckets), buckets_per_interval, exception_suffix(k+1, logfn)))
+
+        # hack to filter out records with the same timestamp
+        # we should not have to do this if fio logs histogram records correctly
+
+        if time_ms == last_time_ms and direction == last_direction:
+            continue
+        last_time_ms = time_ms
+        last_direction = direction
+
         intervals.append((time_ms, direction, bsz, buckets))
     if len(intervals) == 0:
         raise FioHistoLogExc('no records in %s' % logfn)
