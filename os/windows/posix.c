@@ -35,6 +35,8 @@ HRESULT WINAPI StringCchPrintfA(char *pszDest, size_t cchDest, const char *pszFo
 int win_to_posix_error(DWORD winerr)
 {
 	switch (winerr) {
+	case ERROR_SUCCESS:
+		return 0;
 	case ERROR_FILE_NOT_FOUND:
 		return ENOENT;
 	case ERROR_PATH_NOT_FOUND:
