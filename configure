@@ -361,6 +361,7 @@ CYGWIN*)
   output_sym "CONFIG_WINDOWSAIO"
   # We now take the regular configuration path without having exit 0 here.
   # Flags below are still necessary mostly for MinGW.
+  build_static="yes"
   socklen_t="yes"
   rusage_thread="yes"
   fdatasync="yes"

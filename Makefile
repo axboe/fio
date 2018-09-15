@@ -198,7 +198,7 @@ endif
 ifneq (,$(findstring CYGWIN,$(CONFIG_TARGET_OS)))
   SOURCE += os/windows/posix.c
   LIBS	 += -lpthread -lpsapi -lws2_32
-  CFLAGS += -DPSAPI_VERSION=1 -Ios/windows/posix/include -Wno-format -static
+  CFLAGS += -DPSAPI_VERSION=1 -Ios/windows/posix/include -Wno-format
 endif
 
 OBJS := $(SOURCE:.c=.o)
