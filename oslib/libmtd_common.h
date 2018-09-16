@@ -69,7 +69,7 @@ extern "C" {
 #endif
 
 /* define a print format specifier for off_t */
-#ifdef __USE_FILE_OFFSET64
+#ifdef _LARGEFILE_SOURCE
 #define PRIxoff_t PRIx64
 #define PRIdoff_t PRId64
 #else
