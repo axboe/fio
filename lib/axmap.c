@@ -325,7 +325,7 @@ unsigned int axmap_set_nr(struct axmap *axmap, uint64_t bit_nr,
 static bool axmap_isset_fn(struct axmap_level *al, uint64_t offset,
 			   unsigned int bit, void *unused)
 {
-	return (al->map[offset] & (1UL << bit)) != 0;
+	return (al->map[offset] & (1ULL << bit)) != 0;
 }
 
 bool axmap_isset(struct axmap *axmap, uint64_t bit_nr)
