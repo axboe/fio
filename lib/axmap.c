@@ -110,7 +110,7 @@ void axmap_free(struct axmap *axmap)
 }
 
 /* Allocate memory for a set that can store the numbers 0 .. @nr_bits - 1. */
-struct axmap *axmap_new(unsigned long nr_bits)
+struct axmap *axmap_new(uint64_t nr_bits)
 {
 	struct axmap *axmap;
 	unsigned int i, levels;
@@ -135,13 +135,14 @@ struct axmap *axmap_new(unsigned long nr_bits)
 	for (i = 0; i < axmap->nr_levels; i++) {
 		struct axmap_level *al = &axmap->levels[i];
 
+		nr_bits = (nr_bits + BLOCKS_PER_UNIT - 1) >> UNIT_SHIFT;
+
 		al->level = i;
-		al->map_size = (nr_bits + BLOCKS_PER_UNIT - 1) >> UNIT_SHIFT;
+		al->map_size = nr_bits;
 		al->map = malloc(al->map_size * sizeof(unsigned long));
 		if (!al->map)
 			goto free_levels;
 
-		nr_bits = (nr_bits + BLOCKS_PER_UNIT - 1) >> UNIT_SHIFT;
 	}
 
 	axmap_reset(axmap);

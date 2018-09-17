@@ -5,7 +5,7 @@
 #include "types.h"
 
 struct axmap;
-struct axmap *axmap_new(unsigned long nr_bits);
+struct axmap *axmap_new(uint64_t nr_bits);
 void axmap_free(struct axmap *bm);
 
 void axmap_set(struct axmap *axmap, uint64_t bit_nr);
