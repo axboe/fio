@@ -165,7 +165,7 @@ free_axmap:
  * returns true.
  */
 static bool axmap_handler(struct axmap *axmap, uint64_t bit_nr,
-			  bool (*func)(struct axmap_level *, unsigned long, unsigned int,
+			  bool (*func)(struct axmap_level *, uint64_t, unsigned int,
 			  void *), void *data)
 {
 	struct axmap_level *al;
@@ -194,12 +194,12 @@ static bool axmap_handler(struct axmap *axmap, uint64_t bit_nr,
  * returns true.
  */
 static bool axmap_handler_topdown(struct axmap *axmap, uint64_t bit_nr,
-	bool (*func)(struct axmap_level *, unsigned long, unsigned int, void *))
+	bool (*func)(struct axmap_level *, uint64_t, unsigned int, void *))
 {
 	int i;
 
 	for (i = axmap->nr_levels - 1; i >= 0; i--) {
-		unsigned long index = bit_nr >> (UNIT_SHIFT * i);
+		uint64_t index = bit_nr >> (UNIT_SHIFT * i);
 		unsigned long offset = index >> UNIT_SHIFT;
 		unsigned int bit = index & BLOCKS_PER_UNIT_MASK;
 
@@ -220,7 +220,7 @@ struct axmap_set_data {
  * the boundary of the element at offset @offset. Return the number of bits
  * that have been set in @__data->set_bits if @al->level == 0.
  */
-static bool axmap_set_fn(struct axmap_level *al, unsigned long offset,
+static bool axmap_set_fn(struct axmap_level *al, uint64_t offset,
 			 unsigned int bit, void *__data)
 {
 	struct axmap_set_data *data = __data;
@@ -322,7 +322,7 @@ unsigned int axmap_set_nr(struct axmap *axmap, uint64_t bit_nr,
 	return set_bits;
 }
 
-static bool axmap_isset_fn(struct axmap_level *al, unsigned long offset,
+static bool axmap_isset_fn(struct axmap_level *al, uint64_t offset,
 			   unsigned int bit, void *unused)
 {
 	return (al->map[offset] & (1UL << bit)) != 0;
