@@ -331,7 +331,7 @@ unsigned long long get_rand_file_size(struct thread_data *td)
 {
 	unsigned long long ret, sized;
 	uint64_t frand_max;
-	unsigned long r;
+	uint64_t r;
 
 	frand_max = rand_max(&td->file_size_state);
 	r = __rand(&td->file_size_state);
