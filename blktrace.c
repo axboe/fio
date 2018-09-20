@@ -818,6 +818,7 @@ err_file:
 err_out_file:
 	fflush(merge_fp);
 	fclose(merge_fp);
+	free(merge_buf);
 err_param:
 	free(bcs);
 
