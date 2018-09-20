@@ -11,6 +11,7 @@ struct blktrace_cursor {
 	int			fd;	// blktrace file
 	struct blk_io_trace	t;	// current io trace
 	int			swap;	// bitwise reverse required
+	int			scalar;	// scale percentage
 };
 
 bool is_blktrace(const char *, int *);

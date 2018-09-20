@@ -259,6 +259,7 @@ struct thread_options {
 	bool read_iolog_chunked;
 	char *write_iolog_file;
 	char *merge_blktrace_file;
+	fio_fp64_t merge_blktrace_scalars[FIO_IO_U_LIST_MAX_LEN];
 
 	unsigned int write_bw_log;
 	unsigned int write_lat_log;
@@ -542,6 +543,7 @@ struct thread_options_pack {
 	uint8_t read_iolog_file[FIO_TOP_STR_MAX];
 	uint8_t write_iolog_file[FIO_TOP_STR_MAX];
 	uint8_t merge_blktrace_file[FIO_TOP_STR_MAX];
+	fio_fp64_t merge_blktrace_scalars[FIO_IO_U_LIST_MAX_LEN];
 
 	uint32_t write_bw_log;
 	uint32_t write_lat_log;

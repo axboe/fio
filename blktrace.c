@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/ioctl.h>
+#include <unistd.h>
 #include <linux/fs.h>
 
 #include "flist.h"
@@ -614,6 +615,28 @@ err:
 	return false;
 }
 
+static int init_merge_param_list(fio_fp64_t *vals, struct blktrace_cursor *bcs,
+				 int nr_logs, int def, size_t off)
+{
+	int i = 0, len = 0;
+
+	while (len < FIO_IO_U_LIST_MAX_LEN && vals[len].u.f != 0.0)
+		len++;
+
+	if (len && len != nr_logs)
+		return len;
+
+	for (i = 0; i < nr_logs; i++) {
+		int *val = (int *)((char *)&bcs[i] + off);
+		*val = def;
+		if (len)
+			*val = (int)vals[i].u.f;
+	}
+
+	return 0;
+
+}
+
 static int find_earliest_io(struct blktrace_cursor *bcs, int nr_logs)
 {
 	__u64 time = ~(__u64)0;
@@ -674,6 +697,8 @@ read_skip:
 		goto read_skip;
 	}
 
+	t->time = t->time * bc->scalar / 100;
+
 	return ret;
 }
 
@@ -693,6 +718,15 @@ int merge_blktrace_iologs(struct thread_data *td)
 	FILE *merge_fp;
 	char *str, *ptr, *name, *merge_buf;
 	int i, ret;
+
+	ret = init_merge_param_list(td->o.merge_blktrace_scalars, bcs, nr_logs,
+				    100, offsetof(struct blktrace_cursor,
+						  scalar));
+	if (ret) {
+		log_err("fio: merge_blktrace_scalars(%d) != nr_logs(%d)\n",
+			ret, nr_logs);
+		goto err_param;
+	}
 
 	/* setup output file */
 	merge_fp = fopen(td->o.merge_blktrace_file, "w");
@@ -765,6 +799,7 @@ err_file:
 err_out_file:
 	fflush(merge_fp);
 	fclose(merge_fp);
+err_param:
 	free(bcs);
 
 	return ret;

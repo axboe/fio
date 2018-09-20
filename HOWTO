@@ -2504,6 +2504,16 @@ I/O replay
 	This limits the influence of the scheduler compared to replaying multiple
 	blktraces via concurrent jobs.
 
+.. option:: merge_blktrace_scalars=float_list
+
+	This is a percentage based option that is index paired with the list of
+	files passed to :option:`read_iolog`. When merging is performed, scale
+	the time of each event by the corresponding amount. For example,
+	``--merge_blktrace_scalars="50:100"`` runs the first trace in halftime
+	and the second trace in realtime. This knob is separately tunable from
+	:option:`replay_time_scale` which scales the trace during runtime and
+	does not change the output of the merge unlike this option.
+
 .. option:: replay_no_stall=bool
 
 	When replaying I/O with :option:`read_iolog` the default behavior is to
@@ -3872,6 +3882,11 @@ only file passed to :option:`read_iolog`. An example would look like::
 
 Creating only the merged file can be done by passing the command line argument
 :option:`merge-blktrace-only`.
+
+Scaling traces can be done to see the relative impact of any particular trace
+being slowed down or sped up. :option:`merge_blktrace_scalars` takes in a colon
+separated list of percentage scalars. It is index paired with the files passed
+to :option:`read_iolog`.
 
 
 CPU idleness profiling

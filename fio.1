@@ -2209,6 +2209,15 @@ intention here is to make the order of events consistent. This limits the
 influence of the scheduler compared to replaying multiple blktraces via
 concurrent jobs.
 .TP
+.BI merge_blktrace_scalars \fR=\fPfloat_list
+This is a percentage based option that is index paired with the list of files
+passed to \fBread_iolog\fR. When merging is performed, scale the time of each
+event by the corresponding amount. For example,
+`\-\-merge_blktrace_scalars="50:100"' runs the first trace in halftime and the
+second trace in realtime. This knob is separately tunable from
+\fBreplay_time_scale\fR which scales the trace during runtime and will not
+change the output of the merge unlike this option.
+.TP
 .BI replay_no_stall \fR=\fPbool
 When replaying I/O with \fBread_iolog\fR the default behavior is to
 attempt to respect the timestamps within the log and replay them with the
@@ -3561,6 +3570,11 @@ $ fio \-\-read_iolog="<file1>:<file2>" \-\-merge_blktrace_file="<output_file>"
 .P
 Creating only the merged file can be done by passing the command line argument
 \fBmerge-blktrace-only\fR.
+.P
+Scaling traces can be done to see the relative impact of any particular trace
+being slowed down or sped up. \fBmerge_blktrace_scalars\fR takes in a colon
+separated list of percentage scalars. It is index paired with the files passed
+to \fBread_iolog\fR.
 .SH CPU IDLENESS PROFILING
 In some cases, we want to understand CPU overhead in a test. For example, we
 test patches for the specific goodness of whether they reduce CPU usage.
