@@ -613,3 +613,159 @@ err:
 	fifo_free(fifo);
 	return false;
 }
+
+static int find_earliest_io(struct blktrace_cursor *bcs, int nr_logs)
+{
+	__u64 time = ~(__u64)0;
+	int idx = 0, i;
+
+	for (i = 0; i < nr_logs; i++) {
+		if (bcs[i].t.time < time) {
+			time = bcs[i].t.time;
+			idx = i;
+		}
+	}
+
+	return idx;
+}
+
+static void merge_finish_file(struct blktrace_cursor *bcs, int i, int *nr_logs)
+{
+	*nr_logs -= 1;
+
+	/* close file */
+	fifo_free(bcs[i].fifo);
+	close(bcs[i].fd);
+
+	/* keep active files contiguous */
+	memmove(&bcs[i], &bcs[*nr_logs], sizeof(bcs[i]));
+}
+
+static int read_trace(struct thread_data *td, struct blktrace_cursor *bc)
+{
+	int ret = 0;
+	struct blk_io_trace *t = &bc->t;
+
+read_skip:
+	/* read an io trace */
+	ret = trace_fifo_get(td, bc->fifo, bc->fd, t, sizeof(*t));
+	if (ret <= 0) {
+		return ret;
+	} else if (ret < (int) sizeof(*t)) {
+		log_err("fio: short fifo get\n");
+		return -1;
+	}
+
+	if (bc->swap)
+		byteswap_trace(t);
+
+	/* skip over actions that fio does not care about */
+	if ((t->action & 0xffff) != __BLK_TA_QUEUE ||
+	    t_get_ddir(t) == DDIR_INVAL) {
+		ret = discard_pdu(td, bc->fifo, bc->fd, t);
+		if (ret < 0) {
+			td_verror(td, ret, "blktrace lseek");
+			return ret;
+		} else if (t->pdu_len != ret) {
+			log_err("fio: discarded %d of %d\n", ret,
+				t->pdu_len);
+			return -1;
+		}
+		goto read_skip;
+	}
+
+	return ret;
+}
+
+static int write_trace(FILE *fp, struct blk_io_trace *t)
+{
+	/* pdu is not used so just write out only the io trace */
+	t->pdu_len = 0;
+	return fwrite((void *)t, sizeof(*t), 1, fp);
+}
+
+int merge_blktrace_iologs(struct thread_data *td)
+{
+	int nr_logs = get_max_str_idx(td->o.read_iolog_file);
+	struct blktrace_cursor *bcs = malloc(sizeof(struct blktrace_cursor) *
+					     nr_logs);
+	struct blktrace_cursor *bc;
+	FILE *merge_fp;
+	char *str, *ptr, *name, *merge_buf;
+	int i, ret;
+
+	/* setup output file */
+	merge_fp = fopen(td->o.merge_blktrace_file, "w");
+	merge_buf = malloc(128 * 1024);
+	ret = setvbuf(merge_fp, merge_buf, _IOFBF, 128 * 1024);
+	if (ret)
+		goto err_out_file;
+
+	/* setup input files */
+	str = ptr = strdup(td->o.read_iolog_file);
+	nr_logs = 0;
+	for (i = 0; (name = get_next_str(&ptr)) != NULL; i++) {
+		bcs[i].fd = open(name, O_RDONLY);
+		if (bcs[i].fd < 0) {
+			log_err("fio: could not open file: %s\n", name);
+			ret = bcs[i].fd;
+			goto err_file;
+		}
+		bcs[i].fifo = fifo_alloc(TRACE_FIFO_SIZE);
+		nr_logs++;
+
+		if (!is_blktrace(name, &bcs[i].swap)) {
+			log_err("fio: file is not a blktrace: %s\n", name);
+			goto err_file;
+		}
+
+		ret = read_trace(td, &bcs[i]);
+		if (ret < 0) {
+			goto err_file;
+		} else if (!ret) {
+			merge_finish_file(bcs, i, &nr_logs);
+			i--;
+		}
+	}
+	free(str);
+
+	/* merge files */
+	while (nr_logs) {
+		i = find_earliest_io(bcs, nr_logs);
+		bc = &bcs[i];
+		/* skip over the pdu */
+		ret = discard_pdu(td, bc->fifo, bc->fd, &bc->t);
+		if (ret < 0) {
+			td_verror(td, ret, "blktrace lseek");
+			goto err_file;
+		} else if (bc->t.pdu_len != ret) {
+			log_err("fio: discarded %d of %d\n", ret,
+				bc->t.pdu_len);
+			goto err_file;
+		}
+
+		ret = write_trace(merge_fp, &bc->t);
+		ret = read_trace(td, bc);
+		if (ret < 0)
+			goto err_file;
+		else if (!ret)
+			merge_finish_file(bcs, i, &nr_logs);
+	}
+
+	/* set iolog file to read from the newly merged file */
+	td->o.read_iolog_file = td->o.merge_blktrace_file;
+	ret = 0;
+
+err_file:
+	/* cleanup */
+	for (i = 0; i < nr_logs; i++) {
+		fifo_free(bcs[i].fifo);
+		close(bcs[i].fd);
+	}
+err_out_file:
+	fflush(merge_fp);
+	fclose(merge_fp);
+	free(bcs);
+
+	return ret;
+}

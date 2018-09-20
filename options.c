@@ -3199,6 +3199,15 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_IOLOG,
 	},
 	{
+		.name	= "merge_blktrace_file",
+		.lname	= "Merged blktrace output filename",
+		.type	= FIO_OPT_STR_STORE,
+		.off1	= offsetof(struct thread_options, merge_blktrace_file),
+		.help	= "Merged blktrace output filename",
+		.category = FIO_OPT_C_IO,
+		.group = FIO_OPT_G_IOLOG,
+	},
+	{
 		.name	= "exec_prerun",
 		.lname	= "Pre-execute runnable",
 		.type	= FIO_OPT_STR_STORE,

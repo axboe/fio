@@ -20,6 +20,9 @@ file and memory debugging). `help' will list all available tracing options.
 .BI \-\-parse\-only
 Parse options only, don't start any I/O.
 .TP
+.BI \-\-merge\-blktrace\-only
+Merge blktraces only, don't start any I/O.
+.TP
 .BI \-\-output \fR=\fPfilename
 Write output to \fIfilename\fR.
 .TP
@@ -2198,6 +2201,14 @@ Determines how iolog is read. If false (default) entire \fBread_iolog\fR will
 be read at once. If selected true, input from iolog will be read gradually.
 Useful when iolog is very large, or it is generated.
 .TP
+.BI merge_blktrace_file \fR=\fPstr
+When specified, rather than replaying the logs passed to \fBread_iolog\fR,
+the logs go through a merge phase which aggregates them into a single blktrace.
+The resulting file is then passed on as the \fBread_iolog\fR parameter. The
+intention here is to make the order of events consistent. This limits the
+influence of the scheduler compared to replaying multiple blktraces via
+concurrent jobs.
+.TP
 .BI replay_no_stall \fR=\fPbool
 When replaying I/O with \fBread_iolog\fR the default behavior is to
 attempt to respect the timestamps within the log and replay them with the
@@ -3531,6 +3542,25 @@ Write `length' bytes beginning from `offset'.
 Trim the given file from the given `offset' for `length' bytes.
 .RE
 .RE
+.SH I/O REPLAY \- MERGING TRACES
+Colocation is a common practice used to get the most out of a machine.
+Knowing which workloads play nicely with each other and which ones don't is
+a much harder task. While fio can replay workloads concurrently via multiple
+jobs, it leaves some variability up to the scheduler making results harder to
+reproduce. Merging is a way to make the order of events consistent.
+.P
+Merging is integrated into I/O replay and done when a \fBmerge_blktrace_file\fR
+is specified. The list of files passed to \fBread_iolog\fR go through the merge
+process and output a single file stored to the specified file. The output file is
+passed on as if it were the only file passed to \fBread_iolog\fR. An example would
+look like:
+.RS
+.P
+$ fio \-\-read_iolog="<file1>:<file2>" \-\-merge_blktrace_file="<output_file>"
+.RE
+.P
+Creating only the merged file can be done by passing the command line argument
+\fBmerge-blktrace-only\fR.
 .SH CPU IDLENESS PROFILING
 In some cases, we want to understand CPU overhead in a test. For example, we
 test patches for the specific goodness of whether they reduce CPU usage.

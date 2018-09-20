@@ -37,6 +37,7 @@ static void free_thread_options_to_cpu(struct thread_options *o)
 	free(o->mmapfile);
 	free(o->read_iolog_file);
 	free(o->write_iolog_file);
+	free(o->merge_blktrace_file);
 	free(o->bw_log_file);
 	free(o->lat_log_file);
 	free(o->iops_log_file);
@@ -73,6 +74,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	string_to_cpu(&o->mmapfile, top->mmapfile);
 	string_to_cpu(&o->read_iolog_file, top->read_iolog_file);
 	string_to_cpu(&o->write_iolog_file, top->write_iolog_file);
+	string_to_cpu(&o->merge_blktrace_file, top->merge_blktrace_file);
 	string_to_cpu(&o->bw_log_file, top->bw_log_file);
 	string_to_cpu(&o->lat_log_file, top->lat_log_file);
 	string_to_cpu(&o->iops_log_file, top->iops_log_file);
@@ -330,6 +332,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	string_to_net(top->mmapfile, o->mmapfile);
 	string_to_net(top->read_iolog_file, o->read_iolog_file);
 	string_to_net(top->write_iolog_file, o->write_iolog_file);
+	string_to_net(top->merge_blktrace_file, o->merge_blktrace_file);
 	string_to_net(top->bw_log_file, o->bw_log_file);
 	string_to_net(top->lat_log_file, o->lat_log_file);
 	string_to_net(top->iops_log_file, o->iops_log_file);

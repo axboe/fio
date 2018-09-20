@@ -100,6 +100,10 @@ Command line options
 
 	Parse options only, don't start any I/O.
 
+.. option:: --merge-blktrace-only
+
+	Merge blktraces only, don't start any I/O.
+
 .. option:: --output=filename
 
 	Write output to file `filename`.
@@ -2491,6 +2495,15 @@ I/O replay
 	will be read at once. If selected true, input from iolog will be read
 	gradually. Useful when iolog is very large, or it is generated.
 
+.. option:: merge_blktrace_file=str
+
+	When specified, rather than replaying the logs passed to :option:`read_iolog`,
+	the logs go through a merge phase which aggregates them into a single
+	blktrace. The resulting file is then passed on as the :option:`read_iolog`
+	parameter. The intention here is to make the order of events consistent.
+	This limits the influence of the scheduler compared to replaying multiple
+	blktraces via concurrent jobs.
+
 .. option:: replay_no_stall=bool
 
 	When replaying I/O with :option:`read_iolog` the default behavior is to
@@ -3838,6 +3851,28 @@ given in bytes. The `action` can be one of these:
 	   :manpage:`fdatasync(2)` the file.
 **trim**
 	   Trim the given file from the given `offset` for `length` bytes.
+
+
+I/O Replay - Merging Traces
+---------------------------
+
+Colocation is a common practice used to get the most out of a machine.
+Knowing which workloads play nicely with each other and which ones don't is
+a much harder task. While fio can replay workloads concurrently via multiple
+jobs, it leaves some variability up to the scheduler making results harder to
+reproduce. Merging is a way to make the order of events consistent.
+
+Merging is integrated into I/O replay and done when a
+:option:`merge_blktrace_file` is specified. The list of files passed to
+:option:`read_iolog` go through the merge process and output a single file
+stored to the specified file. The output file is passed on as if it were the
+only file passed to :option:`read_iolog`. An example would look like::
+
+	$ fio --read_iolog="<file1>:<file2>" --merge_blktrace_file="<output_file>"
+
+Creating only the merged file can be done by passing the command line argument
+:option:`merge-blktrace-only`.
+
 
 CPU idleness profiling
 ----------------------

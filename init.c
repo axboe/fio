@@ -30,6 +30,7 @@
 #include "idletime.h"
 #include "filelock.h"
 #include "steadystate.h"
+#include "blktrace.h"
 
 #include "oslib/getopt.h"
 #include "oslib/strcasestr.h"
@@ -46,6 +47,7 @@ static char **ini_file;
 static int max_jobs = FIO_MAX_JOBS;
 static int dump_cmdline;
 static int parse_only;
+static int merge_blktrace_only;
 
 static struct thread_data def_thread;
 struct thread_data *threads = NULL;
@@ -285,6 +287,11 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.name		= (char *) "aux-path",
 		.has_arg	= required_argument,
 		.val		= 'K',
+	},
+	{
+		.name		= (char *) "merge-blktrace-only",
+		.has_arg	= no_argument,
+		.val		= 'A' | FIO_CLIENT_FLAG,
 	},
 	{
 		.name		= NULL,
@@ -1724,6 +1731,14 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 	if (td_steadystate_init(td))
 		goto err;
 
+	if (o->merge_blktrace_file && !merge_blktrace_iologs(td))
+		goto err;
+
+	if (merge_blktrace_only) {
+		put_job(td);
+		return 0;
+	}
+
 	/*
 	 * recurse add identical jobs, clear numjobs and stonewall options
 	 * as they don't apply to sub-jobs
@@ -2173,6 +2188,7 @@ static void usage(const char *name)
 	printf("  --debug=options\tEnable debug logging. May be one/more of:\n");
 	show_debug_categories();
 	printf("  --parse-only\t\tParse options only, don't start any IO\n");
+	printf("  --merge-blktrace-only\tMerge blktraces only, don't start any IO\n");
 	printf("  --output\t\tWrite output to file\n");
 	printf("  --bandwidth-log\tGenerate aggregate bandwidth logs\n");
 	printf("  --minimal\t\tMinimal (terse) output\n");
@@ -2888,6 +2904,11 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 				exit_val = 1;
 			}
 			trigger_timeout /= 1000000;
+			break;
+
+		case 'A':
+			did_arg = true;
+			merge_blktrace_only = 1;
 			break;
 		case '?':
 			log_err("%s: unrecognized option '%s'\n", argv[0],
