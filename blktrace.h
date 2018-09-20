@@ -36,5 +36,10 @@ static inline bool load_blktrace(struct thread_data *td, const char *fname,
 	return false;
 }
 
+static inline int merge_blktrace_iologs(struct thread_data *td)
+{
+	return false;
+}
+
 #endif
 #endif
