@@ -2218,6 +2218,13 @@ second trace in realtime. This knob is separately tunable from
 \fBreplay_time_scale\fR which scales the trace during runtime and will not
 change the output of the merge unlike this option.
 .TP
+.BI merge_blktrace_iters \fR=\fPfloat_list
+This is a whole number option that is index paired with the list of files
+passed to \fBread_iolog\fR. When merging is performed, run each trace for
+the specified number of iterations. For example,
+`\-\-merge_blktrace_iters="2:1"' runs the first trace for two iterations
+and the second trace for one iteration.
+.TP
 .BI replay_no_stall \fR=\fPbool
 When replaying I/O with \fBread_iolog\fR the default behavior is to
 attempt to respect the timestamps within the log and replay them with the
@@ -3575,6 +3582,21 @@ Scaling traces can be done to see the relative impact of any particular trace
 being slowed down or sped up. \fBmerge_blktrace_scalars\fR takes in a colon
 separated list of percentage scalars. It is index paired with the files passed
 to \fBread_iolog\fR.
+.P
+With scaling, it may be desirable to match the running time of all traces.
+This can be done with \fBmerge_blktrace_iters\fR. It is index paired with
+\fBread_iolog\fR just like \fBmerge_blktrace_scalars\fR.
+.P
+In an example, given two traces, A and B, each 60s long. If we want to see
+the impact of trace A issuing IOs twice as fast and repeat trace A over the
+runtime of trace B, the following can be done:
+.RS
+.P
+$ fio \-\-read_iolog="<trace_a>:"<trace_b>" \-\-merge_blktrace_file"<output_file>" \-\-merge_blktrace_scalars="50:100" \-\-merge_blktrace_iters="2:1"
+.RE
+.P
+This runs trace A at 2x the speed twice for approximately the same runtime as
+a single run of trace B.
 .SH CPU IDLENESS PROFILING
 In some cases, we want to understand CPU overhead in a test. For example, we
 test patches for the specific goodness of whether they reduce CPU usage.

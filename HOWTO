@@ -2514,6 +2514,14 @@ I/O replay
 	:option:`replay_time_scale` which scales the trace during runtime and
 	does not change the output of the merge unlike this option.
 
+.. option:: merge_blktrace_iters=float_list
+
+	This is a whole number option that is index paired with the list of files
+	passed to :option:`read_iolog`. When merging is performed, run each trace
+	for the specified number of iterations. For example,
+	``--merge_blktrace_iters="2:1"`` runs the first trace for two iterations
+	and the second trace for one iteration.
+
 .. option:: replay_no_stall=bool
 
 	When replaying I/O with :option:`read_iolog` the default behavior is to
@@ -3887,6 +3895,19 @@ Scaling traces can be done to see the relative impact of any particular trace
 being slowed down or sped up. :option:`merge_blktrace_scalars` takes in a colon
 separated list of percentage scalars. It is index paired with the files passed
 to :option:`read_iolog`.
+
+With scaling, it may be desirable to match the running time of all traces.
+This can be done with :option:`merge_blktrace_iters`. It is index paired with
+:option:`read_iolog` just like :option:`merge_blktrace_scalars`.
+
+In an example, given two traces, A and B, each 60s long. If we want to see
+the impact of trace A issuing IOs twice as fast and repeat trace A over the
+runtime of trace B, the following can be done::
+
+	$ fio --read_iolog="<trace_a>:"<trace_b>" --merge_blktrace_file"<output_file>" --merge_blktrace_scalars="50:100" --merge_blktrace_iters="2:1"
+
+This runs trace A at 2x the speed twice for approximately the same runtime as
+a single run of trace B.
 
 
 CPU idleness profiling

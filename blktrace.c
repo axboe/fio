@@ -654,6 +654,12 @@ static int find_earliest_io(struct blktrace_cursor *bcs, int nr_logs)
 
 static void merge_finish_file(struct blktrace_cursor *bcs, int i, int *nr_logs)
 {
+	bcs[i].iter++;
+	if (bcs[i].iter < bcs[i].nr_iter) {
+		lseek(bcs[i].fd, 0, SEEK_SET);
+		return;
+	}
+
 	*nr_logs -= 1;
 
 	/* close file */
@@ -672,7 +678,11 @@ static int read_trace(struct thread_data *td, struct blktrace_cursor *bc)
 read_skip:
 	/* read an io trace */
 	ret = trace_fifo_get(td, bc->fifo, bc->fd, t, sizeof(*t));
-	if (ret <= 0) {
+	if (ret < 0) {
+		return ret;
+	} else if (!ret) {
+		if (!bc->length)
+			bc->length = bc->t.time;
 		return ret;
 	} else if (ret < (int) sizeof(*t)) {
 		log_err("fio: short fifo get\n");
@@ -697,7 +707,7 @@ read_skip:
 		goto read_skip;
 	}
 
-	t->time = t->time * bc->scalar / 100;
+	t->time = (t->time + bc->iter * bc->length) * bc->scalar / 100;
 
 	return ret;
 }
@@ -724,6 +734,15 @@ int merge_blktrace_iologs(struct thread_data *td)
 						  scalar));
 	if (ret) {
 		log_err("fio: merge_blktrace_scalars(%d) != nr_logs(%d)\n",
+			ret, nr_logs);
+		goto err_param;
+	}
+
+	ret = init_merge_param_list(td->o.merge_blktrace_iters, bcs, nr_logs,
+				    1, offsetof(struct blktrace_cursor,
+						nr_iter));
+	if (ret) {
+		log_err("fio: merge_blktrace_iters(%d) != nr_logs(%d)\n",
 			ret, nr_logs);
 		goto err_param;
 	}
