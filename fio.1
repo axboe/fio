@@ -2671,6 +2671,12 @@ steady state assessment criteria. All assessments are carried out using only
 data from the rolling collection window. Threshold limits can be expressed
 as a fixed value or as a percentage of the mean in the collection window.
 .RS
+.P
+When using this feature, most jobs should include the \fBtime_based\fR
+and \fBruntime\fR options or the \fBloops\fR option so that fio does not
+stop running after it has covered the full size of the specified file(s)
+or device(s).
+.RS
 .RS
 .TP
 .B iops
