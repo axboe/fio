@@ -3000,6 +3000,10 @@ Steady state
 	data from the rolling collection window. Threshold limits can be expressed
 	as a fixed value or as a percentage of the mean in the collection window.
 
+	When using this feature, most jobs should include the :option:`time_based`
+	and :option:`runtime` options or the :option:`loops` option so that fio does not
+	stop running after it has covered the full size of the specified file(s) or device(s).
+
 		**iops**
 			Collect IOPS data. Stop the job if all individual IOPS measurements
 			are within the specified limit of the mean IOPS (e.g., ``iops:2``
