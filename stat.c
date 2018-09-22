@@ -1059,10 +1059,16 @@ static void add_ddir_status_json(struct thread_stat *ts,
 
 	if (ts->clat_percentiles || ts->lat_percentiles) {
 		if (ddir_rw(ddir)) {
+			uint64_t samples;
+
+			if (ts->clat_percentiles)
+				samples = ts->clat_stat[ddir].samples;
+			else
+				samples = ts->lat_stat[ddir].samples;
+
 			len = calc_clat_percentiles(ts->io_u_plat[ddir],
-					ts->clat_stat[ddir].samples,
-					ts->percentile_list, &ovals, &maxv,
-					&minv);
+					samples, ts->percentile_list, &ovals,
+					&maxv, &minv);
 		} else {
 			len = calc_clat_percentiles(ts->io_u_sync_plat,
 					ts->sync_stat.samples,
