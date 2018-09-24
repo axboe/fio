@@ -381,7 +381,7 @@ int fio_rados_getevents(struct thread_data *td, unsigned int min,
   return events;
 }
 
-static int fio_rados_setup(struct thread_data *td)
+static int fio_rados_init(struct thread_data *td)
 {
 	struct rados_data *rados = NULL;
 	int r;
@@ -456,7 +456,7 @@ static struct ioengine_ops ioengine = {
 	.name = "rados",
 	.version		= FIO_IOOPS_VERSION,
 	.flags			= FIO_DISKLESSIO,
-	.setup			= fio_rados_setup,
+	.init			= fio_rados_init,
 	.queue			= fio_rados_queue,
 	.getevents		= fio_rados_getevents,
 	.event			= fio_rados_event,
