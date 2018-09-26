@@ -1,0 +1,18 @@
+# Expected results: no parse warnings, runs and with roughly 1/8 iops between
+#			the two jobs.
+# Buggy result: parse warning on flow value overflow, no 1/8 division between
+			jobs.
+#
+[global]
+bs=4k
+ioengine=null
+size=100g
+runtime=3
+flow_id=1
+
+[flow1]
+flow=-8
+rate_iops=1000
+
+[flow2]
+flow=1
