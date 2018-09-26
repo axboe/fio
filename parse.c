@@ -512,11 +512,8 @@ static bool val_too_large(const struct fio_option *o, unsigned long long val,
 	if (!o->maxval)
 		return false;
 
-	if (is_uint) {
-		unsigned int uint_val = val;
-
-		return uint_val > o->maxval;
-	}
+	if (is_uint)
+		return (unsigned int) val > o->maxval;
 
 	return val > o->maxval;
 }
@@ -527,11 +524,8 @@ static bool val_too_small(const struct fio_option *o, unsigned long long val,
 	if (!o->minval)
 		return false;
 
-	if (is_uint) {
-		unsigned int uint_val = val;
-
-		return uint_val < o->minval;
-	}
+	if (is_uint)
+		return (int) val < o->minval;
 
 	return val < o->minval;
 }
