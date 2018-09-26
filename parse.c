@@ -596,13 +596,13 @@ static int __handle_option(const struct fio_option *o, const char *ptr,
 		}
 
 		if (o->maxval && ull > o->maxval) {
-			log_err("max value out of range: %llu"
-					" (%llu max)\n", ull, o->maxval);
+			log_err("%s: max value out of range: %llu"
+				" (%llu max)\n", o->name, ull, o->maxval);
 			return 1;
 		}
 		if (o->minval && ull < o->minval) {
-			log_err("min value out of range: %lld"
-					" (%d min)\n", ull, o->minval);
+			log_err("%s: min value out of range: %lld"
+				" (%d min)\n", o->name, ull, o->minval);
 			return 1;
 		}
 		if (o->posval[0].ival) {
