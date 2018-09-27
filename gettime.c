@@ -237,12 +237,11 @@ static unsigned long get_cycles_per_msec(void)
 	c_s = get_cpu_clock();
 	do {
 		__fio_gettime(&e);
+		c_e = get_cpu_clock();
 
 		elapsed = utime_since(&s, &e);
-		if (elapsed >= 1280) {
-			c_e = get_cpu_clock();
+		if (elapsed >= 1280)
 			break;
-		}
 	} while (1);
 
 	fio_clock_source = old_cs;
