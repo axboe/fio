@@ -606,7 +606,7 @@ static int zbd_reset_range(struct thread_data *td, const struct fio_file *f,
 static unsigned int zbd_zone_nr(struct zoned_block_device_info *zbd_info,
 				struct fio_zone_info *zone)
 {
-	return (uintptr_t) zone - (uintptr_t) zbd_info->zone_info;
+	return zone - zbd_info->zone_info;
 }
 
 /**
