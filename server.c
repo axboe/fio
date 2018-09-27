@@ -296,6 +296,8 @@ static int verify_convert_cmd(struct fio_net_cmd *cmd)
 	if (crc != cmd->cmd_crc16) {
 		log_err("fio: server bad crc on command (got %x, wanted %x)\n",
 				cmd->cmd_crc16, crc);
+		fprintf(f_err, "fio: server bad crc on command (got %x, wanted %x)\n",
+				cmd->cmd_crc16, crc);
 		return 1;
 	}
 
@@ -310,6 +312,8 @@ static int verify_convert_cmd(struct fio_net_cmd *cmd)
 		break;
 	default:
 		log_err("fio: bad server cmd version %d\n", cmd->version);
+		fprintf(f_err, "fio: client/server version mismatch (%d != %d)\n",
+				cmd->version, FIO_SERVER_VER);
 		return 1;
 	}
 
