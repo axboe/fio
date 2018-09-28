@@ -81,13 +81,14 @@ is_scsi_device() {
 }
 
 run_fio() {
-    local fio
+    local fio opts
 
     fio=$(dirname "$0")/../../fio
 
-    { echo; echo "fio $*"; echo; } >>"${logfile}.${test_number}"
+    opts=("--aux-path=/tmp" "--allow_file_create=0" "$@")
+    { echo; echo "fio ${opts[*]}"; echo; } >>"${logfile}.${test_number}"
 
-    "${dynamic_analyzer[@]}" "$fio" "$@"
+    "${dynamic_analyzer[@]}" "$fio" "${opts[@]}"
 }
 
 run_one_fio_job() {
