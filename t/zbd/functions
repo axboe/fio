@@ -102,5 +102,8 @@ fio_written() {
 }
 
 fio_reset_count() {
-    sed -n 's/^.*write:[^;]*; \([0-9]*\) zone resets$/\1/p'
+    local count
+
+    count=$(sed -n 's/^.*write:[^;]*; \([0-9]*\) zone resets$/\1/p')
+    echo "${count:-0}"
 }
