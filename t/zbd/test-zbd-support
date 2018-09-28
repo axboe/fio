@@ -801,18 +801,26 @@ fi
 
 logfile=$0.log
 
+passed=0
+failed=0
 rc=0
 for test_number in "${tests[@]}"; do
     rm -f "${logfile}.${test_number}"
     echo -n "Running test $test_number ... "
     if eval "test$test_number"; then
 	status="PASS"
+	((passed++))
     else
 	status="FAIL"
+	((failed++))
 	rc=1
     fi
     echo "$status"
     echo "$status" >> "${logfile}.${test_number}"
 done
 
+echo "$passed tests passed"
+if [ $failed -gt 0 ]; then
+    echo " and $failed tests failed"
+fi
 exit $rc
