@@ -726,6 +726,28 @@ static bool zbd_dec_and_reset_write_cnt(const struct thread_data *td,
 	return write_cnt == 0;
 }
 
+/* Check whether the value of zbd_info.sectors_with_data is correct. */
+static void zbd_check_swd(const struct fio_file *f)
+{
+#if 0
+	struct fio_zone_info *zb, *ze, *z;
+	uint64_t swd = 0;
+
+	zb = &f->zbd_info->zone_info[zbd_zone_idx(f, f->file_offset)];
+	ze = &f->zbd_info->zone_info[zbd_zone_idx(f, f->file_offset +
+						  f->io_size)];
+	for (z = zb; z < ze; z++) {
+		pthread_mutex_lock(&z->mutex);
+		swd += z->wp - z->start;
+	}
+	pthread_mutex_lock(&f->zbd_info->mutex);
+	assert(f->zbd_info->sectors_with_data == swd);
+	pthread_mutex_unlock(&f->zbd_info->mutex);
+	for (z = zb; z < ze; z++)
+		pthread_mutex_unlock(&z->mutex);
+#endif
+}
+
 void zbd_file_reset(struct thread_data *td, struct fio_file *f)
 {
 	struct fio_zone_info *zb, *ze, *z;
@@ -1077,6 +1099,8 @@ static void zbd_post_submit(const struct io_u *io_u, bool success)
 	}
 unlock:
 	pthread_mutex_unlock(&z->mutex);
+
+	zbd_check_swd(io_u->file);
 }
 
 bool zbd_unaligned_write(int error_code)
@@ -1128,6 +1152,8 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 	if (zb->cond != BLK_ZONE_COND_OFFLINE &&
 	    io_u->ddir == DDIR_READ && td->o.read_beyond_wp)
 		return io_u_accept;
+
+	zbd_check_swd(f);
 
 	pthread_mutex_lock(&zb->mutex);
 	switch (io_u->ddir) {
