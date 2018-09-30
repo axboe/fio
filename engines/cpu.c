@@ -85,7 +85,7 @@ static int fio_cpuio_init(struct thread_data *td)
 	 */
 	o->thinktime_blocks = 1;
 	o->thinktime_spin = 0;
-	o->thinktime = (co->cpucycle * (100 - co->cpuload)) / co->cpuload;
+	o->thinktime = ((unsigned long long) co->cpucycle * (100 - co->cpuload)) / co->cpuload;
 
 	o->nr_files = o->open_files = 1;
 
