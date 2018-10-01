@@ -9,6 +9,36 @@
 #include "lib/getrusage.h"
 #include "rate-submit.h"
 
+static void check_overlap(struct io_u *io_u)
+{
+	int i;
+	struct thread_data *td;
+	bool overlap = false;
+
+	do {
+		/*
+		 * Allow only one thread to check for overlap at a
+		 * time to prevent two threads from thinking the coast
+		 * is clear and then submitting IOs that overlap with
+		 * each other
+		 */
+		pthread_mutex_lock(&overlap_check);
+		for_each_td(td, i) {
+			if (td->runstate <= TD_SETTING_UP ||
+				td->runstate >= TD_FINISHING ||
+				!td->o.serialize_overlap ||
+				td->o.io_submit_mode != IO_MODE_OFFLOAD)
+				continue;
+
+			overlap = in_flight_overlap(&td->io_u_all, io_u);
+			if (overlap) {
+				pthread_mutex_unlock(&overlap_check);
+				break;
+			}
+		}
+	} while (overlap);
+}
+
 static int io_workqueue_fn(struct submit_worker *sw,
 			   struct workqueue_work *work)
 {
@@ -16,6 +46,9 @@ static int io_workqueue_fn(struct submit_worker *sw,
 	const enum fio_ddir ddir = io_u->ddir;
 	struct thread_data *td = sw->priv;
 	int ret;
+
+	if (td->o.serialize_overlap)
+		check_overlap(io_u);
 
 	dprint(FD_RATE, "io_u %p queued by %u\n", io_u, gettid());
 

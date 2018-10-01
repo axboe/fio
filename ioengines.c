@@ -288,6 +288,8 @@ enum fio_q_status td_io_queue(struct thread_data *td, struct io_u *io_u)
 
 	assert((io_u->flags & IO_U_F_FLIGHT) == 0);
 	io_u_set(td, io_u, IO_U_F_FLIGHT);
+	if (td->o.serialize_overlap && td->o.io_submit_mode == IO_MODE_OFFLOAD)
+		pthread_mutex_unlock(&overlap_check);
 
 	assert(fio_file_open(io_u->file));
 

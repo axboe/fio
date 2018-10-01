@@ -852,4 +852,7 @@ enum {
 extern void exec_trigger(const char *);
 extern void check_trigger_file(void);
 
+extern bool in_flight_overlap(struct io_u_queue *q, struct io_u *io_u);
+extern pthread_mutex_t overlap_check;
+
 #endif
