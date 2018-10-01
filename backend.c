@@ -541,6 +541,7 @@ static inline bool io_in_polling(struct thread_data *td)
 	return !td->o.iodepth_batch_complete_min &&
 		   !td->o.iodepth_batch_complete_max;
 }
+
 /*
  * Unlinks files from thread data fio_file structure
  */
@@ -1042,8 +1043,12 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 			if (td->error)
 				break;
 
-			workqueue_enqueue(&td->io_wq, &io_u->work);
-			ret = FIO_Q_QUEUED;
+			do {
+				if (td->o.serialize_overlap)
+					ret = workqueue_enqueue_serial_overlap(&td->io_wq, &io_u->work);
+				else
+					ret = workqueue_enqueue(&td->io_wq, &io_u->work);
+			} while (ret != FIO_Q_QUEUED);
 
 			if (ddir_rw(__ddir)) {
 				td->io_issues[__ddir]++;
@@ -1104,6 +1109,7 @@ reap:
 		td->error = 0;
 		fio_mark_td_terminate(td);
 	}
+
 	if (!td->error) {
 		struct fio_file *f;
 

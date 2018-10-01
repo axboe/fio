@@ -2339,8 +2339,8 @@ I/O depth
 	``serialize_overlap`` tells fio to avoid provoking this behavior by explicitly
 	serializing in-flight I/Os that have a non-zero overlap. Note that setting
 	this option can reduce both performance and the :option:`iodepth` achieved.
-	Additionally this option does not work when :option:`io_submit_mode` is set to
-	offload. Default: false.
+	Threads must be used when this option is combined with offload
+	:option:`io_submit_mode`. Default: false.
 
 .. option:: io_submit_mode=str
 

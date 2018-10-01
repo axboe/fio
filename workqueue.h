@@ -71,7 +71,8 @@ struct workqueue {
 int workqueue_init(struct thread_data *td, struct workqueue *wq, struct workqueue_ops *ops, unsigned int max_workers, struct sk_out *sk_out);
 void workqueue_exit(struct workqueue *wq);
 
-void workqueue_enqueue(struct workqueue *wq, struct workqueue_work *work);
+enum fio_q_status workqueue_enqueue(struct workqueue *wq, struct workqueue_work *work);
+enum fio_q_status workqueue_enqueue_serial_overlap(struct workqueue *wq, struct workqueue_work *work);
 void workqueue_flush(struct workqueue *wq);
 
 static inline bool workqueue_pre_sleep_check(struct submit_worker *sw)
