@@ -5,6 +5,7 @@
  *
  */
 #include <unistd.h>
+#include <pthread.h>
 
 #include "fio.h"
 #include "flist.h"
@@ -19,6 +20,8 @@ enum {
 	SW_F_ACCOUNTED	= 1 << 3,
 	SW_F_ERROR	= 1 << 4,
 };
+
+static pthread_mutex_t serialize_lock;
 
 static struct submit_worker *__get_submit_worker(struct workqueue *wq,
 						 unsigned int start,
@@ -97,9 +100,9 @@ void workqueue_flush(struct workqueue *wq)
 }
 
 /*
- * Must be serialized by caller. Returns true for queued, false for busy.
+ * Must be serialized by caller.
  */
-void workqueue_enqueue(struct workqueue *wq, struct workqueue_work *work)
+enum fio_q_status workqueue_enqueue(struct workqueue *wq, struct workqueue_work *work)
 {
 	struct submit_worker *sw;
 
@@ -113,6 +116,79 @@ void workqueue_enqueue(struct workqueue *wq, struct workqueue_work *work)
 
 	pthread_cond_signal(&sw->cond);
 	pthread_mutex_unlock(&sw->lock);
+
+	return FIO_Q_QUEUED;
+}
+
+/*
+ * Check in the workqueue for overlap and return FIO_Q_BUSY if found.
+ */
+enum fio_q_status workqueue_enqueue_serial_overlap(struct workqueue *wq, struct workqueue_work *work)
+{
+	struct io_u *io_u = container_of(work, struct io_u, work);
+	struct thread_data *td;
+	struct flist_head *entry;
+	struct workqueue *tdwq;
+	int i, j;
+	unsigned long long x1, x2, y1, y2;
+
+	x1 = io_u->offset;
+	x2 = io_u->offset + io_u->buflen;
+
+	pthread_mutex_lock(&serialize_lock);
+
+	for_each_td(td, i) {
+		if (td->runstate <= TD_SETTING_UP ||
+			td->runstate >= TD_FINISHING ||
+			td->o.io_submit_mode != IO_MODE_OFFLOAD)
+			continue;
+
+		tdwq = &td->io_wq;
+		assert(tdwq);
+
+		for (j = 0; j < tdwq->max_workers; j++) {
+			struct submit_worker *tdsw = &tdwq->workers[j];
+			assert(tdsw);
+
+			pthread_mutex_lock(&tdsw->lock);
+
+			if (!(tdsw->flags & SW_F_RUNNING) ||
+				flist_empty(&tdsw->work_list)) {
+				pthread_mutex_unlock(&tdsw->lock);
+				continue;
+			}
+
+			flist_for_each(entry, &tdsw->work_list) {
+				struct workqueue_work *swwork;
+				struct io_u *check_io_u;
+
+				swwork = container_of(entry, struct workqueue_work, list);
+				assert(swwork);
+				check_io_u = container_of(swwork, struct io_u, work);
+				assert(check_io_u);
+
+				y1 = check_io_u->offset;
+				y2 = check_io_u->offset + check_io_u->buflen;
+
+				if (x1 < y2 && y1 < x2) {
+					pthread_mutex_unlock(&tdsw->lock);
+					dprint(FD_IO, "offload in-flight overlap: %llu/%llu, %llu/%llu\n",
+							io_u->offset, io_u->buflen, check_io_u->offset,
+							check_io_u->buflen);
+
+					pthread_mutex_unlock(&serialize_lock);
+					return FIO_Q_BUSY;
+				}
+			}
+
+			pthread_mutex_unlock(&tdsw->lock);
+		}
+	}
+
+	workqueue_enqueue(wq, work);
+
+	pthread_mutex_unlock(&serialize_lock);
+	return FIO_Q_QUEUED;
 }
 
 static void handle_list(struct submit_worker *sw, struct flist_head *list)
