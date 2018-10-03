@@ -566,7 +566,9 @@ static bool read_iolog2(struct thread_data *td)
 static bool is_socket(const char *path)
 {
 	struct stat buf;
-	int r = stat(path, &buf);
+	int r;
+
+	r = stat(path, &buf);
 	if (r == -1)
 		return false;
 
@@ -575,19 +577,25 @@ static bool is_socket(const char *path)
 
 static int open_socket(const char *path)
 {
-	int fd = socket(AF_UNIX, SOCK_STREAM, 0);
 	struct sockaddr_un addr;
+	int ret, fd;
+
+	fd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (fd < 0)
 		return fd;
+
 	addr.sun_family = AF_UNIX;
 	if (snprintf(addr.sun_path, sizeof(addr.sun_path), "%s", path) >=
-	    sizeof(addr.sun_path))
+	    sizeof(addr.sun_path)) {
 		log_err("%s: path name %s is too long for a Unix socket\n",
 			__func__, path);
-	if (connect(fd, (const struct sockaddr *)&addr, strlen(path) + sizeof(addr.sun_family)) == 0)
+	}
+
+	ret = connect(fd, (const struct sockaddr *)&addr, strlen(path) + sizeof(addr.sun_family));
+	if (!ret)
 		return fd;
-	else
-		close(fd);
+
+	close(fd);
 	return -1;
 }
 
@@ -596,20 +604,23 @@ static int open_socket(const char *path)
  */
 static bool init_iolog_read(struct thread_data *td)
 {
-	char buffer[256], *p;
+	char buffer[256], *p, *fname;
 	FILE *f = NULL;
-	bool ret;
-	char* fname = get_name_by_idx(td->o.read_iolog_file, td->subjob_number);
+
+	fname = get_name_by_idx(td->o.read_iolog_file, td->subjob_number);
 	dprint(FD_IO, "iolog: name=%s\n", fname);
 
 	if (is_socket(fname)) {
-		int fd = open_socket(fname);
-		if (fd >= 0) {
+		int fd;
+
+		fd = open_socket(fname);
+		if (fd >= 0)
 			f = fdopen(fd, "r");
-		}
 	} else
 		f = fopen(fname, "r");
+
 	free(fname);
+
 	if (!f) {
 		perror("fopen read iolog");
 		return false;
@@ -622,21 +633,20 @@ static bool init_iolog_read(struct thread_data *td)
 		fclose(f);
 		return false;
 	}
+
 	td->io_log_rfile = f;
+
 	/*
 	 * version 2 of the iolog stores a specific string as the
 	 * first line, check for that
 	 */
 	if (!strncmp(iolog_ver2, buffer, strlen(iolog_ver2))) {
 		free_release_files(td);
-		ret = read_iolog2(td);
-	}
-	else {
-		log_err("fio: iolog version 1 is no longer supported\n");
-		ret = false;
+		return read_iolog2(td);
 	}
 
-	return ret;
+	log_err("fio: iolog version 1 is no longer supported\n");
+	return false;
 }
 
 /*
