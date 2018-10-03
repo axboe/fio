@@ -634,18 +634,18 @@ static bool init_iolog_read(struct thread_data *td)
 		return false;
 	}
 
-	td->io_log_rfile = f;
-
 	/*
 	 * version 2 of the iolog stores a specific string as the
 	 * first line, check for that
 	 */
 	if (!strncmp(iolog_ver2, buffer, strlen(iolog_ver2))) {
 		free_release_files(td);
+		td->io_log_rfile = f;
 		return read_iolog2(td);
 	}
 
 	log_err("fio: iolog version 1 is no longer supported\n");
+	fclose(f);
 	return false;
 }
 
