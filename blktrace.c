@@ -3,9 +3,7 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/ioctl.h>
 #include <unistd.h>
-#include <linux/fs.h>
 
 #include "flist.h"
 #include "fio.h"
@@ -129,37 +127,17 @@ static void trace_add_open_close_event(struct thread_data *td, int fileno, enum 
 	flist_add_tail(&ipo->list, &td->io_log_list);
 }
 
-static int get_dev_blocksize(const char *dev, unsigned int *bs)
+static int trace_add_file(struct thread_data *td, __u32 device)
 {
-	int fd;
-
-	fd = open(dev, O_RDONLY);
-	if (fd < 0)
-		return 1;
-
-	if (ioctl(fd, BLKSSZGET, bs) < 0) {
-		close(fd);
-		return 1;
-	}
-
-	close(fd);
-	return 0;
-}
-
-static int trace_add_file(struct thread_data *td, __u32 device,
-			  unsigned int *bs)
-{
-	static unsigned int last_maj, last_min, last_fileno, last_bs;
+	static unsigned int last_maj, last_min, last_fileno;
 	unsigned int maj = FMAJOR(device);
 	unsigned int min = FMINOR(device);
 	struct fio_file *f;
-	unsigned int i;
 	char dev[256];
+	unsigned int i;
 
-	if (last_maj == maj && last_min == min) {
-		*bs = last_bs;
+	if (last_maj == maj && last_min == min)
 		return last_fileno;
-	}
 
 	last_maj = maj;
 	last_min = min;
@@ -167,17 +145,14 @@ static int trace_add_file(struct thread_data *td, __u32 device,
 	/*
 	 * check for this file in our list
 	 */
-	for_each_file(td, f, i) {
+	for_each_file(td, f, i)
 		if (f->major == maj && f->minor == min) {
 			last_fileno = f->fileno;
-			last_bs = f->bs;
-			goto out;
+			return last_fileno;
 		}
-	}
 
 	strcpy(dev, "/dev");
 	if (blktrace_lookup_device(td->o.replay_redirect, dev, maj, min)) {
-		unsigned int this_bs;
 		int fileno;
 
 		if (td->o.replay_redirect)
@@ -189,22 +164,13 @@ static int trace_add_file(struct thread_data *td, __u32 device,
 
 		dprint(FD_BLKTRACE, "add devices %s\n", dev);
 		fileno = add_file_exclusive(td, dev);
-
-		if (get_dev_blocksize(dev, &this_bs))
-			this_bs = 512;
-
 		td->o.open_files++;
 		td->files[fileno]->major = maj;
 		td->files[fileno]->minor = min;
-		td->files[fileno]->bs = this_bs;
 		trace_add_open_close_event(td, fileno, FIO_LOG_OPEN_FILE);
-
 		last_fileno = fileno;
-		last_bs = this_bs;
 	}
 
-out:
-	*bs = last_bs;
 	return last_fileno;
 }
 
@@ -221,14 +187,14 @@ static void t_bytes_align(struct thread_options *o, struct blk_io_trace *t)
  */
 static void store_ipo(struct thread_data *td, unsigned long long offset,
 		      unsigned int bytes, int rw, unsigned long long ttime,
-		      int fileno, unsigned int bs)
+		      int fileno)
 {
 	struct io_piece *ipo;
 
 	ipo = calloc(1, sizeof(*ipo));
 	init_ipo(ipo);
 
-	ipo->offset = offset * bs;
+	ipo->offset = offset * 512;
 	if (td->o.replay_scale)
 		ipo->offset = ipo->offset / td->o.replay_scale;
 	ipo_bytes_align(td->o.replay_align, ipo);
@@ -268,10 +234,9 @@ static void handle_trace_notify(struct blk_io_trace *t)
 static void handle_trace_discard(struct thread_data *td,
 				 struct blk_io_trace *t,
 				 unsigned long long ttime,
-				 unsigned long *ios, unsigned int *rw_bs)
+				 unsigned long *ios, unsigned int *bs)
 {
 	struct io_piece *ipo;
-	unsigned int bs;
 	int fileno;
 
 	if (td->o.replay_skip & (1u << DDIR_TRIM))
@@ -279,17 +244,17 @@ static void handle_trace_discard(struct thread_data *td,
 
 	ipo = calloc(1, sizeof(*ipo));
 	init_ipo(ipo);
-	fileno = trace_add_file(td, t->device, &bs);
+	fileno = trace_add_file(td, t->device);
 
 	ios[DDIR_TRIM]++;
-	if (t->bytes > rw_bs[DDIR_TRIM])
-		rw_bs[DDIR_TRIM] = t->bytes;
+	if (t->bytes > bs[DDIR_TRIM])
+		bs[DDIR_TRIM] = t->bytes;
 
 	td->o.size += t->bytes;
 
 	INIT_FLIST_HEAD(&ipo->list);
 
-	ipo->offset = t->sector * bs;
+	ipo->offset = t->sector * 512;
 	if (td->o.replay_scale)
 		ipo->offset = ipo->offset / td->o.replay_scale;
 	ipo_bytes_align(td->o.replay_align, ipo);
@@ -311,13 +276,12 @@ static void dump_trace(struct blk_io_trace *t)
 
 static void handle_trace_fs(struct thread_data *td, struct blk_io_trace *t,
 			    unsigned long long ttime, unsigned long *ios,
-			    unsigned int *rw_bs)
+			    unsigned int *bs)
 {
-	unsigned int bs;
 	int rw;
 	int fileno;
 
-	fileno = trace_add_file(td, t->device, &bs);
+	fileno = trace_add_file(td, t->device);
 
 	rw = (t->action & BLK_TC_ACT(BLK_TC_WRITE)) != 0;
 
@@ -335,19 +299,18 @@ static void handle_trace_fs(struct thread_data *td, struct blk_io_trace *t,
 		return;
 	}
 
-	if (t->bytes > rw_bs[rw])
-		rw_bs[rw] = t->bytes;
+	if (t->bytes > bs[rw])
+		bs[rw] = t->bytes;
 
 	ios[rw]++;
 	td->o.size += t->bytes;
-	store_ipo(td, t->sector, t->bytes, rw, ttime, fileno, bs);
+	store_ipo(td, t->sector, t->bytes, rw, ttime, fileno);
 }
 
 static void handle_trace_flush(struct thread_data *td, struct blk_io_trace *t,
 			       unsigned long long ttime, unsigned long *ios)
 {
 	struct io_piece *ipo;
-	unsigned int bs;
 	int fileno;
 
 	if (td->o.replay_skip & (1u << DDIR_SYNC))
@@ -355,7 +318,7 @@ static void handle_trace_flush(struct thread_data *td, struct blk_io_trace *t,
 
 	ipo = calloc(1, sizeof(*ipo));
 	init_ipo(ipo);
-	fileno = trace_add_file(td, t->device, &bs);
+	fileno = trace_add_file(td, t->device);
 
 	ipo->delay = ttime / 1000;
 	ipo->ddir = DDIR_SYNC;
