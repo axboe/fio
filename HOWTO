@@ -2559,12 +2559,13 @@ I/O replay
 
 .. option:: replay_align=int
 
-	Force alignment of I/O offsets and lengths in a trace to this power of 2
-	value.
+	Force alignment of the byte offsets in a trace to this value. The value
+	must be a power of 2.
 
 .. option:: replay_scale=int
 
-	Scale sector offsets down by this factor when replaying traces.
+	Scale byte offsets down by this factor when replaying traces. Should most
+	likely use :option:`replay_align` as well.
 
 .. option:: replay_skip=str
 

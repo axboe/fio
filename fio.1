@@ -2257,11 +2257,12 @@ Unfortunately this also breaks the strict time ordering between multiple
 device accesses.
 .TP
 .BI replay_align \fR=\fPint
-Force alignment of I/O offsets and lengths in a trace to this power of 2
-value.
+Force alignment of the byte offsets in a trace to this value. The value
+must be a power of 2.
 .TP
 .BI replay_scale \fR=\fPint
-Scale sector offsets down by this factor when replaying traces.
+Scale bye offsets down by this factor when replaying traces. Should most
+likely use \fBreplay_align\fR as well.
 .SS "Threads, processes and job synchronization"
 .TP
 .BI replay_skip \fR=\fPstr
