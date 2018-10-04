@@ -482,7 +482,7 @@ static int str_rwmix_write_cb(void *data, unsigned long long *val)
 
 static int str_exitall_cb(void)
 {
-	exitall_on_terminate = 1;
+	exitall_on_terminate = true;
 	return 0;
 }
 

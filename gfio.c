@@ -38,7 +38,7 @@
 #include "gclient.h"
 #include "graph.h"
 
-static int gfio_server_running;
+static bool gfio_server_running;
 static unsigned int gfio_graph_limit = 100;
 
 GdkColor gfio_color_white;
@@ -461,10 +461,10 @@ static int send_job_file(struct gui_entry *ge)
 static void *server_thread(void *arg)
 {
 	fio_server_create_sk_key();
-	is_backend = 1;
-	gfio_server_running = 1;
+	is_backend = true;
+	gfio_server_running = true;
 	fio_start_server(NULL);
-	gfio_server_running = 0;
+	gfio_server_running = false;
 	fio_server_destroy_sk_key();
 	return NULL;
 }
@@ -472,7 +472,7 @@ static void *server_thread(void *arg)
 static void gfio_start_server(struct gui *ui)
 {
 	if (!gfio_server_running) {
-		gfio_server_running = 1;
+		gfio_server_running = true;
 		pthread_create(&ui->server_t, NULL, server_thread, NULL);
 		pthread_detach(ui->server_t);
 	}

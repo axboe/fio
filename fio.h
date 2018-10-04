@@ -503,7 +503,7 @@ enum {
 #define __fio_stringify_1(x)	#x
 #define __fio_stringify(x)	__fio_stringify_1(x)
 
-extern int exitall_on_terminate;
+extern bool exitall_on_terminate;
 extern unsigned int thread_number;
 extern unsigned int stat_number;
 extern int shm_id;
@@ -512,7 +512,7 @@ extern int output_format;
 extern int append_terse_output;
 extern int temp_stall_ts;
 extern uintptr_t page_mask, page_size;
-extern int read_only;
+extern bool read_only;
 extern int eta_print;
 extern int eta_new_line;
 extern unsigned int eta_interval_msec;
@@ -523,10 +523,10 @@ extern enum fio_cs fio_clock_source;
 extern int fio_clock_source_set;
 extern int warnings_fatal;
 extern int terse_version;
-extern int is_backend;
-extern int is_local_backend;
+extern bool is_backend;
+extern bool is_local_backend;
 extern int nr_clients;
-extern int log_syslog;
+extern bool log_syslog;
 extern int status_interval;
 extern const char fio_version_string[];
 extern char *trigger_file;
