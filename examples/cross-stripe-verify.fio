@@ -1,0 +1,25 @@
+# Example of how to split a drive up into sections, manually, and perform
+# verify from a bunch of jobs. This example is special in that it assumes
+# the drive is at around 30 * 124G in size, so with the below settings, we'll
+# cover most of the drive. It's also special in that it doesn't write
+# everything, it just writes 16k at a specific boundary, for every 128k.
+# This is done to exercise the split path for Intel NVMe devices, most of
+# which have a 128k stripe size and require IOs to be split if the cross
+# the stripe boundary.
+#
+[global]
+bs=16k
+direct=1
+rw=write:112k
+verify=crc32c
+filename=/dev/nvme0n1
+verify_backlog=1
+offset_increment=124g
+io_size=120g
+offset=120k
+group_reporting=1
+verify_dump=1
+loops=2
+
+[write-verify]
+numjobs=30
