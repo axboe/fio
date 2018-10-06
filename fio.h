@@ -57,7 +57,9 @@
 /*
  * "local" is pseudo-policy
  */
-#define MPOL_LOCAL MPOL_MAX
+#ifndef MPOL_LOCAL
+#define MPOL_LOCAL 4
+#endif
 #endif
 
 #ifdef CONFIG_CUDA
