@@ -2203,14 +2203,6 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_RANDOM,
 	},
 	{
-		.name	= "use_os_rand",
-		.lname	= "Use OS random",
-		.type	= FIO_OPT_DEPRECATED,
-		.off1	= offsetof(struct thread_options, dep_use_os_rand),
-		.category = FIO_OPT_C_IO,
-		.group	= FIO_OPT_G_RANDOM,
-	},
-	{
 		.name	= "norandommap",
 		.lname	= "No randommap",
 		.type	= FIO_OPT_STR_SET,
