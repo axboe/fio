@@ -60,8 +60,6 @@
 
 typedef cpu_set_t os_cpu_mask_t;
 
-typedef struct drand48_data os_random_state_t;
-
 #ifdef CONFIG_3ARG_AFFINITY
 #define fio_setaffinity(pid, cpumask)		\
 	sched_setaffinity((pid), sizeof(cpumask), &(cpumask))
@@ -168,19 +166,6 @@ static inline unsigned long long os_phys_mem(void)
 		return 0;
 
 	return (unsigned long long) pages * (unsigned long long) pagesize;
-}
-
-static inline void os_random_seed(unsigned long seed, os_random_state_t *rs)
-{
-	srand48_r(seed, rs);
-}
-
-static inline long os_random_long(os_random_state_t *rs)
-{
-	long val;
-
-	lrand48_r(rs, &val);
-	return val;
 }
 
 static inline int fio_lookup_raw(dev_t dev, int *majdev, int *mindev)

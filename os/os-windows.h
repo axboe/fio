@@ -35,7 +35,6 @@ int rand_r(unsigned *);
 #define FIO_HAVE_CPU_AFFINITY
 #define FIO_HAVE_CHARDEV_SIZE
 #define FIO_HAVE_GETTID
-#define FIO_USE_GENERIC_RAND
 
 #define FIO_PREFERRED_ENGINE		"windowsaio"
 #define FIO_PREFERRED_CLOCK_SOURCE	CS_CGETTIME
