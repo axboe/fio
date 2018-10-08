@@ -177,12 +177,27 @@ static unsigned long thread_eta(struct thread_data *td)
 		bytes_total = td->fill_device_size;
 	}
 
-	if (td->o.zone_size && td->o.zone_skip && bytes_total) {
+	/*
+	 * If io_size is set, bytes_total is an exact value that does not need
+	 * adjustment.
+	 */
+	if (td->o.zone_size && td->o.zone_skip && bytes_total &&
+	    !fio_option_is_set(&td->o, io_size)) {
 		unsigned int nr_zones;
 		uint64_t zone_bytes;
 
-		zone_bytes = bytes_total + td->o.zone_size + td->o.zone_skip;
-		nr_zones = (zone_bytes - 1) / (td->o.zone_size + td->o.zone_skip);
+		/*
+		 * Calculate the upper bound of the number of zones that will
+		 * be processed, including skipped bytes between zones. If this
+		 * is larger than total_io_size (e.g. when --io_size or --size
+		 * specify a small value), use the lower bound to avoid
+		 * adjustments to a negative value that would result in a very
+		 * large bytes_total and an incorrect eta.
+		 */
+		zone_bytes = td->o.zone_size + td->o.zone_skip;
+		nr_zones = (bytes_total + zone_bytes - 1) / zone_bytes;
+		if (bytes_total < nr_zones * td->o.zone_skip)
+			nr_zones = bytes_total / zone_bytes;
 		bytes_total -= nr_zones * td->o.zone_skip;
 	}
 

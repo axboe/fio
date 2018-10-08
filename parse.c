@@ -506,6 +506,33 @@ static const char *opt_type_name(const struct fio_option *o)
 	return "OPT_UNKNOWN?";
 }
 
+static bool val_too_large(const struct fio_option *o, unsigned long long val,
+			  bool is_uint)
+{
+	if (!o->maxval)
+		return false;
+
+	if (is_uint) {
+		if ((int) val < 0)
+			return (int) val > (int) o->maxval;
+		return (unsigned int) val > o->maxval;
+	}
+
+	return val > o->maxval;
+}
+
+static bool val_too_small(const struct fio_option *o, unsigned long long val,
+			  bool is_uint)
+{
+	if (!o->minval)
+		return false;
+
+	if (is_uint)
+		return (int) val < o->minval;
+
+	return val < o->minval;
+}
+
 static int __handle_option(const struct fio_option *o, const char *ptr,
 			   void *data, int first, int more, int curr)
 {
@@ -595,14 +622,14 @@ static int __handle_option(const struct fio_option *o, const char *ptr,
 			return 1;
 		}
 
-		if (o->maxval && ull > o->maxval) {
-			log_err("max value out of range: %llu"
-					" (%llu max)\n", ull, o->maxval);
+		if (val_too_large(o, ull, o->type == FIO_OPT_INT)) {
+			log_err("%s: max value out of range: %llu"
+				" (%llu max)\n", o->name, ull, o->maxval);
 			return 1;
 		}
-		if (o->minval && ull < o->minval) {
-			log_err("min value out of range: %lld"
-					" (%d min)\n", ull, o->minval);
+		if (val_too_small(o, ull, o->type == FIO_OPT_INT)) {
+			log_err("%s: min value out of range: %lld"
+				" (%d min)\n", o->name, ull, o->minval);
 			return 1;
 		}
 		if (o->posval[0].ival) {

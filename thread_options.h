@@ -140,7 +140,6 @@ struct thread_options {
 	unsigned int rand_repeatable;
 	unsigned int allrand_repeatable;
 	unsigned long long rand_seed;
-	unsigned int dep_use_os_rand;
 	unsigned int log_avg_msec;
 	unsigned int log_hist_msec;
 	unsigned int log_hist_coarseness;
@@ -173,7 +172,6 @@ struct thread_options {
 
 	unsigned int hugepage_size;
 	unsigned long long rw_min_bs;
-	unsigned int pad2;
 	unsigned int thinktime;
 	unsigned int thinktime_spin;
 	unsigned int thinktime_blocks;
@@ -258,6 +256,9 @@ struct thread_options {
 	char *read_iolog_file;
 	bool read_iolog_chunked;
 	char *write_iolog_file;
+	char *merge_blktrace_file;
+	fio_fp64_t merge_blktrace_scalars[FIO_IO_U_LIST_MAX_LEN];
+	fio_fp64_t merge_blktrace_iters[FIO_IO_U_LIST_MAX_LEN];
 
 	unsigned int write_bw_log;
 	unsigned int write_lat_log;
@@ -427,8 +428,8 @@ struct thread_options_pack {
 	uint32_t override_sync;
 	uint32_t rand_repeatable;
 	uint32_t allrand_repeatable;
+	uint32_t pad;
 	uint64_t rand_seed;
-	uint32_t dep_use_os_rand;
 	uint32_t log_avg_msec;
 	uint32_t log_hist_msec;
 	uint32_t log_hist_coarseness;
@@ -540,6 +541,9 @@ struct thread_options_pack {
 
 	uint8_t read_iolog_file[FIO_TOP_STR_MAX];
 	uint8_t write_iolog_file[FIO_TOP_STR_MAX];
+	uint8_t merge_blktrace_file[FIO_TOP_STR_MAX];
+	fio_fp64_t merge_blktrace_scalars[FIO_IO_U_LIST_MAX_LEN];
+	fio_fp64_t merge_blktrace_iters[FIO_IO_U_LIST_MAX_LEN];
 
 	uint32_t write_bw_log;
 	uint32_t write_lat_log;
@@ -566,7 +570,7 @@ struct thread_options_pack {
 	uint32_t rate_iops_min[DDIR_RWDIR_CNT];
 	uint32_t rate_process;
 	uint32_t rate_ign_think;
-	uint32_t pad;
+	uint32_t pad3;
 
 	uint8_t ioscheduler[FIO_TOP_STR_MAX];
 

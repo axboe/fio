@@ -53,7 +53,7 @@ static struct fio_sem *startup_sem;
 static struct flist_head *cgroup_list;
 static struct cgroup_mnt *cgroup_mnt;
 static int exit_value;
-static volatile int fio_abort;
+static volatile bool fio_abort;
 static unsigned int nr_process = 0;
 static unsigned int nr_thread = 0;
 
@@ -2371,7 +2371,7 @@ reap:
 			if (fio_sem_down_timeout(startup_sem, 10000)) {
 				log_err("fio: job startup hung? exiting.\n");
 				fio_terminate_threads(TERMINATE_ALL);
-				fio_abort = 1;
+				fio_abort = true;
 				nr_started--;
 				free(fd);
 				break;

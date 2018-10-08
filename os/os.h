@@ -298,23 +298,6 @@ static inline int blockdev_size(struct fio_file *f, unsigned long long *bytes)
 }
 #endif
 
-#ifdef FIO_USE_GENERIC_RAND
-typedef unsigned int os_random_state_t;
-
-static inline void os_random_seed(unsigned long seed, os_random_state_t *rs)
-{
-	srand(seed);
-}
-
-static inline long os_random_long(os_random_state_t *rs)
-{
-	long val;
-
-	val = rand_r(rs);
-	return val;
-}
-#endif
-
 #ifdef FIO_USE_GENERIC_INIT_RANDOM_STATE
 static inline int init_random_seeds(unsigned long *rand_seeds, int size)
 {

@@ -273,6 +273,8 @@ static void _hmac(unsigned char *md, void *key, int key_len, char *data) {
 	ctx = HMAC_CTX_new();
 #else
 	ctx = &_ctx;
+	/* work-around crash in certain versions of libssl */
+	HMAC_CTX_init(ctx);
 #endif
 	HMAC_Init_ex(ctx, key, key_len, EVP_sha256(), NULL);
 	HMAC_Update(ctx, (unsigned char*)data, strlen(data));

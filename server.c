@@ -28,7 +28,7 @@
 
 int fio_net_port = FIO_NET_PORT;
 
-int exit_backend = 0;
+bool exit_backend = false;
 
 enum {
 	SK_F_FREE	= 1,
@@ -296,6 +296,8 @@ static int verify_convert_cmd(struct fio_net_cmd *cmd)
 	if (crc != cmd->cmd_crc16) {
 		log_err("fio: server bad crc on command (got %x, wanted %x)\n",
 				cmd->cmd_crc16, crc);
+		fprintf(f_err, "fio: server bad crc on command (got %x, wanted %x)\n",
+				cmd->cmd_crc16, crc);
 		return 1;
 	}
 
@@ -310,6 +312,8 @@ static int verify_convert_cmd(struct fio_net_cmd *cmd)
 		break;
 	default:
 		log_err("fio: bad server cmd version %d\n", cmd->version);
+		fprintf(f_err, "fio: client/server version mismatch (%d != %d)\n",
+				cmd->version, FIO_SERVER_VER);
 		return 1;
 	}
 
@@ -991,7 +995,7 @@ static int handle_command(struct sk_out *sk_out, struct flist_head *job_list,
 		ret = 0;
 		break;
 	case FIO_NET_CMD_EXIT:
-		exit_backend = 1;
+		exit_backend = true;
 		return -1;
 	case FIO_NET_CMD_LOAD_FILE:
 		ret = handle_load_file_cmd(cmd);
@@ -2488,7 +2492,7 @@ void fio_server_got_signal(int signal)
 		sk_out->sk = -1;
 	else {
 		log_info("\nfio: terminating on signal %d\n", signal);
-		exit_backend = 1;
+		exit_backend = true;
 	}
 }
 
@@ -2570,7 +2574,7 @@ int fio_start_server(char *pidfile)
 
 	setsid();
 	openlog("fio", LOG_NDELAY|LOG_NOWAIT|LOG_PID, LOG_USER);
-	log_syslog = 1;
+	log_syslog = true;
 	close(STDIN_FILENO);
 	close(STDOUT_FILENO);
 	close(STDERR_FILENO);

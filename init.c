@@ -30,6 +30,7 @@
 #include "idletime.h"
 #include "filelock.h"
 #include "steadystate.h"
+#include "blktrace.h"
 
 #include "oslib/getopt.h"
 #include "oslib/strcasestr.h"
@@ -44,15 +45,16 @@ const char fio_version_string[] = FIO_VERSION;
 
 static char **ini_file;
 static int max_jobs = FIO_MAX_JOBS;
-static int dump_cmdline;
-static int parse_only;
+static bool dump_cmdline;
+static bool parse_only;
+static bool merge_blktrace_only;
 
 static struct thread_data def_thread;
 struct thread_data *threads = NULL;
 static char **job_sections;
 static int nr_job_sections;
 
-int exitall_on_terminate = 0;
+bool exitall_on_terminate = false;
 int output_format = FIO_OUTPUT_NORMAL;
 int eta_print = FIO_ETA_AUTO;
 unsigned int eta_interval_msec = 1000;
@@ -62,13 +64,13 @@ FILE *f_err = NULL;
 char *exec_profile = NULL;
 int warnings_fatal = 0;
 int terse_version = 3;
-int is_backend = 0;
-int is_local_backend = 0;
+bool is_backend = false;
+bool is_local_backend = false;
 int nr_clients = 0;
-int log_syslog = 0;
+bool log_syslog = false;
 
-int write_bw_log = 0;
-int read_only = 0;
+bool write_bw_log = false;
+bool read_only = false;
 int status_interval = 0;
 
 char *trigger_file = NULL;
@@ -285,6 +287,11 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.name		= (char *) "aux-path",
 		.has_arg	= required_argument,
 		.val		= 'K',
+	},
+	{
+		.name		= (char *) "merge-blktrace-only",
+		.has_arg	= no_argument,
+		.val		= 'A' | FIO_CLIENT_FLAG,
 	},
 	{
 		.name		= NULL,
@@ -1724,6 +1731,14 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 	if (td_steadystate_init(td))
 		goto err;
 
+	if (o->merge_blktrace_file && !merge_blktrace_iologs(td))
+		goto err;
+
+	if (merge_blktrace_only) {
+		put_job(td);
+		return 0;
+	}
+
 	/*
 	 * recurse add identical jobs, clear numjobs and stonewall options
 	 * as they don't apply to sub-jobs
@@ -2173,6 +2188,7 @@ static void usage(const char *name)
 	printf("  --debug=options\tEnable debug logging. May be one/more of:\n");
 	show_debug_categories();
 	printf("  --parse-only\t\tParse options only, don't start any IO\n");
+	printf("  --merge-blktrace-only\tMerge blktraces only, don't start any IO\n");
 	printf("  --output\t\tWrite output to file\n");
 	printf("  --bandwidth-log\tGenerate aggregate bandwidth logs\n");
 	printf("  --minimal\t\tMinimal (terse) output\n");
@@ -2471,7 +2487,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 	char *ostr = cmd_optstr;
 	char *pid_file = NULL;
 	void *cur_client = NULL;
-	int backend = 0;
+	bool backend = false;
 
 	/*
 	 * Reset optind handling, since we may call this multiple times
@@ -2497,7 +2513,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			exit_val = 1;
 			break;
 		case 'b':
-			write_bw_log = 1;
+			write_bw_log = true;
 			break;
 		case 'o': {
 			FILE *tmp;
@@ -2552,7 +2568,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			break;
 		case 's':
 			did_arg = true;
-			dump_cmdline = 1;
+			dump_cmdline = true;
 			break;
 		case 'r':
 			read_only = 1;
@@ -2618,7 +2634,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			break;
 		case 'P':
 			did_arg = true;
-			parse_only = 1;
+			parse_only = true;
 			break;
 		case 'x': {
 			size_t new_size;
@@ -2743,8 +2759,8 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			}
 			if (optarg)
 				fio_server_set_arg(optarg);
-			is_backend = 1;
-			backend = 1;
+			is_backend = true;
+			backend = true;
 #else
 			log_err("fio: client/server requires SHM support\n");
 			do_exit++;
@@ -2888,6 +2904,11 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 				exit_val = 1;
 			}
 			trigger_timeout /= 1000000;
+			break;
+
+		case 'A':
+			did_arg = true;
+			merge_blktrace_only = true;
 			break;
 		case '?':
 			log_err("%s: unrecognized option '%s'\n", argv[0],

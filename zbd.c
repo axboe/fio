@@ -128,9 +128,9 @@ static bool zbd_verify_sizes(void)
 						 f->file_name);
 					return false;
 				}
-				log_info("%s: rounded up offset from %lu to %lu\n",
-					 f->file_name, f->file_offset,
-					 new_offset);
+				log_info("%s: rounded up offset from %llu to %llu\n",
+					 f->file_name, (unsigned long long) f->file_offset,
+					 (unsigned long long) new_offset);
 				f->io_size -= (new_offset - f->file_offset);
 				f->file_offset = new_offset;
 			}
@@ -143,9 +143,9 @@ static bool zbd_verify_sizes(void)
 						 f->file_name);
 					return false;
 				}
-				log_info("%s: rounded down io_size from %lu to %lu\n",
-					 f->file_name, f->io_size,
-					 new_end - f->file_offset);
+				log_info("%s: rounded down io_size from %llu to %llu\n",
+					 f->file_name, (unsigned long long) f->io_size,
+					 (unsigned long long) new_end - f->file_offset);
 				f->io_size = new_end - f->file_offset;
 			}
 		}
@@ -357,14 +357,15 @@ static int parse_zone_info(struct thread_data *td, struct fio_file *f)
 	if (td->o.zone_size == 0) {
 		td->o.zone_size = zone_size;
 	} else if (td->o.zone_size != zone_size) {
-		log_info("fio: %s job parameter zonesize %lld does not match disk zone size %ld.\n",
-			 f->file_name, td->o.zone_size, zone_size);
+		log_info("fio: %s job parameter zonesize %llu does not match disk zone size %llu.\n",
+			 f->file_name, (unsigned long long) td->o.zone_size,
+			(unsigned long long) zone_size);
 		ret = -EINVAL;
 		goto close;
 	}
 
-	dprint(FD_ZBD, "Device %s has %d zones of size %lu KB\n", f->file_name,
-	       nr_zones, zone_size / 1024);
+	dprint(FD_ZBD, "Device %s has %d zones of size %llu KB\n", f->file_name,
+	       nr_zones, (unsigned long long) zone_size / 1024);
 
 	zbd_info = scalloc(1, sizeof(*zbd_info) +
 			   (nr_zones + 1) * sizeof(zbd_info->zone_info[0]));
@@ -407,8 +408,8 @@ static int parse_zone_info(struct thread_data *td, struct fio_file *f)
 			break;
 		ret = read_zone_info(fd, start_sector, buf, bufsz);
 		if (ret < 0) {
-			log_info("fio: BLKREPORTZONE(%lu) failed for %s (%d).\n",
-				 start_sector, f->file_name, -ret);
+			log_info("fio: BLKREPORTZONE(%llu) failed for %s (%d).\n",
+				 (unsigned long long) start_sector, f->file_name, -ret);
 			goto close;
 		}
 	}
@@ -602,6 +603,12 @@ static int zbd_reset_range(struct thread_data *td, const struct fio_file *f,
 	return ret;
 }
 
+static unsigned int zbd_zone_nr(struct zoned_block_device_info *zbd_info,
+				struct fio_zone_info *zone)
+{
+	return zone - zbd_info->zone_info;
+}
+
 /**
  * zbd_reset_zone - reset the write pointer of a single zone
  * @td: FIO thread data.
@@ -613,12 +620,10 @@ static int zbd_reset_range(struct thread_data *td, const struct fio_file *f,
 static int zbd_reset_zone(struct thread_data *td, const struct fio_file *f,
 			  struct fio_zone_info *z)
 {
-	int ret;
+	dprint(FD_ZBD, "%s: resetting wp of zone %u.\n", f->file_name,
+		zbd_zone_nr(f->zbd_info, z));
 
-	dprint(FD_ZBD, "%s: resetting wp of zone %lu.\n", f->file_name,
-	       z - f->zbd_info->zone_info);
-	ret = zbd_reset_range(td, f, z->start, (z+1)->start - z->start);
-	return ret;
+	return zbd_reset_range(td, f, z->start, (z+1)->start - z->start);
 }
 
 /*
@@ -639,8 +644,8 @@ static int zbd_reset_zones(struct thread_data *td, struct fio_file *f,
 	bool reset_wp;
 	int res = 0;
 
-	dprint(FD_ZBD, "%s: examining zones %lu .. %lu\n", f->file_name,
-	       zb - f->zbd_info->zone_info, ze - f->zbd_info->zone_info);
+	dprint(FD_ZBD, "%s: examining zones %u .. %u\n", f->file_name,
+		zbd_zone_nr(f->zbd_info, zb), zbd_zone_nr(f->zbd_info, ze));
 	assert(f->fd != -1);
 	for (z = zb; z < ze; z++) {
 		pthread_mutex_lock(&z->mutex);
@@ -653,10 +658,10 @@ static int zbd_reset_zones(struct thread_data *td, struct fio_file *f,
 				start_z = z;
 			} else if (start_z < ze && !reset_wp) {
 				dprint(FD_ZBD,
-				       "%s: resetting zones %lu .. %lu\n",
+				       "%s: resetting zones %u .. %u\n",
 				       f->file_name,
-				       start_z - f->zbd_info->zone_info,
-				       z - f->zbd_info->zone_info);
+					zbd_zone_nr(f->zbd_info, start_z),
+					zbd_zone_nr(f->zbd_info, z));
 				if (zbd_reset_range(td, f, start_z->start,
 						z->start - start_z->start) < 0)
 					res = 1;
@@ -666,9 +671,9 @@ static int zbd_reset_zones(struct thread_data *td, struct fio_file *f,
 		default:
 			if (start_z == ze)
 				break;
-			dprint(FD_ZBD, "%s: resetting zones %lu .. %lu\n",
-			       f->file_name, start_z - f->zbd_info->zone_info,
-			       z - f->zbd_info->zone_info);
+			dprint(FD_ZBD, "%s: resetting zones %u .. %u\n",
+			       f->file_name, zbd_zone_nr(f->zbd_info, start_z),
+			       zbd_zone_nr(f->zbd_info, z));
 			if (zbd_reset_range(td, f, start_z->start,
 					    z->start - start_z->start) < 0)
 				res = 1;
@@ -677,9 +682,9 @@ static int zbd_reset_zones(struct thread_data *td, struct fio_file *f,
 		}
 	}
 	if (start_z < ze) {
-		dprint(FD_ZBD, "%s: resetting zones %lu .. %lu\n", f->file_name,
-		       start_z - f->zbd_info->zone_info,
-		       z - f->zbd_info->zone_info);
+		dprint(FD_ZBD, "%s: resetting zones %u .. %u\n", f->file_name,
+			zbd_zone_nr(f->zbd_info, start_z),
+			zbd_zone_nr(f->zbd_info, z));
 		if (zbd_reset_range(td, f, start_z->start,
 				    z->start - start_z->start) < 0)
 			res = 1;
@@ -721,34 +726,68 @@ static bool zbd_dec_and_reset_write_cnt(const struct thread_data *td,
 	return write_cnt == 0;
 }
 
-/* Check whether the value of zbd_info.sectors_with_data is correct. */
-static void check_swd(const struct thread_data *td, const struct fio_file *f)
+enum swd_action {
+	CHECK_SWD,
+	SET_SWD,
+};
+
+/* Calculate the number of sectors with data (swd) and perform action 'a' */
+static uint64_t zbd_process_swd(const struct fio_file *f, enum swd_action a)
 {
-#if 0
 	struct fio_zone_info *zb, *ze, *z;
-	uint64_t swd;
+	uint64_t swd = 0;
 
 	zb = &f->zbd_info->zone_info[zbd_zone_idx(f, f->file_offset)];
 	ze = &f->zbd_info->zone_info[zbd_zone_idx(f, f->file_offset +
 						  f->io_size)];
-	swd = 0;
 	for (z = zb; z < ze; z++) {
 		pthread_mutex_lock(&z->mutex);
 		swd += z->wp - z->start;
 	}
 	pthread_mutex_lock(&f->zbd_info->mutex);
-	assert(f->zbd_info->sectors_with_data == swd);
+	switch (a) {
+	case CHECK_SWD:
+		assert(f->zbd_info->sectors_with_data == swd);
+		break;
+	case SET_SWD:
+		f->zbd_info->sectors_with_data = swd;
+		break;
+	}
 	pthread_mutex_unlock(&f->zbd_info->mutex);
 	for (z = zb; z < ze; z++)
 		pthread_mutex_unlock(&z->mutex);
-#endif
+
+	return swd;
+}
+
+/*
+ * The swd check is useful for debugging but takes too much time to leave
+ * it enabled all the time. Hence it is disabled by default.
+ */
+static const bool enable_check_swd = false;
+
+/* Check whether the value of zbd_info.sectors_with_data is correct. */
+static void zbd_check_swd(const struct fio_file *f)
+{
+	if (!enable_check_swd)
+		return;
+
+	zbd_process_swd(f, CHECK_SWD);
+}
+
+static void zbd_init_swd(struct fio_file *f)
+{
+	uint64_t swd;
+
+	swd = zbd_process_swd(f, SET_SWD);
+	dprint(FD_ZBD, "%s(%s): swd = %" PRIu64 "\n", __func__, f->file_name,
+	       swd);
 }
 
 void zbd_file_reset(struct thread_data *td, struct fio_file *f)
 {
-	struct fio_zone_info *zb, *ze, *z;
+	struct fio_zone_info *zb, *ze;
 	uint32_t zone_idx_e;
-	uint64_t swd = 0;
 
 	if (!f->zbd_info)
 		return;
@@ -756,16 +795,7 @@ void zbd_file_reset(struct thread_data *td, struct fio_file *f)
 	zb = &f->zbd_info->zone_info[zbd_zone_idx(f, f->file_offset)];
 	zone_idx_e = zbd_zone_idx(f, f->file_offset + f->io_size);
 	ze = &f->zbd_info->zone_info[zone_idx_e];
-	for (z = zb ; z < ze; z++) {
-		pthread_mutex_lock(&z->mutex);
-		swd += z->wp - z->start;
-	}
-	pthread_mutex_lock(&f->zbd_info->mutex);
-	f->zbd_info->sectors_with_data = swd;
-	pthread_mutex_unlock(&f->zbd_info->mutex);
-	for (z = zb ; z < ze; z++)
-		pthread_mutex_unlock(&z->mutex);
-	dprint(FD_ZBD, "%s(%s): swd = %ld\n", __func__, f->file_name, swd);
+	zbd_init_swd(f);
 	/*
 	 * If data verification is enabled reset the affected zones before
 	 * writing any data to avoid that a zone reset has to be issued while
@@ -995,8 +1025,8 @@ static struct fio_zone_info *zbd_replay_write_order(struct thread_data *td,
 	}
 
 	if (z->verify_block * min_bs >= f->zbd_info->zone_size)
-		log_err("%s: %d * %d >= %ld\n", f->file_name, z->verify_block,
-			min_bs, f->zbd_info->zone_size);
+		log_err("%s: %d * %d >= %llu\n", f->file_name, z->verify_block,
+			min_bs, (unsigned long long) f->zbd_info->zone_size);
 	io_u->offset = z->start + z->verify_block++ * min_bs;
 	return z;
 }
@@ -1094,6 +1124,8 @@ static void zbd_post_submit(const struct io_u *io_u, bool success)
 	}
 unlock:
 	pthread_mutex_unlock(&z->mutex);
+
+	zbd_check_swd(io_u->file);
 }
 
 bool zbd_unaligned_write(int error_code)
@@ -1145,6 +1177,8 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 	if (zb->cond != BLK_ZONE_COND_OFFLINE &&
 	    io_u->ddir == DDIR_READ && td->o.read_beyond_wp)
 		return io_u_accept;
+
+	zbd_check_swd(f);
 
 	pthread_mutex_lock(&zb->mutex);
 	switch (io_u->ddir) {
@@ -1219,7 +1253,6 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 		}
 		/* Check whether the zone reset threshold has been exceeded */
 		if (td->o.zrf.u.f) {
-			check_swd(td, f);
 			if (f->zbd_info->sectors_with_data >=
 			    f->io_size * td->o.zrt.u.f &&
 			    zbd_dec_and_reset_write_cnt(td, f)) {
@@ -1240,7 +1273,6 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 			zb->reset_zone = 0;
 			if (zbd_reset_zone(td, f, zb) < 0)
 				goto eof;
-			check_swd(td, f);
 		}
 		/* Make writes occur at the write pointer */
 		assert(!zbd_zone_full(f, zb, min_bs));
@@ -1301,7 +1333,7 @@ char *zbd_write_status(const struct thread_stat *ts)
 {
 	char *res;
 
-	if (asprintf(&res, "; %ld zone resets", ts->nr_zone_resets) < 0)
+	if (asprintf(&res, "; %llu zone resets", (unsigned long long) ts->nr_zone_resets) < 0)
 		return NULL;
 	return res;
 }

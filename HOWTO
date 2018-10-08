@@ -100,6 +100,10 @@ Command line options
 
 	Parse options only, don't start any I/O.
 
+.. option:: --merge-blktrace-only
+
+	Merge blktraces only, don't start any I/O.
+
 .. option:: --output=filename
 
 	Write output to file `filename`.
@@ -2491,6 +2495,33 @@ I/O replay
 	will be read at once. If selected true, input from iolog will be read
 	gradually. Useful when iolog is very large, or it is generated.
 
+.. option:: merge_blktrace_file=str
+
+	When specified, rather than replaying the logs passed to :option:`read_iolog`,
+	the logs go through a merge phase which aggregates them into a single
+	blktrace. The resulting file is then passed on as the :option:`read_iolog`
+	parameter. The intention here is to make the order of events consistent.
+	This limits the influence of the scheduler compared to replaying multiple
+	blktraces via concurrent jobs.
+
+.. option:: merge_blktrace_scalars=float_list
+
+	This is a percentage based option that is index paired with the list of
+	files passed to :option:`read_iolog`. When merging is performed, scale
+	the time of each event by the corresponding amount. For example,
+	``--merge_blktrace_scalars="50:100"`` runs the first trace in halftime
+	and the second trace in realtime. This knob is separately tunable from
+	:option:`replay_time_scale` which scales the trace during runtime and
+	does not change the output of the merge unlike this option.
+
+.. option:: merge_blktrace_iters=float_list
+
+	This is a whole number option that is index paired with the list of files
+	passed to :option:`read_iolog`. When merging is performed, run each trace
+	for the specified number of iterations. For example,
+	``--merge_blktrace_iters="2:1"`` runs the first trace for two iterations
+	and the second trace for one iteration.
+
 .. option:: replay_no_stall=bool
 
 	When replaying I/O with :option:`read_iolog` the default behavior is to
@@ -2528,12 +2559,13 @@ I/O replay
 
 .. option:: replay_align=int
 
-	Force alignment of I/O offsets and lengths in a trace to this power of 2
-	value.
+	Force alignment of the byte offsets in a trace to this value. The value
+	must be a power of 2.
 
 .. option:: replay_scale=int
 
-	Scale sector offsets down by this factor when replaying traces.
+	Scale byte offsets down by this factor when replaying traces. Should most
+	likely use :option:`replay_align` as well.
 
 .. option:: replay_skip=str
 
@@ -2968,6 +3000,10 @@ Steady state
 	steady state assessment criteria. All assessments are carried out using only
 	data from the rolling collection window. Threshold limits can be expressed
 	as a fixed value or as a percentage of the mean in the collection window.
+
+	When using this feature, most jobs should include the :option:`time_based`
+	and :option:`runtime` options or the :option:`loops` option so that fio does not
+	stop running after it has covered the full size of the specified file(s) or device(s).
 
 		**iops**
 			Collect IOPS data. Stop the job if all individual IOPS measurements
@@ -3838,6 +3874,46 @@ given in bytes. The `action` can be one of these:
 	   :manpage:`fdatasync(2)` the file.
 **trim**
 	   Trim the given file from the given `offset` for `length` bytes.
+
+
+I/O Replay - Merging Traces
+---------------------------
+
+Colocation is a common practice used to get the most out of a machine.
+Knowing which workloads play nicely with each other and which ones don't is
+a much harder task. While fio can replay workloads concurrently via multiple
+jobs, it leaves some variability up to the scheduler making results harder to
+reproduce. Merging is a way to make the order of events consistent.
+
+Merging is integrated into I/O replay and done when a
+:option:`merge_blktrace_file` is specified. The list of files passed to
+:option:`read_iolog` go through the merge process and output a single file
+stored to the specified file. The output file is passed on as if it were the
+only file passed to :option:`read_iolog`. An example would look like::
+
+	$ fio --read_iolog="<file1>:<file2>" --merge_blktrace_file="<output_file>"
+
+Creating only the merged file can be done by passing the command line argument
+:option:`merge-blktrace-only`.
+
+Scaling traces can be done to see the relative impact of any particular trace
+being slowed down or sped up. :option:`merge_blktrace_scalars` takes in a colon
+separated list of percentage scalars. It is index paired with the files passed
+to :option:`read_iolog`.
+
+With scaling, it may be desirable to match the running time of all traces.
+This can be done with :option:`merge_blktrace_iters`. It is index paired with
+:option:`read_iolog` just like :option:`merge_blktrace_scalars`.
+
+In an example, given two traces, A and B, each 60s long. If we want to see
+the impact of trace A issuing IOs twice as fast and repeat trace A over the
+runtime of trace B, the following can be done::
+
+	$ fio --read_iolog="<trace_a>:"<trace_b>" --merge_blktrace_file"<output_file>" --merge_blktrace_scalars="50:100" --merge_blktrace_iters="2:1"
+
+This runs trace A at 2x the speed twice for approximately the same runtime as
+a single run of trace B.
+
 
 CPU idleness profiling
 ----------------------

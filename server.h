@@ -48,7 +48,7 @@ struct fio_net_cmd_reply {
 };
 
 enum {
-	FIO_SERVER_VER			= 74,
+	FIO_SERVER_VER			= 77,
 
 	FIO_SERVER_MAX_FRAGMENT_PDU	= 1024,
 	FIO_SERVER_MAX_CMD_MB		= 2048,
@@ -232,7 +232,7 @@ extern int fio_net_send_quit(int sk);
 extern int fio_server_create_sk_key(void);
 extern void fio_server_destroy_sk_key(void);
 
-extern int exit_backend;
+extern bool exit_backend;
 extern int fio_net_port;
 
 #endif

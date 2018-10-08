@@ -47,7 +47,6 @@ struct solaris_rand_seed {
 #define FIO_OS_HAS_CTIME_R
 
 typedef psetid_t os_cpu_mask_t;
-typedef struct solaris_rand_seed os_random_state_t;
 
 static inline int chardev_size(struct fio_file *f, unsigned long long *bytes)
 {
@@ -90,21 +89,6 @@ static inline unsigned long long get_fs_free_size(const char *path)
 	ret = s.f_frsize;
 	ret *= (unsigned long long) s.f_bfree;
 	return ret;
-}
-
-static inline void os_random_seed(unsigned long seed, os_random_state_t *rs)
-{
-	rs->r[0] = seed & 0xffff;
-	seed >>= 16;
-	rs->r[1] = seed & 0xffff;
-	seed >>= 16;
-	rs->r[2] = seed & 0xffff;
-	seed48(rs->r);
-}
-
-static inline long os_random_long(os_random_state_t *rs)
-{
-	return nrand48(rs->r);
 }
 
 #define FIO_OS_DIRECTIO

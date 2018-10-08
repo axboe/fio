@@ -5,7 +5,7 @@
 #include "../lib/lfsr.h"
 #include "../lib/axmap.h"
 
-static int test_regular(size_t size, int seed)
+static int test_regular(uint64_t size, int seed)
 {
 	struct fio_lfsr lfsr;
 	struct axmap *map;
@@ -61,11 +61,11 @@ static int check_next_free(struct axmap *map, uint64_t start, uint64_t expected)
 	return 0;
 }
 
-static int test_next_free(size_t size, int seed)
+static int test_next_free(uint64_t size, int seed)
 {
 	struct fio_lfsr lfsr;
 	struct axmap *map;
-	size_t osize;
+	uint64_t osize;
 	uint64_t ff, lastfree;
 	int err, i;
 
@@ -196,7 +196,7 @@ static int test_next_free(size_t size, int seed)
 	return 0;
 }
 
-static int test_multi(size_t size, unsigned int bit_off)
+static int test_multi(uint64_t size, unsigned int bit_off)
 {
 	unsigned int map_size = size;
 	struct axmap *map;
@@ -395,7 +395,7 @@ static int test_overlap(void)
 
 int main(int argc, char *argv[])
 {
-	size_t size = (1UL << 23) - 200;
+	uint64_t size = (1ULL << 23) - 200;
 	int seed = 1;
 
 	if (argc > 1) {

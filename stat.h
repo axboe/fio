@@ -326,7 +326,7 @@ extern void add_sync_clat_sample(struct thread_stat *ts,
 extern int calc_log_samples(void);
 
 extern struct io_log *agg_io_log[DDIR_RWDIR_CNT];
-extern int write_bw_log;
+extern bool write_bw_log;
 
 static inline bool nsec_to_usec(unsigned long long *min,
 				unsigned long long *max, double *mean,

@@ -81,13 +81,14 @@ is_scsi_device() {
 }
 
 run_fio() {
-    local fio
+    local fio opts
 
     fio=$(dirname "$0")/../../fio
 
-    { echo; echo "fio $*"; echo; } >>"${logfile}.${test_number}"
+    opts=("--aux-path=/tmp" "--allow_file_create=0" "$@")
+    { echo; echo "fio ${opts[*]}"; echo; } >>"${logfile}.${test_number}"
 
-    "${dynamic_analyzer[@]}" "$fio" "$@"
+    "${dynamic_analyzer[@]}" "$fio" "${opts[@]}"
 }
 
 run_one_fio_job() {
@@ -113,7 +114,7 @@ run_fio_on_seq() {
 # Check whether buffered writes are refused.
 test1() {
     run_fio --name=job1 --filename="$dev" --rw=write --direct=0 --bs=4K	\
-	    --size="${zone_size}"					\
+	    --size="${zone_size}" --thread=1				\
 	    --zonemode=zbd --zonesize="${zone_size}" 2>&1 |
 	tee -a "${logfile}.${test_number}" |
 	grep -q 'Using direct I/O is mandatory for writing to ZBD drives'
@@ -800,18 +801,26 @@ fi
 
 logfile=$0.log
 
+passed=0
+failed=0
 rc=0
 for test_number in "${tests[@]}"; do
     rm -f "${logfile}.${test_number}"
     echo -n "Running test $test_number ... "
     if eval "test$test_number"; then
 	status="PASS"
+	((passed++))
     else
 	status="FAIL"
+	((failed++))
 	rc=1
     fi
     echo "$status"
     echo "$status" >> "${logfile}.${test_number}"
 done
 
+echo "$passed tests passed"
+if [ $failed -gt 0 ]; then
+    echo " and $failed tests failed"
+fi
 exit $rc

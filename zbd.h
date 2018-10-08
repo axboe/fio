@@ -31,8 +31,8 @@ enum io_u_action {
 
 /**
  * struct fio_zone_info - information about a single ZBD zone
- * @start: zone start in 512 byte units
- * @wp: zone write pointer location in 512 byte units
+ * @start: zone start location (bytes)
+ * @wp: zone write pointer location (bytes)
  * @verify_block: number of blocks that have been verified for this zone
  * @mutex: protects the modifiable members in this structure
  * @type: zone type (BLK_ZONE_TYPE_*)
