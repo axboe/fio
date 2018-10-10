@@ -787,7 +787,7 @@ static void show_thread_status_normal(struct thread_stat *ts,
 
 	if (!ddir_rw_sum(ts->io_bytes) && !ddir_rw_sum(ts->total_io_u))
 		return;
-		
+
 	memset(time_buf, 0, sizeof(time_buf));
 
 	time(&time_p);
@@ -1107,6 +1107,7 @@ static void add_ddir_status_json(struct thread_stat *ts,
 			}
 		}
 	}
+
 
 	if (!ddir_rw(ddir))
 		return;
@@ -1515,7 +1516,7 @@ struct json_object *show_thread_status(struct thread_stat *ts,
 	if (output_format & FIO_OUTPUT_JSON)
 		ret = show_thread_status_json(ts, rs, opt_list);
 	if (output_format & FIO_OUTPUT_NORMAL)
-		show_thread_status_normal(ts, rs,  out);
+		show_thread_status_normal(ts, rs, out);
 
 	return ret;
 }
@@ -1589,6 +1590,10 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src,
 	for (l = 0; l < DDIR_RWDIR_CNT; l++) {
 		if (!dst->unified_rw_rep) {
 			sum_stat(&dst->clat_stat[l], &src->clat_stat[l], first);
+			if (l == DDIR_READ) {
+				sum_stat(&dst->clat_high_prio_stat, &src->clat_high_prio_stat, first);
+				sum_stat(&dst->clat_prio_stat, &src->clat_prio_stat, first);
+			}
 			sum_stat(&dst->slat_stat[l], &src->slat_stat[l], first);
 			sum_stat(&dst->lat_stat[l], &src->lat_stat[l], first);
 			sum_stat(&dst->bw_stat[l], &src->bw_stat[l], first);
@@ -1600,6 +1605,10 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src,
 				dst->runtime[l] = src->runtime[l];
 		} else {
 			sum_stat(&dst->clat_stat[0], &src->clat_stat[l], first);
+			if (l == DDIR_READ) {
+				sum_stat(&dst->clat_high_prio_stat, &src->clat_high_prio_stat, first);
+				sum_stat(&dst->clat_prio_stat, &src->clat_prio_stat, first);
+			}
 			sum_stat(&dst->slat_stat[0], &src->slat_stat[l], first);
 			sum_stat(&dst->lat_stat[0], &src->lat_stat[l], first);
 			sum_stat(&dst->bw_stat[0], &src->bw_stat[l], first);
@@ -1656,17 +1665,27 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src,
 		int m;
 
 		for (m = 0; m < FIO_IO_U_PLAT_NR; m++) {
-			if (!dst->unified_rw_rep)
+			if (!dst->unified_rw_rep) {
 				dst->io_u_plat[k][m] += src->io_u_plat[k][m];
-			else
+				if (k == DDIR_READ) {
+					dst->io_u_plat_high_prio[m] += src->io_u_plat_high_prio[m];
+					dst->io_u_plat_prio[m] += src->io_u_plat_prio[m];
+				}
+			}
+			else {
 				dst->io_u_plat[0][m] += src->io_u_plat[k][m];
+				if (k == DDIR_READ) {
+					dst->io_u_plat_high_prio[m] += src->io_u_plat_high_prio[m];
+					dst->io_u_plat_prio[m] += src->io_u_plat_prio[m];
+				}
+			}
+
 		}
 	}
 
 	dst->total_run_time += src->total_run_time;
 	dst->total_submit += src->total_submit;
 	dst->total_complete += src->total_complete;
-	dst->nr_zone_resets += src->nr_zone_resets;
 }
 
 void init_group_run_stat(struct group_run_stats *gs)
@@ -1691,6 +1710,8 @@ void init_thread_stat(struct thread_stat *ts)
 		ts->bw_stat[j].min_val = -1UL;
 		ts->iops_stat[j].min_val = -1UL;
 	}
+	ts->clat_high_prio_stat.min_val = -1UL;
+	ts->clat_prio_stat.min_val = -1UL;
 	ts->sync_stat.min_val = -1UL;
 	ts->groupid = -1;
 }
@@ -2266,7 +2287,7 @@ static struct io_logs *get_cur_log(struct io_log *iolog)
 
 static void __add_log_sample(struct io_log *iolog, union io_sample_data data,
 			     enum fio_ddir ddir, unsigned long long bs,
-			     unsigned long t, uint64_t offset)
+			     unsigned long t, uint64_t offset, unsigned int priority_bit)
 {
 	struct io_logs *cur_log;
 
@@ -2285,6 +2306,7 @@ static void __add_log_sample(struct io_log *iolog, union io_sample_data data,
 		s->time = t + (iolog->td ? iolog->td->unix_epoch : 0);
 		io_sample_set_ddir(iolog, s, ddir);
 		s->bs = bs;
+		s->priority_bit = priority_bit;
 
 		if (iolog->log_offset) {
 			struct io_sample_offset *so = (void *) s;
@@ -2310,6 +2332,8 @@ void reset_io_stats(struct thread_data *td)
 	struct thread_stat *ts = &td->ts;
 	int i, j;
 
+	reset_io_stat(&ts->clat_high_prio_stat);
+	reset_io_stat(&ts->clat_prio_stat);
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		reset_io_stat(&ts->clat_stat[i]);
 		reset_io_stat(&ts->slat_stat[i]);
@@ -2325,6 +2349,10 @@ void reset_io_stats(struct thread_data *td)
 
 		for (j = 0; j < FIO_IO_U_PLAT_NR; j++) {
 			ts->io_u_plat[i][j] = 0;
+			if (i == DDIR_READ) {
+				ts->io_u_plat_high_prio[j] = 0;
+				ts->io_u_plat_prio[j] = 0;
+			}
 			if (!i)
 				ts->io_u_sync_plat[j] = 0;
 		}
@@ -2347,11 +2375,10 @@ void reset_io_stats(struct thread_data *td)
 
 	ts->total_submit = 0;
 	ts->total_complete = 0;
-	ts->nr_zone_resets = 0;
 }
 
 static void __add_stat_to_log(struct io_log *iolog, enum fio_ddir ddir,
-			      unsigned long elapsed, bool log_max)
+			      unsigned long elapsed, bool log_max, bool priority_bit)
 {
 	/*
 	 * Note an entry in the log. Use the mean from the logged samples,
@@ -2366,26 +2393,26 @@ static void __add_stat_to_log(struct io_log *iolog, enum fio_ddir ddir,
 		else
 			data.val = iolog->avg_window[ddir].mean.u.f + 0.50;
 
-		__add_log_sample(iolog, data, ddir, 0, elapsed, 0);
+		__add_log_sample(iolog, data, ddir, 0, elapsed, 0, priority_bit);
 	}
 
 	reset_io_stat(&iolog->avg_window[ddir]);
 }
 
 static void _add_stat_to_log(struct io_log *iolog, unsigned long elapsed,
-			     bool log_max)
+			     bool log_max, unsigned int priority_bit)
 {
 	int ddir;
 
 	for (ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++)
-		__add_stat_to_log(iolog, ddir, elapsed, log_max);
+		__add_stat_to_log(iolog, ddir, elapsed, log_max, priority_bit);
 }
 
 static unsigned long add_log_sample(struct thread_data *td,
 				    struct io_log *iolog,
 				    union io_sample_data data,
 				    enum fio_ddir ddir, unsigned long long bs,
-				    uint64_t offset)
+				    uint64_t offset, bool priority_bit)
 {
 	unsigned long elapsed, this_window;
 
@@ -2398,7 +2425,7 @@ static unsigned long add_log_sample(struct thread_data *td,
 	 * If no time averaging, just add the log sample.
 	 */
 	if (!iolog->avg_msec) {
-		__add_log_sample(iolog, data, ddir, bs, elapsed, offset);
+		__add_log_sample(iolog, data, ddir, bs, elapsed, offset, priority_bit);
 		return 0;
 	}
 
@@ -2422,7 +2449,7 @@ static unsigned long add_log_sample(struct thread_data *td,
 			return diff;
 	}
 
-	__add_stat_to_log(iolog, ddir, elapsed, td->o.log_max != 0);
+	_add_stat_to_log(iolog, elapsed, td->o.log_max != 0, priority_bit);
 
 	iolog->avg_last[ddir] = elapsed - (this_window - iolog->avg_msec);
 	return iolog->avg_msec;
@@ -2435,18 +2462,19 @@ void finalize_logs(struct thread_data *td, bool unit_logs)
 	elapsed = mtime_since_now(&td->epoch);
 
 	if (td->clat_log && unit_logs)
-		_add_stat_to_log(td->clat_log, elapsed, td->o.log_max != 0);
+		_add_stat_to_log(td->clat_log, elapsed, td->o.log_max != 0, 0);
 	if (td->slat_log && unit_logs)
-		_add_stat_to_log(td->slat_log, elapsed, td->o.log_max != 0);
+		_add_stat_to_log(td->slat_log, elapsed, td->o.log_max != 0, 0);
 	if (td->lat_log && unit_logs)
-		_add_stat_to_log(td->lat_log, elapsed, td->o.log_max != 0);
+		_add_stat_to_log(td->lat_log, elapsed, td->o.log_max != 0, 0);
 	if (td->bw_log && (unit_logs == per_unit_log(td->bw_log)))
-		_add_stat_to_log(td->bw_log, elapsed, td->o.log_max != 0);
+		_add_stat_to_log(td->bw_log, elapsed, td->o.log_max != 0, 0);
 	if (td->iops_log && (unit_logs == per_unit_log(td->iops_log)))
-		_add_stat_to_log(td->iops_log, elapsed, td->o.log_max != 0);
+		_add_stat_to_log(td->iops_log, elapsed, td->o.log_max != 0, 0);
 }
 
-void add_agg_sample(union io_sample_data data, enum fio_ddir ddir, unsigned long long bs)
+void add_agg_sample(union io_sample_data data, enum fio_ddir ddir, unsigned long long bs,
+					unsigned int priority_bit)
 {
 	struct io_log *iolog;
 
@@ -2454,7 +2482,7 @@ void add_agg_sample(union io_sample_data data, enum fio_ddir ddir, unsigned long
 		return;
 
 	iolog = agg_io_log[ddir];
-	__add_log_sample(iolog, data, ddir, bs, mtime_since_genesis(), 0);
+	__add_log_sample(iolog, data, ddir, bs, mtime_since_genesis(), 0, priority_bit);
 }
 
 void add_sync_clat_sample(struct thread_stat *ts, unsigned long long nsec)
@@ -2473,11 +2501,20 @@ static void add_clat_percentile_sample(struct thread_stat *ts,
 	assert(idx < FIO_IO_U_PLAT_NR);
 
 	ts->io_u_plat[ddir][idx]++;
+
+	if (!ts->priority_bit && ddir == DDIR_READ) {
+		ts->io_u_plat_prio[idx]++;
+	}
+
+	if (ts->priority_bit && ddir == DDIR_READ) {
+		ts->io_u_plat_high_prio[idx]++;
+		ts->priority_bit = 0;
+	}
 }
 
 void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 		     unsigned long long nsec, unsigned long long bs,
-		     uint64_t offset)
+		     uint64_t offset, bool priority_bit)
 {
 	const bool needs_lock = td_async_processing(td);
 	unsigned long elapsed, this_window;
@@ -2489,12 +2526,24 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 
 	add_stat_sample(&ts->clat_stat[ddir], nsec);
 
+	if (priority_bit && ddir == DDIR_READ) {
+		add_stat_sample(&ts->clat_high_prio_stat, nsec);
+	}
+
+	if (!priority_bit && ddir == DDIR_READ) {
+		add_stat_sample(&ts->clat_prio_stat, nsec);
+	}
+
 	if (td->clat_log)
 		add_log_sample(td, td->clat_log, sample_val(nsec), ddir, bs,
-			       offset);
+			       offset, priority_bit);
 
-	if (ts->clat_percentiles)
+	if (ts->clat_percentiles) {
+		if (priority_bit && ddir == DDIR_READ) {
+			ts->priority_bit = priority_bit;
+		}
 		add_clat_percentile_sample(ts, nsec, ddir);
+	}
 
 	if (iolog && iolog->hist_msec) {
 		struct io_hist *hw = &iolog->hist_window[ddir];
@@ -2504,7 +2553,7 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 		if (!hw->hist_last)
 			hw->hist_last = elapsed;
 		this_window = elapsed - hw->hist_last;
-		
+
 		if (this_window >= iolog->hist_msec) {
 			uint64_t *io_u_plat;
 			struct io_u_plat_entry *dst;
@@ -2522,7 +2571,7 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 				FIO_IO_U_PLAT_NR * sizeof(unsigned int));
 			flist_add(&dst->list, &hw->list);
 			__add_log_sample(iolog, sample_plat(dst), ddir, bs,
-						elapsed, offset);
+						elapsed, offset, priority_bit);
 
 			/*
 			 * Update the last time we recorded as being now, minus
@@ -2539,7 +2588,8 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 }
 
 void add_slat_sample(struct thread_data *td, enum fio_ddir ddir,
-		     unsigned long usec, unsigned long long bs, uint64_t offset)
+			unsigned long usec, unsigned long long bs, uint64_t offset,
+			bool priority_bit)
 {
 	const bool needs_lock = td_async_processing(td);
 	struct thread_stat *ts = &td->ts;
@@ -2553,7 +2603,8 @@ void add_slat_sample(struct thread_data *td, enum fio_ddir ddir,
 	add_stat_sample(&ts->slat_stat[ddir], usec);
 
 	if (td->slat_log)
-		add_log_sample(td, td->slat_log, sample_val(usec), ddir, bs, offset);
+		add_log_sample(td, td->slat_log, sample_val(usec), ddir, bs, offset,
+			priority_bit);
 
 	if (needs_lock)
 		__td_io_u_unlock(td);
@@ -2561,7 +2612,7 @@ void add_slat_sample(struct thread_data *td, enum fio_ddir ddir,
 
 void add_lat_sample(struct thread_data *td, enum fio_ddir ddir,
 		    unsigned long long nsec, unsigned long long bs,
-		    uint64_t offset)
+		    uint64_t offset, bool priority_bit)
 {
 	const bool needs_lock = td_async_processing(td);
 	struct thread_stat *ts = &td->ts;
@@ -2576,7 +2627,7 @@ void add_lat_sample(struct thread_data *td, enum fio_ddir ddir,
 
 	if (td->lat_log)
 		add_log_sample(td, td->lat_log, sample_val(nsec), ddir, bs,
-			       offset);
+			       offset, priority_bit);
 
 	if (ts->lat_percentiles)
 		add_clat_percentile_sample(ts, nsec, ddir);
@@ -2604,7 +2655,7 @@ void add_bw_sample(struct thread_data *td, struct io_u *io_u,
 
 	if (td->bw_log)
 		add_log_sample(td, td->bw_log, sample_val(rate), io_u->ddir,
-			       bytes, io_u->offset);
+			       bytes, io_u->offset, io_u->priority_bit);
 
 	td->stat_io_bytes[io_u->ddir] = td->this_io_bytes[io_u->ddir];
 
@@ -2658,7 +2709,7 @@ static int __add_samples(struct thread_data *td, struct timespec *parent_tv,
 			if (td->o.min_bs[ddir] == td->o.max_bs[ddir])
 				bs = td->o.min_bs[ddir];
 
-			next = add_log_sample(td, log, sample_val(rate), ddir, bs, 0);
+			next = add_log_sample(td, log, sample_val(rate), ddir, bs, 0, 0);
 			next_log = min(next_log, next);
 		}
 
@@ -2698,7 +2749,7 @@ void add_iops_sample(struct thread_data *td, struct io_u *io_u,
 
 	if (td->iops_log)
 		add_log_sample(td, td->iops_log, sample_val(1), io_u->ddir,
-			       bytes, io_u->offset);
+			       bytes, io_u->offset, io_u->priority_bit);
 
 	td->stat_io_blocks[io_u->ddir] = td->this_io_blocks[io_u->ddir];
 

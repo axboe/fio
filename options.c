@@ -3461,6 +3461,12 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_UNSUPPORTED,
 		.help	= "Your platform does not support IO priority classes",
 	},
+	{
+		.name	= "prio_percent",
+		.lname	= "prio percentage",
+		.type	= FIO_OPT_UNSUPPORTED,
+		.help	= "Your platform does not support IO priority classes",
+	},
 #endif
 	{
 		.name	= "thinktime",

@@ -15,6 +15,8 @@
 #include <guasi.h>
 #endif
 
+enum fio_q_status;
+
 enum {
 	IO_U_F_FREE		= 1 << 0,
 	IO_U_F_FLIGHT		= 1 << 1,
@@ -30,6 +32,7 @@ enum {
  * The io unit
  */
 struct io_u {
+	unsigned int priority_bit;
 	struct timespec start_time;
 	struct timespec issue_time;
 

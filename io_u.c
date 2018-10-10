@@ -570,8 +570,8 @@ static unsigned long long get_next_buflen(struct thread_data *td, struct io_u *i
 		power_2 = is_power_of_2(minbs);
 		if (!td->o.bs_unaligned && power_2)
 			buflen &= ~(minbs - 1);
-		else if (!td->o.bs_unaligned && !power_2) 
-			buflen -= buflen % minbs; 
+		else if (!td->o.bs_unaligned && !power_2)
+			buflen -= buflen % minbs;
 	} while (!io_u_fits(td, io_u, buflen));
 
 	return buflen;
@@ -1818,7 +1818,7 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 		unsigned long long tnsec;
 
 		tnsec = ntime_since(&io_u->start_time, &icd->time);
-		add_lat_sample(td, idx, tnsec, bytes, io_u->offset);
+		add_lat_sample(td, idx, tnsec, bytes, io_u->offset, io_u->priority_bit);
 
 		if (td->flags & TD_F_PROFILE_OPS) {
 			struct prof_io_ops *ops = &td->prof_io_ops;
@@ -1837,7 +1837,7 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 
 	if (ddir_rw(idx)) {
 		if (!td->o.disable_clat) {
-			add_clat_sample(td, idx, llnsec, bytes, io_u->offset);
+			add_clat_sample(td, idx, llnsec, bytes, io_u->offset, io_u->priority_bit);
 			io_u_mark_latency(td, llnsec);
 		}
 
@@ -2089,7 +2089,7 @@ void io_u_queued(struct thread_data *td, struct io_u *io_u)
 			td = td->parent;
 
 		add_slat_sample(td, io_u->ddir, slat_time, io_u->xfer_buflen,
-				io_u->offset);
+				io_u->offset, io_u->priority_bit);
 	}
 }
 

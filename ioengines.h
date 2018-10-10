@@ -26,6 +26,7 @@ struct ioengine_ops {
 	int (*setup)(struct thread_data *);
 	int (*init)(struct thread_data *);
 	int (*prep)(struct thread_data *, struct io_u *);
+	void (*prio_prep)(struct thread_data *, struct io_u *);
 	enum fio_q_status (*queue)(struct thread_data *, struct io_u *);
 	int (*commit)(struct thread_data *);
 	int (*getevents)(struct thread_data *, unsigned int, unsigned int, const struct timespec *);

@@ -1261,7 +1261,7 @@ static int handle_connection(struct sk_out *sk_out)
 	_exit(ret);
 }
 
-/* get the address on this host bound by the input socket, 
+/* get the address on this host bound by the input socket,
  * whether it is ipv6 or ipv4 */
 
 static int get_my_addr_str(int sk)
@@ -1561,6 +1561,14 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 	p.ts.ss_slope.u.i	= cpu_to_le64(fio_double_to_uint64(ts->ss_slope.u.f));
 	p.ts.ss_deviation.u.i	= cpu_to_le64(fio_double_to_uint64(ts->ss_deviation.u.f));
 	p.ts.ss_criterion.u.i	= cpu_to_le64(fio_double_to_uint64(ts->ss_criterion.u.f));
+
+	p.ts.priority_bit = ts->priority_bit;
+	for (i = 0; i < FIO_IO_U_PLAT_NR; i++) {
+		p.ts.io_u_plat_high_prio[i] = cpu_to_le64(ts->io_u_plat_high_prio[i]);
+		p.ts.io_u_plat_prio[i] = cpu_to_le64(ts->io_u_plat_prio[i]);
+	}
+	convert_io_stat(&p.ts.clat_high_prio_stat, &ts->clat_high_prio_stat);
+	convert_io_stat(&p.ts.clat_prio_stat, &ts->clat_prio_stat);
 
 	convert_gs(&p.rs, rs);
 
@@ -1988,7 +1996,7 @@ int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
 
 			s->time		= cpu_to_le64(s->time);
 			s->data.val	= cpu_to_le64(s->data.val);
-			s->__ddir	= cpu_to_le32(s->__ddir);
+			s->__ddir	= __cpu_to_le32(s->__ddir);
 			s->bs		= cpu_to_le64(s->bs);
 
 			if (log->log_offset) {
