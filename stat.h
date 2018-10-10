@@ -240,8 +240,8 @@ struct thread_stat {
 	bool priority_bit;
 	uint64_t io_u_plat_high_prio[FIO_IO_U_PLAT_NR];
 	uint64_t io_u_plat_prio[FIO_IO_U_PLAT_NR];
-	struct io_stat clat_high_prio_stat;
-	struct io_stat clat_prio_stat;
+	struct io_stat clat_high_prio_stat __attribute__((aligned(8)));
+	struct io_stat clat_prio_stat __attribute__((aligned(8)));
 
 	union {
 		uint64_t *ss_iops_data;

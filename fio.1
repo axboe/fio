@@ -2301,6 +2301,13 @@ systems since meaning of priority may differ.
 .BI prioclass \fR=\fPint
 Set the I/O priority class. See man \fBionice\fR\|(1).
 .TP
+.BI prio_percent \fR=\fPint
+Set the percentage of reads that will be issued as priority reads with the
+priority set by the \fBprioclass\fR and \fBprio\fR options. Non-priority
+reads will be sent with ``prio=0`` and ``prioclass=0``. Non-read I/O is
+unaffected by ``prio_percent``. This option cannot be used with the `prio`
+or `prioclass` options.
+.TP
 .BI cpus_allowed \fR=\fPstr
 Controls the same options as \fBcpumask\fR, but accepts a textual
 specification of the permitted CPUs instead and CPUs are indexed from 0. So

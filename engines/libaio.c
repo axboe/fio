@@ -87,7 +87,7 @@ static struct fio_option options[] = {
 		.name	= "prio_percent",
 		.lname	= "prio percentage",
 		.type	= FIO_OPT_UNSUPPORTED,
-		.help	= "Your platform does not support IO priority classes",
+		.help	= "Your platform does not support I/O priority classes",
 	},
 #endif
 	{

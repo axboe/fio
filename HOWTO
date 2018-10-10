@@ -2614,6 +2614,14 @@ Threads, processes and job synchronization
 
 	Set the I/O priority class. See man :manpage:`ionice(1)`.
 
+.. option:: prio_percent=int
+
+    Set the percentage of reads that will be issued as priority reads with the
+    priority set by the :option:`prioclass` and :option:`prio` options.
+    Non-priority reads will be sent with ``prio=0`` and ``prioclass=0``.
+    Non-read I/O is unaffected by ``prio_percent``. This option cannot be used
+    with the `prio` or `prioclass` options.
+
 .. option:: cpus_allowed=str
 
 	Controls the same options as :option:`cpumask`, but accepts a textual
