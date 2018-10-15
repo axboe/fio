@@ -83,10 +83,6 @@ static int io_workqueue_fn(struct submit_worker *sw,
 		ret = io_u_queued_complete(td, min_evts);
 		if (ret > 0)
 			td->cur_depth -= ret;
-	} else if (ret == FIO_Q_BUSY) {
-		ret = io_u_queued_complete(td, td->cur_depth);
-		if (ret > 0)
-			td->cur_depth -= ret;
 	}
 
 	return 0;
