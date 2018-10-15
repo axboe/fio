@@ -29,6 +29,7 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <math.h>
+#include <pthread.h>
 
 #include "fio.h"
 #include "smalloc.h"
@@ -65,6 +66,7 @@ unsigned int stat_number = 0;
 int shm_id = 0;
 int temp_stall_ts;
 unsigned long done_secs = 0;
+pthread_mutex_t overlap_check = PTHREAD_MUTEX_INITIALIZER;
 
 #define JOB_START_TIMEOUT	(5 * 1000)
 
@@ -567,7 +569,7 @@ static int unlink_all_files(struct thread_data *td)
 /*
  * Check if io_u will overlap an in-flight IO in the queue
  */
-static bool in_flight_overlap(struct io_u_queue *q, struct io_u *io_u)
+bool in_flight_overlap(struct io_u_queue *q, struct io_u *io_u)
 {
 	bool overlap;
 	struct io_u *check_io_u;
@@ -1872,7 +1874,11 @@ static void *thread_main(void *data)
 			 "perhaps try --debug=io option for details?\n",
 			 td->o.name, td->io_ops->name);
 
+	if (td->o.serialize_overlap && td->o.io_submit_mode == IO_MODE_OFFLOAD)
+		pthread_mutex_lock(&overlap_check);
 	td_set_runstate(td, TD_FINISHING);
+	if (td->o.serialize_overlap && td->o.io_submit_mode == IO_MODE_OFFLOAD)
+		pthread_mutex_unlock(&overlap_check);
 
 	update_rusage_stat(td);
 	td->ts.total_run_time = mtime_since_now(&td->epoch);
