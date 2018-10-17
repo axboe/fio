@@ -772,6 +772,11 @@ static inline bool td_async_processing(struct thread_data *td)
 	return (td->flags & TD_F_NEED_LOCK) != 0;
 }
 
+static inline bool td_offload_overlap(struct thread_data *td)
+{
+	return td->o.serialize_overlap && td->o.io_submit_mode == IO_MODE_OFFLOAD;
+}
+
 /*
  * We currently only need to do locking if we have verifier threads
  * accessing our internal structures too

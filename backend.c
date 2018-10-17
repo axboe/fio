@@ -1874,10 +1874,10 @@ static void *thread_main(void *data)
 			 "perhaps try --debug=io option for details?\n",
 			 td->o.name, td->io_ops->name);
 
-	if (td->o.serialize_overlap && td->o.io_submit_mode == IO_MODE_OFFLOAD)
+	if (td_offload_overlap(td))
 		pthread_mutex_lock(&overlap_check);
 	td_set_runstate(td, TD_FINISHING);
-	if (td->o.serialize_overlap && td->o.io_submit_mode == IO_MODE_OFFLOAD)
+	if (td_offload_overlap(td))
 		pthread_mutex_unlock(&overlap_check);
 
 	update_rusage_stat(td);
