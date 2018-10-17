@@ -1874,6 +1874,11 @@ static void *thread_main(void *data)
 			 "perhaps try --debug=io option for details?\n",
 			 td->o.name, td->io_ops->name);
 
+	/*
+	 * Acquire this lock if we were doing overlap checking in
+	 * offload mode so that we don't clean up this job while
+	 * another thread is checking its io_u's for overlap
+	 */
 	if (td_offload_overlap(td))
 		pthread_mutex_lock(&overlap_check);
 	td_set_runstate(td, TD_FINISHING);
