@@ -2343,7 +2343,7 @@ I/O depth
 	This option only applies to I/Os issued for a single job except when it is
 	enabled along with :option:`io_submit_mode`=offload. In offload mode, fio
 	will check for overlap among all I/Os submitted by offload jobs with :option:`serialize_overlap`
-	enabled. Threads must be used for all such jobs.
+	enabled.
 
 	Default: false.
 
