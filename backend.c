@@ -1189,14 +1189,14 @@ static void cleanup_io_u(struct thread_data *td)
 		if (td->io_ops->io_u_free)
 			td->io_ops->io_u_free(td, io_u);
 
-		fio_memfree(io_u, sizeof(*io_u));
+		fio_memfree(io_u, sizeof(*io_u), td_offload_overlap(td));
 	}
 
 	free_io_mem(td);
 
 	io_u_rexit(&td->io_u_requeues);
-	io_u_qexit(&td->io_u_freelist);
-	io_u_qexit(&td->io_u_all);
+	io_u_qexit(&td->io_u_freelist, false);
+	io_u_qexit(&td->io_u_all, td_offload_overlap(td));
 
 	free_file_completion_logging(td);
 }
@@ -1211,8 +1211,8 @@ static int init_io_u(struct thread_data *td)
 
 	err = 0;
 	err += !io_u_rinit(&td->io_u_requeues, td->o.iodepth);
-	err += !io_u_qinit(&td->io_u_freelist, td->o.iodepth);
-	err += !io_u_qinit(&td->io_u_all, td->o.iodepth);
+	err += !io_u_qinit(&td->io_u_freelist, td->o.iodepth, false);
+	err += !io_u_qinit(&td->io_u_all, td->o.iodepth, td_offload_overlap(td));
 
 	if (err) {
 		log_err("fio: failed setting up IO queues\n");
@@ -1227,7 +1227,7 @@ static int init_io_u(struct thread_data *td)
 		if (td->terminate)
 			return 1;
 
-		ptr = fio_memalign(cl_align, sizeof(*io_u));
+		ptr = fio_memalign(cl_align, sizeof(*io_u), td_offload_overlap(td));
 		if (!ptr) {
 			log_err("fio: unable to allocate aligned memory\n");
 			break;

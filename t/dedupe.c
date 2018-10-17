@@ -158,8 +158,8 @@ static int col_check(struct chunk *c, struct item *i)
 	char *cbuf, *ibuf;
 	int ret = 1;
 
-	cbuf = fio_memalign(blocksize, blocksize);
-	ibuf = fio_memalign(blocksize, blocksize);
+	cbuf = fio_memalign(blocksize, blocksize, false);
+	ibuf = fio_memalign(blocksize, blocksize, false);
 
 	e = flist_entry(c->extent_list[0].next, struct extent, list);
 	if (read_block(file.fd, cbuf, e->offset))
@@ -170,8 +170,8 @@ static int col_check(struct chunk *c, struct item *i)
 
 	ret = memcmp(ibuf, cbuf, blocksize);
 out:
-	fio_memfree(cbuf, blocksize);
-	fio_memfree(ibuf, blocksize);
+	fio_memfree(cbuf, blocksize, false);
+	fio_memfree(ibuf, blocksize, false);
 	return ret;
 }
 
@@ -309,7 +309,7 @@ static void *thread_fn(void *data)
 	struct worker_thread *thread = data;
 	void *buf;
 
-	buf = fio_memalign(blocksize, chunk_size);
+	buf = fio_memalign(blocksize, chunk_size, false);
 
 	do {
 		if (get_work(&thread->cur_offset, &thread->size)) {
@@ -323,7 +323,7 @@ static void *thread_fn(void *data)
 	} while (1);
 
 	thread->done = 1;
-	fio_memfree(buf, chunk_size);
+	fio_memfree(buf, chunk_size, false);
 	return NULL;
 }
 
