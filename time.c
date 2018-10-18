@@ -118,6 +118,7 @@ bool ramp_time_over(struct thread_data *td)
 	if (utime_since_now(&td->epoch) >= td->o.ramp_time) {
 		td->ramp_time_over = true;
 		reset_all_stats(td);
+		reset_io_stats(td);
 		td_set_runstate(td, TD_RAMP);
 
 		/*
