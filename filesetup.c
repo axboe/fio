@@ -908,9 +908,6 @@ int setup_files(struct thread_data *td)
 
 	old_state = td_bump_runstate(td, TD_SETTING_UP);
 
-	if (o->read_iolog_file)
-		goto done;
-
 	/*
 	 * Find out physical size of files or devices for this thread,
 	 * before we determine I/O size and range of our targets.
@@ -926,6 +923,9 @@ int setup_files(struct thread_data *td)
 	if (err)
 		goto err_out;
 
+	if (o->read_iolog_file)
+		goto done;
+	
 	/*
 	 * check sizes. if the files/devices do not exist and the size
 	 * isn't passed to fio, abort.
