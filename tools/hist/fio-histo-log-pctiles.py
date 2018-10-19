@@ -272,6 +272,13 @@ def add_to_histo_from( target, source ):
     for b in range(0, len(source)):
         target[b] += source[b]
 
+
+# calculate total samples in the histogram buckets
+
+def get_samples(buckets):
+    return reduce( lambda x,y: x + y, buckets)
+
+
 # compute percentiles
 # inputs:
 #   buckets: histogram bucket array 
@@ -453,14 +460,24 @@ def compute_percentiles_from_logs():
     # calculate percentiles across aggregate histogram for all threads
     # print CSV header just like fiologparser_hist does
 
-    header = 'msec-since-start, '
+    header = 'msec-since-start, samples, '
     for p in args.pctiles_wanted:
-        header += '%3.1f, ' % p
+        if p == 0.:
+            next_pctile_header = 'min'
+        elif p == 100.:
+            next_pctile_header = 'max'
+        elif p == 50.:
+            next_pctile_header = 'median'
+        else:
+            next_pctile_header = '%3.1f' % p
+        header += '%s, ' % next_pctile_header
+
     print('time (millisec), percentiles in increasing order with values in ' + args.output_unit)
     print(header)
 
     for (t_msec, all_threads_histo_t) in all_threads_histograms:
-        record = '%8d, ' % t_msec
+        samples = get_samples(all_threads_histo_t)
+        record = '%8d, %8d, ' % (t_msec, samples)
         pct = get_pctiles(all_threads_histo_t, args.pctiles_wanted, bucket_times)
         if not pct:
             for w in args.pctiles_wanted:
