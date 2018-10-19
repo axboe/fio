@@ -925,7 +925,7 @@ int setup_files(struct thread_data *td)
 
 	if (o->read_iolog_file)
 		goto done;
-	
+
 	/*
 	 * check sizes. if the files/devices do not exist and the size
 	 * isn't passed to fio, abort.
