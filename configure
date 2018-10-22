@@ -1897,9 +1897,12 @@ int main(int argc, char **argv)
   return 0;
 }
 EOF
-if compile_prog "" "-lpmem" "libpmem"; then
+PMEM_CFLAGS=$(pkg-config --cflags libpmem 2>/dev/null)
+PMEM_LIBS=$(pkg-config --libs libpmem 2>/dev/null)
+if compile_prog "$PMEM_CFLAGS" "$PMEM_LIBS" "libpmem"; then
   libpmem="yes"
-  LIBS="-lpmem $LIBS"
+  CFLAGS="$PMEM_CFLAGS $CFLAGS"
+  LIBS="$PMEM_LIBS $LIBS"
 fi
 print_config "libpmem" "$libpmem"
 
@@ -1919,9 +1922,12 @@ int main(int argc, char **argv)
   return 0;
 }
 EOF
-  if compile_prog "" "-lpmemblk" "libpmemblk"; then
+  PMEMBLK_CFLAGS=$(pkg-config --cflags libpmemblk 2>/dev/null)
+  PMEMBLK_LIBS=$(pkg-config --libs libpmemblk 2>/dev/null)
+  if compile_prog "$PMEMBLK_CFLAGS" "$PMEMBLK_LIBS" "libpmemblk"; then
     libpmemblk="yes"
-    LIBS="-lpmemblk $LIBS"
+    CFLAGS="$PMEMBLK_CFLAGS $CFLAGS"
+    LIBS="$PMEMBLK_LIBS $LIBS"
   fi
 fi
 print_config "libpmemblk" "$libpmemblk"
