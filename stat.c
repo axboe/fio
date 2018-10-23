@@ -416,7 +416,6 @@ static void display_lat(const char *name, unsigned long long min,
 static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 			     int ddir, struct buf_output *out)
 {
-	const char *str[] = { " read", "write", " trim", "sync" };
 	unsigned long runt;
 	unsigned long long min, max, bw, iops;
 	double mean, dev;
@@ -426,12 +425,12 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	if (ddir_sync(ddir)) {
 		if (calc_lat(&ts->sync_stat, &min, &max, &mean, &dev)) {
 			log_buf(out, "  %s:\n", "fsync/fdatasync/sync_file_range");
-			display_lat(str[ddir], min, max, mean, dev, out);
+			display_lat(io_ddir_name(ddir), min, max, mean, dev, out);
 			show_clat_percentiles(ts->io_u_sync_plat,
 						ts->sync_stat.samples,
 						ts->percentile_list,
 						ts->percentile_precision,
-						str[ddir], out);
+						io_ddir_name(ddir), out);
 		}
 		return;
 	}
@@ -455,7 +454,7 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 		zbd_w_st = zbd_write_status(ts);
 
 	log_buf(out, "  %s: IOPS=%s, BW=%s (%s)(%s/%llumsec)%s\n",
-			rs->unified_rw_rep ? "mixed" : str[ddir],
+			rs->unified_rw_rep ? "mixed" : io_ddir_name(ddir),
 			iops_p, bw_p, bw_p_alt, io_p,
 			(unsigned long long) ts->runtime[ddir],
 			zbd_w_st ? : "");
@@ -985,7 +984,6 @@ static void add_ddir_status_json(struct thread_stat *ts,
 	double mean, dev, iops;
 	unsigned int len;
 	int i;
-	const char *ddirname[] = { "read", "write", "trim", "sync" };
 	struct json_object *dir_object, *tmp_object, *percentile_object, *clat_bins_object = NULL;
 	char buf[120];
 	double p_of_agg = 100.0;
@@ -997,7 +995,7 @@ static void add_ddir_status_json(struct thread_stat *ts,
 
 	dir_object = json_create_object();
 	json_object_add_value_object(parent,
-		ts->unified_rw_rep ? "mixed" : ddirname[ddir], dir_object);
+		ts->unified_rw_rep ? "mixed" : io_ddir_name(ddir), dir_object);
 
 	if (ddir_rw(ddir)) {
 		bw_bytes = 0;
