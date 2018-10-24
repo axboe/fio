@@ -1717,8 +1717,11 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src,
 	dst->total_complete += src->total_complete;
 	dst->nr_zone_resets += src->nr_zone_resets;
 
-	for (l = 0; l < ARRAY_SIZE(dst->step_stats); l++)
+	for (l = 0; l < ARRAY_SIZE(dst->step_stats); l++) {
+		if (!__lat_ts_has_stats(src, l))
+			continue;
 		sum_lat_step_stats(&dst->step_stats[l], &src->step_stats[l], first);
+	}
 }
 
 void init_group_run_stat(struct group_run_stats *gs)

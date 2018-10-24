@@ -296,7 +296,12 @@ void lat_step_report(struct thread_stat *ts, struct buf_output *out)
 			if (!ls->iops[j])
 				continue;
 
-			__log_buf(out, "    %s: iops=%llu, lat=%.1f nsec\n",
+			if (!j)
+				__log_buf(out, "    [%2d] ", i);
+			else
+				__log_buf(out, "         ");
+
+			__log_buf(out, "%5s: iops=%llu, lat=%.1f nsec\n",
 					io_ddir_name(j),
 					(unsigned long long) ls->iops[j],
 					ls->avg[j].u.f);

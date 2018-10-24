@@ -1752,6 +1752,9 @@ static void file_log_write_comp(const struct thread_data *td, struct fio_file *f
 
 static bool should_account(struct thread_data *td)
 {
+	if (td->parent)
+		td = td->parent;
+
 	return lat_step_account(td) && ramp_time_over(td) &&
 		(td->runstate == TD_RUNNING || td->runstate == TD_VERIFYING);
 }
