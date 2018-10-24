@@ -14,6 +14,4 @@ norandommap
 filename=/dev/nvme0n1p9
 runtime=1h
 time_based=1
-numjobs=2
 group_reporting=1
-cpus_allowed=0,2
