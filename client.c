@@ -1024,6 +1024,15 @@ static void convert_ts(struct thread_stat *dst, struct thread_stat *src)
 	for (i = 0; i < dst->nr_block_infos; i++)
 		dst->block_infos[i] = le32_to_cpu(src->block_infos[i]);
 
+	for (i = 0; i < ARRAY_SIZE(dst->step_stats); i++) {
+		struct lat_step_stats *ls = &src->step_stats[i];
+
+		for (j = 0; j < DDIR_RWDIR_CNT; j++) {
+			dst->step_stats[i].iops[j] = le64_to_cpu(ls->iops[j]);
+			dst->step_stats[i].avg[j].u.f = fio_uint64_to_double(le64_to_cpu(ls->avg[j].u.i));
+		}
+	}
+
 	dst->ss_dur		= le64_to_cpu(src->ss_dur);
 	dst->ss_state		= le32_to_cpu(src->ss_state);
 	dst->ss_head		= le32_to_cpu(src->ss_head);

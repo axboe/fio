@@ -1,0 +1,19 @@
+# Job demonstrating how to use the iodepth_mode=stepped feature
+#
+[step]
+ioengine=libaio
+# iodepth / step_high (130% here) must be high enough to saturate performance
+iodepth=64
+numjobs=1
+direct=1
+# Step from 10% to 130%, in 5% intervals. For each step, use a ramp time
+# of 5s, then 30 seconds of runtime
+iodepth_mode=stepped:10-130/5,5/30
+rw=randread
+norandommap
+filename=/dev/nvme0n1p9
+runtime=1h
+time_based=1
+numjobs=2
+group_reporting=1
+cpus_allowed=0,2

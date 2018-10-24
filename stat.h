@@ -4,6 +4,11 @@
 #include "iolog.h"
 #include "lib/output_buffer.h"
 
+struct lat_step_stats {
+	uint64_t iops[DDIR_RWDIR_CNT];
+	fio_fp64_t avg[DDIR_RWDIR_CNT];
+};
+
 struct group_run_stats {
 	uint64_t max_run[DDIR_RWDIR_CNT], min_run[DDIR_RWDIR_CNT];
 	uint64_t max_bw[DDIR_RWDIR_CNT], min_bw[DDIR_RWDIR_CNT];
@@ -145,6 +150,8 @@ enum block_info_state {
 #define FIO_JOBDESC_SIZE	256
 #define FIO_VERROR_SIZE		128
 
+#define MAX_STEP_STATS		64
+
 struct thread_stat {
 	char name[FIO_JOBNAME_SIZE];
 	char verror[FIO_VERROR_SIZE];
@@ -227,6 +234,9 @@ struct thread_stat {
 	uint64_t latency_window;
 
 	uint32_t sig_figs;
+	uint32_t pad4;
+
+	struct lat_step_stats step_stats[MAX_STEP_STATS];
 
 	uint64_t ss_dur;
 	uint32_t ss_state;
@@ -239,12 +249,12 @@ struct thread_stat {
 
 	union {
 		uint64_t *ss_iops_data;
-		uint64_t pad4;
+		uint64_t pad5;
 	};
 
 	union {
 		uint64_t *ss_bw_data;
-		uint64_t pad5;
+		uint64_t pad6;
 	};
 } __attribute__((packed));
 

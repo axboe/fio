@@ -559,7 +559,7 @@ static int __setup_rate(struct thread_data *td, enum fio_ddir ddir)
 	return 0;
 }
 
-static int setup_rate(struct thread_data *td)
+int setup_rate(struct thread_data *td)
 {
 	int ret = 0;
 

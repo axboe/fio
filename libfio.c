@@ -34,6 +34,7 @@
 #include "filelock.h"
 #include "helper_thread.h"
 #include "filehash.h"
+#include "target.h"
 
 FLIST_HEAD(disk_list);
 

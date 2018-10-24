@@ -155,6 +155,11 @@ enum {
 	F_ADV_SEQUENTIAL,
 };
 
+enum {
+	IOD_NONE = 0,
+	IOD_STEPPED,
+};
+
 /*
  * Per-thread/process specific data. Only used for the network client
  * for now.
@@ -374,9 +379,14 @@ struct thread_data {
 	unsigned int latency_qd;
 	unsigned int latency_qd_high;
 	unsigned int latency_qd_low;
+	unsigned int latency_qd_step;
 	unsigned int latency_failed;
-	uint64_t latency_ios;
+	unsigned int latency_state;
+	unsigned int latency_iops[DDIR_RWDIR_CNT];
+	unsigned int latency_step;
+	uint64_t latency_ios[DDIR_RWDIR_CNT];
 	int latency_end_run;
+	unsigned int nr_lat_stats;
 
 	/*
 	 * read/write mixed workload state
@@ -688,13 +698,6 @@ extern int io_queue_event(struct thread_data *td, struct io_u *io_u, int *ret,
 		   struct timespec *comp_time);
 
 /*
- * Latency target helpers
- */
-extern void lat_target_check(struct thread_data *);
-extern void lat_target_init(struct thread_data *);
-extern void lat_target_reset(struct thread_data *);
-
-/*
  * Iterates all threads/processes within all the defined jobs
  */
 #define for_each_td(td, i)	\
@@ -750,6 +753,8 @@ static inline bool should_check_rate(struct thread_data *td)
 
 	return ddir_rw_sum(td->bytes_done) != 0;
 }
+
+int setup_rate(struct thread_data *td);
 
 static inline unsigned long long td_max_bs(struct thread_data *td)
 {

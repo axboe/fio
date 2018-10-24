@@ -1550,6 +1550,15 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 
 	p.ts.sig_figs		= cpu_to_le32(ts->sig_figs);
 
+	for (i = 0; i < ARRAY_SIZE(ts->step_stats); i++) {
+		struct lat_step_stats *ls = &ts->step_stats[i];
+
+		for (j = 0; j < DDIR_RWDIR_CNT; j++) {
+			p.ts.step_stats[i].iops[j] = cpu_to_le64(ls->iops[j]);
+			p.ts.step_stats[i].avg[j].u.i = cpu_to_le64(fio_double_to_uint64(ls->avg[j].u.f));
+		}
+	}
+
 	p.ts.nr_block_infos	= cpu_to_le64(ts->nr_block_infos);
 	for (i = 0; i < p.ts.nr_block_infos; i++)
 		p.ts.block_infos[i] = cpu_to_le32(ts->block_infos[i]);

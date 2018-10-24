@@ -15,6 +15,7 @@
 #include "helper_thread.h"
 #include "smalloc.h"
 #include "zbd.h"
+#include "target.h"
 
 #define LOG_MSEC_SLACK	1
 
@@ -391,7 +392,7 @@ void stat_calc_lat_m(struct thread_stat *ts, double *io_u_lat)
 	stat_calc_lat(ts, io_u_lat, ts->io_u_lat_m, FIO_IO_U_LAT_M_NR);
 }
 
-static void display_lat(const char *name, unsigned long long min,
+void display_lat(const char *name, unsigned long long min,
 			unsigned long long max, double mean, double dev,
 			struct buf_output *out)
 {
@@ -887,6 +888,11 @@ static void show_thread_status_normal(struct thread_stat *ts,
 
 	if (ts->ss_dur)
 		show_ss_normal(ts, out);
+
+	if (lat_ts_has_stats(ts)) {
+		log_buf(out, "  Stepped latency report\n");
+		lat_step_report(ts, out);
+	}
 }
 
 static void show_ddir_status_terse(struct thread_stat *ts,
@@ -1264,7 +1270,7 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 	double io_u_lat_u[FIO_IO_U_LAT_U_NR];
 	double io_u_lat_m[FIO_IO_U_LAT_M_NR];
 	double usr_cpu, sys_cpu;
-	int i;
+	int i, j;
 	size_t size;
 
 	root = json_create_object();
@@ -1488,6 +1494,32 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 		json_object_add_value_array(data, "bw", bw);
 	}
 
+	if (lat_ts_has_stats(ts)) {
+		tmp = json_create_object();
+		json_object_add_value_object(root, "lat_step", tmp);
+	}
+
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
+		struct json_object *val;
+
+		if (!__lat_ts_has_stats(ts, i))
+			continue;
+
+		val = json_create_object();
+		json_object_add_value_object(tmp, io_ddir_name(i), val);
+
+		for (j = 0; j < ARRAY_SIZE(ts->step_stats); j++) {
+			struct lat_step_stats *ls = &ts->step_stats[j];
+			char name[32];
+
+			if (!ls->iops[i])
+				continue;
+
+			sprintf(name, "%llu", (unsigned long long) ls->iops[i]);
+			json_object_add_value_float(val, name, ls->avg[i].u.f);
+		}
+	}
+
 	return root;
 }
 
@@ -1551,6 +1583,25 @@ static void sum_stat(struct io_stat *dst, struct io_stat *src, bool first)
 	dst->samples += src->samples;
 	dst->mean.u.f = mean;
 	dst->S.u.f = S;
+}
+
+static void sum_lat_step_stats(struct lat_step_stats *dst,
+			       struct lat_step_stats *src, bool first)
+{
+	int i;
+
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
+		if (!dst->iops[i] && !src->iops[i])
+			continue;
+		if (first)
+			dst->avg[i].u.f = src->avg[i].u.f;
+		else {
+			dst->avg[i].u.f = ((src->avg[i].u.f * src->iops[i]) +
+				(dst->avg[i].u.f * dst->iops[i])) /
+				(dst->iops[i] + src->iops[i]);
+		}
+		dst->iops[i] += src->iops[i];
+	}
 }
 
 void sum_group_stats(struct group_run_stats *dst, struct group_run_stats *src)
@@ -1665,6 +1716,9 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src,
 	dst->total_submit += src->total_submit;
 	dst->total_complete += src->total_complete;
 	dst->nr_zone_resets += src->nr_zone_resets;
+
+	for (l = 0; l < ARRAY_SIZE(dst->step_stats); l++)
+		sum_lat_step_stats(&dst->step_stats[l], &src->step_stats[l], first);
 }
 
 void init_group_run_stat(struct group_run_stats *gs)
@@ -1710,6 +1764,9 @@ void __show_run_stats(void)
 
 	for (i = 0; i < groupid + 1; i++)
 		init_group_run_stat(&runstats[i]);
+
+	for (i = 0; i < FIO_OUTPUT_NR; i++)
+		buf_output_init(&output[i]);
 
 	/*
 	 * find out how many threads stats we need. if group reporting isn't
@@ -1886,9 +1943,6 @@ void __show_run_stats(void)
 						rs->max_run[ddir];
 		}
 	}
-
-	for (i = 0; i < FIO_OUTPUT_NR; i++)
-		buf_output_init(&output[i]);
 
 	/*
 	 * don't overwrite last signal output

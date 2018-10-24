@@ -100,6 +100,12 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->iodepth_batch_complete_min = le32_to_cpu(top->iodepth_batch_complete_min);
 	o->iodepth_batch_complete_max = le32_to_cpu(top->iodepth_batch_complete_max);
 	o->serialize_overlap = le32_to_cpu(top->serialize_overlap);
+	o->iodepth_mode = le32_to_cpu(top->iodepth_mode);
+	o->lat_step_low = le32_to_cpu(top->lat_step_low);
+	o->lat_step_high = le32_to_cpu(top->lat_step_high);
+	o->lat_step_inc = le32_to_cpu(top->lat_step_inc);
+	o->lat_step_ramp = le32_to_cpu(top->lat_step_ramp);
+	o->lat_step_run = le32_to_cpu(top->lat_step_run);
 	o->size = le64_to_cpu(top->size);
 	o->io_size = le64_to_cpu(top->io_size);
 	o->size_percent = le32_to_cpu(top->size_percent);
@@ -363,6 +369,12 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->iodepth_batch_complete_min = cpu_to_le32(o->iodepth_batch_complete_min);
 	top->iodepth_batch_complete_max = cpu_to_le32(o->iodepth_batch_complete_max);
 	top->serialize_overlap = cpu_to_le32(o->serialize_overlap);
+	top->iodepth_mode = cpu_to_le32(o->iodepth_mode);
+	top->lat_step_low = cpu_to_le32(o->lat_step_low);
+	top->lat_step_high = cpu_to_le32(o->lat_step_high);
+	top->lat_step_inc = cpu_to_le32(o->lat_step_inc);
+	top->lat_step_ramp = cpu_to_le32(o->lat_step_ramp);
+	top->lat_step_run = cpu_to_le32(o->lat_step_run);
 	top->size_percent = cpu_to_le32(o->size_percent);
 	top->fill_device = cpu_to_le32(o->fill_device);
 	top->file_append = cpu_to_le32(o->file_append);

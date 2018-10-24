@@ -11,6 +11,7 @@
 #include "lib/pow2.h"
 #include "minmax.h"
 #include "zbd.h"
+#include "target.h"
 
 struct io_completion_data {
 	int nr;				/* input */
@@ -1356,146 +1357,6 @@ static long set_io_u_file(struct thread_data *td, struct io_u *io_u)
 	return 0;
 }
 
-static void lat_fatal(struct thread_data *td, struct io_completion_data *icd,
-		      unsigned long long tnsec, unsigned long long max_nsec)
-{
-	if (!td->error)
-		log_err("fio: latency of %llu nsec exceeds specified max (%llu nsec)\n", tnsec, max_nsec);
-	td_verror(td, ETIMEDOUT, "max latency exceeded");
-	icd->error = ETIMEDOUT;
-}
-
-static void lat_new_cycle(struct thread_data *td)
-{
-	fio_gettime(&td->latency_ts, NULL);
-	td->latency_ios = ddir_rw_sum(td->io_blocks);
-	td->latency_failed = 0;
-}
-
-/*
- * We had an IO outside the latency target. Reduce the queue depth. If we
- * are at QD=1, then it's time to give up.
- */
-static bool __lat_target_failed(struct thread_data *td)
-{
-	if (td->latency_qd == 1)
-		return true;
-
-	td->latency_qd_high = td->latency_qd;
-
-	if (td->latency_qd == td->latency_qd_low)
-		td->latency_qd_low--;
-
-	td->latency_qd = (td->latency_qd + td->latency_qd_low) / 2;
-
-	dprint(FD_RATE, "Ramped down: %d %d %d\n", td->latency_qd_low, td->latency_qd, td->latency_qd_high);
-
-	/*
-	 * When we ramp QD down, quiesce existing IO to prevent
-	 * a storm of ramp downs due to pending higher depth.
-	 */
-	io_u_quiesce(td);
-	lat_new_cycle(td);
-	return false;
-}
-
-static bool lat_target_failed(struct thread_data *td)
-{
-	if (td->o.latency_percentile.u.f == 100.0)
-		return __lat_target_failed(td);
-
-	td->latency_failed++;
-	return false;
-}
-
-void lat_target_init(struct thread_data *td)
-{
-	td->latency_end_run = 0;
-
-	if (td->o.latency_target) {
-		dprint(FD_RATE, "Latency target=%llu\n", td->o.latency_target);
-		fio_gettime(&td->latency_ts, NULL);
-		td->latency_qd = 1;
-		td->latency_qd_high = td->o.iodepth;
-		td->latency_qd_low = 1;
-		td->latency_ios = ddir_rw_sum(td->io_blocks);
-	} else
-		td->latency_qd = td->o.iodepth;
-}
-
-void lat_target_reset(struct thread_data *td)
-{
-	if (!td->latency_end_run)
-		lat_target_init(td);
-}
-
-static void lat_target_success(struct thread_data *td)
-{
-	const unsigned int qd = td->latency_qd;
-	struct thread_options *o = &td->o;
-
-	td->latency_qd_low = td->latency_qd;
-
-	/*
-	 * If we haven't failed yet, we double up to a failing value instead
-	 * of bisecting from highest possible queue depth. If we have set
-	 * a limit other than td->o.iodepth, bisect between that.
-	 */
-	if (td->latency_qd_high != o->iodepth)
-		td->latency_qd = (td->latency_qd + td->latency_qd_high) / 2;
-	else
-		td->latency_qd *= 2;
-
-	if (td->latency_qd > o->iodepth)
-		td->latency_qd = o->iodepth;
-
-	dprint(FD_RATE, "Ramped up: %d %d %d\n", td->latency_qd_low, td->latency_qd, td->latency_qd_high);
-
-	/*
-	 * Same as last one, we are done. Let it run a latency cycle, so
-	 * we get only the results from the targeted depth.
-	 */
-	if (td->latency_qd == qd) {
-		if (td->latency_end_run) {
-			dprint(FD_RATE, "We are done\n");
-			td->done = 1;
-		} else {
-			dprint(FD_RATE, "Quiesce and final run\n");
-			io_u_quiesce(td);
-			td->latency_end_run = 1;
-			reset_all_stats(td);
-			reset_io_stats(td);
-		}
-	}
-
-	lat_new_cycle(td);
-}
-
-/*
- * Check if we can bump the queue depth
- */
-void lat_target_check(struct thread_data *td)
-{
-	uint64_t usec_window;
-	uint64_t ios;
-	double success_ios;
-
-	usec_window = utime_since_now(&td->latency_ts);
-	if (usec_window < td->o.latency_window)
-		return;
-
-	ios = ddir_rw_sum(td->io_blocks) - td->latency_ios;
-	success_ios = (double) (ios - td->latency_failed) / (double) ios;
-	success_ios *= 100.0;
-
-	dprint(FD_RATE, "Success rate: %.2f%% (target %.2f%%)\n", success_ios, td->o.latency_percentile.u.f);
-
-	if (success_ios >= td->o.latency_percentile.u.f)
-		lat_target_success(td);
-	else
-		__lat_target_failed(td);
-}
-
 /*
  * If latency target is enabled, we might be ramping up or down and not
  * using the full queue depth available.
@@ -1506,7 +1367,7 @@ bool queue_full(const struct thread_data *td)
 
 	if (qempty)
 		return true;
-	if (!td->o.latency_target)
+	if (!td->o.latency_target || td->o.iodepth_mode != IOD_STEPPED)
 		return false;
 
 	return td->cur_depth >= td->latency_qd;
@@ -1837,11 +1698,15 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 				icd->error = ops->io_u_lat(td, tnsec);
 		}
 
-		if (td->o.max_latency && tnsec > td->o.max_latency)
-			lat_fatal(td, icd, tnsec, td->o.max_latency);
+		if (td->o.max_latency && tnsec > td->o.max_latency) {
+			icd->error = ETIMEDOUT;
+			lat_fatal(td, tnsec, td->o.max_latency);
+		}
 		if (td->o.latency_target && tnsec > td->o.latency_target) {
-			if (lat_target_failed(td))
-				lat_fatal(td, icd, tnsec, td->o.latency_target);
+			if (lat_target_failed(td)) {
+				icd->error = ETIMEDOUT;
+				lat_fatal(td, tnsec, td->o.latency_target);
+			}
 		}
 	}
 
@@ -1887,8 +1752,8 @@ static void file_log_write_comp(const struct thread_data *td, struct fio_file *f
 
 static bool should_account(struct thread_data *td)
 {
-	return ramp_time_over(td) && (td->runstate == TD_RUNNING ||
-					   td->runstate == TD_VERIFYING);
+	return lat_step_account(td) && ramp_time_over(td) &&
+		(td->runstate == TD_RUNNING || td->runstate == TD_VERIFYING);
 }
 
 static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,

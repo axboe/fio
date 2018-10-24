@@ -13,6 +13,7 @@
 #include "lib/pattern.h"
 #include "options.h"
 #include "optgroup.h"
+#include "target.h"
 
 char client_sockaddr_str[INET6_ADDRSTRLEN] = { 0 };
 
@@ -478,6 +479,51 @@ static int str_rwmix_write_cb(void *data, unsigned long long *val)
 	td->o.rwmix[DDIR_WRITE] = *val;
 	td->o.rwmix[DDIR_READ] = 100 - *val;
 	return 0;
+}
+
+static int str_iodepth_mode_cb(void *data, const char *input)
+{
+	struct thread_data *td = cb_data_to_td(data);
+	struct thread_options *o = &td->o;
+	char *str, *p, *n;
+	int ret = 1;
+
+	if (o->iodepth_mode == IOD_NONE)
+		return 0;
+
+	if (parse_dryrun())
+		return 0;
+
+	p = str = strdup(input);
+
+	strip_blank_front(&str);
+	strip_blank_end(str);
+
+	n = strchr(p, ':');
+	if (!n)
+		goto err;
+
+	*n++ = '\0';
+
+	/* format is now 'low-min/step' */
+	ret = sscanf(n, "%u-%u/%u,%u/%u", &o->lat_step_low, &o->lat_step_high,
+					&o->lat_step_inc, &o->lat_step_ramp,
+					&o->lat_step_run);
+	if (ret == 5) {
+		ret = 0;
+		o->lat_step_ramp *= 1000;
+		o->lat_step_run *= 1000;
+	} else if (ret == 3) {
+		o->lat_step_ramp = IOD_STEPPED_DEF_RAMP;
+		o->lat_step_run = IOD_STEPPED_DEF_RUN;
+		ret = 0;
+	} else
+		ret = 1;
+err:
+	if (ret)
+		log_err("fio: failed parsing <%s>\n", input);
+	free(str);
+	return ret;
 }
 
 static int str_exitall_cb(void)
@@ -1959,6 +2005,30 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_IO_BASIC,
 	},
+	{
+		.name	= "iodepth_mode",
+		.lname	= "IO Depth Mode",
+		.type	= FIO_OPT_STR,
+		.off1	= offsetof(struct thread_options, iodepth_mode),
+		.cb	= str_iodepth_mode_cb,
+		.help	= "How to vary the queue depth",
+		.parent	= "iodepth",
+		.hide	= 1,
+		.interval = 1,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IO_BASIC,
+		.posval = {
+			  { .ival = "none",
+			    .oval = IOD_NONE,
+			    .help = "No depth modification",
+			  },
+			  { .ival = "stepped",
+			    .oval = IOD_STEPPED,
+			    .help = "Stepped IO depth:hi-lo/inc,ramp/run",
+			  },
+		},
+	},
+
 	{
 		.name	= "serialize_overlap",
 		.lname	= "Serialize overlap",

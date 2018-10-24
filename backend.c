@@ -49,6 +49,7 @@
 #include "helper_thread.h"
 #include "pshared.h"
 #include "zone-dist.h"
+#include "target.h"
 
 static struct fio_sem *startup_sem;
 static struct flist_head *cgroup_list;
@@ -1090,8 +1091,8 @@ reap:
 				break;
 			}
 		}
-		if (!in_ramp_time(td) && td->o.latency_target)
-			lat_target_check(td);
+		if (!in_ramp_time(td) && lat_target_check(td))
+			break;
 
 		if (ddir_rw(ddir) && td->o.thinktime)
 			handle_thinktime(td, ddir);
@@ -1867,7 +1868,8 @@ static void *thread_main(void *data)
 	 * (Are we not missing other flags that can be ignored ?)
 	 */
 	if ((td->o.size || td->o.io_size) && !ddir_rw_sum(bytes_done) &&
-	    !did_some_io && !td->o.create_only &&
+	    !did_some_io && (td->o.iodepth_mode != IOD_STEPPED) &&
+	    !td->o.create_only &&
 	    !(td_ioengine_flagged(td, FIO_NOIO) ||
 	      td_ioengine_flagged(td, FIO_DISKLESSIO)))
 		log_err("%s: No I/O performed by %s, "
