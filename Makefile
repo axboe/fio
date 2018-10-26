@@ -303,7 +303,9 @@ PROGS += $(T_PROGS)
 ifdef CONFIG_HAVE_CUNIT
 UT_OBJS = unittests/unittest.o
 UT_OBJS += unittests/lib/memalign.o
+UT_OBJS += unittests/lib/strntol.o
 UT_TARGET_OBJS = lib/memalign.o
+UT_TARGET_OBJS += lib/strntol.o
 UT_PROGS = unittests/unittest
 else
 UT_OBJS =

@@ -19,5 +19,6 @@ CU_ErrorCode fio_unittest_add_suite(const char*, CU_InitializeFunc,
 	CU_CleanupFunc, struct fio_unittest_entry*);
 
 CU_ErrorCode fio_unittest_lib_memalign(void);
+CU_ErrorCode fio_unittest_lib_strntol(void);
 
 #endif
