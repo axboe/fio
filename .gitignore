@@ -18,6 +18,7 @@
 /t/ieee754
 /t/lfsr-test
 /t/stest
+/unittests/unittest
 y.tab.*
 lex.yy.c
 *.un~

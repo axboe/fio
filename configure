@@ -2272,6 +2272,29 @@ if test "$disable_native" = "no" && test "$disable_opt" != "yes" && \
 fi
 print_config "Build march=native" "$build_native"
 
+##########################################
+# check for -lcunit
+if test "$cunit" != "yes" ; then
+  cunit="no"
+fi
+cat > $TMPC << EOF
+#include <CUnit/CUnit.h>
+#include <CUnit/Basic.h>
+int main(void)
+{
+  if (CU_initialize_registry() != CUE_SUCCESS)
+    return CU_get_error();
+  CU_basic_set_mode(CU_BRM_VERBOSE);
+  CU_basic_run_tests();
+  CU_cleanup_registry();
+  return CU_get_error();
+}
+EOF
+if compile_prog "" "-lcunit" "CUnit"; then
+  cunit="yes"
+fi
+print_config "CUnit" "$cunit"
+
 #############################################################################
 
 if test "$wordsize" = "64" ; then
@@ -2536,6 +2559,9 @@ if test "$mkdir_two" = "yes" ; then
 fi
 if test "$march_set" = "no" && test "$build_native" = "yes" ; then
   output_sym "CONFIG_BUILD_NATIVE"
+fi
+if test "$cunit" = "yes" ; then
+  output_sym "CONFIG_HAVE_CUNIT"
 fi
 
 echo "LIBS+=$LIBS" >> $config_host_mak
