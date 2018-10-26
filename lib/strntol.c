@@ -28,6 +28,6 @@ long strntol(const char *str, size_t sz, char **end, int base)
 	if (ret == LONG_MIN || ret == LONG_MAX)
 		return ret;
 	if (end)
-		*end = (char *)str + (*end - buf);
+		*end = (char *)beg + (*end - buf);
 	return ret;
 }
