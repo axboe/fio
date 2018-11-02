@@ -10,7 +10,7 @@ typedef struct {
 /* Return all processors regardless of processor group */
 static inline unsigned int cpus_online(void)
 {
-	return GetMaximumProcessorCount(ALL_PROCESSOR_GROUPS);
+	return GetActiveProcessorCount(ALL_PROCESSOR_GROUPS);
 }
 
 static inline void print_mask(os_cpu_mask_t *cpumask)
@@ -104,7 +104,7 @@ static inline int mask_to_group_mask(os_cpu_mask_t *cpumask, int *processor_grou
 	cpus_offset = 0;
 	group_size = 0;
 	while (!found && group < online_groups) {
-		group_size = GetMaximumProcessorCount(group);
+		group_size = GetActiveProcessorCount(group);
 		dprint(FD_PROCESS, "group=%d group_start=%d group_size=%u search_cpu=%d\n",
 		       group, cpus_offset, group_size, search_cpu);
 		if (cpus_offset + group_size > search_cpu)
@@ -271,7 +271,7 @@ static inline int fio_getaffinity(int pid, os_cpu_mask_t *mask)
 	dprint(FD_PROCESS, "current_groups=%d group_count=%d\n",
 	       current_groups[0], group_count);
 	while (true) {
-		group_size = GetMaximumProcessorCount(group);
+		group_size = GetActiveProcessorCount(group);
 		if (group_size == 0) {
 			log_err("fio_getaffinity: error retrieving size of "
 				"processor group %d\n", group);
