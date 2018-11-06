@@ -345,8 +345,10 @@ static void log_verify_failure(struct verify_header *hdr, struct vcont *vc)
 
 	offset = vc->io_u->offset;
 	offset += vc->hdr_num * hdr->len;
-	log_err("%.8s: verify failed at file %s offset %llu, length %u\n",
-			vc->name, vc->io_u->file->file_name, offset, hdr->len);
+	log_err("%.8s: verify failed at file %s offset %llu, length %u"
+			" (requested block: offset=%llu, length=%llu)\n",
+			vc->name, vc->io_u->file->file_name, offset, hdr->len,
+			vc->io_u->offset, vc->io_u->buflen);
 
 	if (vc->good_crc && vc->bad_crc) {
 		log_err("       Expected CRC: ");
@@ -865,9 +867,11 @@ static int verify_header(struct io_u *io_u, struct thread_data *td,
 	return 0;
 
 err:
-	log_err(" at file %s offset %llu, length %u\n",
+	log_err(" at file %s offset %llu, length %u"
+		" (requested block: offset=%llu, length=%llu)\n",
 		io_u->file->file_name,
-		io_u->offset + hdr_num * hdr_len, hdr_len);
+		io_u->offset + hdr_num * hdr_len, hdr_len,
+		io_u->offset, io_u->buflen);
 
 	if (td->o.verify_dump)
 		dump_buf(p, hdr_len, io_u->offset + hdr_num * hdr_len,
