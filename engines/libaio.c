@@ -60,7 +60,7 @@ static struct fio_option options[] = {
 		.lname	= "RWF_HIPRI",
 		.type	= FIO_OPT_STR_SET,
 		.off1	= offsetof(struct libaio_options, hipri),
-		.help	= "Set RWF_HIPRI for pwritev2/preadv2",
+		.help	= "Use polled IO completions",
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_LIBAIO,
 	},
