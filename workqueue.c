@@ -97,7 +97,7 @@ void workqueue_flush(struct workqueue *wq)
 }
 
 /*
- * Must be serialized by caller. Returns true for queued, false for busy.
+ * Must be serialized by caller.
  */
 void workqueue_enqueue(struct workqueue *wq, struct workqueue_work *work)
 {
