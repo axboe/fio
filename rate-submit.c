@@ -53,7 +53,7 @@ static int io_workqueue_fn(struct submit_worker *sw,
 	struct io_u *io_u = container_of(work, struct io_u, work);
 	const enum fio_ddir ddir = io_u->ddir;
 	struct thread_data *td = sw->priv;
-	int ret;
+	int ret, error;
 
 	if (td->o.serialize_overlap)
 		check_overlap(io_u);
@@ -71,12 +71,14 @@ static int io_workqueue_fn(struct submit_worker *sw,
 		ret = io_u_queued_complete(td, 1);
 		if (ret > 0)
 			td->cur_depth -= ret;
+		else if (ret < 0)
+			break;
 		io_u_clear(td, io_u, IO_U_F_FLIGHT);
 	} while (1);
 
 	dprint(FD_RATE, "io_u %p ret %d by %u\n", io_u, ret, gettid());
 
-	io_queue_event(td, io_u, &ret, ddir, NULL, 0, NULL);
+	error = io_queue_event(td, io_u, &ret, ddir, NULL, 0, NULL);
 
 	if (ret == FIO_Q_COMPLETED)
 		td->cur_depth--;
@@ -93,6 +95,9 @@ static int io_workqueue_fn(struct submit_worker *sw,
 			td->cur_depth -= ret;
 	}
 
+	if (error || td->error)
+		pthread_cond_signal(&td->parent->free_cond);
+
 	return 0;
 }
 
@@ -100,6 +105,8 @@ static bool io_workqueue_pre_sleep_flush_fn(struct submit_worker *sw)
 {
 	struct thread_data *td = sw->priv;
 
+	if (td->error)
+		return false;
 	if (td->io_u_queued || td->cur_depth || td->io_u_in_flight)
 		return true;
 

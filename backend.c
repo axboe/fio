@@ -237,6 +237,9 @@ static void cleanup_pending_aio(struct thread_data *td)
 {
 	int r;
 
+	if (td->error)
+		return;
+
 	/*
 	 * get immediately available events, if any
 	 */
