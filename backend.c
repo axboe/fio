@@ -1869,8 +1869,8 @@ static void *thread_main(void *data)
 	 * then something went wrong unless FIO_NOIO or FIO_DISKLESSIO.
 	 * (Are we not missing other flags that can be ignored ?)
 	 */
-	if ((td->o.size || td->o.io_size) && !ddir_rw_sum(bytes_done) &&
-	    !did_some_io && !td->o.create_only &&
+	if (!td->error && (td->o.size || td->o.io_size) &&
+	    !ddir_rw_sum(bytes_done) && !did_some_io && !td->o.create_only &&
 	    !(td_ioengine_flagged(td, FIO_NOIO) ||
 	      td_ioengine_flagged(td, FIO_DISKLESSIO)))
 		log_err("%s: No I/O performed by %s, "
