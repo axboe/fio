@@ -1559,9 +1559,8 @@ again:
 		assert(!(td->flags & TD_F_CHILD));
 		ret = pthread_cond_wait(&td->free_cond, &td->io_u_lock);
 		assert(ret == 0);
-		if (td->error)
-			return NULL;
-		goto again;
+		if (!td->error)
+			goto again;
 	}
 
 	if (needs_lock)
