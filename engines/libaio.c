@@ -13,8 +13,9 @@
 #include "../lib/pow2.h"
 #include "../optgroup.h"
 
-#define IOCB_CMD_PREAD_POLL 9
-#define IOCB_CMD_PWRITE_POLL 10
+#ifndef IOCB_FLAG_HIPRI
+#define IOCB_FLAG_HIPRI	(1 << 2)
+#endif
 
 static int fio_libaio_commit(struct thread_data *td);
 
@@ -57,7 +58,7 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "hipri",
-		.lname	= "RWF_HIPRI",
+		.lname	= "High Priority",
 		.type	= FIO_OPT_STR_SET,
 		.off1	= offsetof(struct libaio_options, hipri),
 		.help	= "Use polled IO completions",
@@ -86,11 +87,11 @@ static int fio_libaio_prep(struct thread_data fio_unused *td, struct io_u *io_u)
 	if (io_u->ddir == DDIR_READ) {
 		io_prep_pread(&io_u->iocb, f->fd, io_u->xfer_buf, io_u->xfer_buflen, io_u->offset);
 		if (o->hipri)
-			io_u->iocb.aio_lio_opcode = IOCB_CMD_PREAD_POLL;
+			io_u->iocb.u.c.flags |= IOCB_FLAG_HIPRI;
 	} else if (io_u->ddir == DDIR_WRITE) {
 		io_prep_pwrite(&io_u->iocb, f->fd, io_u->xfer_buf, io_u->xfer_buflen, io_u->offset);
 		if (o->hipri)
-			io_u->iocb.aio_lio_opcode = IOCB_CMD_PWRITE_POLL;
+			io_u->iocb.u.c.flags |= IOCB_FLAG_HIPRI;
 	} else if (ddir_sync(io_u->ddir))
 		io_prep_fsync(&io_u->iocb, f->fd);
 
