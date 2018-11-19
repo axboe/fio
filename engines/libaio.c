@@ -16,6 +16,9 @@
 #ifndef IOCB_FLAG_HIPRI
 #define IOCB_FLAG_HIPRI	(1 << 2)
 #endif
+#ifndef IOCTX_FLAG_IOPOLL
+#define IOCTX_FLAG_IOPOLL	(1 << 0)
+#endif
 
 static int fio_libaio_commit(struct thread_data *td);
 
@@ -354,6 +357,25 @@ static void fio_libaio_cleanup(struct thread_data *td)
 	}
 }
 
+static int fio_libaio_queue_init(struct libaio_data *ld, unsigned int depth,
+				 bool hipri)
+{
+#ifdef __NR_sys_io_setup2
+	int err, flags = 0;
+
+	if (hipri)
+		flags = IOCTX_FLAG_IOPOLL;
+
+	return syscall(__NR_sys_io_setup2, depth, flags, &ld->aio_ctx);
+#else
+	if (hipri) {
+		log_err("fio: polled aio not available on your platform\n");
+		return 1;
+	}
+	return io_queue_init(depth, &ld->aio_ctx);
+#endif
+}
+
 static int fio_libaio_init(struct thread_data *td)
 {
 	struct libaio_options *o = td->eo;
@@ -368,9 +390,9 @@ static int fio_libaio_init(struct thread_data *td)
 	 * and we need the right depth.
 	 */
 	if (!o->userspace_reap)
-		err = io_queue_init(INT_MAX, &ld->aio_ctx);
+		err = fio_libaio_queue_init(ld, INT_MAX, o->hipri);
 	if (o->userspace_reap || err == -EINVAL)
-		err = io_queue_init(td->o.iodepth, &ld->aio_ctx);
+		err = fio_libaio_queue_init(ld, td->o.iodepth, o->hipri);
 	if (err) {
 		td_verror(td, -err, "io_queue_init");
 		log_err("fio: check /proc/sys/fs/aio-max-nr\n");

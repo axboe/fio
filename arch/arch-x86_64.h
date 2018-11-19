@@ -1,6 +1,10 @@
 #ifndef ARCH_X86_64_H
 #define ARCH_X86_64_H
 
+#ifndef __NR_sys_iosetup2
+#define __NR_sys_iosetup2	335
+#endif
+
 static inline void do_cpuid(unsigned int *eax, unsigned int *ebx,
 			    unsigned int *ecx, unsigned int *edx)
 {
