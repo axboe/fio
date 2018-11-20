@@ -361,7 +361,7 @@ static int fio_libaio_queue_init(struct libaio_data *ld, unsigned int depth,
 				 bool hipri)
 {
 #ifdef __NR_sys_io_setup2
-	int err, flags = 0;
+	int flags = 0;
 
 	if (hipri)
 		flags = IOCTX_FLAG_IOPOLL;
@@ -389,10 +389,7 @@ static int fio_libaio_init(struct thread_data *td)
 	 * care about the user ring. If that fails, the kernel is too old
 	 * and we need the right depth.
 	 */
-	if (!o->userspace_reap)
-		err = fio_libaio_queue_init(ld, INT_MAX, o->hipri);
-	if (o->userspace_reap || err == -EINVAL)
-		err = fio_libaio_queue_init(ld, td->o.iodepth, o->hipri);
+	err = fio_libaio_queue_init(ld, td->o.iodepth, o->hipri);
 	if (err) {
 		td_verror(td, -err, "io_queue_init");
 		log_err("fio: check /proc/sys/fs/aio-max-nr\n");
