@@ -393,19 +393,9 @@ static void fio_libaio_cleanup(struct thread_data *td)
 	}
 }
 
-static int fio_libaio_queue_init(struct libaio_data *ld, unsigned int depth,
-				 bool hipri, bool useriocb)
+static int fio_libaio_old_queue_init(struct libaio_data *ld, unsigned int depth,
+				     bool hipri, bool useriocb)
 {
-#ifdef __NR_sys_io_setup2
-	int flags = 0;
-
-	if (hipri)
-		flags |= IOCTX_FLAG_IOPOLL;
-	if (useriocb)
-		flags |= IOCTX_FLAG_USERIOCB;
-
-	return syscall(__NR_sys_io_setup2, depth, flags, ld->user_iocbs, &ld->aio_ctx);
-#else
 	if (hipri) {
 		log_err("fio: polled aio not available on your platform\n");
 		return 1;
@@ -416,6 +406,27 @@ static int fio_libaio_queue_init(struct libaio_data *ld, unsigned int depth,
 	}
 
 	return io_queue_init(depth, &ld->aio_ctx);
+}
+
+static int fio_libaio_queue_init(struct libaio_data *ld, unsigned int depth,
+				 bool hipri, bool useriocb)
+{
+#ifdef __NR_sys_io_setup2
+	int ret, flags = 0;
+
+	if (hipri)
+		flags |= IOCTX_FLAG_IOPOLL;
+	if (useriocb)
+		flags |= IOCTX_FLAG_USERIOCB;
+
+	ret = syscall(__NR_sys_io_setup2, depth, flags, ld->user_iocbs,
+			&ld->aio_ctx);
+	if (!ret)
+		return 0;
+
+	return fio_libaio_old_queue_init(ld, depth, hipri, useriocb);
+#else
+	return fio_libaio_old_queue_init(ld, depth, hipri, useriocb);
 #endif
 }
 
