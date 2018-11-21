@@ -16,13 +16,13 @@
 #ifndef IOCB_FLAG_HIPRI
 #define IOCB_FLAG_HIPRI	(1 << 2)
 #endif
-#ifndef IOCTX_FLAG_IOPOLL
-#define IOCTX_FLAG_IOPOLL	(1 << 0)
-#endif
-#ifndef IOCTX_FLAG_USERIOCB
-#define IOCTX_FLAG_USERIOCB	(1 << 1)
-#endif
 
+#ifndef IOCTX_FLAG_USERIOCB
+#define IOCTX_FLAG_USERIOCB	(1 << 0)
+#endif
+#ifndef IOCTX_FLAG_IOPOLL
+#define IOCTX_FLAG_IOPOLL	(1 << 1)
+#endif
 
 static int fio_libaio_commit(struct thread_data *td);
 
