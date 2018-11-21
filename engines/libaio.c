@@ -12,6 +12,7 @@
 #include "../fio.h"
 #include "../lib/pow2.h"
 #include "../optgroup.h"
+#include "../lib/memalign.h"
 
 #ifndef IOCB_FLAG_HIPRI
 #define IOCB_FLAG_HIPRI	(1 << 2)
@@ -110,6 +111,8 @@ static int fio_libaio_prep(struct thread_data fio_unused *td, struct io_u *io_u)
 		iocb = &ld->user_iocbs[io_u->index];
 	else
 		iocb = &io_u->iocb;
+
+	iocb->u.c.flags = 0;
 
 	if (io_u->ddir == DDIR_READ) {
 		io_prep_pread(iocb, f->fd, io_u->xfer_buf, io_u->xfer_buflen, io_u->offset);
@@ -387,8 +390,10 @@ static void fio_libaio_cleanup(struct thread_data *td)
 		free(ld->aio_events);
 		free(ld->iocbs);
 		free(ld->io_us);
-		if (ld->user_iocbs)
-			free(ld->user_iocbs);
+		if (ld->user_iocbs) {
+			size_t size = td->o.iodepth * sizeof(struct iocb);
+			fio_memfree(ld->user_iocbs, size, false);
+		}
 		free(ld);
 	}
 }
@@ -440,16 +445,11 @@ static int fio_libaio_init(struct thread_data *td)
 
 	if (o->useriocb) {
 		size_t size;
-		void *p;
 
 		ld->io_u_index = calloc(td->o.iodepth, sizeof(struct io_u *));
 		size = td->o.iodepth * sizeof(struct iocb);
-		if (posix_memalign(&p, page_size, size)) {
-			log_err("fio: libaio iocb allocation failure\n");
-			free(ld);
-			return 1;
-		}
-		ld->user_iocbs = p;
+		ld->user_iocbs = fio_memalign(page_size, size, false);
+		memset(ld->user_iocbs, 0, size);
 	}
 
 	/*
@@ -461,8 +461,10 @@ static int fio_libaio_init(struct thread_data *td)
 	if (err) {
 		td_verror(td, -err, "io_queue_init");
 		log_err("fio: check /proc/sys/fs/aio-max-nr\n");
-		if (ld->user_iocbs)
-			free(ld->user_iocbs);
+		if (ld->user_iocbs) {
+			size_t size = td->o.iodepth * sizeof(struct iocb);
+			fio_memfree(ld->user_iocbs, size, false);
+		}
 		free(ld);
 		return 1;
 	}
