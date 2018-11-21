@@ -19,6 +19,10 @@
 #ifndef IOCTX_FLAG_IOPOLL
 #define IOCTX_FLAG_IOPOLL	(1 << 0)
 #endif
+#ifndef IOCTX_FLAG_USERIOCB
+#define IOCTX_FLAG_USERIOCB	(1 << 1)
+#endif
+
 
 static int fio_libaio_commit(struct thread_data *td);
 
@@ -27,6 +31,9 @@ struct libaio_data {
 	struct io_event *aio_events;
 	struct iocb **iocbs;
 	struct io_u **io_us;
+
+	struct iocb *user_iocbs;
+	struct io_u **io_u_index;
 
 	/*
 	 * Basic ring buffer. 'head' is incremented in _queue(), and
@@ -47,6 +54,7 @@ struct libaio_options {
 	void *pad;
 	unsigned int userspace_reap;
 	unsigned int hipri;
+	unsigned int useriocb;
 };
 
 static struct fio_option options[] = {
@@ -69,6 +77,15 @@ static struct fio_option options[] = {
 		.group	= FIO_OPT_G_LIBAIO,
 	},
 	{
+		.name	= "useriocb",
+		.lname	= "User IOCBs",
+		.type	= FIO_OPT_STR_SET,
+		.off1	= offsetof(struct libaio_options, useriocb),
+		.help	= "Use user mapped IOCBs",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_LIBAIO,
+	},
+	{
 		.name	= NULL,
 	},
 };
@@ -84,19 +101,26 @@ static inline void ring_inc(struct libaio_data *ld, unsigned int *val,
 
 static int fio_libaio_prep(struct thread_data fio_unused *td, struct io_u *io_u)
 {
+	struct libaio_data *ld = td->io_ops_data;
 	struct fio_file *f = io_u->file;
 	struct libaio_options *o = td->eo;
+	struct iocb *iocb;
+
+	if (o->useriocb)
+		iocb = &ld->user_iocbs[io_u->index];
+	else
+		iocb = &io_u->iocb;
 
 	if (io_u->ddir == DDIR_READ) {
-		io_prep_pread(&io_u->iocb, f->fd, io_u->xfer_buf, io_u->xfer_buflen, io_u->offset);
+		io_prep_pread(iocb, f->fd, io_u->xfer_buf, io_u->xfer_buflen, io_u->offset);
 		if (o->hipri)
-			io_u->iocb.u.c.flags |= IOCB_FLAG_HIPRI;
+			iocb->u.c.flags |= IOCB_FLAG_HIPRI;
 	} else if (io_u->ddir == DDIR_WRITE) {
-		io_prep_pwrite(&io_u->iocb, f->fd, io_u->xfer_buf, io_u->xfer_buflen, io_u->offset);
+		io_prep_pwrite(iocb, f->fd, io_u->xfer_buf, io_u->xfer_buflen, io_u->offset);
 		if (o->hipri)
-			io_u->iocb.u.c.flags |= IOCB_FLAG_HIPRI;
+			iocb->u.c.flags |= IOCB_FLAG_HIPRI;
 	} else if (ddir_sync(io_u->ddir))
-		io_prep_fsync(&io_u->iocb, f->fd);
+		io_prep_fsync(iocb, f->fd);
 
 	return 0;
 }
@@ -104,11 +128,16 @@ static int fio_libaio_prep(struct thread_data fio_unused *td, struct io_u *io_u)
 static struct io_u *fio_libaio_event(struct thread_data *td, int event)
 {
 	struct libaio_data *ld = td->io_ops_data;
+	struct libaio_options *o = td->eo;
 	struct io_event *ev;
 	struct io_u *io_u;
 
 	ev = ld->aio_events + event;
-	io_u = container_of(ev->obj, struct io_u, iocb);
+	if (o->useriocb) {
+		int index = (int) (uintptr_t) ev->obj;
+		io_u = ld->io_u_index[index];
+	} else
+		io_u = container_of(ev->obj, struct io_u, iocb);
 
 	if (ev->res != io_u->xfer_buflen) {
 		if (ev->res > io_u->xfer_buflen)
@@ -204,6 +233,7 @@ static enum fio_q_status fio_libaio_queue(struct thread_data *td,
 					  struct io_u *io_u)
 {
 	struct libaio_data *ld = td->io_ops_data;
+	struct libaio_options *o = td->eo;
 
 	fio_ro_check(td, io_u);
 
@@ -234,7 +264,11 @@ static enum fio_q_status fio_libaio_queue(struct thread_data *td,
 		return FIO_Q_COMPLETED;
 	}
 
-	ld->iocbs[ld->head] = &io_u->iocb;
+	if (o->useriocb)
+		ld->iocbs[ld->head] = (struct iocb *) (uintptr_t) io_u->index;
+	else
+		ld->iocbs[ld->head] = &io_u->iocb;
+
 	ld->io_us[ld->head] = io_u;
 	ring_inc(ld, &ld->head, 1);
 	ld->queued++;
@@ -353,25 +387,34 @@ static void fio_libaio_cleanup(struct thread_data *td)
 		free(ld->aio_events);
 		free(ld->iocbs);
 		free(ld->io_us);
+		if (ld->user_iocbs)
+			free(ld->user_iocbs);
 		free(ld);
 	}
 }
 
 static int fio_libaio_queue_init(struct libaio_data *ld, unsigned int depth,
-				 bool hipri)
+				 bool hipri, bool useriocb)
 {
 #ifdef __NR_sys_io_setup2
 	int flags = 0;
 
 	if (hipri)
-		flags = IOCTX_FLAG_IOPOLL;
+		flags |= IOCTX_FLAG_IOPOLL;
+	if (useriocb)
+		flags |= IOCTX_FLAG_USERIOCB;
 
-	return syscall(__NR_sys_io_setup2, depth, flags, &ld->aio_ctx);
+	return syscall(__NR_sys_io_setup2, depth, flags, ld->user_iocbs, &ld->aio_ctx);
 #else
 	if (hipri) {
 		log_err("fio: polled aio not available on your platform\n");
 		return 1;
 	}
+	if (useriocb) {
+		log_err("fio: user mapped iocbs not available on your platform\n");
+		return 1;
+	}
+
 	return io_queue_init(depth, &ld->aio_ctx);
 #endif
 }
@@ -384,15 +427,31 @@ static int fio_libaio_init(struct thread_data *td)
 
 	ld = calloc(1, sizeof(*ld));
 
+	if (o->useriocb) {
+		size_t size;
+		void *p;
+
+		ld->io_u_index = calloc(td->o.iodepth, sizeof(struct io_u *));
+		size = td->o.iodepth * sizeof(struct iocb);
+		if (posix_memalign(&p, page_size, size)) {
+			log_err("fio: libaio iocb allocation failure\n");
+			free(ld);
+			return 1;
+		}
+		ld->user_iocbs = p;
+	}
+
 	/*
 	 * First try passing in 0 for queue depth, since we don't
 	 * care about the user ring. If that fails, the kernel is too old
 	 * and we need the right depth.
 	 */
-	err = fio_libaio_queue_init(ld, td->o.iodepth, o->hipri);
+	err = fio_libaio_queue_init(ld, td->o.iodepth, o->hipri, o->useriocb);
 	if (err) {
 		td_verror(td, -err, "io_queue_init");
 		log_err("fio: check /proc/sys/fs/aio-max-nr\n");
+		if (ld->user_iocbs)
+			free(ld->user_iocbs);
 		free(ld);
 		return 1;
 	}
@@ -407,10 +466,24 @@ static int fio_libaio_init(struct thread_data *td)
 	return 0;
 }
 
+static int fio_libaio_io_u_init(struct thread_data *td, struct io_u *io_u)
+{
+	struct libaio_options *o = td->eo;
+
+	if (o->useriocb) {
+		struct libaio_data *ld = td->io_ops_data;
+
+		ld->io_u_index[io_u->index] = io_u;
+	}
+
+	return 0;
+}
+
 static struct ioengine_ops ioengine = {
 	.name			= "libaio",
 	.version		= FIO_IOOPS_VERSION,
 	.init			= fio_libaio_init,
+	.io_u_init		= fio_libaio_io_u_init,
 	.prep			= fio_libaio_prep,
 	.queue			= fio_libaio_queue,
 	.commit			= fio_libaio_commit,
