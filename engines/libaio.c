@@ -428,11 +428,9 @@ static int fio_libaio_queue_init(struct libaio_data *ld, unsigned int depth,
 			&ld->aio_ctx);
 	if (!ret)
 		return 0;
-
-	return fio_libaio_old_queue_init(ld, depth, hipri, useriocb);
-#else
-	return fio_libaio_old_queue_init(ld, depth, hipri, useriocb);
+	/* fall through to old syscall */
 #endif
+	return fio_libaio_old_queue_init(ld, depth, hipri, useriocb);
 }
 
 static int fio_libaio_init(struct thread_data *td)
