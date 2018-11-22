@@ -166,6 +166,7 @@ void __fill_random_buf_percentage(unsigned long seed, void *buf,
 		if (!len)
 			break;
 		buf += this_len;
+		this_len = segment - this_len;
 
 		if (this_len > len)
 			this_len = len;
