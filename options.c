@@ -4551,7 +4551,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	{
 		.name	= "unit_base",
 		.lname	= "Unit for quantities of data (Bits or Bytes)",
-		.type	= FIO_OPT_INT,
+		.type	= FIO_OPT_STR,
 		.off1	= offsetof(struct thread_options, unit_base),
 		.prio	= 1,
 		.posval = {
