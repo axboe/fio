@@ -4530,7 +4530,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	{
 		.name	= "kb_base",
 		.lname	= "KB Base",
-		.type	= FIO_OPT_INT,
+		.type	= FIO_OPT_STR,
 		.off1	= offsetof(struct thread_options, kb_base),
 		.prio	= 1,
 		.def	= "1024",
