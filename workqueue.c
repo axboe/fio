@@ -190,8 +190,6 @@ static void *worker_thread(void *data)
 				if (wq->wake_idle)
 					pthread_cond_signal(&wq->flush_cond);
 			}
-			if (wq->ops.update_acct_fn)
-				wq->ops.update_acct_fn(sw);
 
 			pthread_cond_wait(&sw->cond, &sw->lock);
 		} else {
@@ -200,10 +198,9 @@ handle_work:
 		}
 		pthread_mutex_unlock(&sw->lock);
 		handle_list(sw, &local_list);
+		if (wq->ops.update_acct_fn)
+			wq->ops.update_acct_fn(sw);
 	}
-
-	if (wq->ops.update_acct_fn)
-		wq->ops.update_acct_fn(sw);
 
 done:
 	sk_out_drop();
