@@ -24,6 +24,9 @@
 #ifndef IOCTX_FLAG_IOPOLL
 #define IOCTX_FLAG_IOPOLL	(1 << 1)
 #endif
+#ifndef IOCTX_FLAG_FIXEDBUFS
+#define IOCTX_FLAG_FIXEDBUFS	(1 << 2)
+#endif
 
 static int fio_libaio_commit(struct thread_data *td);
 
@@ -56,6 +59,7 @@ struct libaio_options {
 	unsigned int userspace_reap;
 	unsigned int hipri;
 	unsigned int useriocb;
+	unsigned int fixedbufs;
 };
 
 static struct fio_option options[] = {
@@ -83,6 +87,15 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_STR_SET,
 		.off1	= offsetof(struct libaio_options, useriocb),
 		.help	= "Use user mapped IOCBs",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_LIBAIO,
+	},
+	{
+		.name	= "fixedbufs",
+		.lname	= "Fixed (pre-mapped) IO buffers",
+		.type	= FIO_OPT_STR_SET,
+		.off1	= offsetof(struct libaio_options, fixedbufs),
+		.help	= "Pre map IO buffers",
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_LIBAIO,
 	},
@@ -399,7 +412,7 @@ static void fio_libaio_cleanup(struct thread_data *td)
 }
 
 static int fio_libaio_old_queue_init(struct libaio_data *ld, unsigned int depth,
-				     bool hipri, bool useriocb)
+				     bool hipri, bool useriocb, bool fixedbufs)
 {
 	if (hipri) {
 		log_err("fio: polled aio not available on your platform\n");
@@ -409,12 +422,16 @@ static int fio_libaio_old_queue_init(struct libaio_data *ld, unsigned int depth,
 		log_err("fio: user mapped iocbs not available on your platform\n");
 		return 1;
 	}
+	if (fixedbufs) {
+		log_err("fio: fixed buffers not available on your platform\n");
+		return 1;
+	}
 
 	return io_queue_init(depth, &ld->aio_ctx);
 }
 
 static int fio_libaio_queue_init(struct libaio_data *ld, unsigned int depth,
-				 bool hipri, bool useriocb)
+				 bool hipri, bool useriocb, bool fixedbufs)
 {
 #ifdef __NR_sys_io_setup2
 	int ret, flags = 0;
@@ -423,6 +440,8 @@ static int fio_libaio_queue_init(struct libaio_data *ld, unsigned int depth,
 		flags |= IOCTX_FLAG_IOPOLL;
 	if (useriocb)
 		flags |= IOCTX_FLAG_USERIOCB;
+	if (fixedbufs)
+		flags |= IOCTX_FLAG_FIXEDBUFS;
 
 	ret = syscall(__NR_sys_io_setup2, depth, flags, ld->user_iocbs,
 			&ld->aio_ctx);
@@ -430,14 +449,42 @@ static int fio_libaio_queue_init(struct libaio_data *ld, unsigned int depth,
 		return 0;
 	/* fall through to old syscall */
 #endif
-	return fio_libaio_old_queue_init(ld, depth, hipri, useriocb);
+	return fio_libaio_old_queue_init(ld, depth, hipri, useriocb, fixedbufs);
+}
+
+static int fio_libaio_post_init(struct thread_data *td)
+{
+	struct libaio_data *ld = td->io_ops_data;
+	struct libaio_options *o = td->eo;
+	struct io_u *io_u;
+	struct iocb *iocb;
+	int err = 0;
+
+	if (o->fixedbufs) {
+		int i;
+
+		for (i = 0; i < td->o.iodepth; i++) {
+			io_u = ld->io_u_index[i];
+			iocb = &ld->user_iocbs[i];
+			iocb->u.c.buf = io_u->buf;
+			iocb->u.c.nbytes = io_u->buflen;
+		}
+	}
+
+	err = fio_libaio_queue_init(ld, td->o.iodepth, o->hipri, o->useriocb,
+					o->fixedbufs);
+	if (err) {
+		td_verror(td, -err, "io_queue_init");
+		return 1;
+	}
+
+	return 0;
 }
 
 static int fio_libaio_init(struct thread_data *td)
 {
 	struct libaio_options *o = td->eo;
 	struct libaio_data *ld;
-	int err = 0;
 
 	ld = calloc(1, sizeof(*ld));
 
@@ -448,23 +495,6 @@ static int fio_libaio_init(struct thread_data *td)
 		size = td->o.iodepth * sizeof(struct iocb);
 		ld->user_iocbs = fio_memalign(page_size, size, false);
 		memset(ld->user_iocbs, 0, size);
-	}
-
-	/*
-	 * First try passing in 0 for queue depth, since we don't
-	 * care about the user ring. If that fails, the kernel is too old
-	 * and we need the right depth.
-	 */
-	err = fio_libaio_queue_init(ld, td->o.iodepth, o->hipri, o->useriocb);
-	if (err) {
-		td_verror(td, -err, "io_queue_init");
-		log_err("fio: check /proc/sys/fs/aio-max-nr\n");
-		if (ld->user_iocbs) {
-			size_t size = td->o.iodepth * sizeof(struct iocb);
-			fio_memfree(ld->user_iocbs, size, false);
-		}
-		free(ld);
-		return 1;
 	}
 
 	ld->entries = td->o.iodepth;
@@ -494,6 +524,7 @@ static struct ioengine_ops ioengine = {
 	.name			= "libaio",
 	.version		= FIO_IOOPS_VERSION,
 	.init			= fio_libaio_init,
+	.post_init		= fio_libaio_post_init,
 	.io_u_init		= fio_libaio_io_u_init,
 	.prep			= fio_libaio_prep,
 	.queue			= fio_libaio_queue,

@@ -7,7 +7,7 @@
 #include "flist.h"
 #include "io_u.h"
 
-#define FIO_IOOPS_VERSION	24
+#define FIO_IOOPS_VERSION	25
 
 /*
  * io_ops->queue() return values
@@ -25,6 +25,7 @@ struct ioengine_ops {
 	int flags;
 	int (*setup)(struct thread_data *);
 	int (*init)(struct thread_data *);
+	int (*post_init)(struct thread_data *);
 	int (*prep)(struct thread_data *, struct io_u *);
 	enum fio_q_status (*queue)(struct thread_data *, struct io_u *);
 	int (*commit)(struct thread_data *);

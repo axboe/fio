@@ -1704,6 +1704,9 @@ static void *thread_main(void *data)
 	if (init_io_u(td))
 		goto err;
 
+	if (td->io_ops->post_init && td->io_ops->post_init(td))
+		goto err;
+
 	if (o->verify_async && verify_async_init(td))
 		goto err;
 
