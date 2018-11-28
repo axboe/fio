@@ -467,7 +467,7 @@ static int fio_libaio_post_init(struct thread_data *td)
 			io_u = ld->io_u_index[i];
 			iocb = &ld->user_iocbs[i];
 			iocb->u.c.buf = io_u->buf;
-			iocb->u.c.nbytes = io_u->buflen;
+			iocb->u.c.nbytes = td_max_bs(td);
 		}
 	}
 
