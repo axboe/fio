@@ -239,13 +239,13 @@ static unsigned long get_cycles_per_msec(void)
 		__fio_gettime(&e);
 		c_e = get_cpu_clock();
 
-		elapsed = utime_since(&s, &e);
-		if (elapsed >= 1280)
+		elapsed = ntime_since(&s, &e);
+		if (elapsed >= 1280000)
 			break;
 	} while (1);
 
 	fio_clock_source = old_cs;
-	return (c_e - c_s) * 1000 / elapsed;
+	return (c_e - c_s) * 1000000 / elapsed;
 }
 
 #define NR_TIME_ITERS	50
@@ -298,10 +298,10 @@ static int calibrate_cpu_clock(void)
 
 	avg /= samples;
 	cycles_per_msec = avg;
-	dprint(FD_TIME, "avg: %llu\n", (unsigned long long) avg);
-	dprint(FD_TIME, "min=%llu, max=%llu, mean=%f, S=%f\n",
+	dprint(FD_TIME, "min=%llu, max=%llu, mean=%f, S=%f, N=%d\n",
 			(unsigned long long) minc,
-			(unsigned long long) maxc, mean, S);
+			(unsigned long long) maxc, mean, S, NR_TIME_ITERS);
+	dprint(FD_TIME, "trimmed mean=%llu, N=%d\n", (unsigned long long) avg, samples);
 
 	max_ticks = MAX_CLOCK_SEC * cycles_per_msec * 1000ULL;
 	max_mult = ULLONG_MAX / max_ticks;
