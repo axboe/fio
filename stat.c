@@ -1518,12 +1518,9 @@ struct json_object *show_thread_status(struct thread_stat *ts,
 	return ret;
 }
 
-static void sum_stat(struct io_stat *dst, struct io_stat *src, bool first)
+static void __sum_stat(struct io_stat *dst, struct io_stat *src, bool first)
 {
 	double mean, S;
-
-	if (src->samples == 0)
-		return;
 
 	dst->min_val = min(dst->min_val, src->min_val);
 	dst->max_val = max(dst->max_val, src->max_val);
@@ -1551,6 +1548,31 @@ static void sum_stat(struct io_stat *dst, struct io_stat *src, bool first)
 	dst->samples += src->samples;
 	dst->mean.u.f = mean;
 	dst->S.u.f = S;
+
+}
+
+/*
+ * We sum two kinds of stats - one that is time based, in which case we
+ * apply the proper summing technique, and then one that is iops/bw
+ * numbers. For group_reporting, we should just add those up, not make
+ * them the mean of everything.
+ */
+static void sum_stat(struct io_stat *dst, struct io_stat *src, bool first,
+		     bool pure_sum)
+{
+	if (src->samples == 0)
+		return;
+
+	if (!pure_sum) {
+		__sum_stat(dst, src, first);
+		return;
+	}
+
+	dst->min_val += src->min_val;
+	dst->max_val += src->max_val;
+	dst->samples += src->samples;
+	dst->mean.u.f += src->mean.u.f;
+	dst->S.u.f += src->S.u.f;
 }
 
 void sum_group_stats(struct group_run_stats *dst, struct group_run_stats *src)
@@ -1586,22 +1608,22 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src,
 
 	for (l = 0; l < DDIR_RWDIR_CNT; l++) {
 		if (!dst->unified_rw_rep) {
-			sum_stat(&dst->clat_stat[l], &src->clat_stat[l], first);
-			sum_stat(&dst->slat_stat[l], &src->slat_stat[l], first);
-			sum_stat(&dst->lat_stat[l], &src->lat_stat[l], first);
-			sum_stat(&dst->bw_stat[l], &src->bw_stat[l], first);
-			sum_stat(&dst->iops_stat[l], &src->iops_stat[l], first);
+			sum_stat(&dst->clat_stat[l], &src->clat_stat[l], first, false);
+			sum_stat(&dst->slat_stat[l], &src->slat_stat[l], first, false);
+			sum_stat(&dst->lat_stat[l], &src->lat_stat[l], first, false);
+			sum_stat(&dst->bw_stat[l], &src->bw_stat[l], first, true);
+			sum_stat(&dst->iops_stat[l], &src->iops_stat[l], first, true);
 
 			dst->io_bytes[l] += src->io_bytes[l];
 
 			if (dst->runtime[l] < src->runtime[l])
 				dst->runtime[l] = src->runtime[l];
 		} else {
-			sum_stat(&dst->clat_stat[0], &src->clat_stat[l], first);
-			sum_stat(&dst->slat_stat[0], &src->slat_stat[l], first);
-			sum_stat(&dst->lat_stat[0], &src->lat_stat[l], first);
-			sum_stat(&dst->bw_stat[0], &src->bw_stat[l], first);
-			sum_stat(&dst->iops_stat[0], &src->iops_stat[l], first);
+			sum_stat(&dst->clat_stat[0], &src->clat_stat[l], first, false);
+			sum_stat(&dst->slat_stat[0], &src->slat_stat[l], first, false);
+			sum_stat(&dst->lat_stat[0], &src->lat_stat[l], first, false);
+			sum_stat(&dst->bw_stat[0], &src->bw_stat[l], first, true);
+			sum_stat(&dst->iops_stat[0], &src->iops_stat[l], first, true);
 
 			dst->io_bytes[0] += src->io_bytes[l];
 
@@ -1616,7 +1638,7 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src,
 		}
 	}
 
-	sum_stat(&dst->sync_stat, &src->sync_stat, first);
+	sum_stat(&dst->sync_stat, &src->sync_stat, first, false);
 	dst->usr_time += src->usr_time;
 	dst->sys_time += src->sys_time;
 	dst->ctx += src->ctx;
