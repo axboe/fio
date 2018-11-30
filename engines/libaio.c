@@ -125,16 +125,20 @@ static int fio_libaio_prep(struct thread_data fio_unused *td, struct io_u *io_u)
 	else
 		iocb = &io_u->iocb;
 
-	iocb->u.c.flags = 0;
-
 	if (io_u->ddir == DDIR_READ) {
-		io_prep_pread(iocb, f->fd, io_u->xfer_buf, io_u->xfer_buflen, io_u->offset);
-		if (o->hipri)
-			iocb->u.c.flags |= IOCB_FLAG_HIPRI;
+		if (o->fixedbufs) {
+			iocb->aio_fildes = f->fd;
+			iocb->aio_lio_opcode = IO_CMD_PREAD;
+			iocb->u.c.offset = io_u->offset;
+		} else
+			io_prep_pread(iocb, f->fd, io_u->xfer_buf, io_u->xfer_buflen, io_u->offset);
 	} else if (io_u->ddir == DDIR_WRITE) {
-		io_prep_pwrite(iocb, f->fd, io_u->xfer_buf, io_u->xfer_buflen, io_u->offset);
-		if (o->hipri)
-			iocb->u.c.flags |= IOCB_FLAG_HIPRI;
+		if (o->fixedbufs) {
+			iocb->aio_fildes = f->fd;
+			iocb->aio_lio_opcode = IO_CMD_PWRITE;
+			iocb->u.c.offset = io_u->offset;
+		} else
+			io_prep_pwrite(iocb, f->fd, io_u->xfer_buf, io_u->xfer_buflen, io_u->offset);
 	} else if (ddir_sync(io_u->ddir))
 		io_prep_fsync(iocb, f->fd);
 
@@ -468,6 +472,10 @@ static int fio_libaio_post_init(struct thread_data *td)
 			iocb = &ld->user_iocbs[i];
 			iocb->u.c.buf = io_u->buf;
 			iocb->u.c.nbytes = td_max_bs(td);
+
+			iocb->u.c.flags = 0;
+			if (o->hipri)
+				iocb->u.c.flags |= IOCB_FLAG_HIPRI;
 		}
 	}
 
