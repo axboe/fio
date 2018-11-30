@@ -1568,11 +1568,19 @@ static void sum_stat(struct io_stat *dst, struct io_stat *src, bool first,
 		return;
 	}
 
-	dst->min_val += src->min_val;
-	dst->max_val += src->max_val;
-	dst->samples += src->samples;
-	dst->mean.u.f += src->mean.u.f;
-	dst->S.u.f += src->S.u.f;
+	if (first) {
+		dst->min_val = src->min_val;
+		dst->max_val = src->max_val;
+		dst->samples = src->samples;
+		dst->mean.u.f = src->mean.u.f;
+		dst->S.u.f = src->S.u.f;
+	} else {
+		dst->min_val += src->min_val;
+		dst->max_val += src->max_val;
+		dst->samples += src->samples;
+		dst->mean.u.f += src->mean.u.f;
+		dst->S.u.f += src->S.u.f;
+	}
 }
 
 void sum_group_stats(struct group_run_stats *dst, struct group_run_stats *src)
