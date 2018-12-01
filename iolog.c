@@ -175,6 +175,7 @@ int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 			io_u->offset = ipo->offset;
 			io_u->buflen = ipo->len;
 			io_u->file = td->files[ipo->fileno];
+			io_u->offset += io_u->file->file_offset;
 			get_file(io_u->file);
 			dprint(FD_IO, "iolog: get %llu/%llu/%s\n", io_u->offset,
 						io_u->buflen, io_u->file->file_name);

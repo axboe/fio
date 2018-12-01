@@ -923,8 +923,12 @@ int setup_files(struct thread_data *td)
 	if (err)
 		goto err_out;
 
-	if (o->read_iolog_file)
+	if (o->read_iolog_file) {
+		for_each_file(td, f, i) {
+			f->file_offset = get_start_offset(td, f);
+		}
 		goto done;
+	}
 
 	/*
 	 * check sizes. if the files/devices do not exist and the size
