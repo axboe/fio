@@ -130,15 +130,21 @@ static int fio_libaio_prep(struct thread_data fio_unused *td, struct io_u *io_u)
 			iocb->aio_fildes = f->fd;
 			iocb->aio_lio_opcode = IO_CMD_PREAD;
 			iocb->u.c.offset = io_u->offset;
-		} else
+		} else {
 			io_prep_pread(iocb, f->fd, io_u->xfer_buf, io_u->xfer_buflen, io_u->offset);
+			if (o->hipri)
+				iocb->u.c.flags |= IOCB_FLAG_HIPRI;
+		}
 	} else if (io_u->ddir == DDIR_WRITE) {
 		if (o->fixedbufs) {
 			iocb->aio_fildes = f->fd;
 			iocb->aio_lio_opcode = IO_CMD_PWRITE;
 			iocb->u.c.offset = io_u->offset;
-		} else
+		} else {
 			io_prep_pwrite(iocb, f->fd, io_u->xfer_buf, io_u->xfer_buflen, io_u->offset);
+			if (o->hipri)
+				iocb->u.c.flags |= IOCB_FLAG_HIPRI;
+		}
 	} else if (ddir_sync(io_u->ddir))
 		io_prep_fsync(iocb, f->fd);
 
