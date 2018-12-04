@@ -8,6 +8,8 @@
 #include <unistd.h>
 #include <errno.h>
 #include <libaio.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 
 #include "../fio.h"
 #include "../lib/pow2.h"
@@ -450,8 +452,15 @@ static int fio_libaio_queue_init(struct libaio_data *ld, unsigned int depth,
 		flags |= IOCTX_FLAG_IOPOLL;
 	if (useriocb)
 		flags |= IOCTX_FLAG_USERIOCB;
-	if (fixedbufs)
+	if (fixedbufs) {
+		struct rlimit rlim = {
+			.rlim_cur = RLIM_INFINITY,
+			.rlim_max = RLIM_INFINITY,
+		};
+
+		setrlimit(RLIMIT_MEMLOCK, &rlim);
 		flags |= IOCTX_FLAG_FIXEDBUFS;
+	}
 
 	ret = syscall(__NR_sys_io_setup2, depth, flags, ld->user_iocbs,
 			NULL, NULL, &ld->aio_ctx);
