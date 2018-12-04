@@ -454,7 +454,7 @@ static int fio_libaio_queue_init(struct libaio_data *ld, unsigned int depth,
 		flags |= IOCTX_FLAG_FIXEDBUFS;
 
 	ret = syscall(__NR_sys_io_setup2, depth, flags, ld->user_iocbs,
-			&ld->aio_ctx);
+			NULL, NULL, &ld->aio_ctx);
 	if (!ret)
 		return 0;
 	/* fall through to old syscall */
