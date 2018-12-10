@@ -63,10 +63,6 @@ struct aio_io_event_ring {
 #define IORING_FLAG_SUBMIT	(1 << 0)
 #define IORING_FLAG_GETEVENTS	(1 << 1)
 
-#define container_of(ptr, type, member)  ({				\
-	const __typeof__( ((type *)0)->member ) *__mptr = (ptr);	\
-	(type *)( (char *)__mptr - offsetof(type,member) );})
-
 #define DEPTH			32
 #define RING_SIZE		(DEPTH + 1)
 
@@ -96,8 +92,8 @@ static volatile int finish;
 static int polled = 1;		/* use IO polling */
 static int fixedbufs = 1;	/* use fixed user buffers */
 static int buffered = 0;	/* use buffered IO, not O_DIRECT */
-static int sq_thread = 0;
-static int sq_thread_cpu = 0;
+static int sq_thread = 0;	/* use kernel submission thread */
+static int sq_thread_cpu = 0;	/* pin above thread to this CPU */
 
 static int io_setup2(unsigned int nr_events, unsigned int flags,
 		     struct iocb *iocbs, struct aio_iocb_ring *sq_ring,
@@ -297,8 +293,6 @@ submit:
 					break;
 				if (this_reap)
 					goto submit;
-				printf("EAGAIN reap=%d\n", reap_events(s));
-				printf("%d/%d, %d/%d\n", s->sq_ring->head, s->sq_ring->tail, s->cq_ring->head, s->cq_ring->tail);
 				to_submit = 0;
 				goto submit;
 			}
