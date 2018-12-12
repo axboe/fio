@@ -355,8 +355,8 @@ int main(int argc, char *argv[])
 	if (posix_memalign(&p, 4096, size))
 		return 1;
 	s->sq_ring = p;
-	s->sq_ring->nr_events = RING_SIZE;
 	memset(p, 0, size);
+	s->sq_ring->nr_events = RING_SIZE;
 
 	/* CQ ring must be twice as big */
 	size = sizeof(struct aio_io_event_ring) +
@@ -364,8 +364,8 @@ int main(int argc, char *argv[])
 	if (posix_memalign(&p, 4096, size))
 		return 1;
 	s->cq_ring = p;
-	s->cq_ring->nr_events = 2 * RING_SIZE;
 	memset(p, 0, size);
+	s->cq_ring->nr_events = 2 * RING_SIZE;
 
 	for (j = 0; j < RING_SIZE; j++) {
 		struct iocb *iocb = &s->sq_ring->iocbs[j];
