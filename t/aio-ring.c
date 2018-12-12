@@ -24,25 +24,25 @@
 
 #define IOCB_FLAG_HIPRI		(1 << 2)
 
-#define IOCTX_FLAG_IOPOLL	(1 << 1)
-#define IOCTX_FLAG_USERIOCB	(1 << 0)
+#define IOCTX_FLAG_IOPOLL	(1 << 0)
+#define IOCTX_FLAG_SCQRING	(1 << 1)	/* Use SQ/CQ rings */
 #define IOCTX_FLAG_FIXEDBUFS	(1 << 2)
-#define IOCTX_FLAG_SCQRING	(1 << 3)	/* Use SQ/CQ rings */
-#define IOCTX_FLAG_SQTHREAD	(1 << 4)	/* Use SQ thread */
-#define IOCTX_FLAG_SQWQ		(1 << 5)	/* Use SQ wq */
+#define IOCTX_FLAG_SQTHREAD	(1 << 3)	/* Use SQ thread */
+#define IOCTX_FLAG_SQWQ		(1 << 4)	/* Use SQ wq */
 
 #define barrier()	__asm__ __volatile__("": : :"memory")
 
 #define min(a, b)		((a < b) ? (a) : (b))
 
 typedef uint32_t u32;
+typedef uint16_t u16;
 
 struct aio_iocb_ring {
 	union {
 		struct {
 			u32 head, tail;
 			u32 nr_events;
-			u32 sq_thread_cpu;
+			u16 sq_thread_cpu;
 		};
 		struct iocb pad_iocb;
 	};
@@ -355,12 +355,16 @@ int main(int argc, char *argv[])
 	if (posix_memalign(&p, 4096, size))
 		return 1;
 	s->sq_ring = p;
+	s->sq_ring->nr_events = RING_SIZE;
 	memset(p, 0, size);
 
-	size = sizeof(struct aio_io_event_ring) + RING_SIZE * sizeof(struct io_event);
+	/* CQ ring must be twice as big */
+	size = sizeof(struct aio_io_event_ring) +
+			2 * RING_SIZE * sizeof(struct io_event);
 	if (posix_memalign(&p, 4096, size))
 		return 1;
 	s->cq_ring = p;
+	s->cq_ring->nr_events = 2 * RING_SIZE;
 	memset(p, 0, size);
 
 	for (j = 0; j < RING_SIZE; j++) {
