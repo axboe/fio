@@ -96,10 +96,10 @@ static int sq_thread = 0;	/* use kernel submission thread */
 static int sq_thread_cpu = 0;	/* pin above thread to this CPU */
 
 static int io_setup2(unsigned int nr_events, unsigned int flags,
-		     struct iocb *iocbs, struct aio_iocb_ring *sq_ring,
+		     struct aio_iocb_ring *sq_ring,
 		     struct aio_io_event_ring *cq_ring, io_context_t *ctx_idp)
 {
-	return syscall(335, nr_events, flags, iocbs, sq_ring, cq_ring, ctx_idp);
+	return syscall(335, nr_events, flags, sq_ring, cq_ring, ctx_idp);
 }
 
 static int io_ring_enter(io_context_t ctx, unsigned int to_submit,
@@ -389,7 +389,7 @@ int main(int argc, char *argv[])
 		s->sq_ring->sq_thread_cpu = sq_thread_cpu;
 	}
 
-	err = io_setup2(RING_SIZE, flags, s->sq_ring->iocbs, s->sq_ring, s->cq_ring, &s->ioc);
+	err = io_setup2(RING_SIZE, flags, s->sq_ring, s->cq_ring, &s->ioc);
 	if (err) {
 		printf("ctx_init failed: %s, %d\n", strerror(errno), err);
 		return 1;
