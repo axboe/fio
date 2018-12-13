@@ -34,28 +34,32 @@
 
 #define min(a, b)		((a < b) ? (a) : (b))
 
+typedef uint64_t u64;
 typedef uint32_t u32;
 typedef uint16_t u16;
 
-struct aio_iocb_ring {
+struct aio_sq_ring {
 	union {
 		struct {
-			u32 head, tail;
+			u32 head;
+			u32 tail;
 			u32 nr_events;
 			u16 sq_thread_cpu;
+			u64 iocbs;
 		};
-		struct iocb pad_iocb;
+		u32 pad[16];
 	};
-	struct iocb iocbs[0];
+	u32 array[0];
 };
 
-struct aio_io_event_ring {
+struct aio_cq_ring {
 	union {
 		struct {
-			u32 head, tail;
+			u32 head;
+			u32 tail;
 			u32 nr_events;
 		};
-		struct io_event pad_event;
+		struct io_event pad;
 	};
 	struct io_event events[0];
 };
@@ -76,8 +80,9 @@ struct submitter {
 	unsigned long max_blocks;
 	io_context_t ioc;
 	struct drand48_data rand;
-	struct aio_iocb_ring *sq_ring;
-	struct aio_io_event_ring *cq_ring;
+	struct aio_sq_ring *sq_ring;
+	struct iocb *iocbs;
+	struct aio_cq_ring *cq_ring;
 	int inflight;
 	unsigned long reaps;
 	unsigned long done;
@@ -96,8 +101,8 @@ static int sq_thread = 0;	/* use kernel submission thread */
 static int sq_thread_cpu = 0;	/* pin above thread to this CPU */
 
 static int io_setup2(unsigned int nr_events, unsigned int flags,
-		     struct aio_iocb_ring *sq_ring,
-		     struct aio_io_event_ring *cq_ring, io_context_t *ctx_idp)
+		     struct aio_sq_ring *sq_ring, struct aio_cq_ring *cq_ring,
+		     io_context_t *ctx_idp)
 {
 	return syscall(335, nr_events, flags, sq_ring, cq_ring, ctx_idp);
 }
@@ -132,8 +137,7 @@ static void init_io(struct submitter *s, int fd, struct iocb *iocb)
 
 static int prep_more_ios(struct submitter *s, int fd, int max_ios)
 {
-	struct aio_iocb_ring *ring = s->sq_ring;
-	struct iocb *iocb;
+	struct aio_sq_ring *ring = s->sq_ring;
 	u32 tail, next_tail, prepped = 0;
 
 	next_tail = tail = ring->tail;
@@ -146,8 +150,8 @@ static int prep_more_ios(struct submitter *s, int fd, int max_ios)
 		if (next_tail == ring->head)
 			break;
 
-		iocb = &s->sq_ring->iocbs[tail];
-		init_io(s, fd, iocb);
+		init_io(s, fd, &s->iocbs[tail]);
+		s->sq_ring->array[tail] = tail;
 		prepped++;
 		tail = next_tail;
 	} while (prepped < max_ios);
@@ -185,7 +189,7 @@ static int get_file_size(int fd, unsigned long *blocks)
 
 static int reap_events(struct submitter *s)
 {
-	struct aio_io_event_ring *ring = s->cq_ring;
+	struct aio_cq_ring *ring = s->cq_ring;
 	struct io_event *ev;
 	u32 head, reaped = 0;
 
@@ -196,8 +200,7 @@ static int reap_events(struct submitter *s)
 			break;
 		ev = &ring->events[head];
 		if (ev->res != BS) {
-			int index = (int) (uintptr_t) ev->obj;
-			struct iocb *iocb = &s->sq_ring->iocbs[index];
+			struct iocb *iocb = ev->obj;
 
 			printf("io: unexpected ret=%ld\n", ev->res);
 			printf("offset=%lu, size=%lu\n", (unsigned long) iocb->u.c.offset, (unsigned long) iocb->u.c.nbytes);
@@ -351,15 +354,22 @@ int main(int argc, char *argv[])
 
 	arm_sig_int();
 
-	size = sizeof(struct aio_iocb_ring) + RING_SIZE * sizeof(struct iocb);
+	size = sizeof(struct iocb) * RING_SIZE;
+	if (posix_memalign(&p, 4096, size))
+		return 1;
+	memset(p, 0, size);
+	s->iocbs = p;
+
+	size = sizeof(struct aio_sq_ring) + RING_SIZE * sizeof(u32);
 	if (posix_memalign(&p, 4096, size))
 		return 1;
 	s->sq_ring = p;
 	memset(p, 0, size);
 	s->sq_ring->nr_events = RING_SIZE;
+	s->sq_ring->iocbs = (u64) s->iocbs;
 
 	/* CQ ring must be twice as big */
-	size = sizeof(struct aio_io_event_ring) +
+	size = sizeof(struct aio_cq_ring) +
 			2 * RING_SIZE * sizeof(struct io_event);
 	if (posix_memalign(&p, 4096, size))
 		return 1;
@@ -368,7 +378,7 @@ int main(int argc, char *argv[])
 	s->cq_ring->nr_events = 2 * RING_SIZE;
 
 	for (j = 0; j < RING_SIZE; j++) {
-		struct iocb *iocb = &s->sq_ring->iocbs[j];
+		struct iocb *iocb = &s->iocbs[j];
 
 		if (posix_memalign(&iocb->u.c.buf, BS, BS)) {
 			printf("failed alloc\n");
