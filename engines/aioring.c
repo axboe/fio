@@ -42,6 +42,10 @@
 #ifndef IOCTX_FLAG_SQWQ
 #define IOCTX_FLAG_SQWQ		(1 << 4)
 #endif
+#ifndef IOCTX_FLAG_SQPOLL
+#define IOCTX_FLAG_SQPOLL	(1 << 5)
+#endif
+
 
 /*
  * io_ring_enter(2) flags
@@ -104,6 +108,7 @@ struct aioring_options {
 	unsigned int fixedbufs;
 	unsigned int sqthread;
 	unsigned int sqthread_set;
+	unsigned int sqthread_poll;
 	unsigned int sqwq;
 };
 
@@ -146,6 +151,15 @@ static struct fio_option options[] = {
 		.group	= FIO_OPT_G_LIBAIO,
 	},
 	{
+		.name	= "sqthread_poll",
+		.lname	= "Kernel SQ thread should poll",
+		.type	= FIO_OPT_STR_SET,
+		.off1	= offsetof(struct aioring_options, sqthread_poll),
+		.help	= "Used with sqthread, enables kernel side polling",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_LIBAIO,
+	},
+	{
 		.name	= "sqwq",
 		.lname	= "Offload submission to kernel workqueue",
 		.type	= FIO_OPT_STR_SET,
@@ -158,8 +172,6 @@ static struct fio_option options[] = {
 		.name	= NULL,
 	},
 };
-
-static int fio_aioring_commit(struct thread_data *td);
 
 static int io_ring_enter(io_context_t ctx, unsigned int to_submit,
 			 unsigned int min_complete, unsigned int flags)
@@ -257,6 +269,7 @@ static int fio_aioring_getevents(struct thread_data *td, unsigned int min,
 {
 	struct aioring_data *ld = td->io_ops_data;
 	unsigned actual_min = td->o.iodepth_batch_complete_min == 0 ? 0 : min;
+	struct aioring_options *o = td->eo;
 	struct aio_cq_ring *ring = ld->cq_ring;
 	int r, events = 0;
 
@@ -268,13 +281,15 @@ static int fio_aioring_getevents(struct thread_data *td, unsigned int min,
 			continue;
 		}
 
-		r = io_ring_enter(ld->aio_ctx, 0, actual_min,
-					IORING_FLAG_GETEVENTS);
-		if (r < 0) {
-			if (errno == EAGAIN)
-				continue;
-			td_verror(td, errno, "io_ring_enter get");
-			break;
+		if (!o->sqthread_poll) {
+			r = io_ring_enter(ld->aio_ctx, 0, actual_min,
+						IORING_FLAG_GETEVENTS);
+			if (r < 0) {
+				if (errno == EAGAIN)
+					continue;
+				td_verror(td, errno, "io_ring_enter get");
+				break;
+			}
 		}
 	} while (events < min);
 
@@ -345,10 +360,17 @@ static void fio_aioring_queued(struct thread_data *td, int start, int nr)
 static int fio_aioring_commit(struct thread_data *td)
 {
 	struct aioring_data *ld = td->io_ops_data;
+	struct aioring_options *o = td->eo;
 	int ret;
 
 	if (!ld->queued)
 		return 0;
+
+	/* Nothing to do */
+	if (o->sqthread_poll) {
+		ld->queued = 0;
+		return 0;
+	}
 
 	do {
 		int start = ld->sq_ring->head;
@@ -434,6 +456,8 @@ static int fio_aioring_queue_init(struct thread_data *td)
 	if (o->sqthread_set) {
 		ld->sq_ring->sq_thread_cpu = o->sqthread;
 		flags |= IOCTX_FLAG_SQTHREAD;
+		if (o->sqthread_poll)
+			flags |= IOCTX_FLAG_SQPOLL;
 	} else if (o->sqwq)
 		flags |= IOCTX_FLAG_SQWQ;
 
