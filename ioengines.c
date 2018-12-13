@@ -131,7 +131,7 @@ static struct ioengine_ops *__load_ioengine(const char *name)
 	/*
 	 * linux libaio has alias names, so convert to what we want
 	 */
-	if (!strncmp(engine, "linuxaio", 8) || !strncmp(engine, "aio", 3)) {
+	if (!strncmp(engine, "linuxaio", 8)) {
 		dprint(FD_IO, "converting ioengine name: %s -> libaio\n", name);
 		strcpy(engine, "libaio");
 	}
