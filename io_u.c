@@ -570,8 +570,10 @@ static unsigned long long get_next_buflen(struct thread_data *td, struct io_u *i
 		power_2 = is_power_of_2(minbs);
 		if (!td->o.bs_unaligned && power_2)
 			buflen &= ~(minbs - 1);
-		else if (!td->o.bs_unaligned && !power_2) 
-			buflen -= buflen % minbs; 
+		else if (!td->o.bs_unaligned && !power_2)
+			buflen -= buflen % minbs;
+		if (buflen > maxbs)
+			buflen = maxbs;
 	} while (!io_u_fits(td, io_u, buflen));
 
 	return buflen;
