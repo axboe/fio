@@ -483,10 +483,8 @@ static int fio_aioring_init(struct thread_data *td)
 {
 	struct aioring_data *ld;
 
-	if (td->o.iodepth <= 1) {
-		printf("aio-ring: needs a minimum QD of 2\n");
-		return 1;
-	}
+	/* ring needs an extra entry, add one to achieve QD set */
+	td->o.iodepth++;
 
 	ld = calloc(1, sizeof(*ld));
 
