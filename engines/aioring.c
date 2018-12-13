@@ -61,6 +61,8 @@ typedef uint64_t u64;
 typedef uint32_t u32;
 typedef uint16_t u16;
 
+#define IORING_SQ_NEED_WAKEUP	(1 << 0)
+
 struct aio_sq_ring {
 	union {
 		struct {
@@ -68,6 +70,7 @@ struct aio_sq_ring {
 			u32 tail;
 			u32 nr_events;
 			u16 sq_thread_cpu;
+			u16 kflags;
 			u64 iocbs;
 		};
 		u32 pad[16];
@@ -368,6 +371,10 @@ static int fio_aioring_commit(struct thread_data *td)
 
 	/* Nothing to do */
 	if (o->sqthread_poll) {
+		struct aio_sq_ring *ring = ld->sq_ring;
+
+		if (ring->kflags & IORING_SQ_NEED_WAKEUP)
+			io_ring_enter(ld->aio_ctx, ld->queued, 0, IORING_FLAG_SUBMIT);
 		ld->queued = 0;
 		return 0;
 	}
