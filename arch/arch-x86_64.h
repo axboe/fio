@@ -4,6 +4,9 @@
 #ifndef __NR_sys_io_setup2
 #define __NR_sys_io_setup2	335
 #endif
+#ifndef __NR_sys_io_ring_enter
+#define __NR_sys_io_ring_enter	336
+#endif
 
 static inline void do_cpuid(unsigned int *eax, unsigned int *ebx,
 			    unsigned int *ecx, unsigned int *edx)

@@ -1773,6 +1773,11 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .help = "Linux native asynchronous IO",
 			  },
 #endif
+#ifdef CONFIG_LIBAIO
+			  { .ival = "aio-ring",
+			    .help = "Linux native asynchronous IO",
+			  },
+#endif
 #ifdef CONFIG_POSIXAIO
 			  { .ival = "posixaio",
 			    .help = "POSIX asynchronous IO",

@@ -68,6 +68,9 @@ endif
 ifdef CONFIG_LIBAIO
   SOURCE += engines/libaio.c
 endif
+ifdef CONFIG_LIBAIO
+  SOURCE += engines/aioring.c
+endif
 ifdef CONFIG_RDMA
   SOURCE += engines/rdma.c
 endif
