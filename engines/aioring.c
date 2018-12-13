@@ -1,4 +1,3 @@
-#ifdef ARCH_HAVE_AIORING
 /*
  * aioring engine
  *
@@ -16,6 +15,8 @@
 #include "../lib/pow2.h"
 #include "../optgroup.h"
 #include "../lib/memalign.h"
+
+#ifdef ARCH_HAVE_AIORING
 
 #ifndef IOCB_FLAG_HIPRI
 #define IOCB_FLAG_HIPRI	(1 << 2)
