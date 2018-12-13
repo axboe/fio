@@ -1,3 +1,4 @@
+#ifdef ARCH_HAVE_AIORING
 /*
  * aioring engine
  *
@@ -498,7 +499,7 @@ static int fio_aioring_init(struct thread_data *td)
 	ld->sq_ring = fio_memalign(page_size, aioring_sq_size(td), false);
 	memset(ld->sq_ring, 0, aioring_sq_size(td));
 	ld->sq_ring->nr_events = td->o.iodepth;
-	ld->sq_ring->iocbs = (u64) ld->iocbs;
+	ld->sq_ring->iocbs = (u64) (uintptr_t) ld->iocbs;
 
 	ld->cq_ring = fio_memalign(page_size, aioring_cq_size(td), false);
 	memset(ld->cq_ring, 0, aioring_cq_size(td));
@@ -537,18 +538,11 @@ static struct ioengine_ops ioengine = {
 
 static void fio_init fio_aioring_register(void)
 {
-#ifdef __NR_sys_io_setup2
-#ifdef __NR_sys_io_ring_enter
 	register_ioengine(&ioengine);
-#endif
-#endif
 }
 
 static void fio_exit fio_aioring_unregister(void)
 {
-#ifdef __NR_sys_io_setup2
-#ifdef __NR_sys_io_ring_enter
 	unregister_ioengine(&ioengine);
-#endif
-#endif
 }
+#endif

@@ -44,6 +44,7 @@ static inline unsigned long long get_cpu_clock(void)
 #define ARCH_HAVE_FFZ
 #define ARCH_HAVE_SSE4_2
 #define ARCH_HAVE_CPU_CLOCK
+#define ARCH_HAVE_AIORING
 
 #define RDRAND_LONG	".byte 0x48,0x0f,0xc7,0xf0"
 #define RDSEED_LONG	".byte 0x48,0x0f,0xc7,0xf8"
