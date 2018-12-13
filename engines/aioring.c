@@ -1,7 +1,9 @@
 /*
  * aioring engine
  *
- * IO engine using the new native Linux libaio ring interface
+ * IO engine using the new native Linux libaio ring interface. See:
+ *
+ * http://git.kernel.dk/cgit/linux-block/log/?h=aio-poll
  *
  */
 #include <stdlib.h>
@@ -100,7 +102,20 @@ struct aioring_options {
 	void *pad;
 	unsigned int hipri;
 	unsigned int fixedbufs;
+	unsigned int sqthread;
+	unsigned int sqthread_set;
+	unsigned int sqwq;
 };
+
+static int fio_aioring_sqthread_cb(void *data,
+				   unsigned long long *val)
+{
+	struct aioring_options *o = data;
+
+	o->sqthread = *val;
+	o->sqthread_set = 1;
+	return 0;
+}
 
 static struct fio_option options[] = {
 	{
@@ -122,6 +137,24 @@ static struct fio_option options[] = {
 		.group	= FIO_OPT_G_LIBAIO,
 	},
 	{
+		.name	= "sqthread",
+		.lname	= "Use kernel SQ thread on this CPU",
+		.type	= FIO_OPT_INT,
+		.cb	= fio_aioring_sqthread_cb,
+		.help	= "Offload submission to kernel thread",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_LIBAIO,
+	},
+	{
+		.name	= "sqwq",
+		.lname	= "Offload submission to kernel workqueue",
+		.type	= FIO_OPT_STR_SET,
+		.off1	= offsetof(struct aioring_options, sqwq),
+		.help	= "Offload submission to kernel workqueue",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_LIBAIO,
+	},
+	{
 		.name	= NULL,
 	},
 };
@@ -131,12 +164,8 @@ static int fio_aioring_commit(struct thread_data *td);
 static int io_ring_enter(io_context_t ctx, unsigned int to_submit,
 			 unsigned int min_complete, unsigned int flags)
 {
-#ifdef __NR_sys_io_ring_enter
 	return syscall(__NR_sys_io_ring_enter, ctx, to_submit, min_complete,
 			flags);
-#else
-	return -1;
-#endif
 }
 
 static int fio_aioring_prep(struct thread_data *td, struct io_u *io_u)
@@ -244,7 +273,7 @@ static int fio_aioring_getevents(struct thread_data *td, unsigned int min,
 		if (r < 0) {
 			if (errno == EAGAIN)
 				continue;
-			perror("ring enter");
+			td_verror(td, errno, "io_ring_enter get");
 			break;
 		}
 	} while (events < min);
@@ -263,20 +292,6 @@ static enum fio_q_status fio_aioring_queue(struct thread_data *td,
 
 	if (ld->queued == td->o.iodepth)
 		return FIO_Q_BUSY;
-
-	/*
-	 * fsync is tricky, since it can fail and we need to do it
-	 * serialized with other io. the reason is that linux doesn't
-	 * support aio fsync yet. So return busy for the case where we
-	 * have pending io, to let fio complete those first.
-	 */
-	if (ddir_sync(io_u->ddir)) {
-		if (ld->queued)
-			return FIO_Q_BUSY;
-
-		do_io_u_sync(td, io_u);
-		return FIO_Q_COMPLETED;
-	}
 
 	if (io_u->ddir == DDIR_TRIM) {
 		if (ld->queued)
@@ -341,44 +356,27 @@ static int fio_aioring_commit(struct thread_data *td)
 
 		ret = io_ring_enter(ld->aio_ctx, nr, 0, IORING_FLAG_SUBMIT |
 						IORING_FLAG_GETEVENTS);
-		if (ret == -1)
-			perror("io_ring_enter");
 		if (ret > 0) {
 			fio_aioring_queued(td, start, ret);
 			io_u_mark_submit(td, ret);
 
 			ld->queued -= ret;
 			ret = 0;
-		} else if (ret == -EINTR || !ret) {
-			if (!ret)
-				io_u_mark_submit(td, ret);
+		} else if (!ret) {
+			io_u_mark_submit(td, ret);
 			continue;
-		} else if (ret == -EAGAIN) {
-			/*
-			 * If we get EAGAIN, we should break out without
-			 * error and let the upper layer reap some
-			 * events for us. If we have no queued IO, we
-			 * must loop here. If we loop for more than 30s,
-			 * just error out, something must be buggy in the
-			 * IO path.
-			 */
-			if (ld->queued) {
-				ret = 0;
-				break;
+		} else {
+			if (errno == EAGAIN) {
+				ret = fio_aioring_cqring_reap(td, 0, ld->queued);
+				if (ret)
+					continue;
+				/* Shouldn't happen */
+				usleep(1);
+				continue;
 			}
-			usleep(1);
-			continue;
-		} else if (ret == -ENOMEM) {
-			/*
-			 * If we get -ENOMEM, reap events if we can. If
-			 * we cannot, treat it as a fatal event since there's
-			 * nothing we can do about it.
-			 */
-			if (ld->queued)
-				ret = 0;
+			td_verror(td, errno, "io_ring_enter sumit");
 			break;
-		} else
-			break;
+		}
 	} while (ld->queued);
 
 	return ret;
@@ -404,6 +402,9 @@ static void fio_aioring_cleanup(struct thread_data *td)
 	struct aioring_data *ld = td->io_ops_data;
 
 	if (ld) {
+		/* Bump depth to match init depth */
+		td->o.iodepth++;
+
 		/*
 		 * Work-around to avoid huge RCU stalls at exit time. If we
 		 * don't do this here, then it'll be torn down by exit_aio().
@@ -423,7 +424,6 @@ static void fio_aioring_cleanup(struct thread_data *td)
 
 static int fio_aioring_queue_init(struct thread_data *td)
 {
-#ifdef __NR_sys_io_setup2
 	struct aioring_data *ld = td->io_ops_data;
 	struct aioring_options *o = td->eo;
 	int flags = IOCTX_FLAG_SCQRING;
@@ -431,6 +431,12 @@ static int fio_aioring_queue_init(struct thread_data *td)
 
 	if (o->hipri)
 		flags |= IOCTX_FLAG_IOPOLL;
+	if (o->sqthread_set) {
+		ld->sq_ring->sq_thread_cpu = o->sqthread;
+		flags |= IOCTX_FLAG_SQTHREAD;
+	} else if (o->sqwq)
+		flags |= IOCTX_FLAG_SQWQ;
+
 	if (o->fixedbufs) {
 		struct rlimit rlim = {
 			.rlim_cur = RLIM_INFINITY,
@@ -443,9 +449,6 @@ static int fio_aioring_queue_init(struct thread_data *td)
 
 	return syscall(__NR_sys_io_setup2, depth, flags,
 			ld->sq_ring, ld->cq_ring, &ld->aio_ctx);
-#else
-	return -1;
-#endif
 }
 
 static int fio_aioring_post_init(struct thread_data *td)
@@ -476,12 +479,20 @@ static int fio_aioring_post_init(struct thread_data *td)
 		return 1;
 	}
 
+	/* Adjust depth back again */
+	td->o.iodepth--;
 	return 0;
 }
 
 static int fio_aioring_init(struct thread_data *td)
 {
+	struct aioring_options *o = td->eo;
 	struct aioring_data *ld;
+
+	if (o->sqthread_set && o->sqwq) {
+		log_err("fio: aioring sqthread and sqwq are mutually exclusive\n");
+		return 1;
+	}
 
 	/* ring needs an extra entry, add one to achieve QD set */
 	td->o.iodepth++;
