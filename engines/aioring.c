@@ -63,6 +63,8 @@ typedef uint16_t u16;
 
 #define IORING_SQ_NEED_WAKEUP	(1 << 0)
 
+#define IOEV_RES2_CACHEHIT	(1 << 0)
+
 struct aio_sq_ring {
 	union {
 		struct {
@@ -103,6 +105,9 @@ struct aioring_data {
 
 	int queued;
 	int cq_ring_off;
+
+	uint64_t cachehit;
+	uint64_t cachemiss;
 };
 
 struct aioring_options {
@@ -240,6 +245,13 @@ static struct io_u *fio_aioring_event(struct thread_data *td, int event)
 			io_u->resid = io_u->xfer_buflen - ev->res;
 	} else
 		io_u->error = 0;
+
+	if (io_u->ddir == DDIR_READ) {
+		if (ev->res2 & IOEV_RES2_CACHEHIT)
+			ld->cachehit++;
+		else
+			ld->cachemiss++;
+	}
 
 	return io_u;
 }
@@ -431,6 +443,9 @@ static void fio_aioring_cleanup(struct thread_data *td)
 	struct aioring_data *ld = td->io_ops_data;
 
 	if (ld) {
+		td->ts.cachehit += ld->cachehit;
+		td->ts.cachemiss += ld->cachemiss;
+
 		/* Bump depth to match init depth */
 		td->o.iodepth++;
 

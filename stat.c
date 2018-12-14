@@ -419,7 +419,7 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	unsigned long runt;
 	unsigned long long min, max, bw, iops;
 	double mean, dev;
-	char *io_p, *bw_p, *bw_p_alt, *iops_p, *zbd_w_st = NULL;
+	char *io_p, *bw_p, *bw_p_alt, *iops_p, *post_st = NULL;
 	int i2p;
 
 	if (ddir_sync(ddir)) {
@@ -451,15 +451,25 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	iops = (1000 * (uint64_t)ts->total_io_u[ddir]) / runt;
 	iops_p = num2str(iops, ts->sig_figs, 1, 0, N2S_NONE);
 	if (ddir == DDIR_WRITE)
-		zbd_w_st = zbd_write_status(ts);
+		post_st = zbd_write_status(ts);
+	else if (ddir == DDIR_READ && ts->cachehit && ts->cachemiss) {
+		uint64_t total;
+		double hit;
+
+		total = ts->cachehit + ts->cachemiss;
+		hit = (double) ts->cachehit / (double) total;
+		hit *= 100.0;
+		if (asprintf(&post_st, "; Cachehit=%0.2f%%", hit) < 0)
+			post_st = NULL;
+	}
 
 	log_buf(out, "  %s: IOPS=%s, BW=%s (%s)(%s/%llumsec)%s\n",
 			rs->unified_rw_rep ? "mixed" : io_ddir_name(ddir),
 			iops_p, bw_p, bw_p_alt, io_p,
 			(unsigned long long) ts->runtime[ddir],
-			zbd_w_st ? : "");
+			post_st ? : "");
 
-	free(zbd_w_st);
+	free(post_st);
 	free(io_p);
 	free(bw_p);
 	free(bw_p_alt);
@@ -1153,6 +1163,16 @@ static void add_ddir_status_json(struct thread_stat *ts,
 	json_object_add_value_float(dir_object, "iops_stddev", dev);
 	json_object_add_value_int(dir_object, "iops_samples",
 				(&ts->iops_stat[ddir])->samples);
+
+	if (ts->cachehit + ts->cachemiss) {
+		uint64_t total;
+		double hit;
+
+		total = ts->cachehit + ts->cachemiss;
+		hit = (double) ts->cachehit / (double) total;
+		hit *= 100.0;
+		json_object_add_value_float(dir_object, "cachehit", hit);
+	}
 }
 
 static void show_thread_status_terse_all(struct thread_stat *ts,
@@ -1695,6 +1715,8 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src,
 	dst->total_submit += src->total_submit;
 	dst->total_complete += src->total_complete;
 	dst->nr_zone_resets += src->nr_zone_resets;
+	dst->cachehit += src->cachehit;
+	dst->cachemiss += src->cachemiss;
 }
 
 void init_group_run_stat(struct group_run_stats *gs)
@@ -2376,6 +2398,7 @@ void reset_io_stats(struct thread_data *td)
 	ts->total_submit = 0;
 	ts->total_complete = 0;
 	ts->nr_zone_resets = 0;
+	ts->cachehit = ts->cachemiss = 0;
 }
 
 static void __add_stat_to_log(struct io_log *iolog, enum fio_ddir ddir,

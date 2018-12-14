@@ -1039,6 +1039,9 @@ static void convert_ts(struct thread_stat *dst, struct thread_stat *src)
 			dst->ss_bw_data[i] = le64_to_cpu(src->ss_bw_data[i]);
 		}
 	}
+
+	dst->cachehit		= le64_to_cpu(src->cachehit);
+	dst->cachemiss		= le64_to_cpu(src->cachemiss);
 }
 
 static void convert_gs(struct group_run_stats *dst, struct group_run_stats *src)
