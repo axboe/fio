@@ -30,6 +30,8 @@
 #define IOCTX_FLAG_SQTHREAD	(1 << 3)	/* Use SQ thread */
 #define IOCTX_FLAG_SQWQ		(1 << 4)	/* Use SQ wq */
 
+#define IOEV_RES2_CACHEHIT	(1 << 0)
+
 #define barrier()	__asm__ __volatile__("": : :"memory")
 
 #define min(a, b)		((a < b) ? (a) : (b))
@@ -87,6 +89,7 @@ struct submitter {
 	unsigned long reaps;
 	unsigned long done;
 	unsigned long calls;
+	unsigned long cachehit, cachemiss;
 	volatile int finish;
 	char filename[128];
 };
@@ -206,6 +209,10 @@ static int reap_events(struct submitter *s)
 			printf("offset=%lu, size=%lu\n", (unsigned long) iocb->u.c.offset, (unsigned long) iocb->u.c.nbytes);
 			return -1;
 		}
+		if (ev->res2 & IOEV_RES2_CACHEHIT)
+			s->cachehit++;
+		else
+			s->cachemiss++;
 		reaped++;
 		head++;
 		if (head == ring->nr_events)
@@ -333,7 +340,7 @@ static void arm_sig_int(void)
 int main(int argc, char *argv[])
 {
 	struct submitter *s = &submitters[0];
-	unsigned long done, calls, reap;
+	unsigned long done, calls, reap, cache_hit, cache_miss;
 	int flags = 0, err;
 	int j;
 	size_t size;
@@ -410,27 +417,42 @@ int main(int argc, char *argv[])
 
 	pthread_create(&s->thread, NULL, submitter_fn, s);
 
-	reap = calls = done = 0;
+	cache_hit = cache_miss = reap = calls = done = 0;
 	do {
 		unsigned long this_done = 0;
 		unsigned long this_reap = 0;
 		unsigned long this_call = 0;
+		unsigned long this_cache_hit = 0;
+		unsigned long this_cache_miss = 0;
 		unsigned long rpc = 0, ipc = 0;
+		double hit = 0.0;
 
 		sleep(1);
 		this_done += s->done;
 		this_call += s->calls;
 		this_reap += s->reaps;
+		this_cache_hit += s->cachehit;
+		this_cache_miss += s->cachemiss;
+		if (this_cache_hit && this_cache_miss) {
+			unsigned long hits, total;
+
+			hits = this_cache_hit - cache_hit;
+			total = hits + this_cache_miss - cache_miss;
+			hit = (double) hits / (double) total;
+			hit *= 100.0;
+		}
 		if (this_call - calls) {
 			rpc = (this_done - done) / (this_call - calls);
 			ipc = (this_reap - reap) / (this_call - calls);
 		}
-		printf("IOPS=%lu, IOS/call=%lu/%lu, inflight=%u (head=%d tail=%d), %lu, %lu\n",
+		printf("IOPS=%lu, IOS/call=%lu/%lu, inflight=%u (head=%d tail=%d), Cachehit=%0.2f%%\n",
 				this_done - done, rpc, ipc, s->inflight,
-				s->cq_ring->head, s->cq_ring->tail, s->reaps, s->done);
+				s->cq_ring->head, s->cq_ring->tail, hit);
 		done = this_done;
 		calls = this_call;
 		reap = this_reap;
+		cache_hit = s->cachehit;
+		cache_miss = s->cachemiss;
 	} while (!finish);
 
 	pthread_join(s->thread, &ret);
