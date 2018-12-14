@@ -480,7 +480,8 @@ static int fio_aioring_queue_init(struct thread_data *td)
 		flags |= IOCTX_FLAG_SQTHREAD;
 		if (o->sqthread_poll)
 			flags |= IOCTX_FLAG_SQPOLL;
-	} else if (o->sqwq)
+	}
+	if (o->sqwq)
 		flags |= IOCTX_FLAG_SQWQ;
 
 	if (o->fixedbufs) {
@@ -532,13 +533,7 @@ static int fio_aioring_post_init(struct thread_data *td)
 
 static int fio_aioring_init(struct thread_data *td)
 {
-	struct aioring_options *o = td->eo;
 	struct aioring_data *ld;
-
-	if (o->sqthread_set && o->sqwq) {
-		log_err("fio: aioring sqthread and sqwq are mutually exclusive\n");
-		return 1;
-	}
 
 	/* ring needs an extra entry, add one to achieve QD set */
 	td->o.iodepth++;
