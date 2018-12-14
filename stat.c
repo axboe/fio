@@ -2351,7 +2351,8 @@ static void __add_log_sample(struct io_log *iolog, union io_sample_data data,
 
 static inline void reset_io_stat(struct io_stat *ios)
 {
-	ios->max_val = ios->min_val = ios->samples = 0;
+	ios->min_val = -1ULL;
+	ios->max_val = ios->samples = 0;
 	ios->mean.u.f = ios->S.u.f = 0;
 }
 
