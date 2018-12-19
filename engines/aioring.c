@@ -197,26 +197,20 @@ static int fio_aioring_prep(struct thread_data *td, struct io_u *io_u)
 
 	iocb = &ld->iocbs[io_u->index];
 
-	if (io_u->ddir == DDIR_READ) {
-		if (o->fixedbufs) {
-			iocb->aio_fildes = f->fd;
+	if (io_u->ddir == DDIR_READ || io_u->ddir == DDIR_WRITE) {
+		if (io_u->ddir == DDIR_READ)
 			iocb->aio_lio_opcode = IO_CMD_PREAD;
-			iocb->u.c.offset = io_u->offset;
-		} else {
-			io_prep_pread(iocb, f->fd, io_u->xfer_buf, io_u->xfer_buflen, io_u->offset);
-			if (o->hipri)
-				iocb->u.c.flags |= IOCB_FLAG_HIPRI;
-		}
-	} else if (io_u->ddir == DDIR_WRITE) {
-		if (o->fixedbufs) {
-			iocb->aio_fildes = f->fd;
+		else
 			iocb->aio_lio_opcode = IO_CMD_PWRITE;
-			iocb->u.c.offset = io_u->offset;
-		} else {
-			io_prep_pwrite(iocb, f->fd, io_u->xfer_buf, io_u->xfer_buflen, io_u->offset);
-			if (o->hipri)
-				iocb->u.c.flags |= IOCB_FLAG_HIPRI;
-		}
+		iocb->aio_reqprio = 0;
+		iocb->aio_fildes = f->fd;
+		iocb->u.c.buf = io_u->xfer_buf;
+		iocb->u.c.nbytes = io_u->xfer_buflen;
+		iocb->u.c.offset = io_u->offset;
+		if (o->hipri)
+			iocb->u.c.flags |= IOCB_FLAG_HIPRI;
+		else
+			iocb->u.c.flags = 0;
 	} else if (ddir_sync(io_u->ddir))
 		io_prep_fsync(iocb, f->fd);
 
