@@ -515,13 +515,15 @@ static int fio_aioring_post_init(struct thread_data *td)
 	}
 
 	err = fio_aioring_queue_init(td);
-	if (err) {
-		td_verror(td, -err, "io_queue_init");
-		return 1;
-	}
 
 	/* Adjust depth back again */
 	td->o.iodepth--;
+
+	if (err) {
+		td_verror(td, errno, "io_queue_init");
+		return 1;
+	}
+
 	return 0;
 }
 
