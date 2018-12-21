@@ -354,7 +354,7 @@ static void fio_aioring_queued(struct thread_data *td, int start, int nr)
 
 	while (nr--) {
 		int index = ld->sq_ring->array[start & ld->sq_ring_mask];
-		struct io_u *io_u = io_u = ld->io_u_index[index];
+		struct io_u *io_u = ld->io_u_index[index];
 
 		memcpy(&io_u->issue_time, &now, sizeof(now));
 		io_u_queued(td, io_u);
