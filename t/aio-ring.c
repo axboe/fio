@@ -443,7 +443,7 @@ int main(int argc, char *argv[])
 			rpc = (this_done - done) / (this_call - calls);
 			ipc = (this_reap - reap) / (this_call - calls);
 		}
-		printf("IOPS=%lu, IOS/call=%lu/%lu, inflight=%u (head=%d tail=%d), Cachehit=%0.2f%%\n",
+		printf("IOPS=%lu, IOS/call=%lu/%lu, inflight=%u (head=%u tail=%u), Cachehit=%0.2f%%\n",
 				this_done - done, rpc, ipc, s->inflight,
 				s->cq_ring->head, s->cq_ring->tail, hit);
 		done = this_done;
