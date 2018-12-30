@@ -51,11 +51,8 @@
 /*
  * io_ring_enter(2) flags
  */
-#ifndef IORING_FLAG_SUBMIT
-#define IORING_FLAG_SUBMIT	(1 << 0)
-#endif
 #ifndef IORING_FLAG_GETEVENTS
-#define IORING_FLAG_GETEVENTS	(1 << 1)
+#define IORING_FLAG_GETEVENTS	(1 << 0)
 #endif
 
 typedef uint64_t u64;
@@ -377,7 +374,7 @@ static int fio_aioring_commit(struct thread_data *td)
 		struct aio_sq_ring *ring = ld->sq_ring;
 
 		if (ring->kflags & IORING_SQ_NEED_WAKEUP)
-			io_ring_enter(ld->aio_ctx, ld->queued, 0, IORING_FLAG_SUBMIT);
+			io_ring_enter(ld->aio_ctx, ld->queued, 0, 0);
 		ld->queued = 0;
 		return 0;
 	}
@@ -386,8 +383,7 @@ static int fio_aioring_commit(struct thread_data *td)
 		unsigned start = ld->sq_ring->head;
 		long nr = ld->queued;
 
-		ret = io_ring_enter(ld->aio_ctx, nr, 0, IORING_FLAG_SUBMIT |
-						IORING_FLAG_GETEVENTS);
+		ret = io_ring_enter(ld->aio_ctx, nr, 0, IORING_FLAG_GETEVENTS);
 		if (ret > 0) {
 			fio_aioring_queued(td, start, ret);
 			io_u_mark_submit(td, ret);

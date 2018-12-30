@@ -66,8 +66,7 @@ struct aio_cq_ring {
 	struct io_event events[0];
 };
 
-#define IORING_FLAG_SUBMIT	(1 << 0)
-#define IORING_FLAG_GETEVENTS	(1 << 1)
+#define IORING_FLAG_GETEVENTS	(1 << 0)
 
 #define DEPTH			32
 
@@ -254,7 +253,7 @@ static void *submitter_fn(void *data)
 
 	prepped = 0;
 	do {
-		int to_wait, flags, to_submit, this_reap;
+		int to_wait, to_submit, this_reap;
 
 		if (!prepped && s->inflight < DEPTH)
 			prepped = prep_more_ios(s, fd, min(DEPTH - s->inflight, BATCH_SUBMIT));
@@ -267,11 +266,8 @@ submit:
 		else
 			to_wait = min(s->inflight + to_submit, BATCH_COMPLETE);
 
-		flags = IORING_FLAG_GETEVENTS;
-		if (to_submit)
-			flags |= IORING_FLAG_SUBMIT;
-
-		ret = io_ring_enter(s->ioc, to_submit, to_wait, flags);
+		ret = io_ring_enter(s->ioc, to_submit, to_wait,
+					IORING_FLAG_GETEVENTS);
 		s->calls++;
 
 		this_reap = reap_events(s);
