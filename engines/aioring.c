@@ -21,10 +21,6 @@
 
 #ifdef ARCH_HAVE_AIORING
 
-#ifndef IOCB_FLAG_HIPRI
-#define IOCB_FLAG_HIPRI	(1 << 2)
-#endif
-
 /*
  * io_setup2(2) flags
  */
@@ -193,7 +189,6 @@ static int fio_aioring_prep(struct thread_data *td, struct io_u *io_u)
 {
 	struct aioring_data *ld = td->io_ops_data;
 	struct fio_file *f = io_u->file;
-	struct aioring_options *o = td->eo;
 	struct iocb *iocb;
 
 	iocb = &ld->iocbs[io_u->index];
@@ -208,10 +203,7 @@ static int fio_aioring_prep(struct thread_data *td, struct io_u *io_u)
 		iocb->u.c.buf = io_u->xfer_buf;
 		iocb->u.c.nbytes = io_u->xfer_buflen;
 		iocb->u.c.offset = io_u->offset;
-		if (o->hipri)
-			iocb->u.c.flags |= IOCB_FLAG_HIPRI;
-		else
-			iocb->u.c.flags = 0;
+		iocb->u.c.flags = 0;
 	} else if (ddir_sync(io_u->ddir))
 		io_prep_fsync(iocb, f->fd);
 
@@ -503,9 +495,6 @@ static int fio_aioring_post_init(struct thread_data *td)
 			iocb = &ld->iocbs[i];
 			iocb->u.c.buf = io_u->buf;
 			iocb->u.c.nbytes = td_max_bs(td);
-
-			if (o->hipri)
-				iocb->u.c.flags |= IOCB_FLAG_HIPRI;
 		}
 	}
 

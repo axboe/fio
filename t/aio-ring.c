@@ -22,8 +22,6 @@
 #include <pthread.h>
 #include <sched.h>
 
-#define IOCB_FLAG_HIPRI		(1 << 2)
-
 #define IOCTX_FLAG_IOPOLL	(1 << 0)
 #define IOCTX_FLAG_SCQRING	(1 << 1)	/* Use SQ/CQ rings */
 #define IOCTX_FLAG_FIXEDBUFS	(1 << 2)
@@ -133,8 +131,6 @@ static void init_io(struct submitter *s, int fd, struct iocb *iocb)
 	iocb->aio_fildes = fd;
 	iocb->aio_lio_opcode = IO_CMD_PREAD;
 	iocb->u.c.offset = offset;
-	if (polled)
-		iocb->u.c.flags = IOCB_FLAG_HIPRI;
 	if (!fixedbufs)
 		iocb->u.c.nbytes = BS;
 }
