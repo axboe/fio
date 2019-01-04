@@ -23,6 +23,8 @@
 #include <pthread.h>
 #include <sched.h>
 
+#include "../arch/arch.h"
+
 #define IOCTX_FLAG_SCQRING	(1 << 0)	/* Use SQ/CQ rings */
 #define IOCTX_FLAG_IOPOLL	(1 << 1)
 #define IOCTX_FLAG_FIXEDBUFS	(1 << 2)
@@ -120,13 +122,14 @@ static int sq_thread_cpu = 0;	/* pin above thread to this CPU */
 static int io_uring_setup(unsigned entries, struct iovec *iovecs,
 			  struct aio_uring_params *p)
 {
-	return syscall(335, entries, iovecs, p);
+	return syscall(__NR_sys_io_uring_setup, entries, iovecs, p);
 }
 
 static int io_uring_enter(struct submitter *s, unsigned int to_submit,
 			  unsigned int min_complete, unsigned int flags)
 {
-	return syscall(336, s->fd, to_submit, min_complete, flags);
+	return syscall(__NR_sys_io_uring_enter, s->fd, to_submit, min_complete,
+			flags);
 }
 
 static int gettid(void)
