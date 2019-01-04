@@ -1,11 +1,11 @@
 #ifndef ARCH_X86_64_H
 #define ARCH_X86_64_H
 
-#ifndef __NR_sys_io_setup2
-#define __NR_sys_io_setup2	335
+#ifndef __NR_sys_io_uring_setup
+#define __NR_sys_io_uring_setup	335
 #endif
-#ifndef __NR_sys_io_ring_enter
-#define __NR_sys_io_ring_enter	336
+#ifndef __NR_sys_io_uring_enter
+#define __NR_sys_io_uring_enter	336
 #endif
 
 static inline void do_cpuid(unsigned int *eax, unsigned int *ebx,

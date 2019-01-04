@@ -22,13 +22,13 @@
 #ifdef ARCH_HAVE_AIORING
 
 /*
- * io_setup2(2) flags
+ * io_uring_setup(2) flags
  */
-#ifndef IOCTX_FLAG_IOPOLL
-#define IOCTX_FLAG_IOPOLL	(1 << 0)
-#endif
 #ifndef IOCTX_FLAG_SCQRING
-#define IOCTX_FLAG_SCQRING	(1 << 1)
+#define IOCTX_FLAG_SCQRING	(1 << 0)
+#endif
+#ifndef IOCTX_FLAG_IOPOLL
+#define IOCTX_FLAG_IOPOLL	(1 << 1)
 #endif
 #ifndef IOCTX_FLAG_FIXEDBUFS
 #define IOCTX_FLAG_FIXEDBUFS	(1 << 2)
@@ -43,12 +43,15 @@
 #define IOCTX_FLAG_SQPOLL	(1 << 5)
 #endif
 
+#define IORING_OFF_SQ_RING	0ULL
+#define IORING_OFF_CQ_RING	0x8000000ULL
+#define IORING_OFF_IOCB		0x10000000ULL
 
 /*
- * io_ring_enter(2) flags
+ * io_uring_enter(2) flags
  */
-#ifndef IORING_FLAG_GETEVENTS
-#define IORING_FLAG_GETEVENTS	(1 << 0)
+#ifndef IORING_ENTER_GETEVENTS
+#define IORING_ENTER_GETEVENTS	(1 << 0)
 #endif
 
 typedef uint64_t u64;
@@ -59,43 +62,59 @@ typedef uint16_t u16;
 
 #define IOEV_RES2_CACHEHIT	(1 << 0)
 
+struct aio_uring_offsets {
+	u32 head;
+	u32 tail;
+	u32 ring_mask;
+	u32 ring_entries;
+	u32 flags;
+	u32 elems;
+};
+
+struct aio_uring_params {
+	u32 sq_entries;
+	u32 cq_entries;
+	u32 flags;
+	u16 sq_thread_cpu;
+	u16 resv[9];
+	struct aio_uring_offsets sq_off;
+	struct aio_uring_offsets cq_off;
+};
+
 struct aio_sq_ring {
-	union {
-		struct {
-			u32 head;
-			u32 tail;
-			u32 nr_events;
-			u16 sq_thread_cpu;
-			u16 kflags;
-			u64 iocbs;
-		};
-		u32 pad[16];
-	};
-	u32 array[0];
+	u32 *head;
+	u32 *tail;
+	u32 *ring_mask;
+	u32 *ring_entries;
+	u32 *flags;
+	u32 *array;
 };
 
 struct aio_cq_ring {
-	union {
-		struct {
-			u32 head;
-			u32 tail;
-			u32 nr_events;
-		};
-		struct io_event pad;
-	};
-	struct io_event events[0];
+	u32 *head;
+	u32 *tail;
+	u32 *ring_mask;
+	u32 *ring_entries;
+	struct io_event *events;
+};
+
+struct aioring_mmap {
+	void *ptr;
+	size_t len;
 };
 
 struct aioring_data {
-	io_context_t aio_ctx;
+	int ring_fd;
+
 	struct io_u **io_us;
 	struct io_u **io_u_index;
 
-	struct aio_sq_ring *sq_ring;
+	struct aio_sq_ring sq_ring;
 	struct iocb *iocbs;
+	struct iovec *iovecs;
 	unsigned sq_ring_mask;
 
-	struct aio_cq_ring *cq_ring;
+	struct aio_cq_ring cq_ring;
 	struct io_event *events;
 	unsigned cq_ring_mask;
 
@@ -105,6 +124,8 @@ struct aioring_data {
 
 	uint64_t cachehit;
 	uint64_t cachemiss;
+
+	struct aioring_mmap mmap[3];
 };
 
 struct aioring_options {
@@ -178,11 +199,11 @@ static struct fio_option options[] = {
 	},
 };
 
-static int io_ring_enter(io_context_t ctx, unsigned int to_submit,
+static int io_uring_enter(struct aioring_data *ld, unsigned int to_submit,
 			 unsigned int min_complete, unsigned int flags)
 {
-	return syscall(__NR_sys_io_ring_enter, ctx, to_submit, min_complete,
-			flags);
+	return syscall(__NR_sys_io_uring_enter, ld->ring_fd, to_submit,
+			min_complete, flags);
 }
 
 static int fio_aioring_prep(struct thread_data *td, struct io_u *io_u)
@@ -220,7 +241,7 @@ static struct io_u *fio_aioring_event(struct thread_data *td, int event)
 
 	index = (event + ld->cq_ring_off) & ld->cq_ring_mask;
 
-	ev = &ld->cq_ring->events[index];
+	ev = &ld->cq_ring.events[index];
 	io_u = ev->data;
 
 	if (ev->res != io_u->xfer_buflen) {
@@ -245,19 +266,19 @@ static int fio_aioring_cqring_reap(struct thread_data *td, unsigned int events,
 				   unsigned int max)
 {
 	struct aioring_data *ld = td->io_ops_data;
-	struct aio_cq_ring *ring = ld->cq_ring;
+	struct aio_cq_ring *ring = &ld->cq_ring;
 	u32 head, reaped = 0;
 
-	head = ring->head;
+	head = *ring->head;
 	do {
 		read_barrier();
-		if (head == ring->tail)
+		if (head == *ring->tail)
 			break;
 		reaped++;
 		head++;
 	} while (reaped + events < max);
 
-	ring->head = head;
+	*ring->head = head;
 	write_barrier();
 	return reaped;
 }
@@ -268,11 +289,11 @@ static int fio_aioring_getevents(struct thread_data *td, unsigned int min,
 	struct aioring_data *ld = td->io_ops_data;
 	unsigned actual_min = td->o.iodepth_batch_complete_min == 0 ? 0 : min;
 	struct aioring_options *o = td->eo;
-	struct aio_cq_ring *ring = ld->cq_ring;
+	struct aio_cq_ring *ring = &ld->cq_ring;
 	unsigned events = 0;
 	int r;
 
-	ld->cq_ring_off = ring->head;
+	ld->cq_ring_off = *ring->head;
 	do {
 		r = fio_aioring_cqring_reap(td, events, max);
 		if (r) {
@@ -281,12 +302,12 @@ static int fio_aioring_getevents(struct thread_data *td, unsigned int min,
 		}
 
 		if (!o->sqthread_poll) {
-			r = io_ring_enter(ld->aio_ctx, 0, actual_min,
-						IORING_FLAG_GETEVENTS);
+			r = io_uring_enter(ld, 0, actual_min,
+						IORING_ENTER_GETEVENTS);
 			if (r < 0) {
 				if (errno == EAGAIN)
 					continue;
-				td_verror(td, errno, "io_ring_enter get");
+				td_verror(td, errno, "io_uring_enter");
 				break;
 			}
 		}
@@ -299,7 +320,7 @@ static enum fio_q_status fio_aioring_queue(struct thread_data *td,
 					   struct io_u *io_u)
 {
 	struct aioring_data *ld = td->io_ops_data;
-	struct aio_sq_ring *ring = ld->sq_ring;
+	struct aio_sq_ring *ring = &ld->sq_ring;
 	unsigned tail, next_tail;
 
 	fio_ro_check(td, io_u);
@@ -317,14 +338,14 @@ static enum fio_q_status fio_aioring_queue(struct thread_data *td,
 		return FIO_Q_COMPLETED;
 	}
 
-	tail = ring->tail;
+	tail = *ring->tail;
 	next_tail = tail + 1;
 	read_barrier();
-	if (next_tail == ring->head)
+	if (next_tail == *ring->head)
 		return FIO_Q_BUSY;
 
 	ring->array[tail & ld->sq_ring_mask] = io_u->index;
-	ring->tail = next_tail;
+	*ring->tail = next_tail;
 	write_barrier();
 
 	ld->queued++;
@@ -342,7 +363,8 @@ static void fio_aioring_queued(struct thread_data *td, int start, int nr)
 	fio_gettime(&now, NULL);
 
 	while (nr--) {
-		int index = ld->sq_ring->array[start & ld->sq_ring_mask];
+		struct aio_sq_ring *ring = &ld->sq_ring;
+		int index = ring->array[start & ld->sq_ring_mask];
 		struct io_u *io_u = ld->io_u_index[index];
 
 		memcpy(&io_u->issue_time, &now, sizeof(now));
@@ -363,19 +385,19 @@ static int fio_aioring_commit(struct thread_data *td)
 
 	/* Nothing to do */
 	if (o->sqthread_poll) {
-		struct aio_sq_ring *ring = ld->sq_ring;
+		struct aio_sq_ring *ring = &ld->sq_ring;
 
-		if (ring->kflags & IORING_SQ_NEED_WAKEUP)
-			io_ring_enter(ld->aio_ctx, ld->queued, 0, 0);
+		if (*ring->flags & IORING_SQ_NEED_WAKEUP)
+			io_uring_enter(ld, ld->queued, 0, 0);
 		ld->queued = 0;
 		return 0;
 	}
 
 	do {
-		unsigned start = ld->sq_ring->head;
+		unsigned start = *ld->sq_ring.head;
 		long nr = ld->queued;
 
-		ret = io_ring_enter(ld->aio_ctx, nr, 0, IORING_FLAG_GETEVENTS);
+		ret = io_uring_enter(ld, nr, 0, IORING_ENTER_GETEVENTS);
 		if (ret > 0) {
 			fio_aioring_queued(td, start, ret);
 			io_u_mark_submit(td, ret);
@@ -394,7 +416,7 @@ static int fio_aioring_commit(struct thread_data *td)
 				usleep(1);
 				continue;
 			}
-			td_verror(td, errno, "io_ring_enter sumit");
+			td_verror(td, errno, "io_uring_enter submit");
 			break;
 		}
 	} while (ld->queued);
@@ -402,24 +424,13 @@ static int fio_aioring_commit(struct thread_data *td)
 	return ret;
 }
 
-static size_t aioring_cq_size(struct thread_data *td)
+static void fio_aioring_unmap(struct aioring_data *ld)
 {
-	return sizeof(struct aio_cq_ring) + 2 * td->o.iodepth * sizeof(struct io_event);
-}
+	int i;
 
-static size_t aioring_sq_iocb(struct thread_data *td)
-{
-	return sizeof(struct iocb) * td->o.iodepth;
-}
-
-static size_t aioring_sq_size(struct thread_data *td)
-{
-	return sizeof(struct aio_sq_ring) + td->o.iodepth * sizeof(u32);
-}
-
-static unsigned roundup_pow2(unsigned depth)
-{
-	return 1UL << __fls(depth - 1);
+	for (i = 0; i < ARRAY_SIZE(ld->mmap); i++)
+		munmap(ld->mmap[i].ptr, ld->mmap[i].len);
+	close(ld->ring_fd);
 }
 
 static void fio_aioring_cleanup(struct thread_data *td)
@@ -437,33 +448,76 @@ static void fio_aioring_cleanup(struct thread_data *td)
 		 * speeding it up a lot.
 		 */
 		if (!(td->flags & TD_F_CHILD))
-			io_destroy(ld->aio_ctx);
+			fio_aioring_unmap(ld);
+
 		free(ld->io_u_index);
 		free(ld->io_us);
-		fio_memfree(ld->sq_ring, aioring_sq_size(td), false);
-		fio_memfree(ld->iocbs, aioring_sq_iocb(td), false);
-		fio_memfree(ld->cq_ring, aioring_cq_size(td), false);
+		free(ld->iovecs);
 		free(ld);
 	}
+}
+
+static int fio_aioring_mmap(struct aioring_data *ld, struct aio_uring_params *p)
+{
+	struct aio_sq_ring *sring = &ld->sq_ring;
+	struct aio_cq_ring *cring = &ld->cq_ring;
+	void *ptr;
+
+	ld->mmap[0].len = p->sq_off.elems + p->sq_entries * sizeof(u32);
+	ptr = mmap(0, ld->mmap[0].len, PROT_READ | PROT_WRITE,
+			MAP_SHARED | MAP_POPULATE, ld->ring_fd,
+			IORING_OFF_SQ_RING);
+	ld->mmap[0].ptr = ptr;
+	sring->head = ptr + p->sq_off.head;
+	sring->tail = ptr + p->sq_off.tail;
+	sring->ring_mask = ptr + p->sq_off.ring_mask;
+	sring->ring_entries = ptr + p->sq_off.ring_entries;
+	sring->flags = ptr + p->sq_off.flags;
+	sring->array = ptr + p->sq_off.elems;
+	ld->sq_ring_mask = *sring->ring_mask;
+
+	ld->mmap[1].len = p->sq_entries * sizeof(struct iocb);
+	ld->iocbs = mmap(0, ld->mmap[1].len, PROT_READ | PROT_WRITE,
+				MAP_SHARED | MAP_POPULATE, ld->ring_fd,
+				IORING_OFF_IOCB);
+	ld->mmap[1].ptr = ld->iocbs;
+
+	ld->mmap[2].len = p->cq_off.elems +
+				p->cq_entries * sizeof(struct io_event);
+	ptr = mmap(0, ld->mmap[2].len, PROT_READ | PROT_WRITE,
+			MAP_SHARED | MAP_POPULATE, ld->ring_fd,
+			IORING_OFF_CQ_RING);
+	ld->mmap[2].ptr = ptr;
+	cring->head = ptr + p->cq_off.head;
+	cring->tail = ptr + p->cq_off.tail;
+	cring->ring_mask = ptr + p->cq_off.ring_mask;
+	cring->ring_entries = ptr + p->cq_off.ring_entries;
+	cring->events = ptr + p->cq_off.elems;
+	ld->cq_ring_mask = *cring->ring_mask;
+	return 0;
 }
 
 static int fio_aioring_queue_init(struct thread_data *td)
 {
 	struct aioring_data *ld = td->io_ops_data;
 	struct aioring_options *o = td->eo;
-	int flags = IOCTX_FLAG_SCQRING;
 	int depth = td->o.iodepth;
+	struct aio_uring_params p;
+	int ret;
+
+	memset(&p, 0, sizeof(p));
+	p.flags = IOCTX_FLAG_SCQRING;
 
 	if (o->hipri)
-		flags |= IOCTX_FLAG_IOPOLL;
+		p.flags |= IOCTX_FLAG_IOPOLL;
 	if (o->sqthread_set) {
-		ld->sq_ring->sq_thread_cpu = o->sqthread;
-		flags |= IOCTX_FLAG_SQTHREAD;
+		p.sq_thread_cpu = o->sqthread;
+		p.flags |= IOCTX_FLAG_SQTHREAD;
 		if (o->sqthread_poll)
-			flags |= IOCTX_FLAG_SQPOLL;
+			p.flags |= IOCTX_FLAG_SQPOLL;
 	}
 	if (o->sqwq)
-		flags |= IOCTX_FLAG_SQWQ;
+		p.flags |= IOCTX_FLAG_SQWQ;
 
 	if (o->fixedbufs) {
 		struct rlimit rlim = {
@@ -472,11 +526,15 @@ static int fio_aioring_queue_init(struct thread_data *td)
 		};
 
 		setrlimit(RLIMIT_MEMLOCK, &rlim);
-		flags |= IOCTX_FLAG_FIXEDBUFS;
+		p.flags |= IOCTX_FLAG_FIXEDBUFS;
 	}
 
-	return syscall(__NR_sys_io_setup2, depth, flags,
-			ld->sq_ring, ld->cq_ring, &ld->aio_ctx);
+	ret = syscall(__NR_sys_io_uring_setup, depth, ld->iovecs, &p);
+	if (ret < 0)
+		return ret;
+
+	ld->ring_fd = ret;
+	return fio_aioring_mmap(ld, &p);
 }
 
 static int fio_aioring_post_init(struct thread_data *td)
@@ -484,28 +542,32 @@ static int fio_aioring_post_init(struct thread_data *td)
 	struct aioring_data *ld = td->io_ops_data;
 	struct aioring_options *o = td->eo;
 	struct io_u *io_u;
-	struct iocb *iocb;
-	int err = 0;
+	int err;
 
 	if (o->fixedbufs) {
 		int i;
 
 		for (i = 0; i < td->o.iodepth; i++) {
+			struct iovec *iov = &ld->iovecs[i];
+
 			io_u = ld->io_u_index[i];
-			iocb = &ld->iocbs[i];
-			iocb->u.c.buf = io_u->buf;
-			iocb->u.c.nbytes = td_max_bs(td);
+			iov->iov_base = io_u->buf;
+			iov->iov_len = td_max_bs(td);
 		}
 	}
 
 	err = fio_aioring_queue_init(td);
-
 	if (err) {
 		td_verror(td, errno, "io_queue_init");
 		return 1;
 	}
 
 	return 0;
+}
+
+static unsigned roundup_pow2(unsigned depth)
+{
+	return 1UL << __fls(depth - 1);
 }
 
 static int fio_aioring_init(struct thread_data *td)
@@ -522,19 +584,7 @@ static int fio_aioring_init(struct thread_data *td)
 	ld->io_u_index = calloc(td->o.iodepth, sizeof(struct io_u *));
 	ld->io_us = calloc(td->o.iodepth, sizeof(struct io_u *));
 
-	ld->iocbs = fio_memalign(page_size, aioring_sq_iocb(td), false);
-	memset(ld->iocbs, 0, aioring_sq_iocb(td));
-
-	ld->sq_ring = fio_memalign(page_size, aioring_sq_size(td), false);
-	memset(ld->sq_ring, 0, aioring_sq_size(td));
-	ld->sq_ring->nr_events = td->o.iodepth;
-	ld->sq_ring->iocbs = (u64) (uintptr_t) ld->iocbs;
-	ld->sq_ring_mask = td->o.iodepth - 1;
-
-	ld->cq_ring = fio_memalign(page_size, aioring_cq_size(td), false);
-	memset(ld->cq_ring, 0, aioring_cq_size(td));
-	ld->cq_ring->nr_events = td->o.iodepth * 2;
-	ld->cq_ring_mask = (2 * td->o.iodepth) - 1;
+	ld->iovecs = calloc(td->o.iodepth, sizeof(struct iovec));
 
 	td->io_ops_data = ld;
 	return 0;
