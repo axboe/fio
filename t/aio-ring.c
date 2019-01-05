@@ -52,7 +52,9 @@ struct aio_sqring_offsets {
 	u32 ring_mask;
 	u32 ring_entries;
 	u32 flags;
+	u32 dropped;
 	u32 array;
+	u32 resv[3];
 };
 
 struct aio_cqring_offsets {
@@ -62,6 +64,7 @@ struct aio_cqring_offsets {
 	u32 ring_entries;
 	u32 overflow;
 	u32 events;
+	u32 resv[4];
 };
 
 struct aio_uring_params {
