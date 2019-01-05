@@ -107,7 +107,7 @@ static unsigned sq_ring_mask, cq_ring_mask;
 struct submitter {
 	pthread_t thread;
 	unsigned long max_blocks;
-	int fd;
+	int ring_fd;
 	struct drand48_data rand;
 	struct aio_sq_ring sq_ring;
 	struct iocb *iocbs;
@@ -140,8 +140,8 @@ static int io_uring_setup(unsigned entries, struct iovec *iovecs,
 static int io_uring_enter(struct submitter *s, unsigned int to_submit,
 			  unsigned int min_complete, unsigned int flags)
 {
-	return syscall(__NR_sys_io_uring_enter, s->fd, to_submit, min_complete,
-			flags);
+	return syscall(__NR_sys_io_uring_enter, s->ring_fd, to_submit,
+			min_complete, flags);
 }
 
 static int gettid(void)
@@ -231,7 +231,9 @@ static int reap_events(struct submitter *s)
 			struct iocb *iocb = ev->obj;
 
 			printf("io: unexpected ret=%ld\n", ev->res);
-			printf("offset=%lu, size=%lu\n", (unsigned long) iocb->u.c.offset, (unsigned long) iocb->u.c.nbytes);
+			printf("offset=%lu, size=%lu\n",
+					(unsigned long) iocb->u.c.offset,
+					(unsigned long) iocb->u.c.nbytes);
 			return -1;
 		}
 		if (ev->res2 & IOEV_RES2_CACHEHIT)
@@ -268,21 +270,22 @@ static void *submitter_fn(void *data)
 		printf("failed getting size of device/file\n");
 		goto err;
 	}
-	if (!s->max_blocks) {
+	if (s->max_blocks <= 1) {
 		printf("Zero file/device size?\n");
 		goto err;
 	}
-
 	s->max_blocks--;
 
 	srand48_r(pthread_self(), &s->rand);
 
 	prepped = 0;
 	do {
-		int to_wait, to_submit, this_reap;
+		int to_wait, to_submit, this_reap, to_prep;
 
-		if (!prepped && s->inflight < DEPTH)
-			prepped = prep_more_ios(s, fd, min(DEPTH - s->inflight, BATCH_SUBMIT));
+		if (!prepped && s->inflight < DEPTH) {
+			to_prep = min(DEPTH - s->inflight, BATCH_SUBMIT);
+			prepped = prep_more_ios(s, fd, to_prep);
+		}
 		s->inflight += prepped;
 submit_more:
 		to_submit = prepped;
@@ -292,7 +295,8 @@ submit:
 		else
 			to_wait = min(s->inflight + to_submit, BATCH_COMPLETE);
 
-		ret = io_uring_enter(s, to_submit, to_wait, IORING_ENTER_GETEVENTS);
+		ret = io_uring_enter(s, to_submit, to_wait,
+					IORING_ENTER_GETEVENTS);
 		s->calls++;
 
 		this_reap = reap_events(s);
@@ -384,11 +388,10 @@ static int setup_ring(struct submitter *s)
 		return 1;
 	}
 
-	s->fd = fd;
-
+	s->ring_fd = fd;
 	ptr = mmap(0, p.sq_off.array + p.sq_entries * sizeof(u32),
-			PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE,
-			fd, IORING_OFF_SQ_RING);
+			PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, fd,
+			IORING_OFF_SQ_RING);
 	printf("sq_ring ptr = 0x%p\n", ptr);
 	sring->head = ptr + p.sq_off.head;
 	sring->tail = ptr + p.sq_off.tail;
@@ -397,13 +400,14 @@ static int setup_ring(struct submitter *s)
 	sring->array = ptr + p.sq_off.array;
 	sq_ring_mask = *sring->ring_mask;
 
-	s->iocbs = mmap(0, p.sq_entries * sizeof(struct iocb), PROT_READ | PROT_WRITE,
-			MAP_SHARED | MAP_POPULATE, fd, IORING_OFF_IOCB);
+	s->iocbs = mmap(0, p.sq_entries * sizeof(struct iocb),
+			PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, fd,
+			IORING_OFF_IOCB);
 	printf("iocbs ptr   = 0x%p\n", s->iocbs);
 
 	ptr = mmap(0, p.cq_off.events + p.cq_entries * sizeof(struct io_event),
-			PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE,
-			fd, IORING_OFF_CQ_RING);
+			PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, fd,
+			IORING_OFF_CQ_RING);
 	printf("cq_ring ptr = 0x%p\n", ptr);
 	cring->head = ptr + p.cq_off.head;
 	cring->tail = ptr + p.cq_off.tail;
