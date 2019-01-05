@@ -46,13 +46,22 @@ typedef uint16_t u16;
 #define IORING_OFF_CQ_RING	0x8000000ULL
 #define IORING_OFF_IOCB		0x10000000ULL
 
-struct aio_uring_offsets {
+struct aio_sqring_offsets {
 	u32 head;
 	u32 tail;
 	u32 ring_mask;
 	u32 ring_entries;
 	u32 flags;
-	u32 elems;
+	u32 array;
+};
+
+struct aio_cqring_offsets {
+	u32 head;
+	u32 tail;
+	u32 ring_mask;
+	u32 ring_entries;
+	u32 overflow;
+	u32 events;
 };
 
 struct aio_uring_params {
@@ -61,8 +70,8 @@ struct aio_uring_params {
 	u32 flags;
 	u16 sq_thread_cpu;
 	u16 resv[9];
-	struct aio_uring_offsets sq_off;
-	struct aio_uring_offsets cq_off;
+	struct aio_sqring_offsets sq_off;
+	struct aio_cqring_offsets cq_off;
 };
 
 struct aio_sq_ring {
@@ -305,7 +314,7 @@ submit:
 			prepped = 0;
 			continue;
 		} else if (ret < 0) {
-			if ((ret == -1 && errno == EAGAIN) || ret == -EAGAIN) {
+			if (errno == EAGAIN) {
 				if (s->finish)
 					break;
 				if (this_reap)
@@ -313,10 +322,7 @@ submit:
 				to_submit = 0;
 				goto submit;
 			}
-			if (ret == -1)
-				printf("io_submit: %s\n", strerror(errno));
-			else
-				printf("io_submit: %s\n", strerror(-ret));
+			printf("io_submit: %s\n", strerror(errno));
 			break;
 		}
 	} while (!s->finish);
@@ -377,7 +383,7 @@ static int setup_ring(struct submitter *s)
 
 	s->fd = fd;
 
-	ptr = mmap(0, p.sq_off.elems + p.sq_entries * sizeof(u32),
+	ptr = mmap(0, p.sq_off.array + p.sq_entries * sizeof(u32),
 			PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE,
 			fd, IORING_OFF_SQ_RING);
 	printf("sq_ring ptr = 0x%p\n", ptr);
@@ -385,14 +391,14 @@ static int setup_ring(struct submitter *s)
 	sring->tail = ptr + p.sq_off.tail;
 	sring->ring_mask = ptr + p.sq_off.ring_mask;
 	sring->ring_entries = ptr + p.sq_off.ring_entries;
-	sring->array = ptr + p.sq_off.elems;
+	sring->array = ptr + p.sq_off.array;
 	sq_ring_mask = *sring->ring_mask;
 
 	s->iocbs = mmap(0, p.sq_entries * sizeof(struct iocb), PROT_READ | PROT_WRITE,
 			MAP_SHARED | MAP_POPULATE, fd, IORING_OFF_IOCB);
 	printf("iocbs ptr   = 0x%p\n", s->iocbs);
 
-	ptr = mmap(0, p.cq_off.elems + p.cq_entries * sizeof(struct io_event),
+	ptr = mmap(0, p.cq_off.events + p.cq_entries * sizeof(struct io_event),
 			PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE,
 			fd, IORING_OFF_CQ_RING);
 	printf("cq_ring ptr = 0x%p\n", ptr);
@@ -400,7 +406,7 @@ static int setup_ring(struct submitter *s)
 	cring->tail = ptr + p.cq_off.tail;
 	cring->ring_mask = ptr + p.cq_off.ring_mask;
 	cring->ring_entries = ptr + p.cq_off.ring_entries;
-	cring->events = ptr + p.cq_off.elems;
+	cring->events = ptr + p.cq_off.events;
 	cq_ring_mask = *cring->ring_mask;
 	return 0;
 }

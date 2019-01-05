@@ -62,13 +62,22 @@ typedef uint16_t u16;
 
 #define IOEV_RES2_CACHEHIT	(1 << 0)
 
-struct aio_uring_offsets {
+struct aio_sqring_offsets {
 	u32 head;
 	u32 tail;
 	u32 ring_mask;
 	u32 ring_entries;
 	u32 flags;
-	u32 elems;
+	u32 array;
+};
+
+struct aio_cqring_offsets {
+	u32 head;
+	u32 tail;
+	u32 ring_mask;
+	u32 ring_entries;
+	u32 overflow;
+	u32 events;
 };
 
 struct aio_uring_params {
@@ -77,8 +86,8 @@ struct aio_uring_params {
 	u32 flags;
 	u16 sq_thread_cpu;
 	u16 resv[9];
-	struct aio_uring_offsets sq_off;
-	struct aio_uring_offsets cq_off;
+	struct aio_sqring_offsets sq_off;
+	struct aio_cqring_offsets cq_off;
 };
 
 struct aio_sq_ring {
@@ -463,7 +472,7 @@ static int fio_aioring_mmap(struct aioring_data *ld, struct aio_uring_params *p)
 	struct aio_cq_ring *cring = &ld->cq_ring;
 	void *ptr;
 
-	ld->mmap[0].len = p->sq_off.elems + p->sq_entries * sizeof(u32);
+	ld->mmap[0].len = p->sq_off.array + p->sq_entries * sizeof(u32);
 	ptr = mmap(0, ld->mmap[0].len, PROT_READ | PROT_WRITE,
 			MAP_SHARED | MAP_POPULATE, ld->ring_fd,
 			IORING_OFF_SQ_RING);
@@ -473,7 +482,7 @@ static int fio_aioring_mmap(struct aioring_data *ld, struct aio_uring_params *p)
 	sring->ring_mask = ptr + p->sq_off.ring_mask;
 	sring->ring_entries = ptr + p->sq_off.ring_entries;
 	sring->flags = ptr + p->sq_off.flags;
-	sring->array = ptr + p->sq_off.elems;
+	sring->array = ptr + p->sq_off.array;
 	ld->sq_ring_mask = *sring->ring_mask;
 
 	ld->mmap[1].len = p->sq_entries * sizeof(struct iocb);
@@ -482,7 +491,7 @@ static int fio_aioring_mmap(struct aioring_data *ld, struct aio_uring_params *p)
 				IORING_OFF_IOCB);
 	ld->mmap[1].ptr = ld->iocbs;
 
-	ld->mmap[2].len = p->cq_off.elems +
+	ld->mmap[2].len = p->cq_off.events +
 				p->cq_entries * sizeof(struct io_event);
 	ptr = mmap(0, ld->mmap[2].len, PROT_READ | PROT_WRITE,
 			MAP_SHARED | MAP_POPULATE, ld->ring_fd,
@@ -492,7 +501,7 @@ static int fio_aioring_mmap(struct aioring_data *ld, struct aio_uring_params *p)
 	cring->tail = ptr + p->cq_off.tail;
 	cring->ring_mask = ptr + p->cq_off.ring_mask;
 	cring->ring_entries = ptr + p->cq_off.ring_entries;
-	cring->events = ptr + p->cq_off.elems;
+	cring->events = ptr + p->cq_off.events;
 	ld->cq_ring_mask = *cring->ring_mask;
 	return 0;
 }
