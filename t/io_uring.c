@@ -1,6 +1,3 @@
-/*
- * gcc -D_GNU_SOURCE -Wall -O2 -o aio-ring aio-ring.c  -lpthread -laio
- */
 #include <stdio.h>
 #include <errno.h>
 #include <assert.h>
@@ -15,69 +12,29 @@
 #include <sys/syscall.h>
 #include <sys/resource.h>
 #include <sys/mman.h>
+#include <sys/uio.h>
 #include <linux/fs.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <libaio.h>
 #include <string.h>
 #include <pthread.h>
 #include <sched.h>
 
 #include "../arch/arch.h"
 
-#define IOCTX_FLAG_SCQRING	(1 << 0)	/* Use SQ/CQ rings */
-#define IOCTX_FLAG_IOPOLL	(1 << 1)
-#define IOCTX_FLAG_FIXEDBUFS	(1 << 2)
-#define IOCTX_FLAG_SQTHREAD	(1 << 3)	/* Use SQ thread */
-#define IOCTX_FLAG_SQWQ		(1 << 4)	/* Use SQ wq */
-#define IOCTX_FLAG_SQPOLL	(1 << 5)
+typedef uint64_t u64;
+typedef uint32_t u32;
+typedef int32_t s32;
+typedef uint16_t u16;
+typedef uint8_t u8;
 
-#define IOEV_RES2_CACHEHIT	(1 << 0)
+#include "../os/io_uring.h"
 
 #define barrier()	__asm__ __volatile__("": : :"memory")
 
 #define min(a, b)		((a < b) ? (a) : (b))
 
-typedef uint64_t u64;
-typedef uint32_t u32;
-typedef uint16_t u16;
-
-#define IORING_OFF_SQ_RING	0ULL
-#define IORING_OFF_CQ_RING	0x8000000ULL
-#define IORING_OFF_IOCB		0x10000000ULL
-
-struct aio_sqring_offsets {
-	u32 head;
-	u32 tail;
-	u32 ring_mask;
-	u32 ring_entries;
-	u32 flags;
-	u32 dropped;
-	u32 array;
-	u32 resv[3];
-};
-
-struct aio_cqring_offsets {
-	u32 head;
-	u32 tail;
-	u32 ring_mask;
-	u32 ring_entries;
-	u32 overflow;
-	u32 events;
-	u32 resv[4];
-};
-
-struct aio_uring_params {
-	u32 sq_entries;
-	u32 cq_entries;
-	u32 flags;
-	u16 sq_thread_cpu;
-	u16 resv[9];
-	struct aio_sqring_offsets sq_off;
-	struct aio_cqring_offsets cq_off;
-};
-
-struct aio_sq_ring {
+struct io_sq_ring {
 	u32 *head;
 	u32 *tail;
 	u32 *ring_mask;
@@ -85,15 +42,13 @@ struct aio_sq_ring {
 	u32 *array;
 };
 
-struct aio_cq_ring {
+struct io_cq_ring {
 	u32 *head;
 	u32 *tail;
 	u32 *ring_mask;
 	u32 *ring_entries;
-	struct io_event *events;
+	struct io_uring_event *events;
 };
-
-#define IORING_ENTER_GETEVENTS	(1 << 0)
 
 #define DEPTH			32
 
@@ -109,10 +64,10 @@ struct submitter {
 	unsigned long max_blocks;
 	int ring_fd;
 	struct drand48_data rand;
-	struct aio_sq_ring sq_ring;
-	struct iocb *iocbs;
+	struct io_sq_ring sq_ring;
+	struct io_uring_iocb *iocbs;
 	struct iovec iovecs[DEPTH];
-	struct aio_cq_ring cq_ring;
+	struct io_cq_ring cq_ring;
 	int inflight;
 	unsigned long reaps;
 	unsigned long done;
@@ -132,7 +87,7 @@ static int sq_thread = 0;	/* use kernel submission thread */
 static int sq_thread_cpu = 0;	/* pin above thread to this CPU */
 
 static int io_uring_setup(unsigned entries, struct iovec *iovecs,
-			  struct aio_uring_params *p)
+			  struct io_uring_params *p)
 {
 	return syscall(__NR_sys_io_uring_setup, entries, iovecs, p);
 }
@@ -151,23 +106,25 @@ static int gettid(void)
 
 static void init_io(struct submitter *s, int fd, unsigned index)
 {
-	struct iocb *iocb = &s->iocbs[index];
+	struct io_uring_iocb *iocb = &s->iocbs[index];
 	unsigned long offset;
 	long r;
 
 	lrand48_r(&s->rand, &r);
 	offset = (r % (s->max_blocks - 1)) * BS;
 
-	iocb->aio_fildes = fd;
-	iocb->aio_lio_opcode = IO_CMD_PREAD;
-	iocb->u.c.buf = s->iovecs[index].iov_base;
-	iocb->u.c.nbytes = BS;
-	iocb->u.c.offset = offset;
+	iocb->opcode = IORING_OP_READ;
+	iocb->flags = 0;
+	iocb->ioprio = 0;
+	iocb->fd = fd;
+	iocb->off = offset;
+	iocb->addr = s->iovecs[index].iov_base;
+	iocb->len = BS;
 }
 
 static int prep_more_ios(struct submitter *s, int fd, int max_ios)
 {
-	struct aio_sq_ring *ring = &s->sq_ring;
+	struct io_sq_ring *ring = &s->sq_ring;
 	u32 index, tail, next_tail, prepped = 0;
 
 	next_tail = tail = *ring->tail;
@@ -217,8 +174,8 @@ static int get_file_size(int fd, unsigned long *blocks)
 
 static int reap_events(struct submitter *s)
 {
-	struct aio_cq_ring *ring = &s->cq_ring;
-	struct io_event *ev;
+	struct io_cq_ring *ring = &s->cq_ring;
+	struct io_uring_event *ev;
 	u32 head, reaped = 0;
 
 	head = *ring->head;
@@ -228,15 +185,15 @@ static int reap_events(struct submitter *s)
 			break;
 		ev = &ring->events[head & cq_ring_mask];
 		if (ev->res != BS) {
-			struct iocb *iocb = ev->obj;
+			struct io_uring_iocb *iocb = &s->iocbs[ev->index];
 
-			printf("io: unexpected ret=%ld\n", ev->res);
+			printf("io: unexpected ret=%d\n", ev->res);
 			printf("offset=%lu, size=%lu\n",
-					(unsigned long) iocb->u.c.offset,
-					(unsigned long) iocb->u.c.nbytes);
+					(unsigned long) iocb->off,
+					(unsigned long) iocb->len);
 			return -1;
 		}
-		if (ev->res2 & IOEV_RES2_CACHEHIT)
+		if (ev->flags & IOEV_FLAG_CACHEHIT)
 			s->cachehit++;
 		else
 			s->cachemiss++;
@@ -359,23 +316,22 @@ static void arm_sig_int(void)
 
 static int setup_ring(struct submitter *s)
 {
-	struct aio_sq_ring *sring = &s->sq_ring;
-	struct aio_cq_ring *cring = &s->cq_ring;
-	struct aio_uring_params p;
+	struct io_sq_ring *sring = &s->sq_ring;
+	struct io_cq_ring *cring = &s->cq_ring;
+	struct io_uring_params p;
 	void *ptr;
 	int fd;
 
 	memset(&p, 0, sizeof(p));
 
-	p.flags = IOCTX_FLAG_SCQRING;
 	if (polled)
-		p.flags |= IOCTX_FLAG_IOPOLL;
+		p.flags |= IORING_SETUP_IOPOLL;
 	if (fixedbufs)
-		p.flags |= IOCTX_FLAG_FIXEDBUFS;
+		p.flags |= IORING_SETUP_FIXEDBUFS;
 	if (buffered)
-		p.flags |= IOCTX_FLAG_SQWQ;
+		p.flags |= IORING_SETUP_SQWQ;
 	else if (sq_thread) {
-		p.flags |= IOCTX_FLAG_SQTHREAD;
+		p.flags |= IORING_SETUP_SQTHREAD;
 		p.sq_thread_cpu = sq_thread_cpu;
 	}
 
@@ -400,12 +356,12 @@ static int setup_ring(struct submitter *s)
 	sring->array = ptr + p.sq_off.array;
 	sq_ring_mask = *sring->ring_mask;
 
-	s->iocbs = mmap(0, p.sq_entries * sizeof(struct iocb),
+	s->iocbs = mmap(0, p.sq_entries * sizeof(struct io_uring_iocb),
 			PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, fd,
 			IORING_OFF_IOCB);
 	printf("iocbs ptr   = 0x%p\n", s->iocbs);
 
-	ptr = mmap(0, p.cq_off.events + p.cq_entries * sizeof(struct io_event),
+	ptr = mmap(0, p.cq_off.events + p.cq_entries * sizeof(struct io_uring_event),
 			PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, fd,
 			IORING_OFF_CQ_RING);
 	printf("cq_ring ptr = 0x%p\n", ptr);
@@ -501,5 +457,6 @@ int main(int argc, char *argv[])
 	} while (!finish);
 
 	pthread_join(s->thread, &ret);
+	close(s->ring_fd);
 	return 0;
 }
