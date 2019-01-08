@@ -149,6 +149,7 @@ static int io_uring_enter(struct ioring_data *ld, unsigned int to_submit,
 static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 {
 	struct ioring_data *ld = td->io_ops_data;
+	struct ioring_options *o = td->eo;
 	struct fio_file *f = io_u->file;
 	struct io_uring_iocb *iocb;
 
@@ -158,10 +159,17 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 	iocb->ioprio = 0;
 
 	if (io_u->ddir == DDIR_READ || io_u->ddir == DDIR_WRITE) {
-		if (io_u->ddir == DDIR_READ)
-			iocb->opcode = IORING_OP_READ;
-		else
-			iocb->opcode = IORING_OP_WRITE;
+		if (io_u->ddir == DDIR_READ) {
+			if (o->fixedbufs)
+				iocb->opcode = IORING_OP_READ_FIXED;
+			else
+				iocb->opcode = IORING_OP_READ;
+		} else {
+			if (o->fixedbufs)
+				iocb->opcode = IORING_OP_WRITE_FIXED;
+			else
+				iocb->opcode = IORING_OP_WRITE;
+		}
 		iocb->off = io_u->offset;
 		iocb->addr = io_u->xfer_buf;
 		iocb->len = io_u->xfer_buflen;
