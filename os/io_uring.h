@@ -1,25 +1,33 @@
-#ifndef IO_URING_H
-#define IO_URING_H
+/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
+/*
+ * Header file for the io_uring interface.
+ *
+ * Copyright (C) 2019 Jens Axboe
+ * Copyright (C) 2019 Christoph Hellwig
+ */
+#ifndef LINUX_IO_URING_H
+#define LINUX_IO_URING_H
 
 #include <linux/fs.h>
+#include <linux/types.h>
 
 /*
  * IO submission data structure
  */
 struct io_uring_iocb {
-	u8	opcode;
-	u8	flags;
-	u16	ioprio;
-	s32	fd;
-	u64	off;
+	__u8	opcode;
+	__u8	flags;
+	__u16	ioprio;
+	__s32	fd;
+	__u64	off;
 	union {
 		void	*addr;
-		u64	__pad;
+		__u64	__pad;
 	};
-	u32	len;
+	__u32	len;
 	union {
 		__kernel_rwf_t	rw_flags;
-		u32		__resv;
+		__u32		__resv;
 	};
 };
 
@@ -44,10 +52,13 @@ struct io_uring_iocb {
  */
 struct io_uring_event {
 	__u64	index;		/* what iocb this event came from */
-	s32	res;		/* result code for this event */
-	u32	flags;
+	__s32	res;		/* result code for this event */
+	__u32	flags;
 };
 
+/*
+ * io_uring_event->flags
+ */
 #define IOEV_FLAG_CACHEHIT	(1 << 0)	/* IO did not hit media */
 
 /*
@@ -61,39 +72,42 @@ struct io_uring_event {
  * Filled with the offset for mmap(2)
  */
 struct io_sqring_offsets {
-	u32 head;
-	u32 tail;
-	u32 ring_mask;
-	u32 ring_entries;
-	u32 flags;
-	u32 dropped;
-	u32 array;
-	u32 resv[3];
+	__u32 head;
+	__u32 tail;
+	__u32 ring_mask;
+	__u32 ring_entries;
+	__u32 flags;
+	__u32 dropped;
+	__u32 array;
+	__u32 resv[3];
 };
 
 #define IORING_SQ_NEED_WAKEUP	(1 << 0) /* needs io_uring_enter wakeup */
 
 struct io_cqring_offsets {
-	u32 head;
-	u32 tail;
-	u32 ring_mask;
-	u32 ring_entries;
-	u32 overflow;
-	u32 events;
-	u32 resv[4];
+	__u32 head;
+	__u32 tail;
+	__u32 ring_mask;
+	__u32 ring_entries;
+	__u32 overflow;
+	__u32 events;
+	__u32 resv[4];
 };
 
+/*
+ * io_uring_enter(2) flags
+ */
 #define IORING_ENTER_GETEVENTS	(1 << 0)
 
 /*
  * Passed in for io_uring_setup(2). Copied back with updated info on success
  */
 struct io_uring_params {
-	u32 sq_entries;
-	u32 cq_entries;
-	u32 flags;
-	u16 sq_thread_cpu;
-	u16 resv[9];
+	__u32 sq_entries;
+	__u32 cq_entries;
+	__u32 flags;
+	__u16 sq_thread_cpu;
+	__u16 resv[9];
 	struct io_sqring_offsets sq_off;
 	struct io_cqring_offsets cq_off;
 };

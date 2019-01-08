@@ -20,28 +20,22 @@
 
 #ifdef ARCH_HAVE_IOURING
 
-typedef uint64_t u64;
-typedef uint32_t u32;
-typedef int32_t s32;
-typedef uint16_t u16;
-typedef uint8_t u8;
-
 #include "../os/io_uring.h"
 
 struct io_sq_ring {
-	u32 *head;
-	u32 *tail;
-	u32 *ring_mask;
-	u32 *ring_entries;
-	u32 *flags;
-	u32 *array;
+	unsigned *head;
+	unsigned *tail;
+	unsigned *ring_mask;
+	unsigned *ring_entries;
+	unsigned *flags;
+	unsigned *array;
 };
 
 struct io_cq_ring {
-	u32 *head;
-	u32 *tail;
-	u32 *ring_mask;
-	u32 *ring_entries;
+	unsigned *head;
+	unsigned *tail;
+	unsigned *ring_mask;
+	unsigned *ring_entries;
 	struct io_uring_event *events;
 };
 
@@ -211,7 +205,7 @@ static int fio_ioring_cqring_reap(struct thread_data *td, unsigned int events,
 {
 	struct ioring_data *ld = td->io_ops_data;
 	struct io_cq_ring *ring = &ld->cq_ring;
-	u32 head, reaped = 0;
+	unsigned head, reaped = 0;
 
 	head = *ring->head;
 	do {
@@ -401,7 +395,7 @@ static int fio_ioring_mmap(struct ioring_data *ld, struct io_uring_params *p)
 	struct io_cq_ring *cring = &ld->cq_ring;
 	void *ptr;
 
-	ld->mmap[0].len = p->sq_off.array + p->sq_entries * sizeof(u32);
+	ld->mmap[0].len = p->sq_off.array + p->sq_entries * sizeof(__u32);
 	ptr = mmap(0, ld->mmap[0].len, PROT_READ | PROT_WRITE,
 			MAP_SHARED | MAP_POPULATE, ld->ring_fd,
 			IORING_OFF_SQ_RING);

@@ -21,13 +21,6 @@
 #include <sched.h>
 
 #include "../arch/arch.h"
-
-typedef uint64_t u64;
-typedef uint32_t u32;
-typedef int32_t s32;
-typedef uint16_t u16;
-typedef uint8_t u8;
-
 #include "../os/io_uring.h"
 
 #define barrier()	__asm__ __volatile__("": : :"memory")
@@ -35,18 +28,18 @@ typedef uint8_t u8;
 #define min(a, b)		((a < b) ? (a) : (b))
 
 struct io_sq_ring {
-	u32 *head;
-	u32 *tail;
-	u32 *ring_mask;
-	u32 *ring_entries;
-	u32 *array;
+	unsigned *head;
+	unsigned *tail;
+	unsigned *ring_mask;
+	unsigned *ring_entries;
+	unsigned *array;
 };
 
 struct io_cq_ring {
-	u32 *head;
-	u32 *tail;
-	u32 *ring_mask;
-	u32 *ring_entries;
+	unsigned *head;
+	unsigned *tail;
+	unsigned *ring_mask;
+	unsigned *ring_entries;
 	struct io_uring_event *events;
 };
 
@@ -125,7 +118,7 @@ static void init_io(struct submitter *s, int fd, unsigned index)
 static int prep_more_ios(struct submitter *s, int fd, int max_ios)
 {
 	struct io_sq_ring *ring = &s->sq_ring;
-	u32 index, tail, next_tail, prepped = 0;
+	unsigned index, tail, next_tail, prepped = 0;
 
 	next_tail = tail = *ring->tail;
 	do {
@@ -176,7 +169,7 @@ static int reap_events(struct submitter *s)
 {
 	struct io_cq_ring *ring = &s->cq_ring;
 	struct io_uring_event *ev;
-	u32 head, reaped = 0;
+	unsigned head, reaped = 0;
 
 	head = *ring->head;
 	do {
@@ -345,7 +338,7 @@ static int setup_ring(struct submitter *s)
 	}
 
 	s->ring_fd = fd;
-	ptr = mmap(0, p.sq_off.array + p.sq_entries * sizeof(u32),
+	ptr = mmap(0, p.sq_off.array + p.sq_entries * sizeof(__u32),
 			PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, fd,
 			IORING_OFF_SQ_RING);
 	printf("sq_ring ptr = 0x%p\n", ptr);
