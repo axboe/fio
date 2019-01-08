@@ -1,6 +1,8 @@
 #ifndef IO_URING_H
 #define IO_URING_H
 
+#include <linux/fs.h>
+
 /*
  * IO submission data structure
  */
