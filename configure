@@ -2295,6 +2295,23 @@ if compile_prog "" "-lcunit" "CUnit"; then
 fi
 print_config "CUnit" "$cunit"
 
+##########################################
+# check for __kernel_rwf_t
+__kernel_rwf_t="no"
+cat > $TMPC << EOF
+#include <linux/fs.h>
+int main(int argc, char **argv)
+{
+  __kernel_rwf_t x;
+  x = 0;
+  return x;
+}
+EOF
+if compile_prog "" "" "__kernel_rwf_t"; then
+  __kernel_rwf_t="yes"
+fi
+print_config "__kernel_rwf_t" "$__kernel_rwf_t"
+
 #############################################################################
 
 if test "$wordsize" = "64" ; then
@@ -2562,6 +2579,9 @@ if test "$march_set" = "no" && test "$build_native" = "yes" ; then
 fi
 if test "$cunit" = "yes" ; then
   output_sym "CONFIG_HAVE_CUNIT"
+fi
+if test "$__kernel_rwf_t" = "yes"; then
+  output_sym "CONFIG_HAVE_KERNEL_RWF_T"
 fi
 
 echo "LIBS+=$LIBS" >> $config_host_mak

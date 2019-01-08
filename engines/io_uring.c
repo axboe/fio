@@ -20,6 +20,7 @@
 
 #ifdef ARCH_HAVE_IOURING
 
+#include "../lib/types.h"
 #include "../os/io_uring.h"
 
 struct io_sq_ring {
