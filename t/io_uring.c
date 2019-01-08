@@ -107,7 +107,10 @@ static void init_io(struct submitter *s, int fd, unsigned index)
 	lrand48_r(&s->rand, &r);
 	offset = (r % (s->max_blocks - 1)) * BS;
 
-	iocb->opcode = IORING_OP_READ;
+	if (fixedbufs)
+		iocb->opcode = IORING_OP_READ_FIXED;
+	else
+		iocb->opcode = IORING_OP_READ;
 	iocb->flags = 0;
 	iocb->ioprio = 0;
 	iocb->fd = fd;
