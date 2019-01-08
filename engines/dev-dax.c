@@ -259,7 +259,7 @@ fio_devdax_get_file_size(struct thread_data *td, struct fio_file *f)
 {
 	char spath[PATH_MAX];
 	char npath[PATH_MAX];
-	char *rpath;
+	char *rpath, *basename;
 	FILE *sfile;
 	uint64_t size;
 	struct stat st;
@@ -289,7 +289,8 @@ fio_devdax_get_file_size(struct thread_data *td, struct fio_file *f)
 	}
 
 	/* check if DAX device */
-	if (strcmp("/sys/class/dax", rpath)) {
+	basename = strrchr(rpath, '/');
+	if (!basename || strcmp("dax", basename+1)) {
 		log_err("%s: %s not a DAX device!\n",
 			td->o.name, f->file_name);
 	}
