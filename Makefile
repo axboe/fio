@@ -68,9 +68,6 @@ endif
 ifdef CONFIG_LIBAIO
   SOURCE += engines/libaio.c
 endif
-ifdef CONFIG_LIBAIO
-  SOURCE += engines/aioring.c
-endif
 ifdef CONFIG_RDMA
   SOURCE += engines/rdma.c
 endif
@@ -154,7 +151,7 @@ endif
 
 ifeq ($(CONFIG_TARGET_OS), Linux)
   SOURCE += diskutil.c fifo.c blktrace.c cgroup.c trim.c engines/sg.c \
-		oslib/linux-dev-lookup.c
+		oslib/linux-dev-lookup.c engines/io_uring.c
   LIBS += -lpthread -ldl
   LDFLAGS += -rdynamic
 endif

@@ -1,15 +1,14 @@
 /*
- * aioring engine
+ * io_uring engine
  *
- * IO engine using the new native Linux libaio ring interface. See:
+ * IO engine using the new native Linux aio io_uring interface. See:
  *
- * http://git.kernel.dk/cgit/linux-block/log/?h=aio-poll
+ * http://git.kernel.dk/cgit/linux-block/log/?h=io_uring
  *
  */
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
-#include <libaio.h>
 #include <sys/time.h>
 #include <sys/resource.h>
 
@@ -19,81 +18,17 @@
 #include "../lib/memalign.h"
 #include "../lib/fls.h"
 
-#ifdef ARCH_HAVE_AIORING
-
-/*
- * io_uring_setup(2) flags
- */
-#ifndef IOCTX_FLAG_SCQRING
-#define IOCTX_FLAG_SCQRING	(1 << 0)
-#endif
-#ifndef IOCTX_FLAG_IOPOLL
-#define IOCTX_FLAG_IOPOLL	(1 << 1)
-#endif
-#ifndef IOCTX_FLAG_FIXEDBUFS
-#define IOCTX_FLAG_FIXEDBUFS	(1 << 2)
-#endif
-#ifndef IOCTX_FLAG_SQTHREAD
-#define IOCTX_FLAG_SQTHREAD	(1 << 3)
-#endif
-#ifndef IOCTX_FLAG_SQWQ
-#define IOCTX_FLAG_SQWQ		(1 << 4)
-#endif
-#ifndef IOCTX_FLAG_SQPOLL
-#define IOCTX_FLAG_SQPOLL	(1 << 5)
-#endif
-
-#define IORING_OFF_SQ_RING	0ULL
-#define IORING_OFF_CQ_RING	0x8000000ULL
-#define IORING_OFF_IOCB		0x10000000ULL
-
-/*
- * io_uring_enter(2) flags
- */
-#ifndef IORING_ENTER_GETEVENTS
-#define IORING_ENTER_GETEVENTS	(1 << 0)
-#endif
+#ifdef ARCH_HAVE_IOURING
 
 typedef uint64_t u64;
 typedef uint32_t u32;
+typedef int32_t s32;
 typedef uint16_t u16;
+typedef uint8_t u8;
 
-#define IORING_SQ_NEED_WAKEUP	(1 << 0)
+#include "../os/io_uring.h"
 
-#define IOEV_RES2_CACHEHIT	(1 << 0)
-
-struct aio_sqring_offsets {
-	u32 head;
-	u32 tail;
-	u32 ring_mask;
-	u32 ring_entries;
-	u32 flags;
-	u32 dropped;
-	u32 array;
-	u32 resv[3];
-};
-
-struct aio_cqring_offsets {
-	u32 head;
-	u32 tail;
-	u32 ring_mask;
-	u32 ring_entries;
-	u32 overflow;
-	u32 events;
-	u32 resv[4];
-};
-
-struct aio_uring_params {
-	u32 sq_entries;
-	u32 cq_entries;
-	u32 flags;
-	u16 sq_thread_cpu;
-	u16 resv[9];
-	struct aio_sqring_offsets sq_off;
-	struct aio_cqring_offsets cq_off;
-};
-
-struct aio_sq_ring {
+struct io_sq_ring {
 	u32 *head;
 	u32 *tail;
 	u32 *ring_mask;
@@ -102,32 +37,31 @@ struct aio_sq_ring {
 	u32 *array;
 };
 
-struct aio_cq_ring {
+struct io_cq_ring {
 	u32 *head;
 	u32 *tail;
 	u32 *ring_mask;
 	u32 *ring_entries;
-	struct io_event *events;
+	struct io_uring_event *events;
 };
 
-struct aioring_mmap {
+struct ioring_mmap {
 	void *ptr;
 	size_t len;
 };
 
-struct aioring_data {
+struct ioring_data {
 	int ring_fd;
 
 	struct io_u **io_us;
 	struct io_u **io_u_index;
 
-	struct aio_sq_ring sq_ring;
-	struct iocb *iocbs;
+	struct io_sq_ring sq_ring;
+	struct io_uring_iocb *iocbs;
 	struct iovec *iovecs;
 	unsigned sq_ring_mask;
 
-	struct aio_cq_ring cq_ring;
-	struct io_event *events;
+	struct io_cq_ring cq_ring;
 	unsigned cq_ring_mask;
 
 	int queued;
@@ -137,10 +71,10 @@ struct aioring_data {
 	uint64_t cachehit;
 	uint64_t cachemiss;
 
-	struct aioring_mmap mmap[3];
+	struct ioring_mmap mmap[3];
 };
 
-struct aioring_options {
+struct ioring_options {
 	void *pad;
 	unsigned int hipri;
 	unsigned int fixedbufs;
@@ -150,10 +84,9 @@ struct aioring_options {
 	unsigned int sqwq;
 };
 
-static int fio_aioring_sqthread_cb(void *data,
-				   unsigned long long *val)
+static int fio_ioring_sqthread_cb(void *data, unsigned long long *val)
 {
-	struct aioring_options *o = data;
+	struct ioring_options *o = data;
 
 	o->sqthread = *val;
 	o->sqthread_set = 1;
@@ -165,7 +98,7 @@ static struct fio_option options[] = {
 		.name	= "hipri",
 		.lname	= "High Priority",
 		.type	= FIO_OPT_STR_SET,
-		.off1	= offsetof(struct aioring_options, hipri),
+		.off1	= offsetof(struct ioring_options, hipri),
 		.help	= "Use polled IO completions",
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_LIBAIO,
@@ -174,7 +107,7 @@ static struct fio_option options[] = {
 		.name	= "fixedbufs",
 		.lname	= "Fixed (pre-mapped) IO buffers",
 		.type	= FIO_OPT_STR_SET,
-		.off1	= offsetof(struct aioring_options, fixedbufs),
+		.off1	= offsetof(struct ioring_options, fixedbufs),
 		.help	= "Pre map IO buffers",
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_LIBAIO,
@@ -183,7 +116,7 @@ static struct fio_option options[] = {
 		.name	= "sqthread",
 		.lname	= "Use kernel SQ thread on this CPU",
 		.type	= FIO_OPT_INT,
-		.cb	= fio_aioring_sqthread_cb,
+		.cb	= fio_ioring_sqthread_cb,
 		.help	= "Offload submission to kernel thread",
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_LIBAIO,
@@ -192,7 +125,7 @@ static struct fio_option options[] = {
 		.name	= "sqthread_poll",
 		.lname	= "Kernel SQ thread should poll",
 		.type	= FIO_OPT_STR_SET,
-		.off1	= offsetof(struct aioring_options, sqthread_poll),
+		.off1	= offsetof(struct ioring_options, sqthread_poll),
 		.help	= "Used with sqthread, enables kernel side polling",
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_LIBAIO,
@@ -201,7 +134,7 @@ static struct fio_option options[] = {
 		.name	= "sqwq",
 		.lname	= "Offload submission to kernel workqueue",
 		.type	= FIO_OPT_STR_SET,
-		.off1	= offsetof(struct aioring_options, sqwq),
+		.off1	= offsetof(struct ioring_options, sqwq),
 		.help	= "Offload submission to kernel workqueue",
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_LIBAIO,
@@ -211,50 +144,49 @@ static struct fio_option options[] = {
 	},
 };
 
-static int io_uring_enter(struct aioring_data *ld, unsigned int to_submit,
+static int io_uring_enter(struct ioring_data *ld, unsigned int to_submit,
 			 unsigned int min_complete, unsigned int flags)
 {
 	return syscall(__NR_sys_io_uring_enter, ld->ring_fd, to_submit,
 			min_complete, flags);
 }
 
-static int fio_aioring_prep(struct thread_data *td, struct io_u *io_u)
+static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 {
-	struct aioring_data *ld = td->io_ops_data;
+	struct ioring_data *ld = td->io_ops_data;
 	struct fio_file *f = io_u->file;
-	struct iocb *iocb;
+	struct io_uring_iocb *iocb;
 
 	iocb = &ld->iocbs[io_u->index];
+	iocb->fd = f->fd;
+	iocb->flags = 0;
+	iocb->ioprio = 0;
 
 	if (io_u->ddir == DDIR_READ || io_u->ddir == DDIR_WRITE) {
 		if (io_u->ddir == DDIR_READ)
-			iocb->aio_lio_opcode = IO_CMD_PREAD;
+			iocb->opcode = IORING_OP_READ;
 		else
-			iocb->aio_lio_opcode = IO_CMD_PWRITE;
-		iocb->aio_reqprio = 0;
-		iocb->aio_fildes = f->fd;
-		iocb->u.c.buf = io_u->xfer_buf;
-		iocb->u.c.nbytes = io_u->xfer_buflen;
-		iocb->u.c.offset = io_u->offset;
-		iocb->u.c.flags = 0;
+			iocb->opcode = IORING_OP_WRITE;
+		iocb->off = io_u->offset;
+		iocb->addr = io_u->xfer_buf;
+		iocb->len = io_u->xfer_buflen;
 	} else if (ddir_sync(io_u->ddir))
-		io_prep_fsync(iocb, f->fd);
+		iocb->opcode = IORING_OP_FSYNC;
 
-	iocb->data = io_u;
 	return 0;
 }
 
-static struct io_u *fio_aioring_event(struct thread_data *td, int event)
+static struct io_u *fio_ioring_event(struct thread_data *td, int event)
 {
-	struct aioring_data *ld = td->io_ops_data;
-	struct io_event *ev;
+	struct ioring_data *ld = td->io_ops_data;
+	struct io_uring_event *ev;
 	struct io_u *io_u;
 	unsigned index;
 
 	index = (event + ld->cq_ring_off) & ld->cq_ring_mask;
 
 	ev = &ld->cq_ring.events[index];
-	io_u = ev->data;
+	io_u = ld->io_u_index[ev->index];
 
 	if (ev->res != io_u->xfer_buflen) {
 		if (ev->res > io_u->xfer_buflen)
@@ -265,7 +197,7 @@ static struct io_u *fio_aioring_event(struct thread_data *td, int event)
 		io_u->error = 0;
 
 	if (io_u->ddir == DDIR_READ) {
-		if (ev->res2 & IOEV_RES2_CACHEHIT)
+		if (ev->flags & IOEV_FLAG_CACHEHIT)
 			ld->cachehit++;
 		else
 			ld->cachemiss++;
@@ -274,11 +206,11 @@ static struct io_u *fio_aioring_event(struct thread_data *td, int event)
 	return io_u;
 }
 
-static int fio_aioring_cqring_reap(struct thread_data *td, unsigned int events,
+static int fio_ioring_cqring_reap(struct thread_data *td, unsigned int events,
 				   unsigned int max)
 {
-	struct aioring_data *ld = td->io_ops_data;
-	struct aio_cq_ring *ring = &ld->cq_ring;
+	struct ioring_data *ld = td->io_ops_data;
+	struct io_cq_ring *ring = &ld->cq_ring;
 	u32 head, reaped = 0;
 
 	head = *ring->head;
@@ -295,19 +227,19 @@ static int fio_aioring_cqring_reap(struct thread_data *td, unsigned int events,
 	return reaped;
 }
 
-static int fio_aioring_getevents(struct thread_data *td, unsigned int min,
-				 unsigned int max, const struct timespec *t)
+static int fio_ioring_getevents(struct thread_data *td, unsigned int min,
+				unsigned int max, const struct timespec *t)
 {
-	struct aioring_data *ld = td->io_ops_data;
+	struct ioring_data *ld = td->io_ops_data;
 	unsigned actual_min = td->o.iodepth_batch_complete_min == 0 ? 0 : min;
-	struct aioring_options *o = td->eo;
-	struct aio_cq_ring *ring = &ld->cq_ring;
+	struct ioring_options *o = td->eo;
+	struct io_cq_ring *ring = &ld->cq_ring;
 	unsigned events = 0;
 	int r;
 
 	ld->cq_ring_off = *ring->head;
 	do {
-		r = fio_aioring_cqring_reap(td, events, max);
+		r = fio_ioring_cqring_reap(td, events, max);
 		if (r) {
 			events += r;
 			continue;
@@ -328,11 +260,11 @@ static int fio_aioring_getevents(struct thread_data *td, unsigned int min,
 	return r < 0 ? r : events;
 }
 
-static enum fio_q_status fio_aioring_queue(struct thread_data *td,
-					   struct io_u *io_u)
+static enum fio_q_status fio_ioring_queue(struct thread_data *td,
+					  struct io_u *io_u)
 {
-	struct aioring_data *ld = td->io_ops_data;
-	struct aio_sq_ring *ring = &ld->sq_ring;
+	struct ioring_data *ld = td->io_ops_data;
+	struct io_sq_ring *ring = &ld->sq_ring;
 	unsigned tail, next_tail;
 
 	fio_ro_check(td, io_u);
@@ -364,9 +296,9 @@ static enum fio_q_status fio_aioring_queue(struct thread_data *td,
 	return FIO_Q_QUEUED;
 }
 
-static void fio_aioring_queued(struct thread_data *td, int start, int nr)
+static void fio_ioring_queued(struct thread_data *td, int start, int nr)
 {
-	struct aioring_data *ld = td->io_ops_data;
+	struct ioring_data *ld = td->io_ops_data;
 	struct timespec now;
 
 	if (!fio_fill_issue_time(td))
@@ -375,7 +307,7 @@ static void fio_aioring_queued(struct thread_data *td, int start, int nr)
 	fio_gettime(&now, NULL);
 
 	while (nr--) {
-		struct aio_sq_ring *ring = &ld->sq_ring;
+		struct io_sq_ring *ring = &ld->sq_ring;
 		int index = ring->array[start & ld->sq_ring_mask];
 		struct io_u *io_u = ld->io_u_index[index];
 
@@ -386,10 +318,10 @@ static void fio_aioring_queued(struct thread_data *td, int start, int nr)
 	}
 }
 
-static int fio_aioring_commit(struct thread_data *td)
+static int fio_ioring_commit(struct thread_data *td)
 {
-	struct aioring_data *ld = td->io_ops_data;
-	struct aioring_options *o = td->eo;
+	struct ioring_data *ld = td->io_ops_data;
+	struct ioring_options *o = td->eo;
 	int ret;
 
 	if (!ld->queued)
@@ -397,7 +329,7 @@ static int fio_aioring_commit(struct thread_data *td)
 
 	/* Nothing to do */
 	if (o->sqthread_poll) {
-		struct aio_sq_ring *ring = &ld->sq_ring;
+		struct io_sq_ring *ring = &ld->sq_ring;
 
 		if (*ring->flags & IORING_SQ_NEED_WAKEUP)
 			io_uring_enter(ld, ld->queued, 0, 0);
@@ -411,7 +343,7 @@ static int fio_aioring_commit(struct thread_data *td)
 
 		ret = io_uring_enter(ld, nr, 0, IORING_ENTER_GETEVENTS);
 		if (ret > 0) {
-			fio_aioring_queued(td, start, ret);
+			fio_ioring_queued(td, start, ret);
 			io_u_mark_submit(td, ret);
 
 			ld->queued -= ret;
@@ -421,7 +353,7 @@ static int fio_aioring_commit(struct thread_data *td)
 			continue;
 		} else {
 			if (errno == EAGAIN) {
-				ret = fio_aioring_cqring_reap(td, 0, ld->queued);
+				ret = fio_ioring_cqring_reap(td, 0, ld->queued);
 				if (ret)
 					continue;
 				/* Shouldn't happen */
@@ -436,7 +368,7 @@ static int fio_aioring_commit(struct thread_data *td)
 	return ret;
 }
 
-static void fio_aioring_unmap(struct aioring_data *ld)
+static void fio_ioring_unmap(struct ioring_data *ld)
 {
 	int i;
 
@@ -445,22 +377,16 @@ static void fio_aioring_unmap(struct aioring_data *ld)
 	close(ld->ring_fd);
 }
 
-static void fio_aioring_cleanup(struct thread_data *td)
+static void fio_ioring_cleanup(struct thread_data *td)
 {
-	struct aioring_data *ld = td->io_ops_data;
+	struct ioring_data *ld = td->io_ops_data;
 
 	if (ld) {
 		td->ts.cachehit += ld->cachehit;
 		td->ts.cachemiss += ld->cachemiss;
 
-		/*
-		 * Work-around to avoid huge RCU stalls at exit time. If we
-		 * don't do this here, then it'll be torn down by exit_aio().
-		 * But for that case we can parallellize the freeing, thus
-		 * speeding it up a lot.
-		 */
 		if (!(td->flags & TD_F_CHILD))
-			fio_aioring_unmap(ld);
+			fio_ioring_unmap(ld);
 
 		free(ld->io_u_index);
 		free(ld->io_us);
@@ -469,10 +395,10 @@ static void fio_aioring_cleanup(struct thread_data *td)
 	}
 }
 
-static int fio_aioring_mmap(struct aioring_data *ld, struct aio_uring_params *p)
+static int fio_ioring_mmap(struct ioring_data *ld, struct io_uring_params *p)
 {
-	struct aio_sq_ring *sring = &ld->sq_ring;
-	struct aio_cq_ring *cring = &ld->cq_ring;
+	struct io_sq_ring *sring = &ld->sq_ring;
+	struct io_cq_ring *cring = &ld->cq_ring;
 	void *ptr;
 
 	ld->mmap[0].len = p->sq_off.array + p->sq_entries * sizeof(u32);
@@ -488,14 +414,14 @@ static int fio_aioring_mmap(struct aioring_data *ld, struct aio_uring_params *p)
 	sring->array = ptr + p->sq_off.array;
 	ld->sq_ring_mask = *sring->ring_mask;
 
-	ld->mmap[1].len = p->sq_entries * sizeof(struct iocb);
+	ld->mmap[1].len = p->sq_entries * sizeof(struct io_uring_iocb);
 	ld->iocbs = mmap(0, ld->mmap[1].len, PROT_READ | PROT_WRITE,
 				MAP_SHARED | MAP_POPULATE, ld->ring_fd,
 				IORING_OFF_IOCB);
 	ld->mmap[1].ptr = ld->iocbs;
 
 	ld->mmap[2].len = p->cq_off.events +
-				p->cq_entries * sizeof(struct io_event);
+				p->cq_entries * sizeof(struct io_uring_event);
 	ptr = mmap(0, ld->mmap[2].len, PROT_READ | PROT_WRITE,
 			MAP_SHARED | MAP_POPULATE, ld->ring_fd,
 			IORING_OFF_CQ_RING);
@@ -509,27 +435,26 @@ static int fio_aioring_mmap(struct aioring_data *ld, struct aio_uring_params *p)
 	return 0;
 }
 
-static int fio_aioring_queue_init(struct thread_data *td)
+static int fio_ioring_queue_init(struct thread_data *td)
 {
-	struct aioring_data *ld = td->io_ops_data;
-	struct aioring_options *o = td->eo;
+	struct ioring_data *ld = td->io_ops_data;
+	struct ioring_options *o = td->eo;
 	int depth = td->o.iodepth;
-	struct aio_uring_params p;
+	struct io_uring_params p;
 	int ret;
 
 	memset(&p, 0, sizeof(p));
-	p.flags = IOCTX_FLAG_SCQRING;
 
 	if (o->hipri)
-		p.flags |= IOCTX_FLAG_IOPOLL;
+		p.flags |= IORING_SETUP_IOPOLL;
 	if (o->sqthread_set) {
 		p.sq_thread_cpu = o->sqthread;
-		p.flags |= IOCTX_FLAG_SQTHREAD;
+		p.flags |= IORING_SETUP_SQTHREAD;
 		if (o->sqthread_poll)
-			p.flags |= IOCTX_FLAG_SQPOLL;
+			p.flags |= IORING_SETUP_SQPOLL;
 	}
 	if (o->sqwq)
-		p.flags |= IOCTX_FLAG_SQWQ;
+		p.flags |= IORING_SETUP_SQWQ;
 
 	if (o->fixedbufs) {
 		struct rlimit rlim = {
@@ -538,7 +463,7 @@ static int fio_aioring_queue_init(struct thread_data *td)
 		};
 
 		setrlimit(RLIMIT_MEMLOCK, &rlim);
-		p.flags |= IOCTX_FLAG_FIXEDBUFS;
+		p.flags |= IORING_SETUP_FIXEDBUFS;
 	}
 
 	ret = syscall(__NR_sys_io_uring_setup, depth, ld->iovecs, &p);
@@ -546,13 +471,13 @@ static int fio_aioring_queue_init(struct thread_data *td)
 		return ret;
 
 	ld->ring_fd = ret;
-	return fio_aioring_mmap(ld, &p);
+	return fio_ioring_mmap(ld, &p);
 }
 
-static int fio_aioring_post_init(struct thread_data *td)
+static int fio_ioring_post_init(struct thread_data *td)
 {
-	struct aioring_data *ld = td->io_ops_data;
-	struct aioring_options *o = td->eo;
+	struct ioring_data *ld = td->io_ops_data;
+	struct ioring_options *o = td->eo;
 	struct io_u *io_u;
 	int err;
 
@@ -568,7 +493,7 @@ static int fio_aioring_post_init(struct thread_data *td)
 		}
 	}
 
-	err = fio_aioring_queue_init(td);
+	err = fio_ioring_queue_init(td);
 	if (err) {
 		td_verror(td, errno, "io_queue_init");
 		return 1;
@@ -582,9 +507,9 @@ static unsigned roundup_pow2(unsigned depth)
 	return 1UL << __fls(depth - 1);
 }
 
-static int fio_aioring_init(struct thread_data *td)
+static int fio_ioring_init(struct thread_data *td)
 {
-	struct aioring_data *ld;
+	struct ioring_data *ld;
 
 	ld = calloc(1, sizeof(*ld));
 
@@ -602,39 +527,39 @@ static int fio_aioring_init(struct thread_data *td)
 	return 0;
 }
 
-static int fio_aioring_io_u_init(struct thread_data *td, struct io_u *io_u)
+static int fio_ioring_io_u_init(struct thread_data *td, struct io_u *io_u)
 {
-	struct aioring_data *ld = td->io_ops_data;
+	struct ioring_data *ld = td->io_ops_data;
 
 	ld->io_u_index[io_u->index] = io_u;
 	return 0;
 }
 
 static struct ioengine_ops ioengine = {
-	.name			= "aio-ring",
+	.name			= "io_uring",
 	.version		= FIO_IOOPS_VERSION,
-	.init			= fio_aioring_init,
-	.post_init		= fio_aioring_post_init,
-	.io_u_init		= fio_aioring_io_u_init,
-	.prep			= fio_aioring_prep,
-	.queue			= fio_aioring_queue,
-	.commit			= fio_aioring_commit,
-	.getevents		= fio_aioring_getevents,
-	.event			= fio_aioring_event,
-	.cleanup		= fio_aioring_cleanup,
+	.init			= fio_ioring_init,
+	.post_init		= fio_ioring_post_init,
+	.io_u_init		= fio_ioring_io_u_init,
+	.prep			= fio_ioring_prep,
+	.queue			= fio_ioring_queue,
+	.commit			= fio_ioring_commit,
+	.getevents		= fio_ioring_getevents,
+	.event			= fio_ioring_event,
+	.cleanup		= fio_ioring_cleanup,
 	.open_file		= generic_open_file,
 	.close_file		= generic_close_file,
 	.get_file_size		= generic_get_file_size,
 	.options		= options,
-	.option_struct_size	= sizeof(struct aioring_options),
+	.option_struct_size	= sizeof(struct ioring_options),
 };
 
-static void fio_init fio_aioring_register(void)
+static void fio_init fio_ioring_register(void)
 {
 	register_ioengine(&ioengine);
 }
 
-static void fio_exit fio_aioring_unregister(void)
+static void fio_exit fio_ioring_unregister(void)
 {
 	unregister_ioengine(&ioengine);
 }
