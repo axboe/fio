@@ -41,7 +41,7 @@ struct io_cq_ring {
 	unsigned *tail;
 	unsigned *ring_mask;
 	unsigned *ring_entries;
-	struct io_uring_event *events;
+	struct io_uring_cqe *cqes;
 };
 
 #define DEPTH			32
@@ -59,7 +59,7 @@ struct submitter {
 	int ring_fd;
 	struct drand48_data rand;
 	struct io_sq_ring sq_ring;
-	struct io_uring_iocb *iocbs;
+	struct io_uring_sqe *sqes;
 	struct iovec iovecs[DEPTH];
 	struct io_cq_ring cq_ring;
 	int inflight;
@@ -74,9 +74,9 @@ struct submitter {
 static struct submitter submitters[1];
 static volatile int finish;
 
-static int polled = 0;		/* use IO polling */
+static int polled = 1;		/* use IO polling */
 static int fixedbufs = 0;	/* use fixed user buffers */
-static int buffered = 1;	/* use buffered IO, not O_DIRECT */
+static int buffered = 0;	/* use buffered IO, not O_DIRECT */
 static int sq_thread = 0;	/* use kernel submission thread */
 static int sq_thread_cpu = 0;	/* pin above thread to this CPU */
 
@@ -100,23 +100,26 @@ static int gettid(void)
 
 static void init_io(struct submitter *s, int fd, unsigned index)
 {
-	struct io_uring_iocb *iocb = &s->iocbs[index];
+	struct io_uring_sqe *sqe = &s->sqes[index];
 	unsigned long offset;
 	long r;
 
 	lrand48_r(&s->rand, &r);
 	offset = (r % (s->max_blocks - 1)) * BS;
 
-	if (fixedbufs)
-		iocb->opcode = IORING_OP_READ_FIXED;
-	else
-		iocb->opcode = IORING_OP_READ;
-	iocb->flags = 0;
-	iocb->ioprio = 0;
-	iocb->fd = fd;
-	iocb->off = offset;
-	iocb->addr = s->iovecs[index].iov_base;
-	iocb->len = BS;
+	if (fixedbufs) {
+		sqe->opcode = IORING_OP_READ_FIXED;
+		sqe->addr = s->iovecs[index].iov_base;
+		sqe->len = BS;
+	} else {
+		sqe->opcode = IORING_OP_READV;
+		sqe->addr = &s->iovecs[index];
+		sqe->len = 1;
+	}
+	sqe->flags = 0;
+	sqe->ioprio = 0;
+	sqe->fd = fd;
+	sqe->off = offset;
 }
 
 static int prep_more_ios(struct submitter *s, int fd, int max_ios)
@@ -139,7 +142,7 @@ static int prep_more_ios(struct submitter *s, int fd, int max_ios)
 	} while (prepped < max_ios);
 
 	if (*ring->tail != tail) {
-		/* order tail store with writes to iocbs above */
+		/* order tail store with writes to sqes above */
 		barrier();
 		*ring->tail = tail;
 		barrier();
@@ -172,7 +175,7 @@ static int get_file_size(int fd, unsigned long *blocks)
 static int reap_events(struct submitter *s)
 {
 	struct io_cq_ring *ring = &s->cq_ring;
-	struct io_uring_event *ev;
+	struct io_uring_cqe *cqe;
 	unsigned head, reaped = 0;
 
 	head = *ring->head;
@@ -180,17 +183,17 @@ static int reap_events(struct submitter *s)
 		barrier();
 		if (head == *ring->tail)
 			break;
-		ev = &ring->events[head & cq_ring_mask];
-		if (ev->res != BS) {
-			struct io_uring_iocb *iocb = &s->iocbs[ev->index];
+		cqe = &ring->cqes[head & cq_ring_mask];
+		if (cqe->res != BS) {
+			struct io_uring_sqe *sqe = &s->sqes[cqe->index];
 
-			printf("io: unexpected ret=%d\n", ev->res);
+			printf("io: unexpected ret=%d\n", cqe->res);
 			printf("offset=%lu, size=%lu\n",
-					(unsigned long) iocb->off,
-					(unsigned long) iocb->len);
+					(unsigned long) sqe->off,
+					(unsigned long) sqe->len);
 			return -1;
 		}
-		if (ev->flags & IOEV_FLAG_CACHEHIT)
+		if (cqe->flags & IOCQE_FLAG_CACHEHIT)
 			s->cachehit++;
 		else
 			s->cachemiss++;
@@ -323,8 +326,6 @@ static int setup_ring(struct submitter *s)
 
 	if (polled)
 		p.flags |= IORING_SETUP_IOPOLL;
-	if (fixedbufs)
-		p.flags |= IORING_SETUP_FIXEDBUFS;
 	if (buffered)
 		p.flags |= IORING_SETUP_SQWQ;
 	else if (sq_thread) {
@@ -353,12 +354,12 @@ static int setup_ring(struct submitter *s)
 	sring->array = ptr + p.sq_off.array;
 	sq_ring_mask = *sring->ring_mask;
 
-	s->iocbs = mmap(0, p.sq_entries * sizeof(struct io_uring_iocb),
+	s->sqes = mmap(0, p.sq_entries * sizeof(struct io_uring_sqe),
 			PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, fd,
-			IORING_OFF_IOCB);
-	printf("iocbs ptr   = 0x%p\n", s->iocbs);
+			IORING_OFF_SQES);
+	printf("sqes ptr    = 0x%p\n", s->sqes);
 
-	ptr = mmap(0, p.cq_off.events + p.cq_entries * sizeof(struct io_uring_event),
+	ptr = mmap(0, p.cq_off.cqes + p.cq_entries * sizeof(struct io_uring_cqe),
 			PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, fd,
 			IORING_OFF_CQ_RING);
 	printf("cq_ring ptr = 0x%p\n", ptr);
@@ -366,7 +367,7 @@ static int setup_ring(struct submitter *s)
 	cring->tail = ptr + p.cq_off.tail;
 	cring->ring_mask = ptr + p.cq_off.ring_mask;
 	cring->ring_entries = ptr + p.cq_off.ring_entries;
-	cring->events = ptr + p.cq_off.events;
+	cring->cqes = ptr + p.cq_off.cqes;
 	cq_ring_mask = *cring->ring_mask;
 	return 0;
 }

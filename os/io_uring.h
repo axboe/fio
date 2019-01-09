@@ -12,9 +12,9 @@
 #include <linux/types.h>
 
 /*
- * IO submission data structure
+ * IO submission data structure (Submission Queue Entry)
  */
-struct io_uring_iocb {
+struct io_uring_sqe {
 	__u8	opcode;
 	__u8	flags;
 	__u16	ioprio;
@@ -35,23 +35,22 @@ struct io_uring_iocb {
  * io_uring_setup() flags
  */
 #define IORING_SETUP_IOPOLL	(1 << 0)	/* io_context is polled */
-#define IORING_SETUP_FIXEDBUFS	(1 << 1)	/* IO buffers are fixed */
-#define IORING_SETUP_SQTHREAD	(1 << 2)	/* Use SQ thread */
-#define IORING_SETUP_SQWQ	(1 << 3)	/* Use SQ workqueue */
-#define IORING_SETUP_SQPOLL	(1 << 4)	/* SQ thread polls */
+#define	IORING_SETUP_SQTHREAD	(1 << 1)	/* Use SQ thread */
+#define IORING_SETUP_SQWQ	(1 << 2)	/* Use SQ workqueue */
+#define IORING_SETUP_SQPOLL	(1 << 3)	/* SQ thread polls */
 
-#define IORING_OP_READ		1
-#define IORING_OP_WRITE		2
+#define IORING_OP_READV		1
+#define IORING_OP_WRITEV	2
 #define IORING_OP_FSYNC		3
 #define IORING_OP_FDSYNC	4
 #define IORING_OP_READ_FIXED	5
 #define IORING_OP_WRITE_FIXED	6
 
 /*
- * IO completion data structure
+ * IO completion data structure (Completion Queue Entry)
  */
-struct io_uring_event {
-	__u64	index;		/* what iocb this event came from */
+struct io_uring_cqe {
+	__u64	index;		/* what sqe this event came from */
 	__s32	res;		/* result code for this event */
 	__u32	flags;
 };
@@ -59,14 +58,14 @@ struct io_uring_event {
 /*
  * io_uring_event->flags
  */
-#define IOEV_FLAG_CACHEHIT	(1 << 0)	/* IO did not hit media */
+#define IOCQE_FLAG_CACHEHIT	(1 << 0)	/* IO did not hit media */
 
 /*
  * Magic offsets for the application to mmap the data it needs
  */
 #define IORING_OFF_SQ_RING		0ULL
 #define IORING_OFF_CQ_RING		0x8000000ULL
-#define IORING_OFF_IOCB			0x10000000ULL
+#define IORING_OFF_SQES			0x10000000ULL
 
 /*
  * Filled with the offset for mmap(2)
@@ -90,7 +89,7 @@ struct io_cqring_offsets {
 	__u32 ring_mask;
 	__u32 ring_entries;
 	__u32 overflow;
-	__u32 events;
+	__u32 cqes;
 	__u32 resv[4];
 };
 

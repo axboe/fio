@@ -37,7 +37,7 @@ struct io_cq_ring {
 	unsigned *tail;
 	unsigned *ring_mask;
 	unsigned *ring_entries;
-	struct io_uring_event *events;
+	struct io_uring_cqe *cqes;
 };
 
 struct ioring_mmap {
@@ -52,7 +52,7 @@ struct ioring_data {
 	struct io_u **io_u_index;
 
 	struct io_sq_ring sq_ring;
-	struct io_uring_iocb *iocbs;
+	struct io_uring_sqe *sqes;
 	struct iovec *iovecs;
 	unsigned sq_ring_mask;
 
@@ -151,30 +151,32 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 	struct ioring_data *ld = td->io_ops_data;
 	struct ioring_options *o = td->eo;
 	struct fio_file *f = io_u->file;
-	struct io_uring_iocb *iocb;
+	struct io_uring_sqe *sqe;
 
-	iocb = &ld->iocbs[io_u->index];
-	iocb->fd = f->fd;
-	iocb->flags = 0;
-	iocb->ioprio = 0;
+	sqe = &ld->sqes[io_u->index];
+	sqe->fd = f->fd;
+	sqe->flags = 0;
+	sqe->ioprio = 0;
 
 	if (io_u->ddir == DDIR_READ || io_u->ddir == DDIR_WRITE) {
-		if (io_u->ddir == DDIR_READ) {
-			if (o->fixedbufs)
-				iocb->opcode = IORING_OP_READ_FIXED;
+		if (o->fixedbufs) {
+			if (io_u->ddir == DDIR_READ)
+				sqe->opcode = IORING_OP_READ_FIXED;
 			else
-				iocb->opcode = IORING_OP_READ;
+				sqe->opcode = IORING_OP_WRITE_FIXED;
+			sqe->addr = io_u->xfer_buf;
+			sqe->len = io_u->xfer_buflen;
 		} else {
-			if (o->fixedbufs)
-				iocb->opcode = IORING_OP_WRITE_FIXED;
+			if (io_u->ddir == DDIR_READ)
+				sqe->opcode = IORING_OP_READV;
 			else
-				iocb->opcode = IORING_OP_WRITE;
+				sqe->opcode = IORING_OP_WRITEV;
+			sqe->addr = &ld->iovecs[io_u->index];
+			sqe->len = 1;
 		}
-		iocb->off = io_u->offset;
-		iocb->addr = io_u->xfer_buf;
-		iocb->len = io_u->xfer_buflen;
+		sqe->off = io_u->offset;
 	} else if (ddir_sync(io_u->ddir))
-		iocb->opcode = IORING_OP_FSYNC;
+		sqe->opcode = IORING_OP_FSYNC;
 
 	return 0;
 }
@@ -182,25 +184,25 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 static struct io_u *fio_ioring_event(struct thread_data *td, int event)
 {
 	struct ioring_data *ld = td->io_ops_data;
-	struct io_uring_event *ev;
+	struct io_uring_cqe *cqe;
 	struct io_u *io_u;
 	unsigned index;
 
 	index = (event + ld->cq_ring_off) & ld->cq_ring_mask;
 
-	ev = &ld->cq_ring.events[index];
-	io_u = ld->io_u_index[ev->index];
+	cqe = &ld->cq_ring.cqes[index];
+	io_u = ld->io_u_index[cqe->index];
 
-	if (ev->res != io_u->xfer_buflen) {
-		if (ev->res > io_u->xfer_buflen)
-			io_u->error = -ev->res;
+	if (cqe->res != io_u->xfer_buflen) {
+		if (cqe->res > io_u->xfer_buflen)
+			io_u->error = -cqe->res;
 		else
-			io_u->resid = io_u->xfer_buflen - ev->res;
+			io_u->resid = io_u->xfer_buflen - cqe->res;
 	} else
 		io_u->error = 0;
 
 	if (io_u->ddir == DDIR_READ) {
-		if (ev->flags & IOEV_FLAG_CACHEHIT)
+		if (cqe->flags & IOCQE_FLAG_CACHEHIT)
 			ld->cachehit++;
 		else
 			ld->cachemiss++;
@@ -417,14 +419,14 @@ static int fio_ioring_mmap(struct ioring_data *ld, struct io_uring_params *p)
 	sring->array = ptr + p->sq_off.array;
 	ld->sq_ring_mask = *sring->ring_mask;
 
-	ld->mmap[1].len = p->sq_entries * sizeof(struct io_uring_iocb);
-	ld->iocbs = mmap(0, ld->mmap[1].len, PROT_READ | PROT_WRITE,
+	ld->mmap[1].len = p->sq_entries * sizeof(struct io_uring_sqe);
+	ld->sqes = mmap(0, ld->mmap[1].len, PROT_READ | PROT_WRITE,
 				MAP_SHARED | MAP_POPULATE, ld->ring_fd,
-				IORING_OFF_IOCB);
-	ld->mmap[1].ptr = ld->iocbs;
+				IORING_OFF_SQES);
+	ld->mmap[1].ptr = ld->sqes;
 
-	ld->mmap[2].len = p->cq_off.events +
-				p->cq_entries * sizeof(struct io_uring_event);
+	ld->mmap[2].len = p->cq_off.cqes +
+				p->cq_entries * sizeof(struct io_uring_cqe);
 	ptr = mmap(0, ld->mmap[2].len, PROT_READ | PROT_WRITE,
 			MAP_SHARED | MAP_POPULATE, ld->ring_fd,
 			IORING_OFF_CQ_RING);
@@ -433,7 +435,7 @@ static int fio_ioring_mmap(struct ioring_data *ld, struct io_uring_params *p)
 	cring->tail = ptr + p->cq_off.tail;
 	cring->ring_mask = ptr + p->cq_off.ring_mask;
 	cring->ring_entries = ptr + p->cq_off.ring_entries;
-	cring->events = ptr + p->cq_off.events;
+	cring->cqes = ptr + p->cq_off.cqes;
 	ld->cq_ring_mask = *cring->ring_mask;
 	return 0;
 }
@@ -466,7 +468,6 @@ static int fio_ioring_queue_init(struct thread_data *td)
 		};
 
 		setrlimit(RLIMIT_MEMLOCK, &rlim);
-		p.flags |= IORING_SETUP_FIXEDBUFS;
 	}
 
 	ret = syscall(__NR_sys_io_uring_setup, depth, ld->iovecs, &p);
@@ -512,6 +513,7 @@ static unsigned roundup_pow2(unsigned depth)
 
 static int fio_ioring_init(struct thread_data *td)
 {
+	struct ioring_options *o = td->eo;
 	struct ioring_data *ld;
 
 	ld = calloc(1, sizeof(*ld));
@@ -524,7 +526,8 @@ static int fio_ioring_init(struct thread_data *td)
 	ld->io_u_index = calloc(td->o.iodepth, sizeof(struct io_u *));
 	ld->io_us = calloc(td->o.iodepth, sizeof(struct io_u *));
 
-	ld->iovecs = calloc(td->o.iodepth, sizeof(struct iovec));
+	if (o->fixedbufs)
+		ld->iovecs = calloc(td->o.iodepth, sizeof(struct iovec));
 
 	td->io_ops_data = ld;
 	return 0;
