@@ -445,6 +445,7 @@ static int fio_ioring_queue_init(struct thread_data *td)
 	struct ioring_data *ld = td->io_ops_data;
 	struct ioring_options *o = td->eo;
 	int depth = td->o.iodepth;
+	struct iovec *vecs = NULL;
 	struct io_uring_params p;
 	int ret;
 
@@ -468,9 +469,10 @@ static int fio_ioring_queue_init(struct thread_data *td)
 		};
 
 		setrlimit(RLIMIT_MEMLOCK, &rlim);
+		vecs = ld->iovecs;
 	}
 
-	ret = syscall(__NR_sys_io_uring_setup, depth, ld->iovecs, &p);
+	ret = syscall(__NR_sys_io_uring_setup, depth, vecs, &p);
 	if (ret < 0)
 		return ret;
 
@@ -481,20 +483,15 @@ static int fio_ioring_queue_init(struct thread_data *td)
 static int fio_ioring_post_init(struct thread_data *td)
 {
 	struct ioring_data *ld = td->io_ops_data;
-	struct ioring_options *o = td->eo;
 	struct io_u *io_u;
-	int err;
+	int err, i;
 
-	if (o->fixedbufs) {
-		int i;
+	for (i = 0; i < td->o.iodepth; i++) {
+		struct iovec *iov = &ld->iovecs[i];
 
-		for (i = 0; i < td->o.iodepth; i++) {
-			struct iovec *iov = &ld->iovecs[i];
-
-			io_u = ld->io_u_index[i];
-			iov->iov_base = io_u->buf;
-			iov->iov_len = td_max_bs(td);
-		}
+		io_u = ld->io_u_index[i];
+		iov->iov_base = io_u->buf;
+		iov->iov_len = td_max_bs(td);
 	}
 
 	err = fio_ioring_queue_init(td);
@@ -513,7 +510,6 @@ static unsigned roundup_pow2(unsigned depth)
 
 static int fio_ioring_init(struct thread_data *td)
 {
-	struct ioring_options *o = td->eo;
 	struct ioring_data *ld;
 
 	ld = calloc(1, sizeof(*ld));
@@ -525,9 +521,7 @@ static int fio_ioring_init(struct thread_data *td)
 	/* io_u index */
 	ld->io_u_index = calloc(td->o.iodepth, sizeof(struct io_u *));
 	ld->io_us = calloc(td->o.iodepth, sizeof(struct io_u *));
-
-	if (o->fixedbufs)
-		ld->iovecs = calloc(td->o.iodepth, sizeof(struct iovec));
+	ld->iovecs = calloc(td->o.iodepth, sizeof(struct iovec));
 
 	td->io_ops_data = ld;
 	return 0;
