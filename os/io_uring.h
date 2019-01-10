@@ -29,25 +29,27 @@ struct io_uring_sqe {
 		__kernel_rwf_t	rw_flags;
 		__u32		__resv;
 	};
-	__u16	index;		/* index into fixed buffers, if used */
+	__u16	buf_index;	/* index into fixed buffers, if used */
 	__u16	__pad2[3];
 	__u64	data;		/* data to be passed back at completion time */
 };
 
 /*
+ * sqe->flags
+ */
+#define IOSQE_FIXED_BUFFER	(1 << 0)	/* use fixed buffer */
+
+/*
  * io_uring_setup() flags
  */
 #define IORING_SETUP_IOPOLL	(1 << 0)	/* io_context is polled */
-#define	IORING_SETUP_SQTHREAD	(1 << 1)	/* Use SQ thread */
-#define IORING_SETUP_SQWQ	(1 << 2)	/* Use SQ workqueue */
-#define IORING_SETUP_SQPOLL	(1 << 3)	/* SQ thread polls */
+#define IORING_SETUP_SQPOLL	(1 << 1)	/* SQ poll thread */
+#define IORING_SETUP_SQ_AFF	(1 << 2)	/* sq_thread_cpu is valid */
 
 #define IORING_OP_READV		1
 #define IORING_OP_WRITEV	2
 #define IORING_OP_FSYNC		3
 #define IORING_OP_FDSYNC	4
-#define IORING_OP_READ_FIXED	5
-#define IORING_OP_WRITE_FIXED	6
 
 /*
  * IO completion data structure (Completion Queue Entry)
@@ -112,6 +114,17 @@ struct io_uring_params {
 	__u16 resv[9];
 	struct io_sqring_offsets sq_off;
 	struct io_cqring_offsets cq_off;
+};
+
+/*
+ * io_uring_register(2) opcodes and arguments
+ */
+#define IORING_REGISTER_BUFFERS		0
+#define IORING_UNREGISTER_BUFFERS	1
+
+struct io_uring_register_buffers {
+	struct iovec *iovecs;
+	unsigned nr_iovecs;
 };
 
 #endif

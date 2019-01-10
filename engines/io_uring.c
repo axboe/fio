@@ -73,18 +73,16 @@ struct ioring_options {
 	void *pad;
 	unsigned int hipri;
 	unsigned int fixedbufs;
-	unsigned int sqthread;
-	unsigned int sqthread_set;
-	unsigned int sqthread_poll;
-	unsigned int sqwq;
+	unsigned int sqpoll_set;
+	unsigned int sqpoll_cpu;
 };
 
-static int fio_ioring_sqthread_cb(void *data, unsigned long long *val)
+static int fio_ioring_sqpoll_cb(void *data, unsigned long long *val)
 {
 	struct ioring_options *o = data;
 
-	o->sqthread = *val;
-	o->sqthread_set = 1;
+	o->sqpoll_cpu = *val;
+	o->sqpoll_set = 1;
 	return 0;
 }
 
@@ -108,29 +106,11 @@ static struct fio_option options[] = {
 		.group	= FIO_OPT_G_LIBAIO,
 	},
 	{
-		.name	= "sqthread",
-		.lname	= "Use kernel SQ thread on this CPU",
-		.type	= FIO_OPT_INT,
-		.cb	= fio_ioring_sqthread_cb,
-		.help	= "Offload submission to kernel thread",
-		.category = FIO_OPT_C_ENGINE,
-		.group	= FIO_OPT_G_LIBAIO,
-	},
-	{
 		.name	= "sqthread_poll",
 		.lname	= "Kernel SQ thread should poll",
-		.type	= FIO_OPT_STR_SET,
-		.off1	= offsetof(struct ioring_options, sqthread_poll),
-		.help	= "Used with sqthread, enables kernel side polling",
-		.category = FIO_OPT_C_ENGINE,
-		.group	= FIO_OPT_G_LIBAIO,
-	},
-	{
-		.name	= "sqwq",
-		.lname	= "Offload submission to kernel workqueue",
-		.type	= FIO_OPT_STR_SET,
-		.off1	= offsetof(struct ioring_options, sqwq),
-		.help	= "Offload submission to kernel workqueue",
+		.type	= FIO_OPT_INT,
+		.cb	= fio_ioring_sqpoll_cb,
+		.help	= "Offload submission to kernel thread",
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_LIBAIO,
 	},
@@ -157,21 +137,20 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 	sqe->fd = f->fd;
 	sqe->flags = 0;
 	sqe->ioprio = 0;
+	sqe->buf_index = 0;
 
 	if (io_u->ddir == DDIR_READ || io_u->ddir == DDIR_WRITE) {
+		if (io_u->ddir == DDIR_READ)
+			sqe->opcode = IORING_OP_READV;
+		else
+			sqe->opcode = IORING_OP_WRITEV;
+
 		if (o->fixedbufs) {
-			if (io_u->ddir == DDIR_READ)
-				sqe->opcode = IORING_OP_READ_FIXED;
-			else
-				sqe->opcode = IORING_OP_WRITE_FIXED;
+			sqe->flags |= IOSQE_FIXED_BUFFER;
 			sqe->addr = io_u->xfer_buf;
 			sqe->len = io_u->xfer_buflen;
-			sqe->index = io_u->index;
+			sqe->buf_index = io_u->index;
 		} else {
-			if (io_u->ddir == DDIR_READ)
-				sqe->opcode = IORING_OP_READV;
-			else
-				sqe->opcode = IORING_OP_WRITEV;
 			sqe->addr = &ld->iovecs[io_u->index];
 			sqe->len = 1;
 		}
@@ -252,7 +231,7 @@ static int fio_ioring_getevents(struct thread_data *td, unsigned int min,
 			continue;
 		}
 
-		if (!o->sqthread_poll) {
+		if (!o->sqpoll_set) {
 			r = io_uring_enter(ld, 0, actual_min,
 						IORING_ENTER_GETEVENTS);
 			if (r < 0) {
@@ -335,9 +314,10 @@ static int fio_ioring_commit(struct thread_data *td)
 		return 0;
 
 	/* Nothing to do */
-	if (o->sqthread_poll) {
+	if (o->sqpoll_set) {
 		struct io_sq_ring *ring = &ld->sq_ring;
 
+		read_barrier();
 		if (*ring->flags & IORING_SQ_NEED_WAKEUP)
 			io_uring_enter(ld, ld->queued, 0, 0);
 		ld->queued = 0;
@@ -447,7 +427,6 @@ static int fio_ioring_queue_init(struct thread_data *td)
 	struct ioring_data *ld = td->io_ops_data;
 	struct ioring_options *o = td->eo;
 	int depth = td->o.iodepth;
-	struct iovec *vecs = NULL;
 	struct io_uring_params p;
 	int ret;
 
@@ -455,14 +434,10 @@ static int fio_ioring_queue_init(struct thread_data *td)
 
 	if (o->hipri)
 		p.flags |= IORING_SETUP_IOPOLL;
-	if (o->sqthread_set) {
-		p.sq_thread_cpu = o->sqthread;
-		p.flags |= IORING_SETUP_SQTHREAD;
-		if (o->sqthread_poll)
-			p.flags |= IORING_SETUP_SQPOLL;
+	if (o->sqpoll_set) {
+		p.flags |= IORING_SETUP_SQPOLL | IORING_SETUP_SQ_AFF;
+		p.sq_thread_cpu = o->sqpoll_cpu;
 	}
-	if (o->sqwq)
-		p.flags |= IORING_SETUP_SQWQ;
 
 	if (o->fixedbufs) {
 		struct rlimit rlim = {
@@ -471,14 +446,26 @@ static int fio_ioring_queue_init(struct thread_data *td)
 		};
 
 		setrlimit(RLIMIT_MEMLOCK, &rlim);
-		vecs = ld->iovecs;
 	}
 
-	ret = syscall(__NR_sys_io_uring_setup, depth, vecs, depth, &p);
+	ret = syscall(__NR_sys_io_uring_setup, depth, &p);
 	if (ret < 0)
 		return ret;
 
 	ld->ring_fd = ret;
+
+	if (o->fixedbufs) {
+		struct io_uring_register_buffers reg = {
+			.iovecs = ld->iovecs,
+			.nr_iovecs = depth
+		};
+
+		ret = syscall(__NR_sys_io_uring_register, ld->ring_fd,
+				IORING_REGISTER_BUFFERS, &reg);
+		if (ret < 0)
+			return ret;
+	}
+
 	return fio_ioring_mmap(ld, &p);
 }
 

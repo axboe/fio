@@ -85,13 +85,23 @@ static volatile int finish;
 static int polled = 1;		/* use IO polling */
 static int fixedbufs = 0;	/* use fixed user buffers */
 static int buffered = 0;	/* use buffered IO, not O_DIRECT */
-static int sq_thread = 0;	/* use kernel submission thread */
+static int sq_thread = 0;	/* use kernel submission/poller thread */
 static int sq_thread_cpu = 0;	/* pin above thread to this CPU */
 
-static int io_uring_setup(unsigned entries, struct iovec *iovecs,
-			  unsigned nr_iovecs, struct io_uring_params *p)
+static int io_uring_register_buffers(struct submitter *s)
 {
-	return syscall(__NR_sys_io_uring_setup, entries, iovecs, nr_iovecs, p);
+	struct io_uring_register_buffers reg = {
+		.iovecs = s->iovecs,
+		.nr_iovecs = DEPTH
+	};
+
+	return syscall(__NR_sys_io_uring_register, s->ring_fd,
+			IORING_REGISTER_BUFFERS, &reg);
+}
+
+static int io_uring_setup(unsigned entries, struct io_uring_params *p)
+{
+	return syscall(__NR_sys_io_uring_setup, entries, p);
 }
 
 static int io_uring_enter(struct submitter *s, unsigned int to_submit,
@@ -121,17 +131,18 @@ static void init_io(struct submitter *s, unsigned index)
 	lrand48_r(&s->rand, &r);
 	offset = (r % (f->max_blocks - 1)) * BS;
 
+	sqe->flags = 0;
+	sqe->opcode = IORING_OP_READV;
 	if (fixedbufs) {
-		sqe->opcode = IORING_OP_READ_FIXED;
 		sqe->addr = s->iovecs[index].iov_base;
 		sqe->len = BS;
-		sqe->index = index;
+		sqe->buf_index = index;
+		sqe->flags |= IOSQE_FIXED_BUFFER;
 	} else {
-		sqe->opcode = IORING_OP_READV;
 		sqe->addr = &s->iovecs[index];
 		sqe->len = 1;
+		sqe->buf_index = 0;
 	}
-	sqe->flags = 0;
 	sqe->ioprio = 0;
 	sqe->fd = f->fd;
 	sqe->off = offset;
@@ -308,30 +319,33 @@ static int setup_ring(struct submitter *s)
 	struct io_sq_ring *sring = &s->sq_ring;
 	struct io_cq_ring *cring = &s->cq_ring;
 	struct io_uring_params p;
+	int ret, fd;
 	void *ptr;
-	int fd;
 
 	memset(&p, 0, sizeof(p));
 
 	if (polled)
 		p.flags |= IORING_SETUP_IOPOLL;
-	if (buffered)
-		p.flags |= IORING_SETUP_SQWQ;
-	else if (sq_thread) {
-		p.flags |= IORING_SETUP_SQTHREAD;
+	if (sq_thread) {
+		p.flags |= IORING_SETUP_SQPOLL;
 		p.sq_thread_cpu = sq_thread_cpu;
 	}
 
-	if (fixedbufs)
-		fd = io_uring_setup(DEPTH, s->iovecs, DEPTH, &p);
-	else
-		fd = io_uring_setup(DEPTH, NULL, 0, &p);
+	fd = io_uring_setup(DEPTH, &p);
 	if (fd < 0) {
 		perror("io_uring_setup");
 		return 1;
 	}
-
 	s->ring_fd = fd;
+
+	if (fixedbufs) {
+		ret = io_uring_register_buffers(s);
+		if (ret < 0) {
+			perror("io_uring_register");
+			return 1;
+		}
+	}
+
 	ptr = mmap(0, p.sq_off.array + p.sq_entries * sizeof(__u32),
 			PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, fd,
 			IORING_OFF_SQ_RING);
