@@ -474,7 +474,7 @@ static int fio_ioring_queue_init(struct thread_data *td)
 		vecs = ld->iovecs;
 	}
 
-	ret = syscall(__NR_sys_io_uring_setup, depth, vecs, &p);
+	ret = syscall(__NR_sys_io_uring_setup, depth, vecs, depth, &p);
 	if (ret < 0)
 		return ret;
 

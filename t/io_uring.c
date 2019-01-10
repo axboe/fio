@@ -89,9 +89,9 @@ static int sq_thread = 0;	/* use kernel submission thread */
 static int sq_thread_cpu = 0;	/* pin above thread to this CPU */
 
 static int io_uring_setup(unsigned entries, struct iovec *iovecs,
-			  struct io_uring_params *p)
+			  unsigned nr_iovecs, struct io_uring_params *p)
 {
-	return syscall(__NR_sys_io_uring_setup, entries, iovecs, p);
+	return syscall(__NR_sys_io_uring_setup, entries, iovecs, nr_iovecs, p);
 }
 
 static int io_uring_enter(struct submitter *s, unsigned int to_submit,
@@ -323,9 +323,9 @@ static int setup_ring(struct submitter *s)
 	}
 
 	if (fixedbufs)
-		fd = io_uring_setup(DEPTH, s->iovecs, &p);
+		fd = io_uring_setup(DEPTH, s->iovecs, DEPTH, &p);
 	else
-		fd = io_uring_setup(DEPTH, NULL, &p);
+		fd = io_uring_setup(DEPTH, NULL, 0, &p);
 	if (fd < 0) {
 		perror("io_uring_setup");
 		return 1;
