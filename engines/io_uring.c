@@ -166,6 +166,7 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 				sqe->opcode = IORING_OP_WRITE_FIXED;
 			sqe->addr = io_u->xfer_buf;
 			sqe->len = io_u->xfer_buflen;
+			sqe->index = io_u->index;
 		} else {
 			if (io_u->ddir == DDIR_READ)
 				sqe->opcode = IORING_OP_READV;
@@ -178,6 +179,7 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 	} else if (ddir_sync(io_u->ddir))
 		sqe->opcode = IORING_OP_FSYNC;
 
+	sqe->data = (unsigned long) io_u;
 	return 0;
 }
 
@@ -191,7 +193,7 @@ static struct io_u *fio_ioring_event(struct thread_data *td, int event)
 	index = (event + ld->cq_ring_off) & ld->cq_ring_mask;
 
 	cqe = &ld->cq_ring.cqes[index];
-	io_u = ld->io_u_index[cqe->index];
+	io_u = (struct io_u *) cqe->data;
 
 	if (cqe->res != io_u->xfer_buflen) {
 		if (cqe->res > io_u->xfer_buflen)

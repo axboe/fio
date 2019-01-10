@@ -51,11 +51,17 @@ struct io_cq_ring {
 
 #define BS			4096
 
+#define MAX_FDS			16
+
 static unsigned sq_ring_mask, cq_ring_mask;
+
+struct file {
+	unsigned long max_blocks;
+	int fd;
+};
 
 struct submitter {
 	pthread_t thread;
-	unsigned long max_blocks;
 	int ring_fd;
 	struct drand48_data rand;
 	struct io_sq_ring sq_ring;
@@ -68,7 +74,9 @@ struct submitter {
 	unsigned long calls;
 	unsigned long cachehit, cachemiss;
 	volatile int finish;
-	char filename[128];
+	struct file files[MAX_FDS];
+	unsigned nr_files;
+	unsigned cur_file;
 };
 
 static struct submitter submitters[1];
@@ -98,19 +106,26 @@ static int gettid(void)
 	return syscall(__NR_gettid);
 }
 
-static void init_io(struct submitter *s, int fd, unsigned index)
+static void init_io(struct submitter *s, unsigned index)
 {
 	struct io_uring_sqe *sqe = &s->sqes[index];
 	unsigned long offset;
+	struct file *f;
 	long r;
 
+	f = &s->files[s->cur_file];
+	s->cur_file++;
+	if (s->cur_file == s->nr_files)
+		s->cur_file = 0;
+
 	lrand48_r(&s->rand, &r);
-	offset = (r % (s->max_blocks - 1)) * BS;
+	offset = (r % (f->max_blocks - 1)) * BS;
 
 	if (fixedbufs) {
 		sqe->opcode = IORING_OP_READ_FIXED;
 		sqe->addr = s->iovecs[index].iov_base;
 		sqe->len = BS;
+		sqe->index = index;
 	} else {
 		sqe->opcode = IORING_OP_READV;
 		sqe->addr = &s->iovecs[index];
@@ -118,11 +133,11 @@ static void init_io(struct submitter *s, int fd, unsigned index)
 	}
 	sqe->flags = 0;
 	sqe->ioprio = 0;
-	sqe->fd = fd;
+	sqe->fd = f->fd;
 	sqe->off = offset;
 }
 
-static int prep_more_ios(struct submitter *s, int fd, int max_ios)
+static int prep_more_ios(struct submitter *s, int max_ios)
 {
 	struct io_sq_ring *ring = &s->sq_ring;
 	unsigned index, tail, next_tail, prepped = 0;
@@ -135,7 +150,7 @@ static int prep_more_ios(struct submitter *s, int fd, int max_ios)
 			break;
 
 		index = tail & sq_ring_mask;
-		init_io(s, fd, index);
+		init_io(s, index);
 		ring->array[index] = index;
 		prepped++;
 		tail = next_tail;
@@ -150,22 +165,22 @@ static int prep_more_ios(struct submitter *s, int fd, int max_ios)
 	return prepped;
 }
 
-static int get_file_size(int fd, unsigned long *blocks)
+static int get_file_size(struct file *f)
 {
 	struct stat st;
 
-	if (fstat(fd, &st) < 0)
+	if (fstat(f->fd, &st) < 0)
 		return -1;
 	if (S_ISBLK(st.st_mode)) {
 		unsigned long long bytes;
 
-		if (ioctl(fd, BLKGETSIZE64, &bytes) != 0)
+		if (ioctl(f->fd, BLKGETSIZE64, &bytes) != 0)
 			return -1;
 
-		*blocks = bytes / BS;
+		f->max_blocks = bytes / BS;
 		return 0;
 	} else if (S_ISREG(st.st_mode)) {
-		*blocks = st.st_size / BS;
+		f->max_blocks = st.st_size / BS;
 		return 0;
 	}
 
@@ -185,12 +200,7 @@ static int reap_events(struct submitter *s)
 			break;
 		cqe = &ring->cqes[head & cq_ring_mask];
 		if (cqe->res != BS) {
-			struct io_uring_sqe *sqe = &s->sqes[cqe->index];
-
 			printf("io: unexpected ret=%d\n", cqe->res);
-			printf("offset=%lu, size=%lu\n",
-					(unsigned long) sqe->off,
-					(unsigned long) sqe->len);
 			return -1;
 		}
 		if (cqe->flags & IOCQE_FLAG_CACHEHIT)
@@ -210,28 +220,9 @@ static int reap_events(struct submitter *s)
 static void *submitter_fn(void *data)
 {
 	struct submitter *s = data;
-	int fd, ret, prepped, flags;
+	int ret, prepped;
 
 	printf("submitter=%d\n", gettid());
-
-	flags = O_RDONLY;
-	if (!buffered)
-		flags |= O_DIRECT;
-	fd = open(s->filename, flags);
-	if (fd < 0) {
-		perror("open");
-		goto done;
-	}
-
-	if (get_file_size(fd, &s->max_blocks)) {
-		printf("failed getting size of device/file\n");
-		goto err;
-	}
-	if (s->max_blocks <= 1) {
-		printf("Zero file/device size?\n");
-		goto err;
-	}
-	s->max_blocks--;
 
 	srand48_r(pthread_self(), &s->rand);
 
@@ -241,7 +232,7 @@ static void *submitter_fn(void *data)
 
 		if (!prepped && s->inflight < DEPTH) {
 			to_prep = min(DEPTH - s->inflight, BATCH_SUBMIT);
-			prepped = prep_more_ios(s, fd, to_prep);
+			prepped = prep_more_ios(s, to_prep);
 		}
 		s->inflight += prepped;
 submit_more:
@@ -290,9 +281,7 @@ submit:
 			break;
 		}
 	} while (!s->finish);
-err:
-	close(fd);
-done:
+
 	finish = 1;
 	return NULL;
 }
@@ -376,13 +365,42 @@ int main(int argc, char *argv[])
 {
 	struct submitter *s = &submitters[0];
 	unsigned long done, calls, reap, cache_hit, cache_miss;
-	int err, i;
+	int err, i, flags, fd;
 	struct rlimit rlim;
 	void *ret;
 
 	if (argc < 2) {
 		printf("%s: filename\n", argv[0]);
 		return 1;
+	}
+
+	flags = O_RDONLY;
+	if (!buffered)
+		flags |= O_DIRECT;
+
+	i = 1;
+	while (i < argc) {
+		struct file *f = &s->files[s->nr_files];
+
+		fd = open(argv[i], flags);
+		if (fd < 0) {
+			perror("open");
+			return 1;
+		}
+		f->fd = fd;
+		if (get_file_size(f)) {
+			printf("failed getting size of device/file\n");
+			return 1;
+		}
+		if (f->max_blocks <= 1) {
+			printf("Zero file/device size?\n");
+			return 1;
+		}
+		f->max_blocks--;
+
+		printf("Added file %s\n", argv[i]);
+		s->nr_files++;
+		i++;
 	}
 
 	rlim.rlim_cur = RLIM_INFINITY;
@@ -412,7 +430,6 @@ int main(int argc, char *argv[])
 	}
 	printf("polled=%d, fixedbufs=%d, buffered=%d", polled, fixedbufs, buffered);
 	printf(" QD=%d, sq_ring=%d, cq_ring=%d\n", DEPTH, *s->sq_ring.ring_entries, *s->cq_ring.ring_entries);
-	strcpy(s->filename, argv[1]);
 
 	pthread_create(&s->thread, NULL, submitter_fn, s);
 

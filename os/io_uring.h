@@ -15,20 +15,23 @@
  * IO submission data structure (Submission Queue Entry)
  */
 struct io_uring_sqe {
-	__u8	opcode;
-	__u8	flags;
-	__u16	ioprio;
-	__s32	fd;
-	__u64	off;
+	__u8	opcode;		/* type of operation for this sqe */
+	__u8	flags;		/* as of now unused */
+	__u16	ioprio;		/* ioprio for the request */
+	__s32	fd;		/* file descriptor to do IO on */
+	__u64	off;		/* offset into file */
 	union {
-		void	*addr;
+		void	*addr;	/* buffer or iovecs */
 		__u64	__pad;
 	};
-	__u32	len;
+	__u32	len;		/* buffer size or number of iovecs */
 	union {
 		__kernel_rwf_t	rw_flags;
 		__u32		__resv;
 	};
+	__u16	index;		/* index into fixed buffers, if used */
+	__u16	__pad2[3];
+	__u64	data;		/* data to be passed back at completion time */
 };
 
 /*
@@ -50,7 +53,7 @@ struct io_uring_sqe {
  * IO completion data structure (Completion Queue Entry)
  */
 struct io_uring_cqe {
-	__u64	index;		/* what sqe this event came from */
+	__u64	data;		/* sqe->data submission passed back */
 	__s32	res;		/* result code for this event */
 	__u32	flags;
 };
