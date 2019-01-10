@@ -73,6 +73,7 @@ struct ioring_options {
 	void *pad;
 	unsigned int hipri;
 	unsigned int fixedbufs;
+	unsigned int sqpoll_thread;
 	unsigned int sqpoll_set;
 	unsigned int sqpoll_cpu;
 };
@@ -107,10 +108,19 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "sqthread_poll",
-		.lname	= "Kernel SQ thread should poll",
+		.lname	= "Kernel SQ thread polling",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct ioring_options, sqpoll_thread),
+		.help	= "Offload submission/completion to kernel thread",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_LIBAIO,
+	},
+	{
+		.name	= "sqthread_poll_cpu",
+		.lname	= "SQ Thread Poll CPU",
 		.type	= FIO_OPT_INT,
 		.cb	= fio_ioring_sqpoll_cb,
-		.help	= "Offload submission to kernel thread",
+		.help	= "What CPU to run SQ thread polling on",
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_LIBAIO,
 	},
@@ -231,7 +241,7 @@ static int fio_ioring_getevents(struct thread_data *td, unsigned int min,
 			continue;
 		}
 
-		if (!o->sqpoll_set) {
+		if (!o->sqpoll_thread) {
 			r = io_uring_enter(ld, 0, actual_min,
 						IORING_ENTER_GETEVENTS);
 			if (r < 0) {
@@ -313,8 +323,12 @@ static int fio_ioring_commit(struct thread_data *td)
 	if (!ld->queued)
 		return 0;
 
-	/* Nothing to do */
-	if (o->sqpoll_set) {
+	/*
+	 * Kernel side does submission. just need to check if the ring is
+	 * flagged as needing a kick, if so, call io_uring_enter(). This
+	 * only happens if we've been idle too long.
+	 */
+	if (o->sqpoll_thread) {
 		struct io_sq_ring *ring = &ld->sq_ring;
 
 		read_barrier();
@@ -434,9 +448,12 @@ static int fio_ioring_queue_init(struct thread_data *td)
 
 	if (o->hipri)
 		p.flags |= IORING_SETUP_IOPOLL;
-	if (o->sqpoll_set) {
-		p.flags |= IORING_SETUP_SQPOLL | IORING_SETUP_SQ_AFF;
-		p.sq_thread_cpu = o->sqpoll_cpu;
+	if (o->sqpoll_thread) {
+		p.flags |= IORING_SETUP_SQPOLL;
+		if (o->sqpoll_set) {
+			p.flags |= IORING_SETUP_SQ_AFF;
+			p.sq_thread_cpu = o->sqpoll_cpu;
+		}
 	}
 
 	if (o->fixedbufs) {

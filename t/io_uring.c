@@ -85,8 +85,8 @@ static volatile int finish;
 static int polled = 1;		/* use IO polling */
 static int fixedbufs = 0;	/* use fixed user buffers */
 static int buffered = 0;	/* use buffered IO, not O_DIRECT */
-static int sq_thread = 0;	/* use kernel submission/poller thread */
-static int sq_thread_cpu = 0;	/* pin above thread to this CPU */
+static int sq_thread_poll = 0;	/* use kernel submission/poller thread */
+static int sq_thread_cpu = -1;	/* pin above thread to this CPU */
 
 static int io_uring_register_buffers(struct submitter *s)
 {
@@ -324,11 +324,10 @@ static int setup_ring(struct submitter *s)
 
 	memset(&p, 0, sizeof(p));
 
-	if (polled)
-		p.flags |= IORING_SETUP_IOPOLL;
-	if (sq_thread) {
+	if (sq_thread_poll) {
 		p.flags |= IORING_SETUP_SQPOLL;
-		p.sq_thread_cpu = sq_thread_cpu;
+		if (sq_thread_cpu != -1)
+			p.flags |= IORING_SETUP_SQ_AFF;
 	}
 
 	fd = io_uring_setup(DEPTH, &p);
