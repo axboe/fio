@@ -386,8 +386,10 @@ static int setup_ring(struct submitter *s)
 		p.flags |= IORING_SETUP_IOPOLL;
 	if (sq_thread_poll) {
 		p.flags |= IORING_SETUP_SQPOLL;
-		if (sq_thread_cpu != -1)
+		if (sq_thread_cpu != -1) {
 			p.flags |= IORING_SETUP_SQ_AFF;
+			p.sq_thread_cpu = sq_thread_cpu;
+		}
 	}
 
 	fd = io_uring_setup(DEPTH, &p);
