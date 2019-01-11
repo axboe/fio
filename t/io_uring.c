@@ -59,7 +59,8 @@ static unsigned sq_ring_mask, cq_ring_mask;
 struct file {
 	unsigned long max_blocks;
 	unsigned pending_ios;
-	int fd;
+	int real_fd;
+	int fixed_fd;
 };
 
 struct submitter {
@@ -76,6 +77,8 @@ struct submitter {
 	unsigned long calls;
 	unsigned long cachehit, cachemiss;
 	volatile int finish;
+
+	__s32 *fds;
 
 	struct file files[MAX_FDS];
 	unsigned nr_files;
@@ -105,17 +108,18 @@ static int io_uring_register_buffers(struct submitter *s)
 static int io_uring_register_files(struct submitter *s)
 {
 	struct io_uring_register_files reg;
-	int i, ret;
+	int i;
 
-	reg.fds = calloc(s->nr_files, sizeof(int));
-	for (i = 0; i < s->nr_files; i++)
-		reg.fds[i] = s->files[i].fd;
+	s->fds = calloc(s->nr_files, sizeof(__s32));
+	for (i = 0; i < s->nr_files; i++) {
+		s->fds[i] = s->files[i].real_fd;
+		s->files[i].fixed_fd = i;
+	}
+	reg.fds = s->fds;
 	reg.nr_fds = s->nr_files;
 
-	ret = syscall(__NR_sys_io_uring_register, s->ring_fd,
+	return syscall(__NR_sys_io_uring_register, s->ring_fd,
 			IORING_REGISTER_FILES, &reg);
-	free(reg.fds);
-	return ret;
 }
 
 static int io_uring_setup(unsigned entries, struct io_uring_params *p)
@@ -163,21 +167,21 @@ static void init_io(struct submitter *s, unsigned index)
 	offset = (r % (f->max_blocks - 1)) * BS;
 
 	sqe->flags = IOSQE_FIXED_FILE;
-	sqe->opcode = IORING_OP_READV;
 	if (fixedbufs) {
+		sqe->opcode = IORING_OP_READ_FIXED;
 		sqe->addr = s->iovecs[index].iov_base;
 		sqe->len = BS;
 		sqe->buf_index = index;
-		sqe->flags |= IOSQE_FIXED_BUFFER;
 	} else {
+		sqe->opcode = IORING_OP_READV;
 		sqe->addr = &s->iovecs[index];
 		sqe->len = 1;
 		sqe->buf_index = 0;
 	}
 	sqe->ioprio = 0;
-	sqe->fd = f->fd;
+	sqe->fd = f->fixed_fd;
 	sqe->off = offset;
-	sqe->data = (unsigned long) f;
+	sqe->user_data = (unsigned long) f;
 }
 
 static int prep_more_ios(struct submitter *s, int max_ios)
@@ -212,12 +216,12 @@ static int get_file_size(struct file *f)
 {
 	struct stat st;
 
-	if (fstat(f->fd, &st) < 0)
+	if (fstat(f->real_fd, &st) < 0)
 		return -1;
 	if (S_ISBLK(st.st_mode)) {
 		unsigned long long bytes;
 
-		if (ioctl(f->fd, BLKGETSIZE64, &bytes) != 0)
+		if (ioctl(f->real_fd, BLKGETSIZE64, &bytes) != 0)
 			return -1;
 
 		f->max_blocks = bytes / BS;
@@ -244,7 +248,7 @@ static int reap_events(struct submitter *s)
 		if (head == *ring->tail)
 			break;
 		cqe = &ring->cqes[head & cq_ring_mask];
-		f = (struct file *) cqe->data;
+		f = (struct file *) cqe->user_data;
 		f->pending_ios--;
 		if (cqe->res != BS) {
 			printf("io: unexpected ret=%d\n", cqe->res);
@@ -463,7 +467,7 @@ int main(int argc, char *argv[])
 			perror("open");
 			return 1;
 		}
-		f->fd = fd;
+		f->real_fd = fd;
 		if (get_file_size(f)) {
 			printf("failed getting size of device/file\n");
 			return 1;

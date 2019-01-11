@@ -150,25 +150,31 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 	sqe->buf_index = 0;
 
 	if (io_u->ddir == DDIR_READ || io_u->ddir == DDIR_WRITE) {
-		if (io_u->ddir == DDIR_READ)
-			sqe->opcode = IORING_OP_READV;
-		else
-			sqe->opcode = IORING_OP_WRITEV;
-
 		if (o->fixedbufs) {
-			sqe->flags |= IOSQE_FIXED_BUFFER;
+			if (io_u->ddir == DDIR_READ)
+				sqe->opcode = IORING_OP_READ_FIXED;
+			else
+				sqe->opcode = IORING_OP_WRITE_FIXED;
 			sqe->addr = io_u->xfer_buf;
 			sqe->len = io_u->xfer_buflen;
 			sqe->buf_index = io_u->index;
 		} else {
+			if (io_u->ddir == DDIR_READ)
+				sqe->opcode = IORING_OP_READV;
+			else
+				sqe->opcode = IORING_OP_WRITEV;
 			sqe->addr = &ld->iovecs[io_u->index];
 			sqe->len = 1;
 		}
 		sqe->off = io_u->offset;
-	} else if (ddir_sync(io_u->ddir))
+	} else if (ddir_sync(io_u->ddir)) {
+		sqe->fsync_flags = 0;
+		if (io_u->ddir == DDIR_DATASYNC)
+			sqe->fsync_flags |= IORING_FSYNC_DATASYNC;
 		sqe->opcode = IORING_OP_FSYNC;
+	}
 
-	sqe->data = (unsigned long) io_u;
+	sqe->user_data = (unsigned long) io_u;
 	return 0;
 }
 
@@ -182,7 +188,7 @@ static struct io_u *fio_ioring_event(struct thread_data *td, int event)
 	index = (event + ld->cq_ring_off) & ld->cq_ring_mask;
 
 	cqe = &ld->cq_ring.cqes[index];
-	io_u = (struct io_u *) cqe->data;
+	io_u = (struct io_u *) cqe->user_data;
 
 	if (cqe->res != io_u->xfer_buflen) {
 		if (cqe->res > io_u->xfer_buflen)
