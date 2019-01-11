@@ -324,6 +324,8 @@ static int setup_ring(struct submitter *s)
 
 	memset(&p, 0, sizeof(p));
 
+	if (polled)
+		p.flags |= IORING_SETUP_IOPOLL;
 	if (sq_thread_poll) {
 		p.flags |= IORING_SETUP_SQPOLL;
 		if (sq_thread_cpu != -1)
