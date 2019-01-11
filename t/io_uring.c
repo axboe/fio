@@ -33,6 +33,7 @@ struct io_sq_ring {
 	unsigned *tail;
 	unsigned *ring_mask;
 	unsigned *ring_entries;
+	unsigned *flags;
 	unsigned *array;
 };
 
@@ -250,6 +251,7 @@ static int reap_events(struct submitter *s)
 static void *submitter_fn(void *data)
 {
 	struct submitter *s = data;
+	struct io_sq_ring *ring = &s->sq_ring;
 	int ret, prepped;
 
 	printf("submitter=%d\n", gettid());
@@ -273,13 +275,30 @@ submit:
 		else
 			to_wait = min(s->inflight + to_submit, BATCH_COMPLETE);
 
-		ret = io_uring_enter(s, to_submit, to_wait,
-					IORING_ENTER_GETEVENTS);
-		s->calls++;
+		/*
+		 * Only need to call io_uring_enter if we're not using SQ thread
+		 * poll, or if IORING_SQ_NEED_WAKEUP is set.
+		 */
+		if (!sq_thread_poll || (*ring->flags & IORING_SQ_NEED_WAKEUP)) {
+			ret = io_uring_enter(s, to_submit, to_wait,
+						IORING_ENTER_GETEVENTS);
+			s->calls++;
+		}
 
-		this_reap = reap_events(s);
-		if (this_reap == -1)
-			break;
+		/*
+		 * For non SQ thread poll, we already got the events we needed
+		 * through the io_uring_enter() above. For SQ thread poll, we
+		 * need to loop here until we find enough events.
+		 */
+		this_reap = 0;
+		do {
+			int r;
+			r = reap_events(s);
+			if (r == -1)
+				break;
+			else if (r > 0)
+				this_reap += r;
+		} while (sq_thread_poll && this_reap < to_wait);
 		s->reaps += this_reap;
 
 		if (ret >= 0) {
@@ -374,6 +393,7 @@ static int setup_ring(struct submitter *s)
 	sring->tail = ptr + p.sq_off.tail;
 	sring->ring_mask = ptr + p.sq_off.ring_mask;
 	sring->ring_entries = ptr + p.sq_off.ring_entries;
+	sring->flags = ptr + p.sq_off.flags;
 	sring->array = ptr + p.sq_off.array;
 	sq_ring_mask = *sring->ring_mask;
 
