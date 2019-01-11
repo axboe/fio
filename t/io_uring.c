@@ -44,10 +44,10 @@ struct io_cq_ring {
 	struct io_uring_cqe *cqes;
 };
 
-#define DEPTH			32
+#define DEPTH			128
 
-#define BATCH_SUBMIT		8
-#define BATCH_COMPLETE		8
+#define BATCH_SUBMIT		64
+#define BATCH_COMPLETE		64
 
 #define BS			4096
 
@@ -57,6 +57,7 @@ static unsigned sq_ring_mask, cq_ring_mask;
 
 struct file {
 	unsigned long max_blocks;
+	unsigned pending_ios;
 	int fd;
 };
 
@@ -74,6 +75,7 @@ struct submitter {
 	unsigned long calls;
 	unsigned long cachehit, cachemiss;
 	volatile int finish;
+
 	struct file files[MAX_FDS];
 	unsigned nr_files;
 	unsigned cur_file;
@@ -83,7 +85,7 @@ static struct submitter submitters[1];
 static volatile int finish;
 
 static int polled = 1;		/* use IO polling */
-static int fixedbufs = 0;	/* use fixed user buffers */
+static int fixedbufs = 1;	/* use fixed user buffers */
 static int buffered = 0;	/* use buffered IO, not O_DIRECT */
 static int sq_thread_poll = 0;	/* use kernel submission/poller thread */
 static int sq_thread_cpu = -1;	/* pin above thread to this CPU */
@@ -116,6 +118,11 @@ static int gettid(void)
 	return syscall(__NR_gettid);
 }
 
+static unsigned file_depth(struct submitter *s)
+{
+	return (DEPTH + s->nr_files - 1) / s->nr_files;
+}
+
 static void init_io(struct submitter *s, unsigned index)
 {
 	struct io_uring_sqe *sqe = &s->sqes[index];
@@ -123,10 +130,17 @@ static void init_io(struct submitter *s, unsigned index)
 	struct file *f;
 	long r;
 
-	f = &s->files[s->cur_file];
-	s->cur_file++;
-	if (s->cur_file == s->nr_files)
-		s->cur_file = 0;
+	if (s->nr_files == 1) {
+		f = &s->files[0];
+	} else {
+		f = &s->files[s->cur_file];
+		if (f->pending_ios >= file_depth(s)) {
+			s->cur_file++;
+			if (s->cur_file == s->nr_files)
+				s->cur_file = 0;
+		}
+	}
+	f->pending_ios++;
 
 	lrand48_r(&s->rand, &r);
 	offset = (r % (f->max_blocks - 1)) * BS;
@@ -146,6 +160,7 @@ static void init_io(struct submitter *s, unsigned index)
 	sqe->ioprio = 0;
 	sqe->fd = f->fd;
 	sqe->off = offset;
+	sqe->data = (unsigned long) f;
 }
 
 static int prep_more_ios(struct submitter *s, int max_ios)
@@ -206,10 +221,14 @@ static int reap_events(struct submitter *s)
 
 	head = *ring->head;
 	do {
+		struct file *f;
+
 		barrier();
 		if (head == *ring->tail)
 			break;
 		cqe = &ring->cqes[head & cq_ring_mask];
+		f = (struct file *) cqe->data;
+		f->pending_ios--;
 		if (cqe->res != BS) {
 			printf("io: unexpected ret=%d\n", cqe->res);
 			return -1;
@@ -389,7 +408,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	flags = O_RDONLY;
+	flags = O_RDONLY | O_NOATIME;
 	if (!buffered)
 		flags |= O_DIRECT;
 
