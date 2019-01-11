@@ -300,8 +300,11 @@ submit:
 		 * poll, or if IORING_SQ_NEED_WAKEUP is set.
 		 */
 		if (!sq_thread_poll || (*ring->flags & IORING_SQ_NEED_WAKEUP)) {
-			ret = io_uring_enter(s, to_submit, to_wait,
-						IORING_ENTER_GETEVENTS);
+			unsigned flags = 0;
+
+			if (to_wait)
+				flags = IORING_ENTER_GETEVENTS;
+			ret = io_uring_enter(s, to_submit, to_wait, flags);
 			s->calls++;
 		}
 
