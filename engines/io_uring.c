@@ -48,7 +48,6 @@ struct ioring_mmap {
 struct ioring_data {
 	int ring_fd;
 
-	struct io_u **io_us;
 	struct io_u **io_u_index;
 
 	struct io_sq_ring sq_ring;
@@ -396,7 +395,6 @@ static void fio_ioring_cleanup(struct thread_data *td)
 			fio_ioring_unmap(ld);
 
 		free(ld->io_u_index);
-		free(ld->io_us);
 		free(ld->iovecs);
 		free(ld);
 	}
@@ -532,7 +530,6 @@ static int fio_ioring_init(struct thread_data *td)
 
 	/* io_u index */
 	ld->io_u_index = calloc(td->o.iodepth, sizeof(struct io_u *));
-	ld->io_us = calloc(td->o.iodepth, sizeof(struct io_u *));
 	ld->iovecs = calloc(td->o.iodepth, sizeof(struct iovec));
 
 	td->io_ops_data = ld;
