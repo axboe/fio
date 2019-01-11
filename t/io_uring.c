@@ -514,8 +514,9 @@ int main(int argc, char *argv[])
 		if (this_call - calls) {
 			rpc = (this_done - done) / (this_call - calls);
 			ipc = (this_reap - reap) / (this_call - calls);
-		}
-		printf("IOPS=%lu, IOS/call=%lu/%lu, inflight=%u (head=%u tail=%u), Cachehit=%0.2f%%\n",
+		} else
+			rpc = ipc = -1;
+		printf("IOPS=%lu, IOS/call=%ld/%ld, inflight=%u (head=%u tail=%u), Cachehit=%0.2f%%\n",
 				this_done - done, rpc, ipc, s->inflight,
 				*s->cq_ring.head, *s->cq_ring.tail, hit);
 		done = this_done;
