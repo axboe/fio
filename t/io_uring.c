@@ -102,6 +102,22 @@ static int io_uring_register_buffers(struct submitter *s)
 			IORING_REGISTER_BUFFERS, &reg);
 }
 
+static int io_uring_register_files(struct submitter *s)
+{
+	struct io_uring_register_files reg;
+	int i, ret;
+
+	reg.fds = calloc(s->nr_files, sizeof(int));
+	for (i = 0; i < s->nr_files; i++)
+		reg.fds[i] = s->files[i].fd;
+	reg.nr_fds = s->nr_files;
+
+	ret = syscall(__NR_sys_io_uring_register, s->ring_fd,
+			IORING_REGISTER_FILES, &reg);
+	free(reg.fds);
+	return ret;
+}
+
 static int io_uring_setup(unsigned entries, struct io_uring_params *p)
 {
 	return syscall(__NR_sys_io_uring_setup, entries, p);
@@ -146,7 +162,7 @@ static void init_io(struct submitter *s, unsigned index)
 	lrand48_r(&s->rand, &r);
 	offset = (r % (f->max_blocks - 1)) * BS;
 
-	sqe->flags = 0;
+	sqe->flags = IOSQE_FIXED_FILE;
 	sqe->opcode = IORING_OP_READV;
 	if (fixedbufs) {
 		sqe->addr = s->iovecs[index].iov_base;
@@ -380,9 +396,15 @@ static int setup_ring(struct submitter *s)
 	if (fixedbufs) {
 		ret = io_uring_register_buffers(s);
 		if (ret < 0) {
-			perror("io_uring_register");
+			perror("io_uring_register_buffers");
 			return 1;
 		}
+	}
+
+	ret = io_uring_register_files(s);
+	if (ret < 0) {
+		perror("io_uring_register_files");
+		return 1;
 	}
 
 	ptr = mmap(0, p.sq_off.array + p.sq_entries * sizeof(__u32),
