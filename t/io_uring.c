@@ -261,7 +261,7 @@ static int reap_events(struct submitter *s)
 			break;
 		cqe = &ring->cqes[head & cq_ring_mask];
 		if (!do_nop) {
-			f = (struct file *) cqe->user_data;
+			f = (struct file *) (uintptr_t) cqe->user_data;
 			f->pending_ios--;
 			if (cqe->res != BS) {
 				printf("io: unexpected ret=%d\n", cqe->res);

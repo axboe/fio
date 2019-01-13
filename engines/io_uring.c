@@ -187,7 +187,7 @@ static struct io_u *fio_ioring_event(struct thread_data *td, int event)
 	index = (event + ld->cq_ring_off) & ld->cq_ring_mask;
 
 	cqe = &ld->cq_ring.cqes[index];
-	io_u = (struct io_u *) cqe->user_data;
+	io_u = (struct io_u *) (uintptr_t) cqe->user_data;
 
 	if (cqe->res != io_u->xfer_buflen) {
 		if (cqe->res > io_u->xfer_buflen)
