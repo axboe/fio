@@ -137,12 +137,18 @@ struct io_uring_params {
 #define IORING_UNREGISTER_FILES		3
 
 struct io_uring_register_buffers {
-	struct iovec *iovecs;
+	union {
+		struct iovec *iovecs;
+		__u64 pad;
+	};
 	__u32 nr_iovecs;
 };
 
 struct io_uring_register_files {
-	__s32 *fds;
+	union {
+		__s32 *fds;
+		__u64 pad;
+	};
 	__u32 nr_fds;
 };
 
