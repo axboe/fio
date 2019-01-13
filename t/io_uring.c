@@ -90,6 +90,7 @@ static volatile int finish;
 
 static int polled = 1;		/* use IO polling */
 static int fixedbufs = 1;	/* use fixed user buffers */
+static int register_files = 1;	/* use fixed files */
 static int buffered = 0;	/* use buffered IO, not O_DIRECT */
 static int sq_thread_poll = 0;	/* use kernel submission/poller thread */
 static int sq_thread_cpu = -1;	/* pin above thread to this CPU */
@@ -178,7 +179,13 @@ static void init_io(struct submitter *s, unsigned index)
 	lrand48_r(&s->rand, &r);
 	offset = (r % (f->max_blocks - 1)) * BS;
 
-	sqe->flags = IOSQE_FIXED_FILE;
+	if (register_files) {
+		sqe->flags = IOSQE_FIXED_FILE;
+		sqe->fd = f->fixed_fd;
+	} else {
+		sqe->flags = 0;
+		sqe->fd = f->real_fd;
+	}
 	if (fixedbufs) {
 		sqe->opcode = IORING_OP_READ_FIXED;
 		sqe->addr = s->iovecs[index].iov_base;
@@ -191,7 +198,6 @@ static void init_io(struct submitter *s, unsigned index)
 		sqe->buf_index = 0;
 	}
 	sqe->ioprio = 0;
-	sqe->fd = f->fixed_fd;
 	sqe->off = offset;
 	sqe->user_data = (unsigned long) f;
 }
@@ -424,10 +430,12 @@ static int setup_ring(struct submitter *s)
 		}
 	}
 
-	ret = io_uring_register_files(s);
-	if (ret < 0) {
-		perror("io_uring_register_files");
-		return 1;
+	if (register_files) {
+		ret = io_uring_register_files(s);
+		if (ret < 0) {
+			perror("io_uring_register_files");
+			return 1;
+		}
 	}
 
 	ptr = mmap(0, p.sq_off.array + p.sq_entries * sizeof(__u32),
