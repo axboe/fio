@@ -29,10 +29,11 @@ struct io_uring_sqe {
 		__kernel_rwf_t	rw_flags;
 		__u32		fsync_flags;
 	};
-	__u16	buf_index;	/* index into fixed buffers, if used */
-	__u16	__pad2;
-	__u32	__pad3;
 	__u64	user_data;	/* data to be passed back at completion time */
+	union {
+		__u16	buf_index;	/* index into fixed buffers, if used */
+		__u64	__pad2[3];
+	};
 };
 
 /*

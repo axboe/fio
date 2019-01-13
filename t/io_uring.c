@@ -22,7 +22,7 @@
 
 #include "../arch/arch.h"
 #include "../lib/types.h"
-#include "../os/io_uring.h"
+#include "../os/linux/io_uring.h"
 
 #define barrier()	__asm__ __volatile__("": : :"memory")
 
