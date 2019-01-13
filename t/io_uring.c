@@ -93,6 +93,7 @@ static int fixedbufs = 1;	/* use fixed user buffers */
 static int buffered = 0;	/* use buffered IO, not O_DIRECT */
 static int sq_thread_poll = 0;	/* use kernel submission/poller thread */
 static int sq_thread_cpu = -1;	/* pin above thread to this CPU */
+static int do_nop = 0;		/* no-op SQ ring commands */
 
 static int io_uring_register_buffers(struct submitter *s)
 {
@@ -100,6 +101,9 @@ static int io_uring_register_buffers(struct submitter *s)
 		.iovecs = s->iovecs,
 		.nr_iovecs = DEPTH
 	};
+
+	if (do_nop)
+		return 0;
 
 	return syscall(__NR_sys_io_uring_register, s->ring_fd,
 			IORING_REGISTER_BUFFERS, &reg);
@@ -109,6 +113,9 @@ static int io_uring_register_files(struct submitter *s)
 {
 	struct io_uring_register_files reg;
 	int i;
+
+	if (do_nop)
+		return 0;
 
 	s->fds = calloc(s->nr_files, sizeof(__s32));
 	for (i = 0; i < s->nr_files; i++) {
@@ -150,6 +157,11 @@ static void init_io(struct submitter *s, unsigned index)
 	unsigned long offset;
 	struct file *f;
 	long r;
+
+	if (do_nop) {
+		sqe->opcode = IORING_OP_NOP;
+		return;
+	}
 
 	if (s->nr_files == 1) {
 		f = &s->files[0];
@@ -248,11 +260,13 @@ static int reap_events(struct submitter *s)
 		if (head == *ring->tail)
 			break;
 		cqe = &ring->cqes[head & cq_ring_mask];
-		f = (struct file *) cqe->user_data;
-		f->pending_ios--;
-		if (cqe->res != BS) {
-			printf("io: unexpected ret=%d\n", cqe->res);
-			return -1;
+		if (!do_nop) {
+			f = (struct file *) cqe->user_data;
+			f->pending_ios--;
+			if (cqe->res != BS) {
+				printf("io: unexpected ret=%d\n", cqe->res);
+				return -1;
+			}
 		}
 		if (cqe->flags & IOCQE_FLAG_CACHEHIT)
 			s->cachehit++;
@@ -454,7 +468,7 @@ int main(int argc, char *argv[])
 	struct rlimit rlim;
 	void *ret;
 
-	if (argc < 2) {
+	if (!do_nop && argc < 2) {
 		printf("%s: filename\n", argv[0]);
 		return 1;
 	}
@@ -464,7 +478,7 @@ int main(int argc, char *argv[])
 		flags |= O_DIRECT;
 
 	i = 1;
-	while (i < argc) {
+	while (!do_nop && i < argc) {
 		struct file *f = &s->files[s->nr_files];
 
 		fd = open(argv[i], flags);

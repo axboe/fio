@@ -47,6 +47,7 @@ struct io_uring_sqe {
 #define IORING_SETUP_SQPOLL	(1 << 1)	/* SQ poll thread */
 #define IORING_SETUP_SQ_AFF	(1 << 2)	/* sq_thread_cpu is valid */
 
+#define IORING_OP_NOP		0
 #define IORING_OP_READV		1
 #define IORING_OP_WRITEV	2
 #define IORING_OP_FSYNC		3
