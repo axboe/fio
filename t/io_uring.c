@@ -473,7 +473,6 @@ int main(int argc, char *argv[])
 	struct submitter *s = &submitters[0];
 	unsigned long done, calls, reap, cache_hit, cache_miss;
 	int err, i, flags, fd;
-	struct rlimit rlim;
 	void *ret;
 
 	if (!do_nop && argc < 2) {
@@ -510,11 +509,15 @@ int main(int argc, char *argv[])
 		i++;
 	}
 
-	rlim.rlim_cur = RLIM_INFINITY;
-	rlim.rlim_max = RLIM_INFINITY;
-	if (setrlimit(RLIMIT_MEMLOCK, &rlim) < 0) {
-		perror("setrlimit");
-		return 1;
+	if (fixedbufs) {
+		struct rlimit rlim;
+
+		rlim.rlim_cur = RLIM_INFINITY;
+		rlim.rlim_max = RLIM_INFINITY;
+		if (setrlimit(RLIMIT_MEMLOCK, &rlim) < 0) {
+			perror("setrlimit");
+			return 1;
+		}
 	}
 
 	arm_sig_int();
