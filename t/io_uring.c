@@ -310,7 +310,7 @@ static void *submitter_fn(void *data)
 submit_more:
 		to_submit = prepped;
 submit:
-		if (s->inflight + BATCH_SUBMIT < DEPTH)
+		if (to_submit && (s->inflight + to_submit < DEPTH))
 			to_wait = 0;
 		else
 			to_wait = min(s->inflight + to_submit, BATCH_COMPLETE);
