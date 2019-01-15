@@ -47,8 +47,8 @@ struct io_cq_ring {
 
 #define DEPTH			128
 
-#define BATCH_SUBMIT		64
-#define BATCH_COMPLETE		64
+#define BATCH_SUBMIT		32
+#define BATCH_COMPLETE		32
 
 #define BS			4096
 
@@ -469,11 +469,29 @@ static int setup_ring(struct submitter *s)
 	return 0;
 }
 
+static void file_depths(char *buf)
+{
+	struct submitter *s = &submitters[0];
+	char *p;
+	int i;
+
+	p = buf;
+	for (i = 0; i < s->nr_files; i++) {
+		struct file *f = &s->files[i];
+
+		if (i + 1 == s->nr_files)
+			p += sprintf(p, "%d", f->pending_ios);
+		else
+			p += sprintf(p, "%d, ", f->pending_ios);
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	struct submitter *s = &submitters[0];
 	unsigned long done, calls, reap, cache_hit, cache_miss;
 	int err, i, flags, fd;
+	char *fdepths;
 	void *ret;
 
 	if (!do_nop && argc < 2) {
@@ -544,6 +562,7 @@ int main(int argc, char *argv[])
 
 	pthread_create(&s->thread, NULL, submitter_fn, s);
 
+	fdepths = malloc(8 * s->nr_files);
 	cache_hit = cache_miss = reap = calls = done = 0;
 	do {
 		unsigned long this_done = 0;
@@ -573,9 +592,10 @@ int main(int argc, char *argv[])
 			ipc = (this_reap - reap) / (this_call - calls);
 		} else
 			rpc = ipc = -1;
-		printf("IOPS=%lu, IOS/call=%ld/%ld, inflight=%u (head=%u tail=%u), Cachehit=%0.2f%%\n",
+		file_depths(fdepths);
+		printf("IOPS=%lu, IOS/call=%ld/%ld, inflight=%u (%s), Cachehit=%0.2f%%\n",
 				this_done - done, rpc, ipc, s->inflight,
-				*s->cq_ring.head, *s->cq_ring.tail, hit);
+				fdepths, hit);
 		done = this_done;
 		calls = this_call;
 		reap = this_reap;
@@ -585,5 +605,6 @@ int main(int argc, char *argv[])
 
 	pthread_join(s->thread, &ret);
 	close(s->ring_fd);
+	free(fdepths);
 	return 0;
 }
