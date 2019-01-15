@@ -475,6 +475,7 @@ static void file_depths(char *buf)
 	char *p;
 	int i;
 
+	buf[0] = '\0';
 	p = buf;
 	for (i = 0; i < s->nr_files; i++) {
 		struct file *f = &s->files[i];
