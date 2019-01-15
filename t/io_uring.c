@@ -172,6 +172,7 @@ static void init_io(struct submitter *s, unsigned index)
 			s->cur_file++;
 			if (s->cur_file == s->nr_files)
 				s->cur_file = 0;
+			f = &s->files[s->cur_file];
 		}
 	}
 	f->pending_ios++;
