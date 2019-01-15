@@ -338,9 +338,10 @@ submit:
 		do {
 			int r;
 			r = reap_events(s);
-			if (r == -1)
+			if (r == -1) {
+				s->finish = 1;
 				break;
-			else if (r > 0)
+			} else if (r > 0)
 				this_reap += r;
 		} while (sq_thread_poll && this_reap < to_wait);
 		s->reaps += this_reap;
@@ -406,7 +407,7 @@ static int setup_ring(struct submitter *s)
 
 	memset(&p, 0, sizeof(p));
 
-	if (polled)
+	if (polled && !do_nop)
 		p.flags |= IORING_SETUP_IOPOLL;
 	if (sq_thread_poll) {
 		p.flags |= IORING_SETUP_SQPOLL;
