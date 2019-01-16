@@ -462,15 +462,6 @@ static int fio_ioring_queue_init(struct thread_data *td)
 		}
 	}
 
-	if (o->fixedbufs) {
-		struct rlimit rlim = {
-			.rlim_cur = RLIM_INFINITY,
-			.rlim_max = RLIM_INFINITY,
-		};
-
-		setrlimit(RLIMIT_MEMLOCK, &rlim);
-	}
-
 	ret = syscall(__NR_sys_io_uring_setup, depth, &p);
 	if (ret < 0)
 		return ret;
@@ -478,6 +469,14 @@ static int fio_ioring_queue_init(struct thread_data *td)
 	ld->ring_fd = ret;
 
 	if (o->fixedbufs) {
+		struct rlimit rlim = {
+			.rlim_cur = RLIM_INFINITY,
+			.rlim_max = RLIM_INFINITY,
+		};
+
+		if (setrlimit(RLIMIT_MEMLOCK, &rlim) < 0)
+			return -1;
+
 		ret = syscall(__NR_sys_io_uring_register, ld->ring_fd,
 				IORING_REGISTER_BUFFERS, ld->iovecs, depth);
 		if (ret < 0)
