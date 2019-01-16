@@ -24,8 +24,6 @@
 #include "../lib/types.h"
 #include "../os/linux/io_uring.h"
 
-#define barrier()	__asm__ __volatile__("": : :"memory")
-
 #define min(a, b)		((a < b) ? (a) : (b))
 
 struct io_sq_ring {
@@ -211,7 +209,7 @@ static int prep_more_ios(struct submitter *s, int max_ios)
 	next_tail = tail = *ring->tail;
 	do {
 		next_tail++;
-		barrier();
+		read_barrier();
 		if (next_tail == *ring->head)
 			break;
 
@@ -224,9 +222,9 @@ static int prep_more_ios(struct submitter *s, int max_ios)
 
 	if (*ring->tail != tail) {
 		/* order tail store with writes to sqes above */
-		barrier();
+		write_barrier();
 		*ring->tail = tail;
-		barrier();
+		write_barrier();
 	}
 	return prepped;
 }
@@ -263,7 +261,7 @@ static int reap_events(struct submitter *s)
 	do {
 		struct file *f;
 
-		barrier();
+		read_barrier();
 		if (head == *ring->tail)
 			break;
 		cqe = &ring->cqes[head & cq_ring_mask];
@@ -285,7 +283,7 @@ static int reap_events(struct submitter *s)
 
 	s->inflight -= reaped;
 	*ring->head = head;
-	barrier();
+	write_barrier();
 	return reaped;
 }
 
