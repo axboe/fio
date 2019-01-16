@@ -96,21 +96,15 @@ static int do_nop = 0;		/* no-op SQ ring commands */
 
 static int io_uring_register_buffers(struct submitter *s)
 {
-	struct io_uring_register_buffers reg = {
-		.iovecs = s->iovecs,
-		.nr_iovecs = DEPTH
-	};
-
 	if (do_nop)
 		return 0;
 
 	return syscall(__NR_sys_io_uring_register, s->ring_fd,
-			IORING_REGISTER_BUFFERS, &reg);
+			IORING_REGISTER_BUFFERS, s->iovecs, DEPTH);
 }
 
 static int io_uring_register_files(struct submitter *s)
 {
-	struct io_uring_register_files reg;
 	int i;
 
 	if (do_nop)
@@ -121,11 +115,9 @@ static int io_uring_register_files(struct submitter *s)
 		s->fds[i] = s->files[i].real_fd;
 		s->files[i].fixed_fd = i;
 	}
-	reg.fds = s->fds;
-	reg.nr_fds = s->nr_files;
 
 	return syscall(__NR_sys_io_uring_register, s->ring_fd,
-			IORING_REGISTER_FILES, &reg);
+			IORING_REGISTER_FILES, s->fds, s->nr_files);
 }
 
 static int io_uring_setup(unsigned entries, struct io_uring_params *p)
@@ -187,12 +179,12 @@ static void init_io(struct submitter *s, unsigned index)
 	}
 	if (fixedbufs) {
 		sqe->opcode = IORING_OP_READ_FIXED;
-		sqe->addr = s->iovecs[index].iov_base;
+		sqe->addr = (unsigned long) s->iovecs[index].iov_base;
 		sqe->len = BS;
 		sqe->buf_index = index;
 	} else {
 		sqe->opcode = IORING_OP_READV;
-		sqe->addr = &s->iovecs[index];
+		sqe->addr = (unsigned long) &s->iovecs[index];
 		sqe->len = 1;
 		sqe->buf_index = 0;
 	}

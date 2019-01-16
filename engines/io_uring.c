@@ -154,7 +154,7 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 				sqe->opcode = IORING_OP_READ_FIXED;
 			else
 				sqe->opcode = IORING_OP_WRITE_FIXED;
-			sqe->addr = io_u->xfer_buf;
+			sqe->addr = (unsigned long) io_u->xfer_buf;
 			sqe->len = io_u->xfer_buflen;
 			sqe->buf_index = io_u->index;
 		} else {
@@ -162,7 +162,7 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 				sqe->opcode = IORING_OP_READV;
 			else
 				sqe->opcode = IORING_OP_WRITEV;
-			sqe->addr = &ld->iovecs[io_u->index];
+			sqe->addr = (unsigned long) &ld->iovecs[io_u->index];
 			sqe->len = 1;
 		}
 		sqe->off = io_u->offset;
@@ -478,13 +478,8 @@ static int fio_ioring_queue_init(struct thread_data *td)
 	ld->ring_fd = ret;
 
 	if (o->fixedbufs) {
-		struct io_uring_register_buffers reg = {
-			.iovecs = ld->iovecs,
-			.nr_iovecs = depth
-		};
-
 		ret = syscall(__NR_sys_io_uring_register, ld->ring_fd,
-				IORING_REGISTER_BUFFERS, &reg);
+				IORING_REGISTER_BUFFERS, ld->iovecs, depth);
 		if (ret < 0)
 			return ret;
 	}

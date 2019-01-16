@@ -20,10 +20,7 @@ struct io_uring_sqe {
 	__u16	ioprio;		/* ioprio for the request */
 	__s32	fd;		/* file descriptor to do IO on */
 	__u64	off;		/* offset into file */
-	union {
-		void	*addr;	/* buffer or iovecs */
-		__u64	__pad;
-	};
+	__u64	addr;		/* pointer to buffer or iovecs */
 	__u32	len;		/* buffer size or number of iovecs */
 	union {
 		__kernel_rwf_t	rw_flags;
@@ -135,21 +132,5 @@ struct io_uring_params {
 #define IORING_UNREGISTER_BUFFERS	1
 #define IORING_REGISTER_FILES		2
 #define IORING_UNREGISTER_FILES		3
-
-struct io_uring_register_buffers {
-	union {
-		struct iovec *iovecs;
-		__u64 pad;
-	};
-	__u32 nr_iovecs;
-};
-
-struct io_uring_register_files {
-	union {
-		__s32 *fds;
-		__u64 pad;
-	};
-	__u32 nr_fds;
-};
 
 #endif
