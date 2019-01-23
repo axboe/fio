@@ -3,6 +3,16 @@
 
 #include <string.h>
 
+#ifndef __NR_sys_io_uring_setup
+#define __NR_sys_io_uring_setup		425
+#endif
+#ifndef __NR_sys_io_uring_enter
+#define __NR_sys_io_uring_enter		426
+#endif
+#ifndef __NR_sys_io_uring_register
+#define __NR_sys_io_uring_register	427
+#endif
+
 static inline void cpuid(unsigned int op,
 			 unsigned int *eax, unsigned int *ebx,
 			 unsigned int *ecx, unsigned int *edx)
@@ -13,6 +23,7 @@ static inline void cpuid(unsigned int op,
 }
 
 #define ARCH_HAVE_INIT
+#define ARCH_HAVE_IOURING
 
 extern bool tsc_reliable;
 extern int arch_random;
