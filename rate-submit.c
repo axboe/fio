@@ -165,6 +165,9 @@ static int io_workqueue_init_worker_fn(struct submit_worker *sw)
 	if (td_io_init(td))
 		goto err_io_init;
 
+	if (td->io_ops->post_init && td->io_ops->post_init(td))
+		goto err_io_init;
+
 	set_epoch_time(td, td->o.log_unix_epoch);
 	fio_getrusage(&td->ru_start);
 	clear_io_state(td, 1);
