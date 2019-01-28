@@ -315,6 +315,8 @@ submit:
 
 			if (to_wait)
 				flags = IORING_ENTER_GETEVENTS;
+			if (*ring->flags & IORING_SQ_NEED_WAKEUP)
+				flags |= IORING_ENTER_SQ_WAKEUP;
 			ret = io_uring_enter(s, to_submit, to_wait, flags);
 			s->calls++;
 		}

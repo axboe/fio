@@ -11,6 +11,8 @@
 #include <linux/fs.h>
 #include <linux/types.h>
 
+#define IORING_MAX_ENTRIES	4096
+
 /*
  * IO submission data structure (Submission Queue Entry)
  */
@@ -25,6 +27,7 @@ struct io_uring_sqe {
 	union {
 		__kernel_rwf_t	rw_flags;
 		__u32		fsync_flags;
+		__u16		poll_events;
 	};
 	__u64	user_data;	/* data to be passed back at completion time */
 	union {
@@ -51,6 +54,8 @@ struct io_uring_sqe {
 #define IORING_OP_FSYNC		3
 #define IORING_OP_READ_FIXED	4
 #define IORING_OP_WRITE_FIXED	5
+#define IORING_OP_POLL_ADD	6
+#define IORING_OP_POLL_REMOVE	7
 
 /*
  * sqe->fsync_flags
@@ -111,6 +116,7 @@ struct io_cqring_offsets {
  * io_uring_enter(2) flags
  */
 #define IORING_ENTER_GETEVENTS	(1 << 0)
+#define IORING_ENTER_SQ_WAKEUP	(1 << 1)
 
 /*
  * Passed in for io_uring_setup(2). Copied back with updated info on success
@@ -120,7 +126,8 @@ struct io_uring_params {
 	__u32 cq_entries;
 	__u32 flags;
 	__u16 sq_thread_cpu;
-	__u16 resv[9];
+	__u16 sq_thread_idle;
+	__u16 resv[8];
 	struct io_sqring_offsets sq_off;
 	struct io_cqring_offsets cq_off;
 };

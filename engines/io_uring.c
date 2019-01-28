@@ -340,7 +340,8 @@ static int fio_ioring_commit(struct thread_data *td)
 
 		read_barrier();
 		if (*ring->flags & IORING_SQ_NEED_WAKEUP)
-			io_uring_enter(ld, ld->queued, 0, 0);
+			io_uring_enter(ld, ld->queued, 0,
+					IORING_ENTER_SQ_WAKEUP);
 		ld->queued = 0;
 		return 0;
 	}
