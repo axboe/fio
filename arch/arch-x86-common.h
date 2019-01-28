@@ -70,7 +70,7 @@ static inline void arch_init(char *envp[])
 	str[12] = '\0';
 	if (!strcmp(str, "GenuineIntel"))
 		arch_init_intel();
-	else if (!strcmp(str, "AuthenticAMD"))
+	else if (!strcmp(str, "AuthenticAMD") || !strcmp(str, "HygonGenuine"))
 		arch_init_amd();
 }
 
