@@ -39,14 +39,14 @@ struct io_uring_sqe {
 /*
  * sqe->flags
  */
-#define IOSQE_FIXED_FILE	(1 << 0)	/* use fixed fileset */
+#define IOSQE_FIXED_FILE	(1U << 0)	/* use fixed fileset */
 
 /*
  * io_uring_setup() flags
  */
-#define IORING_SETUP_IOPOLL	(1 << 0)	/* io_context is polled */
-#define IORING_SETUP_SQPOLL	(1 << 1)	/* SQ poll thread */
-#define IORING_SETUP_SQ_AFF	(1 << 2)	/* sq_thread_cpu is valid */
+#define IORING_SETUP_IOPOLL	(1U << 0)	/* io_context is polled */
+#define IORING_SETUP_SQPOLL	(1U << 1)	/* SQ poll thread */
+#define IORING_SETUP_SQ_AFF	(1U << 2)	/* sq_thread_cpu is valid */
 
 #define IORING_OP_NOP		0
 #define IORING_OP_READV		1
@@ -60,7 +60,7 @@ struct io_uring_sqe {
 /*
  * sqe->fsync_flags
  */
-#define IORING_FSYNC_DATASYNC	(1 << 0)
+#define IORING_FSYNC_DATASYNC	(1U << 0)
 
 /*
  * IO completion data structure (Completion Queue Entry)
@@ -74,7 +74,7 @@ struct io_uring_cqe {
 /*
  * io_uring_event->flags
  */
-#define IOCQE_FLAG_CACHEHIT	(1 << 0)	/* IO did not hit media */
+#define IOCQE_FLAG_CACHEHIT	(1U << 0)	/* IO did not hit media */
 
 /*
  * Magic offsets for the application to mmap the data it needs
@@ -100,7 +100,7 @@ struct io_sqring_offsets {
 /*
  * sq_ring->flags
  */
-#define IORING_SQ_NEED_WAKEUP	(1 << 0) /* needs io_uring_enter wakeup */
+#define IORING_SQ_NEED_WAKEUP	(1U << 0) /* needs io_uring_enter wakeup */
 
 struct io_cqring_offsets {
 	__u32 head;
@@ -115,8 +115,8 @@ struct io_cqring_offsets {
 /*
  * io_uring_enter(2) flags
  */
-#define IORING_ENTER_GETEVENTS	(1 << 0)
-#define IORING_ENTER_SQ_WAKEUP	(1 << 1)
+#define IORING_ENTER_GETEVENTS	(1U << 0)
+#define IORING_ENTER_SQ_WAKEUP	(1U << 1)
 
 /*
  * Passed in for io_uring_setup(2). Copied back with updated info on success
@@ -125,9 +125,9 @@ struct io_uring_params {
 	__u32 sq_entries;
 	__u32 cq_entries;
 	__u32 flags;
-	__u16 sq_thread_cpu;
-	__u16 sq_thread_idle;
-	__u16 resv[8];
+	__u32 sq_thread_cpu;
+	__u32 sq_thread_idle;
+	__u32 resv[5];
 	struct io_sqring_offsets sq_off;
 	struct io_cqring_offsets cq_off;
 };
