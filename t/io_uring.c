@@ -129,7 +129,7 @@ static int io_uring_enter(struct submitter *s, unsigned int to_submit,
 			  unsigned int min_complete, unsigned int flags)
 {
 	return syscall(__NR_sys_io_uring_enter, s->ring_fd, to_submit,
-			min_complete, flags);
+			min_complete, flags, NULL, 0);
 }
 
 static int gettid(void)

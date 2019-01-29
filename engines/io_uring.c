@@ -132,7 +132,7 @@ static int io_uring_enter(struct ioring_data *ld, unsigned int to_submit,
 			 unsigned int min_complete, unsigned int flags)
 {
 	return syscall(__NR_sys_io_uring_enter, ld->ring_fd, to_submit,
-			min_complete, flags);
+			min_complete, flags, NULL, 0);
 }
 
 static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
