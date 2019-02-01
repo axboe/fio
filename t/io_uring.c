@@ -262,6 +262,8 @@ static int reap_events(struct submitter *s)
 			f->pending_ios--;
 			if (cqe->res != BS) {
 				printf("io: unexpected ret=%d\n", cqe->res);
+				if (polled && cqe->res == -EOPNOTSUPP)
+					printf("Your filesystem doesn't support poll\n");
 				return -1;
 			}
 		}
