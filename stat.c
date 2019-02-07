@@ -139,7 +139,6 @@ unsigned int calc_clat_percentiles(uint64_t *io_u_plat, unsigned long long nr,
 {
 	unsigned long long sum = 0;
 	unsigned int len, i, j = 0;
-	unsigned int oval_len = 0;
 	unsigned long long *ovals = NULL;
 	bool is_last;
 
@@ -161,6 +160,10 @@ unsigned int calc_clat_percentiles(uint64_t *io_u_plat, unsigned long long nr,
 	if (len > 1)
 		qsort((void *)plist, len, sizeof(plist[0]), double_cmp);
 
+	ovals = malloc(len * sizeof(*ovals));
+	if (!ovals)
+		return 0;
+
 	/*
 	 * Calculate bucket values, note down max and min values
 	 */
@@ -169,11 +172,6 @@ unsigned int calc_clat_percentiles(uint64_t *io_u_plat, unsigned long long nr,
 		sum += io_u_plat[i];
 		while (sum >= (plist[j].u.f / 100.0 * nr)) {
 			assert(plist[j].u.f <= 100.0);
-
-			if (j == oval_len) {
-				oval_len += 100;
-				ovals = realloc(ovals, oval_len * sizeof(*ovals));
-			}
 
 			ovals[j] = plat_idx_to_val(i);
 			if (ovals[j] < *minv)
