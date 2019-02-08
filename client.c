@@ -1598,6 +1598,11 @@ static struct cmd_iolog_pdu *convert_iolog_gz(struct fio_net_cmd *cmd,
 		err = inflate(&stream, Z_NO_FLUSH);
 		/* may be Z_OK, or Z_STREAM_END */
 		if (err < 0) {
+			/*
+			 * Z_STREAM_ERROR and Z_BUF_ERROR can safely be
+			 * ignored */
+			if (err == Z_STREAM_ERROR || err == Z_BUF_ERROR)
+				break;
 			log_err("fio: inflate error %d\n", err);
 			free(ret);
 			ret = NULL;
