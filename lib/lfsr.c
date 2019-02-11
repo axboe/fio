@@ -88,21 +88,37 @@ static inline void __lfsr_next(struct fio_lfsr *fl, unsigned int spin)
 	 */
 	switch (spin) {
 		case 15: __LFSR_NEXT(fl, fl->last_val);
+		/* fall through */
 		case 14: __LFSR_NEXT(fl, fl->last_val);
+		/* fall through */
 		case 13: __LFSR_NEXT(fl, fl->last_val);
+		/* fall through */
 		case 12: __LFSR_NEXT(fl, fl->last_val);
+		/* fall through */
 		case 11: __LFSR_NEXT(fl, fl->last_val);
+		/* fall through */
 		case 10: __LFSR_NEXT(fl, fl->last_val);
+		/* fall through */
 		case  9: __LFSR_NEXT(fl, fl->last_val);
+		/* fall through */
 		case  8: __LFSR_NEXT(fl, fl->last_val);
+		/* fall through */
 		case  7: __LFSR_NEXT(fl, fl->last_val);
+		/* fall through */
 		case  6: __LFSR_NEXT(fl, fl->last_val);
+		/* fall through */
 		case  5: __LFSR_NEXT(fl, fl->last_val);
+		/* fall through */
 		case  4: __LFSR_NEXT(fl, fl->last_val);
+		/* fall through */
 		case  3: __LFSR_NEXT(fl, fl->last_val);
+		/* fall through */
 		case  2: __LFSR_NEXT(fl, fl->last_val);
+		/* fall through */
 		case  1: __LFSR_NEXT(fl, fl->last_val);
+		/* fall through */
 		case  0: __LFSR_NEXT(fl, fl->last_val);
+		/* fall through */
 		default: break;
 	}
 }

@@ -2907,6 +2907,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			log_err("%s: unrecognized option '%s'\n", argv[0],
 							argv[optind - 1]);
 			show_closest_option(argv[optind - 1]);
+			/* fall through */
 		default:
 			do_exit++;
 			exit_val = 1;

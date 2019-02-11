@@ -39,9 +39,12 @@ int main(int argc, char *argv[])
 	/* Read arguments */
 	switch (argc) {
 		case 5: if (strncmp(argv[4], "verify", 7) == 0)
-					verify = 1;
+				verify = 1;
+			/* fall through */
 		case 4: spin = atoi(argv[3]);
+			/* fall through */
 		case 3: seed = atol(argv[2]);
+			/* fall through */
 		case 2: numbers = strtol(argv[1], NULL, 16);
 				break;
 		default: usage();
