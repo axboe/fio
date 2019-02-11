@@ -2312,6 +2312,20 @@ if compile_prog "" "" "__kernel_rwf_t"; then
 fi
 print_config "__kernel_rwf_t" "$__kernel_rwf_t"
 
+##########################################
+# check if gcc has -Wimplicit-fallthrough
+fallthrough="no"
+cat > $TMPC << EOF
+int main(int argc, char **argv)
+{
+  return 0;
+}
+EOF
+if compile_prog "-Wimplicit-fallthrough" "" "-Wimplicit-fallthrough"; then
+  fallthrough="yes"
+fi
+print_config "-Wimplicit-fallthrough" "$fallthrough"
+
 #############################################################################
 
 if test "$wordsize" = "64" ; then
@@ -2582,6 +2596,9 @@ if test "$cunit" = "yes" ; then
 fi
 if test "$__kernel_rwf_t" = "yes"; then
   output_sym "CONFIG_HAVE_KERNEL_RWF_T"
+fi
+if test "$fallthrough" = "yes"; then
+  CFLAGS="$CFLAGS -Wimplicit-fallthrough"
 fi
 
 echo "LIBS+=$LIBS" >> $config_host_mak
