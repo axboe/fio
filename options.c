@@ -493,6 +493,9 @@ int fio_cpus_split(os_cpu_mask_t *mask, unsigned int cpu_index)
 	const long max_cpu = cpus_online();
 
 	cpus_in_mask = fio_cpu_count(mask);
+	if (!cpus_in_mask)
+		return 0;
+
 	cpu_index = cpu_index % cpus_in_mask;
 
 	index = 0;
