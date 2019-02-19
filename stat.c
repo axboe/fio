@@ -170,7 +170,7 @@ unsigned int calc_clat_percentiles(uint64_t *io_u_plat, unsigned long long nr,
 	is_last = false;
 	for (i = 0; i < FIO_IO_U_PLAT_NR && !is_last; i++) {
 		sum += io_u_plat[i];
-		while (sum >= (plist[j].u.f / 100.0 * nr)) {
+		while (sum >= ((long double) plist[j].u.f / 100.0 * nr)) {
 			assert(plist[j].u.f <= 100.0);
 
 			ovals[j] = plat_idx_to_val(i);
@@ -186,6 +186,9 @@ unsigned int calc_clat_percentiles(uint64_t *io_u_plat, unsigned long long nr,
 			j++;
 		}
 	}
+
+	if (!is_last)
+		log_err("fio: error calculating latency percentiles\n");
 
 	*output = ovals;
 	return len;
