@@ -141,9 +141,8 @@ test2() {
     if [ -z "$is_zbd" ]; then
 	opts+=("--zonesize=${zone_size}")
     fi
-    run_fio "${opts[@]}" 2>&1 |
-	tee -a "${logfile}.${test_number}" |
-	grep -q 'No I/O performed'
+    run_fio "${opts[@]}" >> "${logfile}.${test_number}" 2>&1 || return $?
+    ! grep -q 'WRITE:' "${logfile}.${test_number}"
 }
 
 # Run fio against an empty zone. This causes fio to report "No I/O performed".
@@ -160,12 +159,12 @@ test3() {
 	opts+=("--zonesize=${zone_size}")
     fi
     run_fio "${opts[@]}" >> "${logfile}.${test_number}" 2>&1 || return $?
-    grep -q "No I/O performed" "${logfile}.${test_number}"
+    grep -q 'READ:' "${logfile}.${test_number}"
     rc=$?
     if [ -n "$is_zbd" ]; then
-	[ $rc = 0 ]
-    else
 	[ $rc != 0 ]
+    else
+	[ $rc = 0 ]
     fi
 }
 
