@@ -1,8 +1,7 @@
 #!/bin/bash
 
-# To do: switch to blkzone once blkzone reset works correctly.
-blkzone=
-#blkzone=$(type -p blkzone 2>/dev/null)
+blkzone=$(type -p blkzone 2>/dev/null)
+sg_inq=$(type -p sg_inq 2>/dev/null)
 zbc_report_zones=$(type -p zbc_report_zones 2>/dev/null)
 zbc_reset_zone=$(type -p zbc_reset_zone 2>/dev/null)
 if [ -z "${blkzone}" ] &&
@@ -34,9 +33,23 @@ first_sequential_zone() {
 max_open_zones() {
     local dev=$1
 
-    if [ -n "${blkzone}" ]; then
-	# To do: query the maximum number of open zones using sg_raw
-	return 1
+    if [ -n "${sg_inq}" ]; then
+	if ! ${sg_inq} -e --page=0xB6 --len=20 --hex "$dev" 2> /dev/null; then
+	    # Non scsi device such as null_blk can not return max open zones.
+	    # Use default value.
+	    echo 128
+	else
+	    ${sg_inq} -e --page=0xB6 --len=20 --hex "$dev" | tail -1 |
+		{
+		    read -r offset b0 b1 b2 b3 trailer || return $?
+		    # Convert from hex to decimal
+		    max_nr_open_zones=$((0x${b0}))
+		    max_nr_open_zones=$((max_nr_open_zones * 256 + 0x${b1}))
+		    max_nr_open_zones=$((max_nr_open_zones * 256 + 0x${b2}))
+		    max_nr_open_zones=$((max_nr_open_zones * 256 + 0x${b3}))
+		    echo ${max_nr_open_zones}
+		}
+	fi
     else
 	${zbc_report_zones} "$dev" |
 	    sed -n 's/^[[:blank:]]*Maximum number of open sequential write required zones:[[:blank:]]*//p'
