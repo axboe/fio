@@ -137,7 +137,7 @@ struct sgio_cmd {
 };
 
 struct sgio_trim {
-	char *unmap_param;
+	uint8_t *unmap_param;
 	unsigned int unmap_range_count;
 	struct io_u **trim_io_us;
 };
@@ -156,6 +156,42 @@ struct sgio_data {
 	unsigned int *trim_queue_map;
 #endif
 };
+
+static inline uint16_t sgio_get_be16(uint8_t *buf)
+{
+	return be16_to_cpu(*((uint16_t *) buf));
+}
+
+static inline uint32_t sgio_get_be32(uint8_t *buf)
+{
+	return be32_to_cpu(*((uint32_t *) buf));
+}
+
+static inline uint64_t sgio_get_be64(uint8_t *buf)
+{
+	return be64_to_cpu(*((uint64_t *) buf));
+}
+
+static inline void sgio_set_be16(uint16_t val, uint8_t *buf)
+{
+	uint16_t t = cpu_to_be16(val);
+
+	memcpy(buf, &t, sizeof(uint16_t));
+}
+
+static inline void sgio_set_be32(uint32_t val, uint8_t *buf)
+{
+	uint32_t t = cpu_to_be32(val);
+
+	memcpy(buf, &t, sizeof(uint32_t));
+}
+
+static inline void sgio_set_be64(uint64_t val, uint8_t *buf)
+{
+	uint64_t t = cpu_to_be64(val);
+
+	memcpy(buf, &t, sizeof(uint64_t));
+}
 
 static inline bool sgio_unbuffered(struct thread_data *td)
 {
@@ -440,25 +476,11 @@ static void fio_sgio_rw_lba(struct sg_io_hdr *hdr, unsigned long long lba,
 			    unsigned long long nr_blocks)
 {
 	if (lba < MAX_10B_LBA) {
-		hdr->cmdp[2] = (unsigned char) ((lba >> 24) & 0xff);
-		hdr->cmdp[3] = (unsigned char) ((lba >> 16) & 0xff);
-		hdr->cmdp[4] = (unsigned char) ((lba >>  8) & 0xff);
-		hdr->cmdp[5] = (unsigned char) (lba & 0xff);
-		hdr->cmdp[7] = (unsigned char) ((nr_blocks >> 8) & 0xff);
-		hdr->cmdp[8] = (unsigned char) (nr_blocks & 0xff);
+		sgio_set_be32((uint32_t) lba, &hdr->cmdp[2]);
+		sgio_set_be16((uint16_t) nr_blocks, &hdr->cmdp[7]);
 	} else {
-		hdr->cmdp[2] = (unsigned char) ((lba >> 56) & 0xff);
-		hdr->cmdp[3] = (unsigned char) ((lba >> 48) & 0xff);
-		hdr->cmdp[4] = (unsigned char) ((lba >> 40) & 0xff);
-		hdr->cmdp[5] = (unsigned char) ((lba >> 32) & 0xff);
-		hdr->cmdp[6] = (unsigned char) ((lba >> 24) & 0xff);
-		hdr->cmdp[7] = (unsigned char) ((lba >> 16) & 0xff);
-		hdr->cmdp[8] = (unsigned char) ((lba >>  8) & 0xff);
-		hdr->cmdp[9] = (unsigned char) (lba & 0xff);
-		hdr->cmdp[10] = (unsigned char) ((nr_blocks >> 32) & 0xff);
-		hdr->cmdp[11] = (unsigned char) ((nr_blocks >> 16) & 0xff);
-		hdr->cmdp[12] = (unsigned char) ((nr_blocks >> 8) & 0xff);
-		hdr->cmdp[13] = (unsigned char) (nr_blocks & 0xff);
+		sgio_set_be64(lba, &hdr->cmdp[2]);
+		sgio_set_be32((uint32_t) nr_blocks, &hdr->cmdp[10]);
 	}
 
 	return;
@@ -552,18 +574,8 @@ static int fio_sgio_prep(struct thread_data *td, struct io_u *io_u)
 #endif
 
 		offset = 8 + 16 * st->unmap_range_count;
-		st->unmap_param[offset] = (unsigned char) ((lba >> 56) & 0xff);
-		st->unmap_param[offset+1] = (unsigned char) ((lba >> 48) & 0xff);
-		st->unmap_param[offset+2] = (unsigned char) ((lba >> 40) & 0xff);
-		st->unmap_param[offset+3] = (unsigned char) ((lba >> 32) & 0xff);
-		st->unmap_param[offset+4] = (unsigned char) ((lba >> 24) & 0xff);
-		st->unmap_param[offset+5] = (unsigned char) ((lba >> 16) & 0xff);
-		st->unmap_param[offset+6] = (unsigned char) ((lba >>  8) & 0xff);
-		st->unmap_param[offset+7] = (unsigned char) (lba & 0xff);
-		st->unmap_param[offset+8] = (unsigned char) ((nr_blocks >> 32) & 0xff);
-		st->unmap_param[offset+9] = (unsigned char) ((nr_blocks >> 16) & 0xff);
-		st->unmap_param[offset+10] = (unsigned char) ((nr_blocks >> 8) & 0xff);
-		st->unmap_param[offset+11] = (unsigned char) (nr_blocks & 0xff);
+		sgio_set_be64(lba, &st->unmap_param[offset]);
+		sgio_set_be32((uint32_t) nr_blocks, &st->unmap_param[offset + 8]);
 
 		st->unmap_range_count++;
 
@@ -582,14 +594,12 @@ static int fio_sgio_prep(struct thread_data *td, struct io_u *io_u)
 
 static void fio_sgio_unmap_setup(struct sg_io_hdr *hdr, struct sgio_trim *st)
 {
-	hdr->dxfer_len = st->unmap_range_count * 16 + 8;
-	hdr->cmdp[7] = (unsigned char) (((st->unmap_range_count * 16 + 8) >> 8) & 0xff);
-	hdr->cmdp[8] = (unsigned char) ((st->unmap_range_count * 16 + 8) & 0xff);
+	uint16_t cnt = st->unmap_range_count * 16;
 
-	st->unmap_param[0] = (unsigned char) (((16 * st->unmap_range_count + 6) >> 8) & 0xff);
-	st->unmap_param[1] = (unsigned char)  ((16 * st->unmap_range_count + 6) & 0xff);
-	st->unmap_param[2] = (unsigned char) (((16 * st->unmap_range_count) >> 8) & 0xff);
-	st->unmap_param[3] = (unsigned char)  ((16 * st->unmap_range_count) & 0xff);
+	hdr->dxfer_len = cnt + 8;
+	sgio_set_be16(cnt + 8, &hdr->cmdp[7]);
+	sgio_set_be16(cnt + 6, st->unmap_param);
+	sgio_set_be16(cnt, &st->unmap_param[2]);
 
 	return;
 }
@@ -765,10 +775,8 @@ static int fio_sgio_read_capacity(struct thread_data *td, unsigned int *bs,
 		/* RCAP(10) might be unsupported by device. Force RCAP(16) */
 		hlba = MAX_10B_LBA;
 	} else {
-		blksz	 = ((unsigned long) buf[4] << 24) | ((unsigned long) buf[5] << 16) |
-			   ((unsigned long) buf[6] << 8) | (unsigned long) buf[7];
-		hlba	 = ((unsigned long) buf[0] << 24) | ((unsigned long) buf[1] << 16) |
-			   ((unsigned long) buf[2] << 8) | (unsigned long) buf[3];
+		blksz = sgio_get_be32(&buf[4]);
+		hlba = sgio_get_be32(buf);
 	}
 
 	/*
@@ -779,10 +787,7 @@ static int fio_sgio_read_capacity(struct thread_data *td, unsigned int *bs,
 		hdr.cmd_len = 16;
 		hdr.cmdp[0] = 0x9e; // service action
 		hdr.cmdp[1] = 0x10; // Read Capacity(16)
-		hdr.cmdp[10] = (unsigned char) ((sizeof(buf) >> 24) & 0xff);
-		hdr.cmdp[11] = (unsigned char) ((sizeof(buf) >> 16) & 0xff);
-		hdr.cmdp[12] = (unsigned char) ((sizeof(buf) >> 8) & 0xff);
-		hdr.cmdp[13] = (unsigned char) (sizeof(buf) & 0xff);
+		sgio_set_be32(sizeof(buf), &hdr.cmdp[10]);
 
 		hdr.dxfer_direction = SG_DXFER_FROM_DEV;
 		hdr.dxferp = buf;
@@ -798,15 +803,8 @@ static int fio_sgio_read_capacity(struct thread_data *td, unsigned int *bs,
 		if (hdr.info & SG_INFO_CHECK)
 			td_verror(td, EIO, "fio_sgio_read_capacity");
 
-		blksz = (buf[8] << 24) | (buf[9] << 16) | (buf[10] << 8) | buf[11];
-		hlba  = ((unsigned long long)buf[0] << 56) |
-			((unsigned long long)buf[1] << 48) |
-			((unsigned long long)buf[2] << 40) |
-			((unsigned long long)buf[3] << 32) |
-			((unsigned long long)buf[4] << 24) |
-			((unsigned long long)buf[5] << 16) |
-			((unsigned long long)buf[6] << 8) |
-			(unsigned long long)buf[7];
+		blksz = sgio_get_be32(&buf[8]);
+		hlba = sgio_get_be64(buf);
 	}
 
 	if (blksz) {
