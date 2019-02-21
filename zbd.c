@@ -228,12 +228,45 @@ static enum blk_zoned_model get_zbd_model(const char *file_name)
 	char *zoned_attr_path = NULL;
 	char *model_str = NULL;
 	struct stat statbuf;
+	char *sys_devno_path = NULL;
+	char *part_attr_path = NULL;
+	char *part_str = NULL;
+	char sys_path[PATH_MAX];
+	ssize_t sz;
+	char *delim = NULL;
 
 	if (stat(file_name, &statbuf) < 0)
 		goto out;
-	if (asprintf(&zoned_attr_path, "/sys/dev/block/%d:%d/queue/zoned",
+
+	if (asprintf(&sys_devno_path, "/sys/dev/block/%d:%d",
 		     major(statbuf.st_rdev), minor(statbuf.st_rdev)) < 0)
 		goto out;
+
+	sz = readlink(sys_devno_path, sys_path, sizeof(sys_path) - 1);
+	if (sz < 0)
+		goto out;
+	sys_path[sz] = '\0';
+
+	/*
+	 * If the device is a partition device, cut the device name in the
+	 * canonical sysfs path to obtain the sysfs path of the holder device.
+	 *   e.g.:  /sys/devices/.../sda/sda1 -> /sys/devices/.../sda
+	 */
+	if (asprintf(&part_attr_path, "/sys/dev/block/%s/partition",
+		     sys_path) < 0)
+		goto out;
+	part_str = read_file(part_attr_path);
+	if (part_str && *part_str == '1') {
+		delim = strrchr(sys_path, '/');
+		if (!delim)
+			goto out;
+		*delim = '\0';
+	}
+
+	if (asprintf(&zoned_attr_path,
+		     "/sys/dev/block/%s/queue/zoned", sys_path) < 0)
+		goto out;
+
 	model_str = read_file(zoned_attr_path);
 	if (!model_str)
 		goto out;
@@ -246,6 +279,9 @@ static enum blk_zoned_model get_zbd_model(const char *file_name)
 out:
 	free(model_str);
 	free(zoned_attr_path);
+	free(part_str);
+	free(part_attr_path);
+	free(sys_devno_path);
 	return model;
 }
 
