@@ -761,7 +761,15 @@ source "$(dirname "$0")/functions" || exit $?
 dev=$1
 realdev=$(readlink -f "$dev")
 basename=$(basename "$realdev")
-disk_size=$(($(<"/sys/block/$basename/size")*512))
+major=$((0x$(stat -L -c '%t' "$realdev")))
+minor=$((0x$(stat -L -c '%T' "$realdev")))
+disk_size=$(($(<"/sys/dev/block/$major:$minor/size")*512))
+# When the target is a partition device, get basename of its holder device to
+# access sysfs path of the holder device
+if [[ -r "/sys/dev/block/$major:$minor/partition" ]]; then
+	realsysfs=$(readlink "/sys/dev/block/$major:$minor")
+	basename=$(basename "${realsysfs%/*}")
+fi
 logical_block_size=$(<"/sys/block/$basename/queue/logical_block_size")
 case "$(<"/sys/class/block/$basename/queue/zoned")" in
     host-managed|host-aware)
