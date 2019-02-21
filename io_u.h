@@ -92,11 +92,22 @@ struct io_u {
 		struct workqueue_work work;
 	};
 
+#ifdef CONFIG_LINUX_BLKZONED
 	/*
-	 * Post-submit callback. Used by the ZBD code. @success == true means
-	 * that the I/O operation has been queued or completed successfully.
+	 * ZBD mode zbd_queue_io callback: called after engine->queue operation
+	 * to advance a zone write pointer and eventually unlock the I/O zone.
+	 * @q indicates the I/O queue status (busy, queued or completed).
+	 * @success == true means that the I/O operation has been queued or
+	 * completed successfully.
 	 */
-	void (*post_submit)(const struct io_u *, bool success);
+	void (*zbd_queue_io)(struct io_u *, int q, bool success);
+
+	/*
+	 * ZBD mode zbd_put_io callback: called in after completion of an I/O
+	 * or commit of an async I/O to unlock the I/O target zone.
+	 */
+	void (*zbd_put_io)(const struct io_u *);
+#endif
 
 	/*
 	 * Callback for io completion

@@ -775,10 +775,7 @@ void put_io_u(struct thread_data *td, struct io_u *io_u)
 {
 	const bool needs_lock = td_async_processing(td);
 
-	if (io_u->post_submit) {
-		io_u->post_submit(io_u, io_u->error == 0);
-		io_u->post_submit = NULL;
-	}
+	zbd_put_io_u(io_u);
 
 	if (td->parent)
 		td = td->parent;
@@ -1340,10 +1337,7 @@ static long set_io_u_file(struct thread_data *td, struct io_u *io_u)
 		if (!fill_io_u(td, io_u))
 			break;
 
-		if (io_u->post_submit) {
-			io_u->post_submit(io_u, false);
-			io_u->post_submit = NULL;
-		}
+		zbd_put_io_u(io_u);
 
 		put_file_log(td, f);
 		td_io_close_file(td, f);

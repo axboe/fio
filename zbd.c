@@ -1111,37 +1111,44 @@ zbd_find_zone(struct thread_data *td, struct io_u *io_u,
 	return NULL;
 }
 
-
 /**
- * zbd_post_submit - update the write pointer and unlock the zone lock
+ * zbd_queue_io - update the write pointer of a sequential zone
  * @io_u: I/O unit
- * @success: Whether or not the I/O unit has been executed successfully
+ * @success: Whether or not the I/O unit has been queued successfully
+ * @q: queueing status (busy, completed or queued).
  *
- * For write and trim operations, update the write pointer of all affected
- * zones.
+ * For write and trim operations, update the write pointer of the I/O unit
+ * target zone.
  */
-static void zbd_post_submit(const struct io_u *io_u, bool success)
+static void zbd_queue_io(struct io_u *io_u, int q, bool success)
 {
-	struct zoned_block_device_info *zbd_info;
+	const struct fio_file *f = io_u->file;
+	struct zoned_block_device_info *zbd_info = f->zbd_info;
 	struct fio_zone_info *z;
 	uint32_t zone_idx;
-	uint64_t end, zone_end;
+	uint64_t zone_end;
 
-	zbd_info = io_u->file->zbd_info;
 	if (!zbd_info)
 		return;
 
-	zone_idx = zbd_zone_idx(io_u->file, io_u->offset);
-	end = io_u->offset + io_u->buflen;
-	z = &zbd_info->zone_info[zone_idx];
+	zone_idx = zbd_zone_idx(f, io_u->offset);
 	assert(zone_idx < zbd_info->nr_zones);
+	z = &zbd_info->zone_info[zone_idx];
+
 	if (z->type != BLK_ZONE_TYPE_SEQWRITE_REQ)
 		return;
+
 	if (!success)
 		goto unlock;
+
+	dprint(FD_ZBD,
+	       "%s: queued I/O (%lld, %llu) for zone %u\n",
+	       f->file_name, io_u->offset, io_u->buflen, zone_idx);
+
 	switch (io_u->ddir) {
 	case DDIR_WRITE:
-		zone_end = min(end, (z + 1)->start);
+		zone_end = min((uint64_t)(io_u->offset + io_u->buflen),
+			       (z + 1)->start);
 		pthread_mutex_lock(&zbd_info->mutex);
 		/*
 		 * z->wp > zone_end means that one or more I/O errors
@@ -1158,10 +1165,42 @@ static void zbd_post_submit(const struct io_u *io_u, bool success)
 	default:
 		break;
 	}
-unlock:
-	pthread_mutex_unlock(&z->mutex);
 
-	zbd_check_swd(io_u->file);
+unlock:
+	if (!success || q != FIO_Q_QUEUED) {
+		/* BUSY or COMPLETED: unlock the zone */
+		pthread_mutex_unlock(&z->mutex);
+		io_u->zbd_put_io = NULL;
+	}
+}
+
+/**
+ * zbd_put_io - Unlock an I/O unit target zone lock
+ * @io_u: I/O unit
+ */
+static void zbd_put_io(const struct io_u *io_u)
+{
+	const struct fio_file *f = io_u->file;
+	struct zoned_block_device_info *zbd_info = f->zbd_info;
+	struct fio_zone_info *z;
+	uint32_t zone_idx;
+
+	if (!zbd_info)
+		return;
+
+	zone_idx = zbd_zone_idx(f, io_u->offset);
+	assert(zone_idx < zbd_info->nr_zones);
+	z = &zbd_info->zone_info[zone_idx];
+
+	if (z->type != BLK_ZONE_TYPE_SEQWRITE_REQ)
+		return;
+
+	dprint(FD_ZBD,
+	       "%s: terminate I/O (%lld, %llu) for zone %u\n",
+	       f->file_name, io_u->offset, io_u->buflen, zone_idx);
+
+	assert(pthread_mutex_unlock(&z->mutex) == 0);
+	zbd_check_swd(f);
 }
 
 bool zbd_unaligned_write(int error_code)
@@ -1354,8 +1393,10 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 accept:
 	assert(zb);
 	assert(zb->cond != BLK_ZONE_COND_OFFLINE);
-	assert(!io_u->post_submit);
-	io_u->post_submit = zbd_post_submit;
+	assert(!io_u->zbd_queue_io);
+	assert(!io_u->zbd_put_io);
+	io_u->zbd_queue_io = zbd_queue_io;
+	io_u->zbd_put_io = zbd_put_io;
 	return io_u_accept;
 
 eof:

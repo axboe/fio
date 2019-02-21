@@ -96,6 +96,24 @@ void zbd_file_reset(struct thread_data *td, struct fio_file *f);
 bool zbd_unaligned_write(int error_code);
 enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u);
 char *zbd_write_status(const struct thread_stat *ts);
+
+static inline void zbd_queue_io_u(struct io_u *io_u, enum fio_q_status status)
+{
+	if (io_u->zbd_queue_io) {
+		io_u->zbd_queue_io(io_u, status, io_u->error == 0);
+		io_u->zbd_queue_io = NULL;
+	}
+}
+
+static inline void zbd_put_io_u(struct io_u *io_u)
+{
+	if (io_u->zbd_put_io) {
+		io_u->zbd_put_io(io_u);
+		io_u->zbd_queue_io = NULL;
+		io_u->zbd_put_io = NULL;
+	}
+}
+
 #else
 static inline void zbd_free_zone_info(struct fio_file *f)
 {
@@ -125,6 +143,10 @@ static inline char *zbd_write_status(const struct thread_stat *ts)
 {
 	return NULL;
 }
+
+static inline void zbd_queue_io_u(struct io_u *io_u,
+				  enum fio_q_status status) {}
+static inline void zbd_put_io_u(struct io_u *io_u) {}
 #endif
 
 #endif /* FIO_ZBD_H */
