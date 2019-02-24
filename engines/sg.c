@@ -157,11 +157,6 @@ struct sgio_data {
 #endif
 };
 
-static inline uint16_t sgio_get_be16(uint8_t *buf)
-{
-	return be16_to_cpu(*((uint16_t *) buf));
-}
-
 static inline uint32_t sgio_get_be32(uint8_t *buf)
 {
 	return be32_to_cpu(*((uint32_t *) buf));
