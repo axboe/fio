@@ -448,11 +448,12 @@ static enum fio_q_status fio_sgio_rw_doio(struct thread_data *td,
 			if (ret < 0)
 				return ret;
 
+			__io_u = hdr->usr_ptr;
+
 			/* record if an io error occurred */
 			if (hdr->info & SG_INFO_CHECK)
-				io_u->error = EIO;
+				__io_u->error = EIO;
 
-			__io_u = hdr->usr_ptr;
 			if (__io_u == io_u)
 				break;
 
