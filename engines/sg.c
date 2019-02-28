@@ -424,7 +424,8 @@ static enum fio_q_status fio_sgio_ioctl_doio(struct thread_data *td,
 	return FIO_Q_COMPLETED;
 }
 
-static enum fio_q_status fio_sgio_rw_doio(struct fio_file *f,
+static enum fio_q_status fio_sgio_rw_doio(struct thread_data *td,
+					  struct fio_file *f,
 					  struct io_u *io_u, int do_sync)
 {
 	struct sg_io_hdr *hdr = &io_u->hdr;
@@ -435,13 +436,31 @@ static enum fio_q_status fio_sgio_rw_doio(struct fio_file *f,
 		return ret;
 
 	if (do_sync) {
-		ret = read(f->fd, hdr, sizeof(*hdr));
-		if (ret < 0)
-			return ret;
+		/*
+		 * We can't just read back the first command that completes
+		 * and assume it's the one we need, it could be any command
+		 * that is inflight.
+		 */
+		do {
+			struct io_u *__io_u;
 
-		/* record if an io error occurred */
-		if (hdr->info & SG_INFO_CHECK)
-			io_u->error = EIO;
+			ret = read(f->fd, hdr, sizeof(*hdr));
+			if (ret < 0)
+				return ret;
+
+			/* record if an io error occurred */
+			if (hdr->info & SG_INFO_CHECK)
+				io_u->error = EIO;
+
+			__io_u = hdr->usr_ptr;
+			if (__io_u == io_u)
+				break;
+
+			if (io_u_sync_complete(td, __io_u)) {
+				ret = -1;
+				break;
+			}
+		} while (1);
 
 		return FIO_Q_COMPLETED;
 	}
@@ -457,10 +476,11 @@ static enum fio_q_status fio_sgio_doio(struct thread_data *td,
 
 	if (f->filetype == FIO_TYPE_BLOCK) {
 		ret = fio_sgio_ioctl_doio(td, f, io_u);
-		td_verror(td, io_u->error, __func__);
+		if (io_u->error)
+			td_verror(td, io_u->error, __func__);
 	} else {
-		ret = fio_sgio_rw_doio(f, io_u, do_sync);
-		if (do_sync)
+		ret = fio_sgio_rw_doio(td, f, io_u, do_sync);
+		if (io_u->error && do_sync)
 			td_verror(td, io_u->error, __func__);
 	}
 
@@ -678,7 +698,7 @@ static int fio_sgio_commit(struct thread_data *td)
 
 	sd->current_queue = -1;
 
-	ret = fio_sgio_rw_doio(io_u->file, io_u, 0);
+	ret = fio_sgio_rw_doio(td, io_u->file, io_u, 0);
 
 	if (ret < 0 || hdr->status) {
 		int error;
