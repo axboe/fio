@@ -92,6 +92,11 @@ endif
 ifdef CONFIG_WINDOWSAIO
   SOURCE += engines/windowsaio.c
 endif
+ifdef CONFIG_PXV
+  SOURCE += engines/pxv2.c
+  LIBS += libpxv.a -lpthread -lz -lcrypto -ldl
+  CFLAGS += -I/root/git/go/src/github.com/portworx/porx/src/gdfs/gdsd/pxv
+endif
 ifdef CONFIG_RADOS
   SOURCE += engines/rados.c
 endif
