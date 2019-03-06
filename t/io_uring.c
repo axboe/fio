@@ -501,13 +501,19 @@ int main(int argc, char *argv[])
 
 	i = 1;
 	while (!do_nop && i < argc) {
-		struct file *f = &s->files[s->nr_files];
+		struct file *f;
 
+		if (s->nr_files == MAX_FDS) {
+			printf("Max number of files (%d) reached\n", MAX_FDS);
+			break;
+		}
 		fd = open(argv[i], flags);
 		if (fd < 0) {
 			perror("open");
 			return 1;
 		}
+
+		f = &s->files[s->nr_files];
 		f->real_fd = fd;
 		if (get_file_size(f)) {
 			printf("failed getting size of device/file\n");
