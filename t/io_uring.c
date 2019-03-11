@@ -526,7 +526,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	submitter = malloc(sizeof(*submitter) * depth * sizeof(struct iovec));
+	submitter = malloc(sizeof(*submitter) + depth * sizeof(struct iovec));
+	memset(submitter, 0, sizeof(*submitter) + depth * sizeof(struct iovec));
 	s = submitter;
 
 	flags = O_RDONLY | O_NOATIME;
