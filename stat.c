@@ -1684,7 +1684,11 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src,
 	}
 	for (k = 0; k < FIO_IO_U_LAT_N_NR; k++) {
 		dst->io_u_lat_n[k] += src->io_u_lat_n[k];
+	}
+	for (k = 0; k < FIO_IO_U_LAT_U_NR; k++) {
 		dst->io_u_lat_u[k] += src->io_u_lat_u[k];
+	}
+	for (k = 0; k < FIO_IO_U_LAT_M_NR; k++) {
 		dst->io_u_lat_m[k] += src->io_u_lat_m[k];
 	}
 	for (k = 0; k < FIO_IO_U_PLAT_NR; k++)
