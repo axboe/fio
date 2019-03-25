@@ -59,6 +59,7 @@ struct group_run_stats client_gs;
 int sum_stat_clients;
 
 static int sum_stat_nr;
+static struct buf_output allclients;
 static struct json_object *root = NULL;
 static struct json_object *job_opt_object = NULL;
 static struct json_array *clients_array = NULL;
@@ -1103,7 +1104,7 @@ static void handle_ts(struct fio_client *client, struct fio_net_cmd *cmd)
 
 	if (++sum_stat_nr == sum_stat_clients) {
 		strcpy(client_ts.name, "All clients");
-		tsobj = show_thread_status(&client_ts, &client_gs, NULL, &client->buf);
+		tsobj = show_thread_status(&client_ts, &client_gs, NULL, &allclients);
 		if (tsobj) {
 			json_object_add_client_info(tsobj, client);
 			json_array_add_value_object(clients_array, tsobj);
@@ -2128,6 +2129,9 @@ int fio_handle_clients(struct client_ops *ops)
 			fio_put_client(client);
 		}
 	}
+
+	log_info_buf(allclients.buf, allclients.buflen);
+	buf_output_free(&allclients);
 
 	fio_client_json_fini();
 
