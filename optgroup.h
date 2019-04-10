@@ -63,6 +63,7 @@ enum opt_category_group {
 	__FIO_OPT_G_SG,
 	__FIO_OPT_G_MMAP,
 	__FIO_OPT_G_NR,
+	__FIO_OPT_G_ISCSI,
 
 	FIO_OPT_G_RATE		= (1ULL << __FIO_OPT_G_RATE),
 	FIO_OPT_G_ZONE		= (1ULL << __FIO_OPT_G_ZONE),
@@ -100,6 +101,7 @@ enum opt_category_group {
 	FIO_OPT_G_SG		= (1ULL << __FIO_OPT_G_SG),
 	FIO_OPT_G_MMAP		= (1ULL << __FIO_OPT_G_MMAP),
 	FIO_OPT_G_INVALID	= (1ULL << __FIO_OPT_G_NR),
+	FIO_OPT_G_ISCSI         = (1ULL << __FIO_OPT_G_ISCSI),
 };
 
 extern const struct opt_group *opt_group_from_mask(uint64_t *mask);

@@ -59,6 +59,12 @@ ifdef CONFIG_LIBHDFS
   SOURCE += engines/libhdfs.c
 endif
 
+ifdef CONFIG_LIBISCSI
+  CFLAGS += $(LIBISCSI_CFLAGS)
+  LIBS += $(LIBISCSI_LIBS)
+  SOURCE += engines/libiscsi.c
+endif
+
 ifdef CONFIG_64BIT
   CFLAGS += -DBITS_PER_LONG=64
 endif

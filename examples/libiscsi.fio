@@ -1,0 +1,3 @@
+[iscsi]
+ioengine=libiscsi
+filename=iscsi\://127.0.0.1/iqn.2016-02.com.fio\:system\:fio/1
