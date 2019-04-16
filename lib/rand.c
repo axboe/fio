@@ -95,7 +95,7 @@ void init_rand_seed(struct frand_state *state, unsigned int seed, bool use64)
 		__init_rand64(&state->state64, seed);
 }
 
-void __fill_random_buf(void *buf, unsigned int len, unsigned long seed)
+void __fill_random_buf(void *buf, unsigned int len, unsigned long long seed)
 {
 	void *ptr = buf;
 
@@ -122,10 +122,10 @@ void __fill_random_buf(void *buf, unsigned int len, unsigned long seed)
 	}
 }
 
-unsigned long fill_random_buf(struct frand_state *fs, void *buf,
+unsigned long long fill_random_buf(struct frand_state *fs, void *buf,
 			      unsigned int len)
 {
-	unsigned long r = __rand(fs);
+	unsigned long long r = __rand(fs);
 
 	if (sizeof(int) != sizeof(long *))
 		r *= (unsigned long) __rand(fs);
@@ -134,7 +134,7 @@ unsigned long fill_random_buf(struct frand_state *fs, void *buf,
 	return r;
 }
 
-void __fill_random_buf_percentage(unsigned long seed, void *buf,
+void __fill_random_buf_percentage(unsigned long long seed, void *buf,
 				  unsigned int percentage,
 				  unsigned int segment, unsigned int len,
 				  char *pattern, unsigned int pbytes)
@@ -183,12 +183,12 @@ void __fill_random_buf_percentage(unsigned long seed, void *buf,
 	}
 }
 
-unsigned long fill_random_buf_percentage(struct frand_state *fs, void *buf,
+unsigned long long fill_random_buf_percentage(struct frand_state *fs, void *buf,
 					 unsigned int percentage,
 					 unsigned int segment, unsigned int len,
 					 char *pattern, unsigned int pbytes)
 {
-	unsigned long r = __rand(fs);
+	unsigned long long r = __rand(fs);
 
 	if (sizeof(int) != sizeof(long *))
 		r *= (unsigned long) __rand(fs);

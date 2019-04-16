@@ -45,7 +45,7 @@ static void __fill_buffer(struct thread_options *o, unsigned long seed, void *p,
 	__fill_random_buf_percentage(seed, p, o->compress_percentage, len, len, o->buffer_pattern, o->buffer_pattern_bytes);
 }
 
-static unsigned long fill_buffer(struct thread_data *td, void *p,
+static unsigned long long fill_buffer(struct thread_data *td, void *p,
 				 unsigned int len)
 {
 	struct frand_state *fs = &td->verify_state;
