@@ -1217,7 +1217,7 @@ static void init_flags(struct thread_data *td)
 
 static int setup_random_seeds(struct thread_data *td)
 {
-	unsigned long seed;
+	uint64_t seed;
 	unsigned int i;
 
 	if (!td->o.rand_repeatable && !fio_option_is_set(&td->o, rand_seed)) {

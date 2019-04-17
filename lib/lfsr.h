@@ -24,7 +24,7 @@ struct fio_lfsr {
 
 int lfsr_next(struct fio_lfsr *fl, uint64_t *off);
 int lfsr_init(struct fio_lfsr *fl, uint64_t size,
-		unsigned long seed, unsigned int spin);
-int lfsr_reset(struct fio_lfsr *fl, unsigned long seed);
+	      uint64_t seed, unsigned int spin);
+int lfsr_reset(struct fio_lfsr *fl, uint64_t seed);
 
 #endif

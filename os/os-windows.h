@@ -167,7 +167,7 @@ static inline int gettid(void)
 	return GetCurrentThreadId();
 }
 
-static inline int init_random_seeds(unsigned long *rand_seeds, int size)
+static inline int init_random_seeds(uint64_t *rand_seeds, int size)
 {
 	HCRYPTPROV hCryptProv;
 

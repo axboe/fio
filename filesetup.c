@@ -1287,7 +1287,7 @@ bool init_random_map(struct thread_data *td)
 			return false;
 
 		if (td->o.random_generator == FIO_RAND_GEN_LFSR) {
-			unsigned long seed;
+			uint64_t seed;
 
 			seed = td->rand_seeds[FIO_RAND_BLOCK_OFF];
 

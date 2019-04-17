@@ -323,7 +323,7 @@ static inline int blockdev_size(struct fio_file *f, unsigned long long *bytes)
 #endif
 
 #ifdef FIO_USE_GENERIC_INIT_RANDOM_STATE
-static inline int init_random_seeds(unsigned long *rand_seeds, int size)
+static inline int init_random_seeds(uint64_t *rand_seeds, int size)
 {
 	int fd;
 

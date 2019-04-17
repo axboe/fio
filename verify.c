@@ -39,14 +39,14 @@ void fill_buffer_pattern(struct thread_data *td, void *p, unsigned int len)
 	(void)cpy_pattern(td->o.buffer_pattern, td->o.buffer_pattern_bytes, p, len);
 }
 
-static void __fill_buffer(struct thread_options *o, unsigned long seed, void *p,
+static void __fill_buffer(struct thread_options *o, uint64_t seed, void *p,
 			  unsigned int len)
 {
 	__fill_random_buf_percentage(seed, p, o->compress_percentage, len, len, o->buffer_pattern, o->buffer_pattern_bytes);
 }
 
-static unsigned long fill_buffer(struct thread_data *td, void *p,
-				 unsigned int len)
+static uint64_t fill_buffer(struct thread_data *td, void *p,
+			    unsigned int len)
 {
 	struct frand_state *fs = &td->verify_state;
 	struct thread_options *o = &td->o;
@@ -55,7 +55,7 @@ static unsigned long fill_buffer(struct thread_data *td, void *p,
 }
 
 void fill_verify_pattern(struct thread_data *td, void *p, unsigned int len,
-			 struct io_u *io_u, unsigned long seed, int use_seed)
+			 struct io_u *io_u, uint64_t seed, int use_seed)
 {
 	struct thread_options *o = &td->o;
 
@@ -100,7 +100,7 @@ static unsigned int get_hdr_inc(struct thread_data *td, struct io_u *io_u)
 }
 
 static void fill_pattern_headers(struct thread_data *td, struct io_u *io_u,
-				 unsigned long seed, int use_seed)
+				 uint64_t seed, int use_seed)
 {
 	unsigned int hdr_inc, header_num;
 	struct verify_header *hdr;
