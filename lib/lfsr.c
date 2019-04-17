@@ -232,7 +232,7 @@ static int prepare_spin(struct fio_lfsr *fl, unsigned int spin)
 	return 0;
 }
 
-int lfsr_reset(struct fio_lfsr *fl, unsigned long seed)
+int lfsr_reset(struct fio_lfsr *fl, uint64_t seed)
 {
 	uint64_t bitmask = (fl->cached_bit << 1) - 1;
 
@@ -246,8 +246,8 @@ int lfsr_reset(struct fio_lfsr *fl, unsigned long seed)
 	return 0;
 }
 
-int lfsr_init(struct fio_lfsr *fl, uint64_t nums, unsigned long seed,
-		unsigned int spin)
+int lfsr_init(struct fio_lfsr *fl, uint64_t nums, uint64_t seed,
+	      unsigned int spin)
 {
 	uint8_t *taps;
 

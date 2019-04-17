@@ -245,7 +245,7 @@ struct thread_data {
 	void *iolog_buf;
 	FILE *iolog_f;
 
-	unsigned long rand_seeds[FIO_RAND_NR_OFFS];
+	uint64_t rand_seeds[FIO_RAND_NR_OFFS];
 
 	struct frand_state bsrange_state[DDIR_RWDIR_CNT];
 	struct frand_state verify_state;
