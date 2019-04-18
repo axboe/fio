@@ -60,16 +60,24 @@
 
 #ifndef CONFIG_NO_SHM
 /*
- * Bionic doesn't support SysV shared memeory, so implement it using ashmem
+ * The Android NDK doesn't currently export <sys/shm.h>, so define the
+ * necessary stuff here.
  */
+#if __ANDROID_API__ >= 26
+#define shmat bionic_shmat
+#define shmctl bionic_shmctl
+#define shmdt bionic_shmdt
+#define shmget bionic_shmget
+#endif
+#include <sys/shm.h>
+#undef shmat
+#undef shmctl
+#undef shmdt
+#undef shmget
+#define SHM_HUGETLB    04000
 #include <stdio.h>
 #include <linux/ashmem.h>
-#include <linux/shm.h>
-#define shmid_ds shmid64_ds
-#define SHM_HUGETLB    04000
-
 #define ASHMEM_DEVICE	"/dev/ashmem"
-
 static inline int shmctl(int __shmid, int __cmd, struct shmid_ds *__buf)
 {
 	int ret=0;
@@ -82,49 +90,39 @@ static inline int shmctl(int __shmid, int __cmd, struct shmid_ds *__buf)
 	}
 	return ret;
 }
-
 static inline int shmget(key_t __key, size_t __size, int __shmflg)
 {
 	int fd,ret;
 	char keybuf[11];
-
 	fd = open(ASHMEM_DEVICE, O_RDWR);
 	if (fd < 0)
 		return fd;
-
 	sprintf(keybuf,"%d",__key);
 	ret = ioctl(fd, ASHMEM_SET_NAME, keybuf);
 	if (ret < 0)
 		goto error;
-
-	/* Stores size in first 8 bytes, allocate extra space */
-	ret = ioctl(fd, ASHMEM_SET_SIZE, __size + sizeof(uint64_t));
+	ret = ioctl(fd, ASHMEM_SET_SIZE, __size);
 	if (ret < 0)
 		goto error;
-
 	return fd;
-
 error:
 	close(fd);
 	return ret;
 }
-
 static inline void *shmat(int __shmid, const void *__shmaddr, int __shmflg)
 {
-	size_t size = ioctl(__shmid, ASHMEM_GET_SIZE, NULL);
-	/* Needs to be 8-byte aligned to prevent SIGBUS on 32-bit ARM */
-	uint64_t *ptr = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, __shmid, 0);
-	/* Save size at beginning of buffer, for use with munmap */
-	*ptr = size;
-	return ptr + 1;
+	size_t *ptr, size = ioctl(__shmid, ASHMEM_GET_SIZE, NULL);
+	ptr = mmap(NULL, size + sizeof(size_t), PROT_READ | PROT_WRITE, MAP_SHARED, __shmid, 0);
+	*ptr = size;    //save size at beginning of buffer, for use with munmap
+	return &ptr[1];
 }
-
-static inline int shmdt (const void *__shmaddr)
+static inline int shmdt(const void *__shmaddr)
 {
-	/* Find mmap size which we stored at the beginning of the buffer */
-	uint64_t *ptr = (uint64_t *)__shmaddr - 1;
-	size_t size = *ptr;
-	return munmap(ptr, size);
+	size_t *ptr, size;
+	ptr = (size_t *)__shmaddr;
+	ptr--;
+	size = *ptr;    //find mmap size which we stored at the beginning of the buffer
+	return munmap((void *)ptr, size + sizeof(size_t));
 }
 #endif
 
