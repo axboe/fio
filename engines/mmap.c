@@ -11,6 +11,7 @@
 #include <sys/mman.h>
 
 #include "../fio.h"
+#include "../optgroup.h"
 #include "../verify.h"
 
 /*
@@ -26,11 +27,40 @@ struct fio_mmap_data {
 	off_t mmap_off;
 };
 
+#ifdef CONFIG_HAVE_THP
+struct mmap_options {
+	void *pad;
+	unsigned int thp;
+};
+
+static struct fio_option options[] = {
+	{
+		.name	= "thp",
+		.lname	= "Transparent Huge Pages",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct mmap_options, thp),
+		.help	= "Memory Advise Huge Page",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_MMAP,
+	},
+	{
+		.name = NULL,
+	},
+};
+#endif
+
 static bool fio_madvise_file(struct thread_data *td, struct fio_file *f,
 			     size_t length)
 
 {
 	struct fio_mmap_data *fmd = FILE_ENG_DATA(f);
+#ifdef CONFIG_HAVE_THP
+	struct mmap_options *o = td->eo;
+
+	/* Ignore errors on this optional advisory */
+	if (o->thp)
+		madvise(fmd->mmap_ptr, length, MADV_HUGEPAGE);
+#endif
 
 	if (!td->o.fadvise_hint)
 		return true;
@@ -50,11 +80,27 @@ static bool fio_madvise_file(struct thread_data *td, struct fio_file *f,
 	return true;
 }
 
+#ifdef CONFIG_HAVE_THP
+static int fio_mmap_get_shared(struct thread_data *td)
+{
+	struct mmap_options *o = td->eo;
+
+	if (o->thp)
+		return MAP_PRIVATE;
+	return MAP_SHARED;
+}
+#else
+static int fio_mmap_get_shared(struct thread_data *td)
+{
+	return MAP_SHARED;
+}
+#endif
+
 static int fio_mmap_file(struct thread_data *td, struct fio_file *f,
 			 size_t length, off_t off)
 {
 	struct fio_mmap_data *fmd = FILE_ENG_DATA(f);
-	int flags = 0;
+	int flags = 0, shared = fio_mmap_get_shared(td);
 
 	if (td_rw(td) && !td->o.verify_only)
 		flags = PROT_READ | PROT_WRITE;
@@ -66,7 +112,7 @@ static int fio_mmap_file(struct thread_data *td, struct fio_file *f,
 	} else
 		flags = PROT_READ;
 
-	fmd->mmap_ptr = mmap(NULL, length, flags, MAP_SHARED, f->fd, off);
+	fmd->mmap_ptr = mmap(NULL, length, flags, shared, f->fd, off);
 	if (fmd->mmap_ptr == MAP_FAILED) {
 		fmd->mmap_ptr = NULL;
 		td_verror(td, errno, "mmap");
@@ -275,6 +321,10 @@ static struct ioengine_ops ioengine = {
 	.close_file	= fio_mmapio_close_file,
 	.get_file_size	= generic_get_file_size,
 	.flags		= FIO_SYNCIO | FIO_NOEXTEND,
+#ifdef CONFIG_HAVE_THP
+	.options	= options,
+	.option_struct_size = sizeof(struct mmap_options),
+#endif
 };
 
 static void fio_init fio_mmapio_register(void)

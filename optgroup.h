@@ -61,6 +61,7 @@ enum opt_category_group {
 	__FIO_OPT_G_MTD,
 	__FIO_OPT_G_HDFS,
 	__FIO_OPT_G_SG,
+	__FIO_OPT_G_MMAP,
 	__FIO_OPT_G_NR,
 
 	FIO_OPT_G_RATE		= (1ULL << __FIO_OPT_G_RATE),
@@ -97,6 +98,7 @@ enum opt_category_group {
 	FIO_OPT_G_MTD		= (1ULL << __FIO_OPT_G_MTD),
 	FIO_OPT_G_HDFS		= (1ULL << __FIO_OPT_G_HDFS),
 	FIO_OPT_G_SG		= (1ULL << __FIO_OPT_G_SG),
+	FIO_OPT_G_MMAP		= (1ULL << __FIO_OPT_G_MMAP),
 	FIO_OPT_G_INVALID	= (1ULL << __FIO_OPT_G_NR),
 };
 

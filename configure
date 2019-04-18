@@ -2326,6 +2326,30 @@ if compile_prog "-Wimplicit-fallthrough" "" "-Wimplicit-fallthrough"; then
 fi
 print_config "-Wimplicit-fallthrough" "$fallthrough"
 
+##########################################
+# check for MADV_HUGEPAGE support
+if test "$thp" != "yes" ; then
+  thp="no"
+fi
+if test "$esx" != "yes" ; then
+  cat > $TMPC <<EOF
+#include <sys/mman.h>
+int main(void)
+{
+  return madvise(0, 0x1000, MADV_HUGEPAGE);
+}
+EOF
+  if compile_prog "" "" "thp" ; then
+    thp=yes
+  else
+    if test "$thp" = "yes" ; then
+      feature_not_found "Transparent Huge Page" ""
+    fi
+    thp=no
+  fi
+fi
+print_config "MADV_HUGEPAGE" "$thp"
+
 #############################################################################
 
 if test "$wordsize" = "64" ; then
@@ -2599,6 +2623,9 @@ if test "$__kernel_rwf_t" = "yes"; then
 fi
 if test "$fallthrough" = "yes"; then
   CFLAGS="$CFLAGS -Wimplicit-fallthrough"
+fi
+if test "$thp" = "yes" ; then
+  output_sym "CONFIG_HAVE_THP"
 fi
 
 echo "LIBS+=$LIBS" >> $config_host_mak
