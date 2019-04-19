@@ -186,11 +186,14 @@ static bool zbd_verify_bs(void)
  * size of @buf.
  *
  * Returns 0 upon success and a negative error code upon failure.
+ * If the zone report is empty, always assume an error (device problem) and
+ * return -EIO.
  */
 static int read_zone_info(int fd, uint64_t start_sector,
 			  void *buf, unsigned int bufsz)
 {
 	struct blk_zone_report *hdr = buf;
+	int ret;
 
 	if (bufsz < sizeof(*hdr))
 		return -EINVAL;
@@ -199,7 +202,12 @@ static int read_zone_info(int fd, uint64_t start_sector,
 
 	hdr->nr_zones = (bufsz - sizeof(*hdr)) / sizeof(struct blk_zone);
 	hdr->sector = start_sector;
-	return ioctl(fd, BLKREPORTZONE, hdr) >= 0 ? 0 : -errno;
+	ret = ioctl(fd, BLKREPORTZONE, hdr);
+	if (ret)
+		return -errno;
+	if (!hdr->nr_zones)
+		return -EIO;
+	return 0;
 }
 
 /*
