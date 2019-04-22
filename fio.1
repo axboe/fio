@@ -1751,6 +1751,9 @@ are "contiguous" and the IO depth is not exceeded) before issuing a call to IME.
 Asynchronous read and write using DDN's Infinite Memory Engine (IME). This
 engine will try to stack as much IOs as possible by creating requests for IME.
 FIO will then decide when to commit these requests.
+.TP
+.B libiscsi
+Read and write iscsi lun with libiscsi.
 .SS "I/O engine specific parameters"
 In addition, there are some parameters which are only valid when a specific
 \fBioengine\fR is in use. These are used identically to normal parameters,

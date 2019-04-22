@@ -1991,6 +1991,8 @@ I/O engine
 			Asynchronous read and write using DDN's Infinite Memory Engine (IME).
 			This engine will try to stack as much IOs as possible by creating
 			requests for IME. FIO will then decide when to commit these requests.
+		**libiscsi**
+			Read and write iscsi lun with libiscsi.
 
 I/O engine specific parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

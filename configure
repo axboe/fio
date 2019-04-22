@@ -148,6 +148,7 @@ disable_lex=""
 disable_pmem="no"
 disable_native="no"
 march_set="no"
+libiscsi="no"
 prefix=/usr/local
 
 # parse options
@@ -204,6 +205,8 @@ for opt do
   ;;
   --with-ime=*) ime_path="$optarg"
   ;;
+  --enable-libiscsi) libiscsi="yes"
+  ;;
   --help)
     show_help="yes"
     ;;
@@ -239,6 +242,7 @@ if test "$show_help" = "yes" ; then
   echo "--enable-cuda           Enable GPUDirect RDMA support"
   echo "--disable-native        Don't build for native host"
   echo "--with-ime=             Install path for DDN's Infinite Memory Engine"
+  echo "--enable-libiscsi       Enable iscsi support"
   exit $exit_val
 fi
 
@@ -1971,6 +1975,22 @@ fi
 print_config "DDN's Infinite Memory Engine" "$libime"
 
 ##########################################
+# Check if we have required environment variables configured for libiscsi
+if test "$libiscsi" = "yes" ; then
+  if $(pkg-config --atleast-version=1.9.0 libiscsi); then
+    libiscsi="yes"
+    libiscsi_cflags=$(pkg-config --cflags libiscsi)
+    libiscsi_libs=$(pkg-config --libs libiscsi)
+  else
+    if test "$libiscsi" = "yes" ; then
+      echo "libiscsi" "Install libiscsi >= 1.9.0"
+    fi
+    libiscsi="no"
+  fi
+fi
+print_config "iscsi engine" "$libiscsi"
+
+##########################################
 # Check if we have lex/yacc available
 yacc="no"
 yacc_is_bison="no"
@@ -2543,7 +2563,7 @@ if test "$libhdfs" = "yes" ; then
   echo "JAVA_HOME=$JAVA_HOME" >> $config_host_mak
   echo "FIO_LIBHDFS_INCLUDE=$FIO_LIBHDFS_INCLUDE" >> $config_host_mak
   echo "FIO_LIBHDFS_LIB=$FIO_LIBHDFS_LIB" >> $config_host_mak
- fi
+fi
 if test "$mtd" = "yes" ; then
   output_sym "CONFIG_MTD"
 fi
@@ -2626,6 +2646,12 @@ if test "$fallthrough" = "yes"; then
 fi
 if test "$thp" = "yes" ; then
   output_sym "CONFIG_HAVE_THP"
+fi
+if test "$libiscsi" = "yes" ; then
+  output_sym "CONFIG_LIBISCSI"
+  echo "CONFIG_LIBISCSI=m" >> $config_host_mak
+  echo "LIBISCSI_CFLAGS=$libiscsi_cflags" >> $config_host_mak
+  echo "LIBISCSI_LIBS=$libiscsi_libs" >> $config_host_mak
 fi
 
 echo "LIBS+=$LIBS" >> $config_host_mak
