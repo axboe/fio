@@ -426,8 +426,6 @@ static int parse_zone_info(struct thread_data *td, struct fio_file *f)
 			p->start = z->start << 9;
 			switch (z->cond) {
 			case BLK_ZONE_COND_NOT_WP:
-				p->wp = p->start;
-				break;
 			case BLK_ZONE_COND_FULL:
 				p->wp = p->start + zone_size;
 				break;
