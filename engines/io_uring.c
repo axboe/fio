@@ -62,9 +62,6 @@ struct ioring_data {
 	int cq_ring_off;
 	unsigned iodepth;
 
-	uint64_t cachehit;
-	uint64_t cachemiss;
-
 	struct ioring_mmap mmap[3];
 };
 
@@ -196,13 +193,6 @@ static struct io_u *fio_ioring_event(struct thread_data *td, int event)
 			io_u->resid = io_u->xfer_buflen - cqe->res;
 	} else
 		io_u->error = 0;
-
-	if (io_u->ddir == DDIR_READ) {
-		if (cqe->flags & IOCQE_FLAG_CACHEHIT)
-			ld->cachehit++;
-		else
-			ld->cachemiss++;
-	}
 
 	return io_u;
 }
@@ -391,9 +381,6 @@ static void fio_ioring_cleanup(struct thread_data *td)
 	struct ioring_data *ld = td->io_ops_data;
 
 	if (ld) {
-		td->ts.cachehit += ld->cachehit;
-		td->ts.cachemiss += ld->cachemiss;
-
 		if (!(td->flags & TD_F_CHILD))
 			fio_ioring_unmap(ld);
 

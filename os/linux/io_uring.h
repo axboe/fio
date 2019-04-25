@@ -70,11 +70,6 @@ struct io_uring_cqe {
 };
 
 /*
- * io_uring_event->flags
- */
-#define IOCQE_FLAG_CACHEHIT	(1U << 0)	/* IO did not hit media */
-
-/*
  * Magic offsets for the application to mmap the data it needs
  */
 #define IORING_OFF_SQ_RING		0ULL
