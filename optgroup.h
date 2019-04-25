@@ -62,8 +62,8 @@ enum opt_category_group {
 	__FIO_OPT_G_HDFS,
 	__FIO_OPT_G_SG,
 	__FIO_OPT_G_MMAP,
-	__FIO_OPT_G_NR,
 	__FIO_OPT_G_ISCSI,
+	__FIO_OPT_G_NR,
 
 	FIO_OPT_G_RATE		= (1ULL << __FIO_OPT_G_RATE),
 	FIO_OPT_G_ZONE		= (1ULL << __FIO_OPT_G_ZONE),
