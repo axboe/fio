@@ -233,6 +233,7 @@ static int fio_ioring_getevents(struct thread_data *td, unsigned int min,
 		r = fio_ioring_cqring_reap(td, events, max);
 		if (r) {
 			events += r;
+			actual_min -= r;
 			continue;
 		}
 
