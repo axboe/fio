@@ -307,6 +307,10 @@ AIX|OpenBSD|NetBSD)
     force_no_lex_o="yes"
   fi
   ;;
+FreeBSD)
+  CFLAGS="$CFLAGS -I/usr/local/include"
+  LDFLAGS="$LDFLAGS -L/usr/local/lib"
+  ;;
 Darwin)
   # on Leopard most of the system is 32-bit, so we have to ask the kernel if
   # we can run 64-bit userspace code.
