@@ -264,8 +264,7 @@ static int reap_events(struct submitter *s)
 			if (cqe->res != BS) {
 				printf("io: unexpected ret=%d\n", cqe->res);
 				if (polled && cqe->res == -EOPNOTSUPP)
-					printf("Your filesystem/device doesn't "
-						"support polled IO\n");
+					printf("Your filesystem/driver/kernel doesn't support polled IO\n");
 				return -1;
 			}
 		}
