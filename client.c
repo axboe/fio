@@ -1224,8 +1224,10 @@ static void handle_du(struct fio_client *client, struct fio_net_cmd *cmd)
 		__log_buf(&client->buf, "\nDisk stats (read/write):\n");
 		print_disk_util(&du->dus, &du->agg, 0, &client->buf);
 	}
-	if (output_format & FIO_OUTPUT_TERSE && terse_version >= 3)
+	if (output_format & FIO_OUTPUT_TERSE && terse_version >= 3) {
 		print_disk_util(&du->dus, &du->agg, 1, &client->buf);
+		__log_buf(&client->buf, "\n");
+	}
 }
 
 static void convert_jobs_eta(struct jobs_eta *je)
