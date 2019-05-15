@@ -1219,7 +1219,7 @@ static void handle_du(struct fio_client *client, struct fio_net_cmd *cmd)
 		json_array_add_disk_util(&du->dus, &du->agg, du_array);
 		duobj = json_array_last_value_object(du_array);
 		json_object_add_client_info(duobj, client);
-	} else if (output_format & FIO_OUTPUT_TERSE)
+	} else if (output_format & FIO_OUTPUT_TERSE && terse_version >= 3)
 		print_disk_util(&du->dus, &du->agg, 1, &client->buf);
 	else if (output_format & FIO_OUTPUT_NORMAL) {
 		__log_buf(&client->buf, "\nDisk stats (read/write):\n");
