@@ -1244,12 +1244,13 @@ static void show_thread_status_terse_all(struct thread_stat *ts,
 	/* Additional output if continue_on_error set - default off*/
 	if (ts->continue_on_error)
 		log_buf(out, ";%llu;%d", (unsigned long long) ts->total_err_count, ts->first_error);
-	if (ver == 2)
-		log_buf(out, "\n");
 
 	/* Additional output if description is set */
-	if (strlen(ts->description))
+	if (strlen(ts->description)) {
+		if (ver == 2)
+			log_buf(out, "\n");
 		log_buf(out, ";%s", ts->description);
+	}
 
 	log_buf(out, "\n");
 }
