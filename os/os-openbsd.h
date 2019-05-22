@@ -65,10 +65,12 @@ static inline unsigned long long os_phys_mem(void)
 	return mem;
 }
 
+#ifndef CONFIG_HAVE_GETTID
 static inline int gettid(void)
 {
 	return (int)(intptr_t) pthread_self();
 }
+#endif
 
 static inline unsigned long long get_fs_free_size(const char *path)
 {

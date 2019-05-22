@@ -2374,6 +2374,21 @@ EOF
 fi
 print_config "MADV_HUGEPAGE" "$thp"
 
+##########################################
+# check for gettid()
+gettid="no"
+cat > $TMPC << EOF
+#include <unistd.h>
+int main(int argc, char **argv)
+{
+  return gettid();
+}
+EOF
+if compile_prog "" "" "gettid"; then
+  gettid="yes"
+fi
+print_config "gettid" "$gettid"
+
 #############################################################################
 
 if test "$wordsize" = "64" ; then
@@ -2644,6 +2659,9 @@ if test "$cunit" = "yes" ; then
 fi
 if test "$__kernel_rwf_t" = "yes"; then
   output_sym "CONFIG_HAVE_KERNEL_RWF_T"
+fi
+if test "$gettid" = "yes"; then
+  output_sym "CONFIG_HAVE_GETTID"
 fi
 if test "$fallthrough" = "yes"; then
   CFLAGS="$CFLAGS -Wimplicit-fallthrough"

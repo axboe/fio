@@ -164,10 +164,12 @@ static inline int fio_cpuset_exit(os_cpu_mask_t *mask)
 	return 0;
 }
 
+#ifndef CONFIG_HAVE_GETTID
 static inline int gettid(void)
 {
 	return pthread_self();
 }
+#endif
 
 /*
  * Should be enough, not aware of what (if any) restrictions Solaris has

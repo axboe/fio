@@ -90,10 +90,12 @@ static inline unsigned long long os_phys_mem(void)
 	return mem;
 }
 
+#ifndef CONFIG_HAVE_GETTID
 static inline int gettid(void)
 {
 	return mach_thread_self();
 }
+#endif
 
 /*
  * For some reason, there's no header definition for fdatasync(), even

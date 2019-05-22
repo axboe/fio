@@ -373,10 +373,12 @@ static inline int CPU_COUNT(os_cpu_mask_t *mask)
 #endif
 
 #ifndef FIO_HAVE_GETTID
+#ifndef CONFIG_HAVE_GETTID
 static inline int gettid(void)
 {
 	return getpid();
 }
+#endif
 #endif
 
 #ifndef FIO_HAVE_SHM_ATTACH_REMOVED
