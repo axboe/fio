@@ -288,7 +288,11 @@ int fio_gf_open_file(struct thread_data *td, struct fio_file *f)
 		    || sb.st_size < f->real_file_size) {
 			dprint(FD_FILE, "fio extend file %s from %jd to %" PRIu64 "\n",
 			       f->file_name, (intmax_t) sb.st_size, f->real_file_size);
+#if defined(CONFIG_GF_NEW_API)
+			ret = glfs_ftruncate(g->fd, f->real_file_size, NULL, NULL);
+#else
 			ret = glfs_ftruncate(g->fd, f->real_file_size);
+#endif
 			if (ret) {
 				log_err("failed fio extend file %s to %" PRIu64 "\n",
 					f->file_name, f->real_file_size);
@@ -350,7 +354,11 @@ int fio_gf_open_file(struct thread_data *td, struct fio_file *f)
 					       f->file_name);
 					glfs_unlink(g->fs, f->file_name);
 				} else if (td->o.create_fsync) {
+#if defined(CONFIG_GF_NEW_API)
+					if (glfs_fsync(g->fd, NULL, NULL) < 0) {
+#else
 					if (glfs_fsync(g->fd) < 0) {
+#endif
 						dprint(FD_FILE,
 						       "failed to sync, close %s\n",
 						       f->file_name);

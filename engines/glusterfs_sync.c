@@ -42,9 +42,17 @@ static enum fio_q_status fio_gf_queue(struct thread_data *td, struct io_u *io_u)
 	else if (io_u->ddir == DDIR_WRITE)
 		ret = glfs_write(g->fd, io_u->xfer_buf, io_u->xfer_buflen, 0);
 	else if (io_u->ddir == DDIR_SYNC)
+#if defined(CONFIG_GF_NEW_API)
+		ret = glfs_fsync(g->fd, NULL, NULL);
+#else
 		ret = glfs_fsync(g->fd);
+#endif
 	else if (io_u->ddir == DDIR_DATASYNC)
+#if defined(CONFIG_GF_NEW_API)
+		ret = glfs_fdatasync(g->fd, NULL, NULL);
+#else
 		ret = glfs_fdatasync(g->fd);
+#endif
 	else {
 		log_err("unsupported operation.\n");
 		io_u->error = EINVAL;
