@@ -1356,19 +1356,18 @@ if test "$?" != "0" ; then
   echo "configure: gtk and gthread not found"
   exit 1
 fi
-if compile_prog "$GTK_CFLAGS" "$GTK_LIBS" "gfio" ; then
-  $TMPE
-  if test "$?" = "0" ; then
+if ! ${cross_prefix}pkg-config --atleast-version 2.18.0 gtk+-2.0; then
+  echo "GTK found, but need version 2.18 or higher"
+  gfio="no"
+else
+  if compile_prog "$GTK_CFLAGS" "$GTK_LIBS" "gfio" ; then
     gfio="yes"
     GFIO_LIBS="$LIBS $GTK_LIBS"
     CFLAGS="$CFLAGS $GTK_CFLAGS"
   else
-    echo "GTK found, but need version 2.18 or higher"
+    echo "Please install gtk and gdk libraries"
     gfio="no"
   fi
-else
-  echo "Please install gtk and gdk libraries"
-  gfio="no"
 fi
 LDFLAGS=$ORG_LDFLAGS
 fi
