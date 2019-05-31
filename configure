@@ -207,6 +207,8 @@ for opt do
   ;;
   --enable-libiscsi) libiscsi="yes"
   ;;
+  --disable-tcmalloc) disable_tcmalloc="yes"
+  ;;
   --help)
     show_help="yes"
     ;;
@@ -243,6 +245,7 @@ if test "$show_help" = "yes" ; then
   echo "--disable-native        Don't build for native host"
   echo "--with-ime=             Install path for DDN's Infinite Memory Engine"
   echo "--enable-libiscsi       Enable iscsi support"
+  echo "--disable-tcmalloc	Disable tcmalloc support"
   exit $exit_val
 fi
 
@@ -2695,6 +2698,19 @@ if test "$libiscsi" = "yes" ; then
   echo "LIBISCSI_CFLAGS=$libiscsi_cflags" >> $config_host_mak
   echo "LIBISCSI_LIBS=$libiscsi_libs" >> $config_host_mak
 fi
+cat > $TMPC << EOF
+int main(int argc, char **argv)
+{
+  return 0;
+}
+EOF
+if test "$disable_tcmalloc" != "yes"  && compile_prog "" "-ltcmalloc" "tcmalloc"; then
+  LIBS="-ltcmalloc $LIBS"
+  tcmalloc="yes"
+else
+  tcmalloc="no"
+fi
+print_config "TCMalloc support" "$tcmalloc"
 
 echo "LIBS+=$LIBS" >> $config_host_mak
 echo "GFIO_LIBS+=$GFIO_LIBS" >> $config_host_mak
