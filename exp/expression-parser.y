@@ -204,9 +204,9 @@ static void setup_to_parse_string(const char *string)
 {
 	unsigned int len;
 
-	len = strlen(string);
-	if (len > sizeof(lexer_input_buffer) - 3)
-		len = sizeof(lexer_input_buffer) - 3;
+	len = sizeof(lexer_input_buffer) - 3;
+	if (len > strlen(string))
+		len = strlen(string);
 
 	strncpy(lexer_input_buffer, string, len);
 	lexer_input_buffer[len] = '\0'; 

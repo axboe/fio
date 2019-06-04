@@ -1438,7 +1438,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		   int recursed, int client_type)
 {
 	unsigned int i;
-	char fname[PATH_MAX];
+	char fname[PATH_MAX + 1];
 	int numjobs, file_alloced;
 	struct thread_options *o = &td->o;
 	char logname[PATH_MAX + 32];
@@ -2040,7 +2040,8 @@ static int __parse_jobs_ini(struct thread_data *td,
 					strncpy(full_fn,
 						file, (ts - file) + 1);
 					strncpy(full_fn + (ts - file) + 1,
-						filename, strlen(filename));
+						filename,
+						len - (ts - file) - 1);
 					full_fn[len - 1] = 0;
 					filename = full_fn;
 				}
