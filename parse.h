@@ -37,7 +37,7 @@ struct value_pair {
 	void *cb;			/* sub-option callback */
 };
 
-#define OPT_LEN_MAX 	4096
+#define OPT_LEN_MAX 	8192
 #define PARSE_MAX_VP	24
 
 /*

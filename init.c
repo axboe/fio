@@ -1887,7 +1887,7 @@ static int __parse_jobs_ini(struct thread_data *td,
 		}
 	}
 
-	string = malloc(4096);
+	string = malloc(OPT_LEN_MAX);
 
 	/*
 	 * it's really 256 + small bit, 280 should suffice
@@ -1920,7 +1920,7 @@ static int __parse_jobs_ini(struct thread_data *td,
 			if (is_buf)
 				p = strsep(&file, "\n");
 			else
-				p = fgets(string, 4096, f);
+				p = fgets(string, OPT_LEN_MAX, f);
 			if (!p)
 				break;
 		}
@@ -1989,7 +1989,7 @@ static int __parse_jobs_ini(struct thread_data *td,
 				if (is_buf)
 					p = strsep(&file, "\n");
 				else
-					p = fgets(string, 4096, f);
+					p = fgets(string, OPT_LEN_MAX, f);
 				if (!p)
 					break;
 				dprint(FD_PARSE, "%s", p);
