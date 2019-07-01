@@ -316,12 +316,14 @@ static inline int fri_check_complete(struct rbd_data *rbd, struct io_u *io_u,
 	return 0;
 }
 
+#ifndef CONFIG_RBD_POLL
 static inline int rbd_io_u_seen(struct io_u *io_u)
 {
 	struct fio_rbd_iou *fri = io_u->engine_data;
 
 	return fri->io_seen;
 }
+#endif
 
 static void rbd_io_u_wait_complete(struct io_u *io_u)
 {
