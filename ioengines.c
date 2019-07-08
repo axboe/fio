@@ -308,7 +308,9 @@ enum fio_q_status td_io_queue(struct thread_data *td, struct io_u *io_u)
 	io_u->error = 0;
 	io_u->resid = 0;
 
-	if (td_ioengine_flagged(td, FIO_SYNCIO)) {
+	if (td_ioengine_flagged(td, FIO_SYNCIO) ||
+		(td_ioengine_flagged(td, FIO_ASYNCIO_SYNC_TRIM) && 
+		io_u->ddir == DDIR_TRIM)) {
 		if (fio_fill_issue_time(td))
 			fio_gettime(&io_u->issue_time, NULL);
 
@@ -389,7 +391,9 @@ enum fio_q_status td_io_queue(struct thread_data *td, struct io_u *io_u)
 			td_io_commit(td);
 	}
 
-	if (!td_ioengine_flagged(td, FIO_SYNCIO)) {
+	if (!td_ioengine_flagged(td, FIO_SYNCIO) &&
+		(!td_ioengine_flagged(td, FIO_ASYNCIO_SYNC_TRIM) ||
+		 io_u->ddir != DDIR_TRIM)) {
 		if (fio_fill_issue_time(td))
 			fio_gettime(&io_u->issue_time, NULL);
 

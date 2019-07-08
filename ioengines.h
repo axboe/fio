@@ -63,6 +63,8 @@ enum fio_ioengine_flags {
 	FIO_FAKEIO	= 1 << 11,	/* engine pretends to do IO */
 	FIO_NOSTATS	= 1 << 12,	/* don't do IO stats */
 	FIO_NOFILEHASH	= 1 << 13,	/* doesn't hash the files for lookup later. */
+	FIO_ASYNCIO_SYNC_TRIM
+			= 1 << 14	/* io engine has async ->queue except for trim */
 };
 
 /*
