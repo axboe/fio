@@ -117,7 +117,8 @@ static int fio_iscsi_setup_lun(struct iscsi_info *iscsi_info,
 
 	task = iscsi_readcapacity16_sync(iscsi_lun->iscsi, iscsi_lun->url->lun);
 	if (task == NULL || task->status != SCSI_STATUS_GOOD) {
-		log_err("iscsi: failed to send readcapacity command\n");
+		log_err("iscsi: failed to send readcapacity command: %s\n",
+			iscsi_get_error(iscsi_lun->iscsi));
 		ret = EINVAL;
 		goto out;
 	}
