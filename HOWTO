@@ -1805,6 +1805,11 @@ I/O engine
 		**pvsync2**
 			Basic :manpage:`preadv2(2)` or :manpage:`pwritev2(2)` I/O.
 
+		**io_uring**
+			Fast Linux native asynchronous I/O. Supports async IO
+			for both direct and buffered IO.
+			This engine defines engine specific options.
+
 		**libaio**
 			Linux native asynchronous I/O. Note that Linux may only support
 			queued behavior with non-buffered I/O (set ``direct=1`` or
@@ -2001,6 +2006,35 @@ In addition, there are some parameters which are only valid when a specific
 :option:`ioengine` is in use. These are used identically to normal parameters,
 with the caveat that when used on the command line, they must come after the
 :option:`ioengine` that defines them is selected.
+
+.. option:: hipri : [io_uring]
+
+	If this option is set, fio will attempt to use polled IO completions.
+	Normal IO completions generate interrupts to signal the completion of
+	IO, polled completions do not. Hence they are require active reaping
+	by the application. The benefits are more efficient IO for high IOPS
+	scenarios, and lower latencies for low queue depth IO.
+
+.. option:: fixedbufs : [io_uring]
+
+	If fio is asked to do direct IO, then Linux will map pages for each
+	IO call, and release them when IO is done. If this option is set, the
+	pages are pre-mapped before IO is started. This eliminates the need to
+	map and release for each IO. This is more efficient, and reduces the
+	IO latency as well.
+
+.. option:: sqthread_poll : [io_uring]
+
+	Normally fio will submit IO by issuing a system call to notify the
+	kernel of available items in the SQ ring. If this option is set, the
+	act of submitting IO will be done by a polling thread in the kernel.
+	This frees up cycles for fio, at the cost of using more CPU in the
+	system.
+
+.. option:: sqthread_poll_cpu : [io_uring]
+
+	When :option:`sqthread_poll` is set, this option provides a way to
+	define which CPU should be used for the polling thread.
 
 .. option:: userspace_reap : [libaio]
 

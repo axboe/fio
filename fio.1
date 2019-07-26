@@ -1762,6 +1762,29 @@ In addition, there are some parameters which are only valid when a specific
 with the caveat that when used on the command line, they must come after the
 \fBioengine\fR that defines them is selected.
 .TP
+.BI (io_uring)hipri
+If this option is set, fio will attempt to use polled IO completions. Normal IO
+completions generate interrupts to signal the completion of IO, polled
+completions do not. Hence they are require active reaping by the application.
+The benefits are more efficient IO for high IOPS scenarios, and lower latencies
+for low queue depth IO.
+.TP
+.BI (io_uring)fixedbufs
+If fio is asked to do direct IO, then Linux will map pages for each IO call, and
+release them when IO is done. If this option is set, the pages are pre-mapped
+before IO is started. This eliminates the need to map and release for each IO.
+This is more efficient, and reduces the IO latency as well.
+.TP
+.BI (io_uring)sqthread_poll
+Normally fio will submit IO by issuing a system call to notify the kernel of
+available items in the SQ ring. If this option is set, the act of submitting IO
+will be done by a polling thread in the kernel. This frees up cycles for fio, at
+the cost of using more CPU in the system.
+.TP
+.BI (io_uring)sqthread_poll_cpu
+When `sqthread_poll` is set, this option provides a way to define which CPU
+should be used for the polling thread.
+.TP
 .BI (libaio)userspace_reap
 Normally, with the libaio engine in use, fio will use the
 \fBio_getevents\fR\|(3) system call to reap newly returned events. With
