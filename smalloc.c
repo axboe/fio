@@ -338,6 +338,17 @@ void sfree(void *ptr)
 	log_err("smalloc: ptr %p not from smalloc pool\n", ptr);
 }
 
+static unsigned int firstfree(struct pool *pool)
+{
+        unsigned int i;
+
+        for (i = 0; i < pool->nr_blocks; i++)
+                if (pool->bitmap[i] != -1U)
+                        return i;
+
+        assert(0);
+}
+
 static void *__smalloc_pool(struct pool *pool, size_t size)
 {
 	size_t nr_blocks;
@@ -352,7 +363,14 @@ static void *__smalloc_pool(struct pool *pool, size_t size)
 	if (nr_blocks > pool->free_blocks)
 		goto fail;
 
-	i = pool->next_non_full;
+	for (i = pool->next_non_full; pool->bitmap[i] == -1U; i++)
+		if (i == pool->nr_blocks - 1) {
+			i = firstfree(pool);
+			break;
+		}
+
+	pool->next_non_full = i;
+
 	last_idx = 0;
 	offset = -1U;
 	while (i < pool->nr_blocks) {
@@ -360,7 +378,6 @@ static void *__smalloc_pool(struct pool *pool, size_t size)
 
 		if (pool->bitmap[i] == -1U) {
 			i++;
-			pool->next_non_full = i;
 			last_idx = 0;
 			continue;
 		}
