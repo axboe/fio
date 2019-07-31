@@ -557,10 +557,10 @@ static unsigned long long get_next_buflen(struct thread_data *td, struct io_u *i
 			for (i = 0; i < td->o.bssplit_nr[ddir]; i++) {
 				struct bssplit *bsp = &td->o.bssplit[ddir][i];
 
+				if (!bsp->perc)
+					continue;
 				buflen = bsp->bs;
 				perc += bsp->perc;
-				if (!perc)
-					break;
 				if ((r / perc <= frand_max / 100ULL) &&
 				    io_u_fits(td, io_u, buflen))
 					break;
