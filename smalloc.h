@@ -9,6 +9,7 @@ extern void sfree(void *);
 extern char *smalloc_strdup(const char *);
 extern void sinit(void);
 extern void scleanup(void);
+extern void smalloc_debug(size_t);
 
 extern unsigned int smalloc_pool_size;
 

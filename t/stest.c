@@ -11,11 +11,14 @@
 #define MAGIC2	0xf0a1e9b3
 
 #define LOOPS	32
+#define MAXSMALLOC	120*1024*1024UL
+#define LARGESMALLOC	128*1024U
 
 struct elem {
 	unsigned int magic1;
 	struct flist_head list;
 	unsigned int magic2;
+	unsigned int size;
 };
 
 static FLIST_HEAD(list);
@@ -25,13 +28,15 @@ static int do_rand_allocs(void)
 	unsigned int size, nr, rounds = 0;
 	unsigned long total;
 	struct elem *e;
+	bool error;
 
 	while (rounds++ < LOOPS) {
 #ifdef STEST_SEED
 		srand(MAGIC1);
 #endif
+		error = false;
 		nr = total = 0;
-		while (total < 120*1024*1024UL) {
+		while (total < MAXSMALLOC) {
 			size = 8 * sizeof(struct elem) + (int) (999.0 * (rand() / (RAND_MAX + 1.0)));
 			e = smalloc(size);
 			if (!e) {
@@ -40,6 +45,7 @@ static int do_rand_allocs(void)
 			}
 			e->magic1 = MAGIC1;
 			e->magic2 = MAGIC2;
+			e->size = size;
 			total += size;
 			flist_add_tail(&e->list, &list);
 			nr++;
@@ -51,8 +57,20 @@ static int do_rand_allocs(void)
 			e = flist_entry(list.next, struct elem, list);
 			assert(e->magic1 == MAGIC1);
 			assert(e->magic2 == MAGIC2);
+			total -= e->size;
 			flist_del(&e->list);
 			sfree(e);
+
+			if (!error) {
+				e = smalloc(LARGESMALLOC);
+				if (!e) {
+					error = true;
+					printf("failure allocating %u bytes at %lu allocated during sfree phase\n",
+						LARGESMALLOC, total);
+				}
+				else
+					sfree(e);
+			}
 		}
 	}
 
@@ -66,6 +84,7 @@ int main(int argc, char *argv[])
 	debug_init();
 
 	do_rand_allocs();
+	smalloc_debug(0);	/* free and total blocks should match */
 
 	scleanup();
 	return 0;
