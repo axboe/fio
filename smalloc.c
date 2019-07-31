@@ -347,6 +347,9 @@ static unsigned int firstfree(struct pool *pool)
                         return i;
 
         assert(0);
+
+	/* we will never get here but this fixes a compiler warning */
+	return -1U;
 }
 
 static void *__smalloc_pool(struct pool *pool, size_t size)
