@@ -705,16 +705,6 @@ extern void lat_target_reset(struct thread_data *);
 	    	 (i) < (td)->o.nr_files && ((f) = (td)->files[i]) != NULL; \
 		 (i)++)
 
-#define fio_assert(td, cond)	do {	\
-	if (!(cond)) {			\
-		int *__foo = NULL;	\
-		fprintf(stderr, "file:%s:%d, assert %s failed\n", __FILE__, __LINE__, #cond);	\
-		td_set_runstate((td), TD_EXITED);	\
-		(td)->error = EFAULT;		\
-		*__foo = 0;			\
-	}	\
-} while (0)
-
 static inline bool fio_fill_issue_time(struct thread_data *td)
 {
 	if (td->o.read_iolog_file ||
