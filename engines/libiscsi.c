@@ -351,6 +351,9 @@ static int fio_iscsi_getevents(struct thread_data *td, unsigned int min,
 
 		ret = poll(iscsi_info->pfds, iscsi_info->nr_luns, -1);
 		if (ret < 0) {
+			if (errno == EINTR || errno == EAGAIN) {
+				continue;
+			}
 			log_err("iscsi: failed to poll events: %s.\n",
 				strerror(errno));
 			break;
