@@ -338,18 +338,23 @@ void sfree(void *ptr)
 	log_err("smalloc: ptr %p not from smalloc pool\n", ptr);
 }
 
-static unsigned int firstfree(struct pool *pool)
+static unsigned int find_best_index(struct pool *pool)
 {
-        unsigned int i;
+	unsigned int i;
 
-        for (i = 0; i < pool->nr_blocks; i++)
-                if (pool->bitmap[i] != -1U)
-                        return i;
+	assert(pool->free_blocks);
 
-        assert(0);
+	for (i = pool->next_non_full; pool->bitmap[i] == -1U; i++) {
+		if (i == pool->nr_blocks - 1) {
+			unsigned int j;
 
-	/* we will never get here but this fixes a compiler warning */
-	return -1U;
+			for (j = 0; j < pool->nr_blocks; j++)
+				if (pool->bitmap[j] != -1U)
+					return j;
+		}
+	}
+
+	return i;
 }
 
 static void *__smalloc_pool(struct pool *pool, size_t size)
@@ -366,16 +371,11 @@ static void *__smalloc_pool(struct pool *pool, size_t size)
 	if (nr_blocks > pool->free_blocks)
 		goto fail;
 
-	for (i = pool->next_non_full; pool->bitmap[i] == -1U; i++)
-		if (i == pool->nr_blocks - 1) {
-			i = firstfree(pool);
-			break;
-		}
-
-	pool->next_non_full = i;
+	pool->next_non_full = find_best_index(pool);
 
 	last_idx = 0;
 	offset = -1U;
+	i = pool->next_non_full;
 	while (i < pool->nr_blocks) {
 		unsigned int idx;
 
