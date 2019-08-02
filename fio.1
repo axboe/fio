@@ -2022,6 +2022,22 @@ blocksize=8k will write 16 sectors with each command. fio will still
 generate 8k of data for each command butonly the first 512 bytes will
 be used and transferred to the device. The writefua option is ignored
 with this selection.
+.RE
+.RE
+.TP
+.BI (nbd)uri \fR=\fPstr
+Specify the NBD URI of the server to test.
+The string is a standard NBD URI (see
+\fIhttps://github.com/NetworkBlockDevice/nbd/tree/master/doc\fR).
+Example URIs:
+.RS
+.RS
+.TP
+\fInbd://localhost:10809\fR
+.TP
+\fInbd+unix:///?socket=/tmp/socket\fR
+.TP
+\fInbds://tlshost/exportname\fR
 
 .SS "I/O depth"
 .TP

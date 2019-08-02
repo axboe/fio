@@ -1999,7 +1999,7 @@ I/O engine
 		**libiscsi**
 			Read and write iscsi lun with libiscsi.
 		**nbd**
-			Synchronous read and write a Network Block Device (NBD).
+			Read and write a Network Block Device (NBD).
 
 I/O engine specific parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2300,6 +2300,15 @@ with the caveat that when used on the command line, they must come after the
 	Enable verbose requests from libcurl. Useful for debugging. 1
 	turns on verbose logging from libcurl, 2 additionally enables
 	HTTP IO tracing. Default is **0**
+
+.. option:: uri=str : [nbd]
+
+	Specify the NBD URI of the server to test.  The string
+	is a standard NBD URI
+	(see https://github.com/NetworkBlockDevice/nbd/tree/master/doc).
+	Example URIs: nbd://localhost:10809
+	nbd+unix:///?socket=/tmp/socket
+	nbds://tlshost/exportname
 
 I/O depth
 ~~~~~~~~~
