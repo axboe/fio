@@ -170,6 +170,10 @@ static const struct opt_group fio_opt_cat_groups[] = {
 		.mask	= FIO_OPT_G_HDFS,
 	},
 	{
+		.name	= "NBD I/O engine", /* NBD */
+		.mask	= FIO_OPT_G_NBD,
+	},
+	{
 		.name	= NULL,
 	},
 };

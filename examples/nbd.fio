@@ -1,0 +1,35 @@
+# To use fio to test nbdkit:
+#
+# nbdkit -U - memory size=256M --run 'export unixsocket; fio examples/nbd.fio'
+#
+# To use fio to test qemu-nbd:
+#
+# rm -f /tmp/disk.img /tmp/socket
+# truncate -s 256M /tmp/disk.img
+# export unixsocket=/tmp/socket
+# qemu-nbd -t -k $unixsocket -f raw /tmp/disk.img &
+# fio examples/nbd.fio
+# killall qemu-nbd
+
+[global]
+ioengine=nbd
+uri=nbd+unix:///?socket=${unixsocket}
+# Starting from nbdkit 1.14 the following will work:
+#uri=${uri}
+rw=randrw
+time_based
+runtime=60
+group_reporting
+iodepth=64
+
+[job0]
+offset=0
+
+[job1]
+offset=064m
+
+[job2]
+offset=128m
+
+[job3]
+offset=192m

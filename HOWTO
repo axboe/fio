@@ -1998,6 +1998,8 @@ I/O engine
 			requests for IME. FIO will then decide when to commit these requests.
 		**libiscsi**
 			Read and write iscsi lun with libiscsi.
+		**nbd**
+			Synchronous read and write a Network Block Device (NBD).
 
 I/O engine specific parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

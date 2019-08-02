@@ -65,6 +65,12 @@ ifdef CONFIG_LIBISCSI
   SOURCE += engines/libiscsi.c
 endif
 
+ifdef CONFIG_LIBNBD
+  CFLAGS += $(LIBNBD_CFLAGS)
+  LIBS += $(LIBNBD_LIBS)
+  SOURCE += engines/nbd.c
+endif
+
 ifdef CONFIG_64BIT
   CFLAGS += -DBITS_PER_LONG=64
 endif
