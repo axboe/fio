@@ -278,13 +278,6 @@ static int fio_spliceio_init(struct thread_data *td)
 	 */
 	sd->vmsplice_to_user_map = 1;
 
-	/*
-	 * And if vmsplice_to_user works, we definitely need aligned
-	 * buffers. Just set ->odirect to force that.
-	 */
-	if (td_read(td))
-		td->o.mem_align = 1;
-
 	td->io_ops_data = sd;
 	return 0;
 }
