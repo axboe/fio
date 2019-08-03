@@ -26,7 +26,7 @@ iodepth=64
 offset=0
 
 [job1]
-offset=064m
+offset=64m
 
 [job2]
 offset=128m
