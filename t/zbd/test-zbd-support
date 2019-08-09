@@ -85,7 +85,8 @@ run_fio() {
 
     fio=$(dirname "$0")/../../fio
 
-    opts=("--aux-path=/tmp" "--allow_file_create=0" "$@")
+    opts=("--aux-path=/tmp" "--allow_file_create=0" \
+			    "--significant_figures=10" "$@")
     { echo; echo "fio ${opts[*]}"; echo; } >>"${logfile}.${test_number}"
 
     "${dynamic_analyzer[@]}" "$fio" "${opts[@]}"
