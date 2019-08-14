@@ -260,10 +260,11 @@ struct jobs_eta {
 
 	uint64_t m_rate[DDIR_RWDIR_CNT], t_rate[DDIR_RWDIR_CNT];
 	uint64_t rate[DDIR_RWDIR_CNT];
-	uint32_t m_iops[DDIR_RWDIR_CNT], t_iops[DDIR_RWDIR_CNT];
-	uint32_t iops[DDIR_RWDIR_CNT];
-	uint64_t elapsed_sec;
-	uint64_t eta_sec;
+	uint32_t m_iops[DDIR_RWDIR_CNT] __attribute__((packed));
+	uint32_t t_iops[DDIR_RWDIR_CNT] __attribute__((packed));
+	uint32_t iops[DDIR_RWDIR_CNT] __attribute__((packed));
+	uint64_t elapsed_sec __attribute__((packed));
+	uint64_t eta_sec __attribute__((packed));
 	uint32_t is_pow2;
 	uint32_t unit_base;
 
@@ -276,7 +277,7 @@ struct jobs_eta {
 	 */
 	uint32_t nr_threads;
 	uint8_t run_str[];
-} __attribute__((packed));
+};
 
 struct io_u_plat_entry {
 	struct flist_head list;
