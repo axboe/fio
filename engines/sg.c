@@ -1181,8 +1181,8 @@ static char *fio_sgio_errdetails(struct io_u *io_u)
 	}
 
 	if (!(hdr->info & SG_INFO_CHECK) && !strlen(msg))
-		strncpy(msg, "SG Driver did not report a Host, Driver or Device check",
-			MAXERRDETAIL - 1);
+		snprintf(msg, MAXERRDETAIL, "%s",
+			 "SG Driver did not report a Host, Driver or Device check");
 
 	return msg;
 }

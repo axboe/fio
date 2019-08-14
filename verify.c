@@ -1635,8 +1635,7 @@ struct all_io_list *get_all_io_list(int save_mask, size_t *sz)
 			s->rand.state32.s[3] = 0;
 			s->rand.use64 = 0;
 		}
-		s->name[sizeof(s->name) - 1] = '\0';
-		strncpy((char *) s->name, td->o.name, sizeof(s->name) - 1);
+		snprintf((char *) s->name, sizeof(s->name), "%s", td->o.name);
 		next = io_list_next(s);
 	}
 

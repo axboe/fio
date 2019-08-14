@@ -4902,8 +4902,7 @@ char *fio_option_dup_subs(const char *opt)
 		return NULL;
 	}
 
-	in[OPT_LEN_MAX] = '\0';
-	strncpy(in, opt, OPT_LEN_MAX);
+	snprintf(in, sizeof(in), "%s", opt);
 
 	while (*inptr && nchr > 0) {
 		if (inptr[0] == '$' && inptr[1] == '{') {

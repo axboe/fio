@@ -125,8 +125,7 @@ static struct ioengine_ops *__load_ioengine(const char *name)
 {
 	char engine[64];
 
-	engine[sizeof(engine) - 1] = '\0';
-	strncpy(engine, name, sizeof(engine) - 1);
+	snprintf(engine, sizeof(engine), "%s", name);
 
 	/*
 	 * linux libaio has alias names, so convert to what we want

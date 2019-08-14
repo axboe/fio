@@ -865,7 +865,8 @@ static int handle_probe_cmd(struct fio_net_cmd *cmd)
 	strcpy(me, (char *) pdu->server);
 
 	gethostname((char *) probe.hostname, sizeof(probe.hostname));
-	strncpy((char *) probe.fio_version, fio_version_string, sizeof(probe.fio_version) - 1);
+	snprintf((char *) probe.fio_version, sizeof(probe.fio_version), "%s",
+		 fio_version_string);
 
 	/*
 	 * If the client supports compression and we do too, then enable it
@@ -1470,12 +1471,10 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 
 	memset(&p, 0, sizeof(p));
 
-	strncpy(p.ts.name, ts->name, FIO_JOBNAME_SIZE);
-	p.ts.name[FIO_JOBNAME_SIZE - 1] = '\0';
-	strncpy(p.ts.verror, ts->verror, FIO_VERROR_SIZE);
-	p.ts.verror[FIO_VERROR_SIZE - 1] = '\0';
-	strncpy(p.ts.description, ts->description, FIO_JOBDESC_SIZE);
-	p.ts.description[FIO_JOBDESC_SIZE - 1] = '\0';
+	snprintf(p.ts.name, sizeof(p.ts.name), "%s", ts->name);
+	snprintf(p.ts.verror, sizeof(p.ts.verror), "%s", ts->verror);
+	snprintf(p.ts.description, sizeof(p.ts.description), "%s",
+		 ts->description);
 
 	p.ts.error		= cpu_to_le32(ts->error);
 	p.ts.thread_number	= cpu_to_le32(ts->thread_number);
@@ -1666,8 +1665,7 @@ static void convert_dus(struct disk_util_stat *dst, struct disk_util_stat *src)
 {
 	int i;
 
-	dst->name[FIO_DU_NAME_SZ - 1] = '\0';
-	strncpy((char *) dst->name, (char *) src->name, FIO_DU_NAME_SZ - 1);
+	snprintf((char *) dst->name, sizeof(dst->name), "%s", src->name);
 
 	for (i = 0; i < 2; i++) {
 		dst->s.ios[i]		= cpu_to_le64(src->s.ios[i]);
@@ -1977,8 +1975,7 @@ int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
 	else
 		pdu.compressed = 0;
 
-	strncpy((char *) pdu.name, name, FIO_NET_NAME_MAX);
-	pdu.name[FIO_NET_NAME_MAX - 1] = '\0';
+	snprintf((char *) pdu.name, sizeof(pdu.name), "%s", name);
 
 	/*
 	 * We can't do this for a pre-compressed log, but for that case,
@@ -2195,9 +2192,8 @@ static int fio_init_server_sock(void)
 
 	mode = umask(000);
 
-	memset(&addr, 0, sizeof(addr));
 	addr.sun_family = AF_UNIX;
-	strncpy(addr.sun_path, bind_sock, sizeof(addr.sun_path) - 1);
+	snprintf(addr.sun_path, sizeof(addr.sun_path), "%s", bind_sock);
 
 	len = sizeof(addr.sun_family) + strlen(bind_sock) + 1;
 
@@ -2247,9 +2243,9 @@ static int fio_init_server_connection(void)
 		if (p)
 			strcat(p, port);
 		else
-			strncpy(bind_str, port, sizeof(bind_str) - 1);
+			snprintf(bind_str, sizeof(bind_str), "%s", port);
 	} else
-		strncpy(bind_str, bind_sock, sizeof(bind_str) - 1);
+		snprintf(bind_str, sizeof(bind_str), "%s", bind_sock);
 
 	log_info("fio: server listening on %s\n", bind_str);
 

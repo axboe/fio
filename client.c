@@ -520,7 +520,7 @@ static void probe_client(struct fio_client *client)
 
 	sname = server_name(client, buf, sizeof(buf));
 	memset(pdu.server, 0, sizeof(pdu.server));
-	strncpy((char *) pdu.server, sname, sizeof(pdu.server) - 1);
+	snprintf((char *) pdu.server, sizeof(pdu.server), "%s", sname);
 
 	fio_net_send_cmd(client->fd, FIO_NET_CMD_PROBE, &pdu, sizeof(pdu), &tag, &client->cmd_list);
 }
@@ -574,7 +574,8 @@ static int fio_client_connect_sock(struct fio_client *client)
 
 	memset(addr, 0, sizeof(*addr));
 	addr->sun_family = AF_UNIX;
-	strncpy(addr->sun_path, client->hostname, sizeof(addr->sun_path) - 1);
+	snprintf(addr->sun_path, sizeof(addr->sun_path), "%s",
+		 client->hostname);
 
 	fd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (fd < 0) {

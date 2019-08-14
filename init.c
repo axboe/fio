@@ -1273,8 +1273,7 @@ static char *make_filename(char *buf, size_t buf_size,struct thread_options *o,
 	for (f = &fpre_keywords[0]; f->keyword; f++)
 		f->strlen = strlen(f->keyword);
 
-	buf[buf_size - 1] = '\0';
-	strncpy(buf, o->filename_format, buf_size - 1);
+	snprintf(buf, buf_size, "%s", o->filename_format);
 
 	memset(copy, 0, sizeof(copy));
 	for (f = &fpre_keywords[0]; f->keyword; f++) {
@@ -1353,7 +1352,7 @@ static char *make_filename(char *buf, size_t buf_size,struct thread_options *o,
 			if (post_start)
 				strncpy(dst, buf + post_start, dst_left);
 
-			strncpy(buf, copy, buf_size - 1);
+			snprintf(buf, buf_size, "%s", copy);
 		} while (1);
 	}
 
@@ -2029,20 +2028,12 @@ static int __parse_jobs_ini(struct thread_data *td,
 				 */
 				if (access(filename, F_OK) &&
 				    (ts = strrchr(file, '/'))) {
-					int len = ts - file +
-						strlen(filename) + 2;
-
-					if (!(full_fn = calloc(1, len))) {
+					if (asprintf(&full_fn, "%.*s%s",
+						 (int)(ts - file + 1), file,
+						 filename) < 0) {
 						ret = ENOMEM;
 						break;
 					}
-
-					strncpy(full_fn,
-						file, (ts - file) + 1);
-					strncpy(full_fn + (ts - file) + 1,
-						filename,
-						len - (ts - file) - 1);
-					full_fn[len - 1] = 0;
 					filename = full_fn;
 				}
 

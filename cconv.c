@@ -13,10 +13,9 @@ static void string_to_cpu(char **dst, const uint8_t *src)
 
 static void __string_to_net(uint8_t *dst, const char *src, size_t dst_size)
 {
-	if (src) {
-		dst[dst_size - 1] = '\0';
-		strncpy((char *) dst, src, dst_size - 1);
-	} else
+	if (src)
+		snprintf((char *) dst, dst_size, "%s", src);
+	else
 		dst[0] = '\0';
 }
 

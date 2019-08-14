@@ -1828,10 +1828,11 @@ void __show_run_stats(void)
 			/*
 			 * These are per-group shared already
 			 */
-			strncpy(ts->name, td->o.name, FIO_JOBNAME_SIZE - 1);
+			snprintf(ts->name, sizeof(ts->name), "%s", td->o.name);
 			if (td->o.description)
-				strncpy(ts->description, td->o.description,
-						FIO_JOBDESC_SIZE - 1);
+				snprintf(ts->description,
+					 sizeof(ts->description), "%s",
+					 td->o.description);
 			else
 				memset(ts->description, 0, FIO_JOBDESC_SIZE);
 
@@ -1868,12 +1869,12 @@ void __show_run_stats(void)
 			if (!td->error && td->o.continue_on_error &&
 			    td->first_error) {
 				ts->error = td->first_error;
-				ts->verror[sizeof(ts->verror) - 1] = '\0';
-				strncpy(ts->verror, td->verror, sizeof(ts->verror) - 1);
+				snprintf(ts->verror, sizeof(ts->verror), "%s",
+					 td->verror);
 			} else  if (td->error) {
 				ts->error = td->error;
-				ts->verror[sizeof(ts->verror) - 1] = '\0';
-				strncpy(ts->verror, td->verror, sizeof(ts->verror) - 1);
+				snprintf(ts->verror, sizeof(ts->verror), "%s",
+					 td->verror);
 			}
 		}
 

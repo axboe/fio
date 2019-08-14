@@ -602,8 +602,7 @@ static int __handle_option(const struct fio_option *o, const char *ptr,
 		if (!is_time && o->is_time)
 			is_time = o->is_time;
 
-		tmp[sizeof(tmp) - 1] = '\0';
-		strncpy(tmp, ptr, sizeof(tmp) - 1);
+		snprintf(tmp, sizeof(tmp), "%s", ptr);
 		p = strchr(tmp, ',');
 		if (p)
 			*p = '\0';
@@ -829,8 +828,7 @@ static int __handle_option(const struct fio_option *o, const char *ptr,
 		char tmp[128];
 		char *p1, *p2;
 
-		tmp[sizeof(tmp) - 1] = '\0';
-		strncpy(tmp, ptr, sizeof(tmp) - 1);
+		snprintf(tmp, sizeof(tmp), "%s", ptr);
 
 		/* Handle bsrange with separate read,write values: */
 		p1 = strchr(tmp, ',');
