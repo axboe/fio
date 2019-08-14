@@ -733,8 +733,9 @@ void print_thread_status(void)
 
 void print_status_init(int thr_number)
 {
-	compiletime_assert(sizeof(struct jobs_eta) ==
-			   sizeof(struct jobs_eta_packed), "jobs_eta");
+	struct jobs_eta_packed jep;
+
+	compiletime_assert(sizeof(struct jobs_eta) == sizeof(jep), "jobs_eta");
 
 	DRD_IGNORE_VAR(__run_str);
 	__run_str[thr_number] = 'P';
