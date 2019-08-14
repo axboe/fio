@@ -24,6 +24,6 @@ modprobe null_blk nr_devices=0 &&
     echo 4096 > blocksize &&
     echo 1024 > size &&
     echo 1 > memory_backed &&
-    echo 1 > power
+    echo 1 > power || exit $?
 
 "${scriptdir}"/test-zbd-support "$@" /dev/nullb0

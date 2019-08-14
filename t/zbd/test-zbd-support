@@ -772,8 +772,8 @@ source "$(dirname "$0")/functions" || exit $?
 dev=$1
 realdev=$(readlink -f "$dev")
 basename=$(basename "$realdev")
-major=$((0x$(stat -L -c '%t' "$realdev")))
-minor=$((0x$(stat -L -c '%T' "$realdev")))
+major=$((0x$(stat -L -c '%t' "$realdev"))) || exit $?
+minor=$((0x$(stat -L -c '%T' "$realdev"))) || exit $?
 disk_size=$(($(<"/sys/dev/block/$major:$minor/size")*512))
 # When the target is a partition device, get basename of its holder device to
 # access sysfs path of the holder device
