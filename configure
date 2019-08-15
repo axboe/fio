@@ -2020,7 +2020,7 @@ print_config "iscsi engine" "$libiscsi"
 
 ##########################################
 # Check if we have libnbd (for NBD support).
-minimum_libnbd=0.9.6
+minimum_libnbd=0.9.8
 if test "$libnbd" = "yes" ; then
   if $(pkg-config --atleast-version=$minimum_libnbd libnbd); then
     libnbd="yes"

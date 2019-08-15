@@ -152,14 +152,11 @@ static int nbd_init(struct thread_data *td)
 }
 
 /* A command in flight has been completed. */
-static int cmd_completed (unsigned valid_flag, void *vp, int *error)
+static int cmd_completed (void *vp, int *error)
 {
 	struct io_u *io_u;
 	struct nbd_data *nbd_data;
 	struct io_u **completed;
-
-	if (!(valid_flag & LIBNBD_CALLBACK_VALID))
-		return 0;
 
 	io_u = vp;
 	nbd_data = io_u->engine_data;
@@ -195,6 +192,8 @@ static enum fio_q_status nbd_queue(struct thread_data *td,
 				   struct io_u *io_u)
 {
 	struct nbd_data *nbd_data = td->io_ops_data;
+	nbd_completion_callback completion = { .callback = cmd_completed,
+					       .user_data = io_u };
 	int r;
 
 	fio_ro_check(td, io_u);
@@ -206,32 +205,24 @@ static enum fio_q_status nbd_queue(struct thread_data *td,
 
 	switch (io_u->ddir) {
 	case DDIR_READ:
-		r = nbd_aio_pread_callback(nbd_data->nbd,
-					   io_u->xfer_buf, io_u->xfer_buflen,
-					   io_u->offset,
-					   cmd_completed, io_u,
-					   0);
+		r = nbd_aio_pread(nbd_data->nbd,
+				  io_u->xfer_buf, io_u->xfer_buflen,
+				  io_u->offset, completion, 0);
 		break;
 	case DDIR_WRITE:
-		r = nbd_aio_pwrite_callback(nbd_data->nbd,
-					    io_u->xfer_buf, io_u->xfer_buflen,
-					    io_u->offset,
-					    cmd_completed, io_u,
-					    0);
+		r = nbd_aio_pwrite(nbd_data->nbd,
+				   io_u->xfer_buf, io_u->xfer_buflen,
+				   io_u->offset, completion, 0);
 		break;
 	case DDIR_TRIM:
-		r = nbd_aio_trim_callback(nbd_data->nbd, io_u->xfer_buflen,
-					  io_u->offset,
-					  cmd_completed, io_u,
-					  0);
+		r = nbd_aio_trim(nbd_data->nbd, io_u->xfer_buflen,
+				 io_u->offset, completion, 0);
 		break;
 	case DDIR_SYNC:
 		/* XXX We could probably also handle
 		 * DDIR_SYNC_FILE_RANGE with a bit of effort.
 		 */
-		r = nbd_aio_flush_callback(nbd_data->nbd,
-					   cmd_completed, io_u,
-					   0);
+		r = nbd_aio_flush(nbd_data->nbd, completion, 0);
 		break;
 	default:
 		io_u->error = EINVAL;
