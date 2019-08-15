@@ -258,13 +258,15 @@ struct thread_stat {
 	uint32_t nr_pending;						\
 	uint32_t nr_setting_up;						\
 									\
-	uint64_t m_rate[DDIR_RWDIR_CNT], t_rate[DDIR_RWDIR_CNT];	\
+	uint64_t m_rate[DDIR_RWDIR_CNT];				\
+	uint64_t t_rate[DDIR_RWDIR_CNT];				\
 	uint64_t rate[DDIR_RWDIR_CNT];					\
-	uint32_t m_iops[DDIR_RWDIR_CNT] __attribute__((packed));	\
-	uint32_t t_iops[DDIR_RWDIR_CNT] __attribute__((packed));	\
-	uint32_t iops[DDIR_RWDIR_CNT] __attribute__((packed));		\
-	uint64_t elapsed_sec __attribute__((packed));			\
-	uint64_t eta_sec __attribute__((packed));			\
+	uint32_t m_iops[DDIR_RWDIR_CNT];				\
+	uint32_t t_iops[DDIR_RWDIR_CNT];				\
+	uint32_t iops[DDIR_RWDIR_CNT];					\
+	uint32_t pad;							\
+	uint64_t elapsed_sec;						\
+	uint64_t eta_sec;						\
 	uint32_t is_pow2;						\
 	uint32_t unit_base;						\
 									\
@@ -276,6 +278,7 @@ struct thread_stat {
 	 * Network 'copy' of run_str[]					\
 	 */								\
 	uint32_t nr_threads;						\
+	uint32_t pad2;							\
 	uint8_t run_str[];						\
 }
 
