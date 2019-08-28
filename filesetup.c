@@ -852,16 +852,37 @@ static unsigned long long get_fs_free_counts(struct thread_data *td)
 
 uint64_t get_start_offset(struct thread_data *td, struct fio_file *f)
 {
+	bool align = false;
 	struct thread_options *o = &td->o;
 	unsigned long long align_bs;
 	unsigned long long offset;
+	unsigned long long increment;
 
 	if (o->file_append && f->filetype == FIO_TYPE_FILE)
 		return f->real_file_size;
 
+	if (o->offset_increment_percent) {
+		assert(!o->offset_increment);
+		increment = o->offset_increment_percent * f->real_file_size / 100;
+		align = true;
+	} else
+		increment = o->offset_increment;
+
 	if (o->start_offset_percent > 0) {
+		/* calculate the raw offset */
+		offset = (f->real_file_size * o->start_offset_percent / 100) +
+			(td->subjob_number * increment);
+
+		align = true;
+	} else {
+		/* start_offset_percent not set */
+		offset = o->start_offset +
+				td->subjob_number * increment;
+	}
+
+	if (align) {
 		/*
-		 * if offset_align is provided, set initial offset
+		 * if offset_align is provided, use it
 		 */
 		if (fio_option_is_set(o, start_offset_align)) {
 			align_bs = o->start_offset_align;
@@ -870,20 +891,11 @@ uint64_t get_start_offset(struct thread_data *td, struct fio_file *f)
 			align_bs = td_min_bs(td);
 		}
 
-		/* calculate the raw offset */
-		offset = (f->real_file_size * o->start_offset_percent / 100) +
-			(td->subjob_number * o->offset_increment);
-
 		/*
 		 * block align the offset at the next available boundary at
 		 * ceiling(offset / align_bs) * align_bs
 		 */
 		offset = (offset / align_bs + (offset % align_bs != 0)) * align_bs;
-
-	} else {
-		/* start_offset_percent not set */
-		offset = o->start_offset +
-				td->subjob_number * o->offset_increment;
 	}
 
 	return offset;

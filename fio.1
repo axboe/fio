@@ -1015,7 +1015,9 @@ If this is provided, then the real offset becomes `\fBoffset\fR + \fBoffset_incr
 is incremented for each sub\-job (i.e. when \fBnumjobs\fR option is
 specified). This option is useful if there are several jobs which are
 intended to operate on a file in parallel disjoint segments, with even
-spacing between the starting points.
+spacing between the starting points. Percentages can be used for this option.
+If a percentage is given, the generated offset will be aligned to the minimum
+\fBblocksize\fR or to the value of \fBoffset_align\fR if provided.
 .TP
 .BI number_ios \fR=\fPint
 Fio will normally perform I/Os until it has exhausted the size of the region

@@ -1252,7 +1252,9 @@ I/O type
 	is incremented for each sub-job (i.e. when :option:`numjobs` option is
 	specified). This option is useful if there are several jobs which are
 	intended to operate on a file in parallel disjoint segments, with even
-	spacing between the starting points.
+	spacing between the starting points. Percentages can be used for this option.
+	If a percentage is given, the generated offset will be aligned to the minimum
+	``blocksize`` or to the value of ``offset_align`` if provided.
 
 .. option:: number_ios=int
 

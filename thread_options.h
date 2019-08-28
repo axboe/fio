@@ -313,6 +313,7 @@ struct thread_options {
 	int flow_watermark;
 	unsigned int flow_sleep;
 
+	unsigned int offset_increment_percent;
 	unsigned long long offset_increment;
 	unsigned long long number_ios;
 
@@ -599,6 +600,8 @@ struct thread_options_pack {
 	int32_t flow_watermark;
 	uint32_t flow_sleep;
 
+	uint32_t offset_increment_percent;
+	uint32_t pad4;
 	uint64_t offset_increment;
 	uint64_t number_ios;
 
