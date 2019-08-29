@@ -559,7 +559,7 @@ static int zbd_init_zone_info(struct thread_data *td, struct fio_file *file)
 
 	ret = zbd_create_zone_info(td, file);
 	if (ret < 0)
-		td_verror(td, -ret, "BLKREPORTZONE failed");
+		td_verror(td, -ret, "zbd_create_zone_info() failed");
 	return ret;
 }
 
