@@ -753,7 +753,10 @@ restricted to a single zone.
 .RE
 .TP
 .BI zonerange \fR=\fPint
-Size of a single zone. See also \fBzonesize\fR and \fBzoneskip\fR.
+For \fBzonemode\fR=strided, this is the size of a single zone. See also
+\fBzonesize\fR and \fBzoneskip\fR.
+
+For \fBzonemode\fR=zbd, this parameter is ignored.
 .TP
 .BI zonesize \fR=\fPint
 For \fBzonemode\fR=strided, this is the number of bytes to transfer before
@@ -762,8 +765,11 @@ skipping \fBzoneskip\fR bytes. If this parameter is smaller than
 will be accessed.  If this parameter is larger than \fBzonerange\fR then each
 zone will be accessed multiple times before skipping to the next zone.
 
-For \fBzonemode\fR=zbd, this is the size of a single zone. The \fBzonerange\fR
-parameter is ignored in this mode.
+For \fBzonemode\fR=zbd, this is the size of a single zone. The
+\fBzonerange\fR parameter is ignored in this mode. For a job accessing a
+zoned block device, the specified \fBzonesize\fR must be 0 or equal to the
+device zone size. For a regular block device or file, the specified
+\fBzonesize\fR must be at least 512B.
 .TP
 .BI zoneskip \fR=\fPint
 For \fBzonemode\fR=strided, the number of bytes to skip after \fBzonesize\fR
