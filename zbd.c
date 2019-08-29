@@ -411,8 +411,8 @@ static int parse_zone_info(struct thread_data *td, struct fio_file *f)
 	if (td->o.zone_size == 0) {
 		td->o.zone_size = zone_size;
 	} else if (td->o.zone_size != zone_size) {
-		log_info("fio: %s job parameter zonesize %llu does not match disk zone size %llu.\n",
-			 f->file_name, (unsigned long long) td->o.zone_size,
+		log_err("fio: %s job parameter zonesize %llu does not match disk zone size %llu.\n",
+			f->file_name, (unsigned long long) td->o.zone_size,
 			(unsigned long long) zone_size);
 		ret = -EINVAL;
 		goto close;
