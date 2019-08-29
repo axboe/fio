@@ -773,8 +773,13 @@ device zone size. For a regular block device or file, the specified
 .TP
 .BI zoneskip \fR=\fPint
 For \fBzonemode\fR=strided, the number of bytes to skip after \fBzonesize\fR
-bytes of data have been transferred. This parameter must be zero for
-\fBzonemode\fR=zbd.
+bytes of data have been transferred.
+
+For \fBzonemode\fR=zbd, the \fBzonesize\fR aligned number of bytes to skip
+once a zone is fully written (write workloads) or all written data in the
+zone have been read (read workloads). This parameter is valid only for
+sequential workloads and ignored for random workloads. For read workloads,
+see also \fBread_beyond_wp\fR.
 
 .TP
 .BI read_beyond_wp \fR=\fPbool

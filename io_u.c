@@ -901,6 +901,8 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 
 	if (td->o.zone_mode == ZONE_MODE_STRIDED)
 		setup_strided_zone_mode(td, io_u);
+	else if (td->o.zone_mode == ZONE_MODE_ZBD)
+		setup_zbd_zone_mode(td, io_u);
 
 	/*
 	 * No log, let the seq/rand engine retrieve the next buflen and

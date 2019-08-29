@@ -119,6 +119,16 @@ static bool zbd_verify_sizes(void)
 				continue;
 			if (!zbd_is_seq_job(f))
 				continue;
+
+			if (td->o.zone_skip &&
+			    (td->o.zone_skip < td->o.zone_size ||
+			     td->o.zone_skip % td->o.zone_size)) {
+				log_err("%s: zoneskip %llu is not a multiple of the device zone size %llu.\n",
+					f->file_name, (unsigned long long) td->o.zone_skip,
+					(unsigned long long) td->o.zone_size);
+				return false;
+			}
+
 			zone_idx = zbd_zone_idx(f, f->file_offset);
 			z = &f->zbd_info->zone_info[zone_idx];
 			if (f->file_offset != z->start) {
@@ -1217,6 +1227,65 @@ bool zbd_unaligned_write(int error_code)
 		return true;
 	}
 	return false;
+}
+
+/**
+ * setup_zbd_zone_mode - handle zoneskip as necessary for ZBD drives
+ * @td: FIO thread data.
+ * @io_u: FIO I/O unit.
+ *
+ * For sequential workloads, change the file offset to skip zoneskip bytes when
+ * no more IO can be performed in the current zone.
+ * - For read workloads, zoneskip is applied when the io has reached the end of
+ *   the zone or the zone write position (when td->o.read_beyond_wp is false).
+ * - For write workloads, zoneskip is applied when the zone is full.
+ * This applies only to read and write operations.
+ */
+void setup_zbd_zone_mode(struct thread_data *td, struct io_u *io_u)
+{
+	struct fio_file *f = io_u->file;
+	enum fio_ddir ddir = io_u->ddir;
+	struct fio_zone_info *z;
+	uint32_t zone_idx;
+
+	assert(td->o.zone_mode == ZONE_MODE_ZBD);
+	assert(td->o.zone_size);
+
+	/*
+	 * zone_skip is valid only for sequential workloads.
+	 */
+	if (td_random(td) || !td->o.zone_skip)
+		return;
+
+	/*
+	 * It is time to switch to a new zone if:
+	 * - zone_bytes == zone_size bytes have already been accessed
+	 * - The last position reached the end of the current zone.
+	 * - For reads with td->o.read_beyond_wp == false, the last position
+	 *   reached the zone write pointer.
+	 */
+	zone_idx = zbd_zone_idx(f, f->last_pos[ddir]);
+	z = &f->zbd_info->zone_info[zone_idx];
+
+	if (td->zone_bytes >= td->o.zone_size ||
+	    f->last_pos[ddir] >= (z+1)->start ||
+	    (ddir == DDIR_READ &&
+	     (!td->o.read_beyond_wp) && f->last_pos[ddir] >= z->wp)) {
+		/*
+		 * Skip zones.
+		 */
+		td->zone_bytes = 0;
+		f->file_offset += td->o.zone_size + td->o.zone_skip;
+
+		/*
+		 * Wrap from the beginning, if we exceed the file size
+		 */
+		if (f->file_offset >= f->real_file_size)
+			f->file_offset = get_start_offset(td, f);
+
+		f->last_pos[ddir] = f->file_offset;
+		td->io_skip_bytes += td->o.zone_skip;
+	}
 }
 
 /**
