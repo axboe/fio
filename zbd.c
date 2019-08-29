@@ -312,13 +312,23 @@ static int init_zone_info(struct thread_data *td, struct fio_file *f)
 {
 	uint32_t nr_zones;
 	struct fio_zone_info *p;
-	uint64_t zone_size;
+	uint64_t zone_size = td->o.zone_size;
 	struct zoned_block_device_info *zbd_info = NULL;
 	pthread_mutexattr_t attr;
 	int i;
 
-	zone_size = td->o.zone_size;
-	assert(zone_size);
+	if (zone_size == 0) {
+		log_err("%s: Specifying the zone size is mandatory for regular block devices with --zonemode=zbd\n\n",
+			f->file_name);
+		return 1;
+	}
+
+	if (zone_size < 512) {
+		log_err("%s: zone size must be at least 512 bytes for --zonemode=zbd\n\n",
+			f->file_name);
+		return 1;
+	}
+
 	nr_zones = (f->real_file_size + zone_size - 1) / zone_size;
 	zbd_info = scalloc(1, sizeof(*zbd_info) +
 			   (nr_zones + 1) * sizeof(zbd_info->zone_info[0]));
@@ -561,18 +571,8 @@ int zbd_init(struct thread_data *td)
 	for_each_file(td, f, i) {
 		if (f->filetype != FIO_TYPE_BLOCK)
 			continue;
-		if (td->o.zone_size && td->o.zone_size < 512) {
-			log_err("%s: zone size must be at least 512 bytes for --zonemode=zbd\n\n",
-				f->file_name);
+		if (zbd_init_zone_info(td, f))
 			return 1;
-		}
-		if (td->o.zone_size == 0 &&
-		    get_zbd_model(f->file_name) == ZBD_DM_NONE) {
-			log_err("%s: Specifying the zone size is mandatory for regular block devices with --zonemode=zbd\n\n",
-				f->file_name);
-			return 1;
-		}
-		zbd_init_zone_info(td, f);
 	}
 
 	if (!zbd_using_direct_io()) {
