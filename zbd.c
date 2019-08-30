@@ -127,6 +127,11 @@ static bool zbd_verify_sizes(void)
 						f->file_name);
 					return false;
 				}
+			} else if (td->o.zone_size != f->zbd_info->zone_size) {
+				log_err("%s: job parameter zonesize %llu does not match disk zone size %llu.\n",
+					f->file_name, (unsigned long long) td->o.zone_size,
+					(unsigned long long) f->zbd_info->zone_size);
+				return false;
 			}
 
 			if (td->o.zone_skip &&
