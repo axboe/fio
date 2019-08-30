@@ -120,6 +120,15 @@ static bool zbd_verify_sizes(void)
 			if (!zbd_is_seq_job(f))
 				continue;
 
+			if (!td->o.zone_size) {
+				td->o.zone_size = f->zbd_info->zone_size;
+				if (!td->o.zone_size) {
+					log_err("%s: invalid 0 zone size\n",
+						f->file_name);
+					return false;
+				}
+			}
+
 			if (td->o.zone_skip &&
 			    (td->o.zone_skip < td->o.zone_size ||
 			     td->o.zone_skip % td->o.zone_size)) {
