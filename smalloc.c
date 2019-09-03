@@ -173,7 +173,7 @@ static bool add_pool(struct pool *pool, unsigned int alloc_size)
 	pool->mmap_size = alloc_size;
 
 	pool->nr_blocks = bitmap_blocks;
-	pool->free_blocks = bitmap_blocks * SMALLOC_BPB;
+	pool->free_blocks = bitmap_blocks * SMALLOC_BPI;
 
 	mmap_flags = OS_MAP_ANON;
 #ifdef CONFIG_ESX
