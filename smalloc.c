@@ -54,7 +54,7 @@ struct block_hdr {
  */
 static const bool enable_smalloc_debug = false;
 
-static struct pool mp[MAX_POOLS];
+static struct pool *mp;
 static unsigned int nr_pools;
 static unsigned int last_pool;
 
@@ -208,6 +208,20 @@ void sinit(void)
 	bool ret;
 	int i;
 
+	/*
+	 * sinit() can be called more than once if alloc-size is
+	 * set. But we want to allocate space for the struct pool
+	 * instances only once.
+	 */
+	if (!mp) {
+		mp = (struct pool *) mmap(NULL,
+			MAX_POOLS * sizeof(struct pool),
+			PROT_READ | PROT_WRITE,
+			OS_MAP_ANON | MAP_SHARED, -1, 0);
+
+		assert(mp != MAP_FAILED);
+	}
+
 	for (i = 0; i < INITIAL_POOLS; i++) {
 		ret = add_pool(&mp[nr_pools], smalloc_pool_size);
 		if (!ret)
@@ -239,6 +253,8 @@ void scleanup(void)
 
 	for (i = 0; i < nr_pools; i++)
 		cleanup_pool(&mp[i]);
+
+	munmap(mp, MAX_POOLS * sizeof(struct pool));
 }
 
 #ifdef SMALLOC_REDZONE
