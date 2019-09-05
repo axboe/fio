@@ -1791,6 +1791,12 @@ release them when IO is done. If this option is set, the pages are pre-mapped
 before IO is started. This eliminates the need to map and release for each IO.
 This is more efficient, and reduces the IO latency as well.
 .TP
+.BI (io_uring)registerfiles
+With this option, fio registers the set of files being used with the kernel.
+This avoids the overhead of managing file counts in the kernel, making the
+submission and completion part more lightweight. Required for the below
+sqthread_poll option.
+.TP
 .BI (io_uring)sqthread_poll
 Normally fio will submit IO by issuing a system call to notify the kernel of
 available items in the SQ ring. If this option is set, the act of submitting IO
