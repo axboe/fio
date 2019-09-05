@@ -94,7 +94,7 @@ static struct fio_option options[] = {
 		.off1	= offsetof(struct ioring_options, hipri),
 		.help	= "Use polled IO completions",
 		.category = FIO_OPT_C_ENGINE,
-		.group	= FIO_OPT_G_LIBAIO,
+		.group	= FIO_OPT_G_IOURING,
 	},
 	{
 		.name	= "fixedbufs",
@@ -103,7 +103,7 @@ static struct fio_option options[] = {
 		.off1	= offsetof(struct ioring_options, fixedbufs),
 		.help	= "Pre map IO buffers",
 		.category = FIO_OPT_C_ENGINE,
-		.group	= FIO_OPT_G_LIBAIO,
+		.group	= FIO_OPT_G_IOURING,
 	},
 	{
 		.name	= "registerfiles",
@@ -112,7 +112,7 @@ static struct fio_option options[] = {
 		.off1	= offsetof(struct ioring_options, registerfiles),
 		.help	= "Pre-open/register files",
 		.category = FIO_OPT_C_ENGINE,
-		.group	= FIO_OPT_G_LIBAIO,
+		.group	= FIO_OPT_G_IOURING,
 	},
 	{
 		.name	= "sqthread_poll",
@@ -121,7 +121,7 @@ static struct fio_option options[] = {
 		.off1	= offsetof(struct ioring_options, sqpoll_thread),
 		.help	= "Offload submission/completion to kernel thread",
 		.category = FIO_OPT_C_ENGINE,
-		.group	= FIO_OPT_G_LIBAIO,
+		.group	= FIO_OPT_G_IOURING,
 	},
 	{
 		.name	= "sqthread_poll_cpu",
@@ -130,7 +130,7 @@ static struct fio_option options[] = {
 		.cb	= fio_ioring_sqpoll_cb,
 		.help	= "What CPU to run SQ thread polling on",
 		.category = FIO_OPT_C_ENGINE,
-		.group	= FIO_OPT_G_LIBAIO,
+		.group	= FIO_OPT_G_IOURING,
 	},
 	{
 		.name	= NULL,
