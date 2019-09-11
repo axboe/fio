@@ -222,8 +222,8 @@ Command line options
 
 .. option:: --alloc-size=kb
 
-	Set the internal smalloc pool size to `kb` in KiB.  The
-	``--alloc-size`` switch allows one to use a larger pool size for smalloc.
+	Allocate additional internal smalloc pools of size `kb` in KiB.  The
+	``--alloc-size`` option increases shared memory set aside for use by fio.
 	If running large jobs with randommap enabled, fio can run out of memory.
 	Smalloc is an internal allocator for shared structures from a fixed size
 	memory pool and can grow to 16 pools. The pool size defaults to 16MiB.
