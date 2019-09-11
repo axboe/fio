@@ -1047,7 +1047,7 @@ int setup_files(struct thread_data *td)
 			 * doesn't divide nicely with the min blocksize,
 			 * make the first files bigger.
 			 */
-			f->io_size = fs;
+			f->io_size = fs - f->file_offset;
 			if (nr_fs_extra) {
 				nr_fs_extra--;
 				f->io_size += bs;
