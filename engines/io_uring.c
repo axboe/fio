@@ -555,6 +555,7 @@ static int fio_ioring_post_init(struct thread_data *td)
 		return 1;
 	}
 
+	printf("files=%d\n", o->registerfiles);
 	if (o->registerfiles) {
 		err = fio_ioring_register_files(td);
 		if (err) {
@@ -613,7 +614,7 @@ static int fio_ioring_open_file(struct thread_data *td, struct fio_file *f)
 	struct ioring_data *ld = td->io_ops_data;
 	struct ioring_options *o = td->eo;
 
-	if (!o->registerfiles)
+	if (!ld || !o->registerfiles)
 		return generic_open_file(td, f);
 
 	f->fd = ld->fds[f->engine_pos];
@@ -622,9 +623,10 @@ static int fio_ioring_open_file(struct thread_data *td, struct fio_file *f)
 
 static int fio_ioring_close_file(struct thread_data *td, struct fio_file *f)
 {
+	struct ioring_data *ld = td->io_ops_data;
 	struct ioring_options *o = td->eo;
 
-	if (!o->registerfiles)
+	if (!ld || !o->registerfiles)
 		return generic_close_file(td, f);
 
 	f->fd = -1;
