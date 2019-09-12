@@ -181,10 +181,17 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 		}
 		sqe->off = io_u->offset;
 	} else if (ddir_sync(io_u->ddir)) {
-		sqe->fsync_flags = 0;
-		if (io_u->ddir == DDIR_DATASYNC)
-			sqe->fsync_flags |= IORING_FSYNC_DATASYNC;
-		sqe->opcode = IORING_OP_FSYNC;
+		if (io_u->ddir == DDIR_SYNC_FILE_RANGE) {
+			sqe->off = f->first_write;
+			sqe->len = f->last_write - f->first_write;
+			sqe->sync_range_flags = td->o.sync_file_range;
+			sqe->opcode = IORING_OP_SYNC_FILE_RANGE;
+		} else {
+			sqe->fsync_flags = 0;
+			if (io_u->ddir == DDIR_DATASYNC)
+				sqe->fsync_flags |= IORING_FSYNC_DATASYNC;
+			sqe->opcode = IORING_OP_FSYNC;
+		}
 	}
 
 	sqe->user_data = (unsigned long) io_u;
