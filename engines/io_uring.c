@@ -259,7 +259,7 @@ static int fio_ioring_getevents(struct thread_data *td, unsigned int min,
 			r = io_uring_enter(ld, 0, actual_min,
 						IORING_ENTER_GETEVENTS);
 			if (r < 0) {
-				if (errno == EAGAIN)
+				if (errno == EAGAIN || errno == EINTR)
 					continue;
 				td_verror(td, errno, "io_uring_enter");
 				break;
@@ -370,7 +370,7 @@ static int fio_ioring_commit(struct thread_data *td)
 			io_u_mark_submit(td, ret);
 			continue;
 		} else {
-			if (errno == EAGAIN) {
+			if (errno == EAGAIN || errno == EINTR) {
 				ret = fio_ioring_cqring_reap(td, 0, ld->queued);
 				if (ret)
 					continue;
