@@ -152,15 +152,16 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 	struct io_uring_sqe *sqe;
 
 	sqe = &ld->sqes[io_u->index];
+
+	/* zero out fields not used in this submission */
+	memset(sqe, 0, sizeof(*sqe));
+
 	if (o->registerfiles) {
 		sqe->fd = f->engine_pos;
 		sqe->flags = IOSQE_FIXED_FILE;
 	} else {
 		sqe->fd = f->fd;
-		sqe->flags = 0;
 	}
-	sqe->ioprio = 0;
-	sqe->buf_index = 0;
 
 	if (io_u->ddir == DDIR_READ || io_u->ddir == DDIR_WRITE) {
 		if (o->fixedbufs) {
@@ -187,7 +188,6 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 			sqe->sync_range_flags = td->o.sync_file_range;
 			sqe->opcode = IORING_OP_SYNC_FILE_RANGE;
 		} else {
-			sqe->fsync_flags = 0;
 			if (io_u->ddir == DDIR_DATASYNC)
 				sqe->fsync_flags |= IORING_FSYNC_DATASYNC;
 			sqe->opcode = IORING_OP_FSYNC;
