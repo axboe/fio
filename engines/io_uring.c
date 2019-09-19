@@ -562,7 +562,6 @@ static int fio_ioring_post_init(struct thread_data *td)
 		return 1;
 	}
 
-	printf("files=%d\n", o->registerfiles);
 	if (o->registerfiles) {
 		err = fio_ioring_register_files(td);
 		if (err) {
