@@ -1191,6 +1191,10 @@ static void populate_hdr(struct thread_data *td, struct io_u *io_u,
 
 	fill_hdr(td, io_u, hdr, header_num, header_len, io_u->rand_seed);
 
+	if (header_len <= hdr_size(td, hdr)) {
+		td_verror(td, EINVAL, "Blocksize too small");
+		return;
+	}
 	data_len = header_len - hdr_size(td, hdr);
 
 	data = p + hdr_size(td, hdr);
