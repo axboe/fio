@@ -826,9 +826,8 @@ case "$(<"/sys/class/block/$basename/queue/zoned")" in
 esac
 
 if [ "${#tests[@]}" = 0 ]; then
-    for ((i=1;i<=46;i++)); do
-	tests+=("$i")
-    done
+    readarray -t tests < <(declare -F | grep "test[0-9]*" | \
+				   tr -c -d "[:digit:]\n" | sort -n)
 fi
 
 logfile=$0.log
