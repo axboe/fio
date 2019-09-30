@@ -119,8 +119,8 @@ Solaris:
 	``pkgutil -i fio``.
 
 Windows:
-	Rebecca Cran <rebecca+fio@bluestop.org> has fio packages for Windows at
-	https://www.bluestop.org/fio/ . The latest builds for Windows can also
+	Rebecca Cran <rebecca@bsdio.com> has fio packages for Windows at
+	https://bsdio.com/fio/ . The latest builds for Windows can also
 	be grabbed from https://ci.appveyor.com/project/axboe/fio by clicking
 	the latest x86 or x64 build, then selecting the ARTIFACTS tab.
 
