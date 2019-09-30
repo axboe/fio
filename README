@@ -164,9 +164,9 @@ configure.
 Windows
 ~~~~~~~
 
-On Windows, Cygwin (http://www.cygwin.com/) is required in order to build
-fio. To create an MSI installer package install WiX 3.8 from
-http://wixtoolset.org and run :file:`dobuild.cmd` from the :file:`os/windows`
+On Windows, Cygwin (https://www.cygwin.com/) is required in order to build
+fio. To create an MSI installer package install WiX from
+https://wixtoolset.org and run :file:`dobuild.cmd` from the :file:`os/windows`
 directory.
 
 How to compile fio on 64-bit Windows:
