@@ -97,12 +97,6 @@ static inline int gettid(void)
 }
 #endif
 
-/*
- * For some reason, there's no header definition for fdatasync(), even
- * if it exists.
- */
-extern int fdatasync(int fd);
-
 static inline bool fio_fallocate(struct fio_file *f, uint64_t offset, uint64_t len)
 {
 	fstore_t store = {F_ALLOCATEALL, F_PEOFPOSMODE, offset, len};
