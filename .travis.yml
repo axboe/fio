@@ -12,13 +12,11 @@ env:
     - MAKEFLAGS="-j 2"
 matrix:
   include:
+    # Default xcode image
     - os: osx
       compiler: clang # Workaround travis setting CC=["clang", "gcc"]
       env: BUILD_ARCH="x86_64"
-    - os: osx
-      compiler: clang
-      osx_image: xcode9.4
-      env: BUILD_ARCH="x86_64"
+    # Latest xcode image (needs periodic updating)
     - os: osx
       compiler: clang
       osx_image: xcode11.2
