@@ -88,14 +88,14 @@ do_cc() {
 }
 
 compile_object() {
-  do_cc $CFLAGS -c -o $TMPO $TMPC
+  do_cc $CFLAGS -Werror-implicit-function-declaration -c -o $TMPO $TMPC
 }
 
 compile_prog() {
   local_cflags="$1"
   local_ldflags="$2 $LIBS"
   echo "Compiling test case $3" >> config.log
-  do_cc $CFLAGS $local_cflags -o $TMPE $TMPC $LDFLAGS $local_ldflags
+  do_cc $CFLAGS -Werror-implicit-function-declaration $local_cflags -o $TMPE $TMPC $LDFLAGS $local_ldflags
 }
 
 feature_not_found() {
