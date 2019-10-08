@@ -544,16 +544,19 @@ bool load_blktrace(struct thread_data *td, const char *filename, int need_swap)
 	    !ios[DDIR_SYNC]) {
 		log_err("fio: found no ios in blktrace data\n");
 		return false;
-	} else if (ios[DDIR_READ] && !ios[DDIR_WRITE]) {
-		td->o.td_ddir = TD_DDIR_READ;
+	}
+
+	td->o.td_ddir = 0;
+	if (ios[DDIR_READ]) {
+		td->o.td_ddir |= TD_DDIR_READ;
 		td->o.max_bs[DDIR_READ] = rw_bs[DDIR_READ];
-	} else if (!ios[DDIR_READ] && ios[DDIR_WRITE]) {
-		td->o.td_ddir = TD_DDIR_WRITE;
+	}
+	if (ios[DDIR_WRITE]) {
+		td->o.td_ddir |= TD_DDIR_WRITE;
 		td->o.max_bs[DDIR_WRITE] = rw_bs[DDIR_WRITE];
-	} else {
-		td->o.td_ddir = TD_DDIR_RW;
-		td->o.max_bs[DDIR_READ] = rw_bs[DDIR_READ];
-		td->o.max_bs[DDIR_WRITE] = rw_bs[DDIR_WRITE];
+	}
+	if (ios[DDIR_TRIM]) {
+		td->o.td_ddir |= TD_DDIR_TRIM;
 		td->o.max_bs[DDIR_TRIM] = rw_bs[DDIR_TRIM];
 	}
 
