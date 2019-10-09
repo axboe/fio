@@ -22,7 +22,7 @@ struct fio_filelock {
 	unsigned int references;
 };
 
-#define MAX_FILELOCKS	128
+#define MAX_FILELOCKS	1024
 	
 static struct filelock_data {
 	struct flist_head list;
