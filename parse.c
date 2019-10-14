@@ -373,12 +373,16 @@ int str_to_decimal(const char *str, long long *val, int kilo, void *data,
 #endif
 
 	if (rc == 1) {
+		char *endptr;
+
 		if (strstr(str, "0x") || strstr(str, "0X"))
 			base = 16;
 		else
 			base = 10;
 
-		*val = strtoll(str, NULL, base);
+		*val = strtoll(str, &endptr, base);
+		if (*val == 0 && endptr == str)
+			return 1;
 		if (*val == LONG_MAX && errno == ERANGE)
 			return 1;
 	}
