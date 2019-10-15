@@ -1338,6 +1338,9 @@ bool init_random_map(struct thread_data *td)
 	for_each_file(td, f, i) {
 		uint64_t fsize = min(f->real_file_size, f->io_size);
 
+		if (td->o.zone_mode == ZONE_MODE_STRIDED)
+			fsize = td->o.zone_range;
+
 		blocks = fsize / (unsigned long long) td->o.rw_min_bs;
 
 		if (check_rand_gen_limits(td, f, blocks))
