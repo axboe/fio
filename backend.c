@@ -281,6 +281,7 @@ static bool fio_io_sync(struct thread_data *td, struct fio_file *f)
 
 	io_u->ddir = DDIR_SYNC;
 	io_u->file = f;
+	io_u_set(td, io_u, IO_U_F_NO_FILE_PUT);
 
 	if (td_io_prep(td, io_u)) {
 		put_io_u(td, io_u);
@@ -314,7 +315,7 @@ requeue:
 
 static int fio_file_fsync(struct thread_data *td, struct fio_file *f)
 {
-	int ret;
+	int ret, ret2;
 
 	if (fio_file_open(f))
 		return fio_io_sync(td, f);
@@ -323,8 +324,10 @@ static int fio_file_fsync(struct thread_data *td, struct fio_file *f)
 		return 1;
 
 	ret = fio_io_sync(td, f);
-	td_io_close_file(td, f);
-	return ret;
+	ret2 = 0;
+	if (fio_file_open(f))
+		ret2 = td_io_close_file(td, f);
+	return (ret || ret2);
 }
 
 static inline void __update_ts_cache(struct thread_data *td)
@@ -1124,7 +1127,7 @@ reap:
 				td->error = 0;
 		}
 
-		if (should_fsync(td) && td->o.end_fsync) {
+		if (should_fsync(td) && (td->o.end_fsync || td->o.fsync_on_close)) {
 			td_set_runstate(td, TD_FSYNCING);
 
 			for_each_file(td, f, i) {
