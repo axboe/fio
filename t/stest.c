@@ -25,7 +25,7 @@ static FLIST_HEAD(list);
 
 static int do_rand_allocs(void)
 {
-	unsigned int size, nr, rounds = 0;
+	unsigned int size, nr, rounds = 0, ret = 0;
 	unsigned long total;
 	struct elem *e;
 	bool error;
@@ -41,6 +41,7 @@ static int do_rand_allocs(void)
 			e = smalloc(size);
 			if (!e) {
 				printf("fail at %lu, size %u\n", total, size);
+				ret++;
 				break;
 			}
 			e->magic1 = MAGIC1;
@@ -65,6 +66,7 @@ static int do_rand_allocs(void)
 				e = smalloc(LARGESMALLOC);
 				if (!e) {
 					error = true;
+					ret++;
 					printf("failure allocating %u bytes at %lu allocated during sfree phase\n",
 						LARGESMALLOC, total);
 				}
@@ -74,18 +76,21 @@ static int do_rand_allocs(void)
 		}
 	}
 
-	return 0;
+	return ret;
 }
 
 int main(int argc, char *argv[])
 {
+	int ret;
+
 	arch_init(argv);
 	sinit();
 	debug_init();
 
-	do_rand_allocs();
-	smalloc_debug(0);	/* free and total blocks should match */
+	ret = do_rand_allocs();
+	smalloc_debug(0);	/* TODO: check that free and total blocks
+				** match */
 
 	scleanup();
-	return 0;
+	return ret;
 }
