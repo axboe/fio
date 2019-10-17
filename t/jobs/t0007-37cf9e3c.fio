@@ -4,7 +4,6 @@
 size=128mb
 rw=read:512k
 bs=1m
-time_based
 norandommap
 write_iolog=log
 direct=1
