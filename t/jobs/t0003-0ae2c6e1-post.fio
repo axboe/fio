@@ -3,7 +3,7 @@
 [global]
 ioengine=libaio
 direct=1
-filename=/tmp/foo
+filename=foo
 iodepth=128
 size=1M
 loops=1
