@@ -170,7 +170,7 @@ endif
 ifeq ($(CONFIG_TARGET_OS), Android)
   SOURCE += diskutil.c fifo.c blktrace.c cgroup.c trim.c profiles/tiobench.c \
 		oslib/linux-dev-lookup.c
-  LIBS += -ldl
+  LIBS += -ldl -llog
   LDFLAGS += -rdynamic
 endif
 ifeq ($(CONFIG_TARGET_OS), SunOS)
