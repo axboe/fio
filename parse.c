@@ -383,6 +383,8 @@ int str_to_decimal(const char *str, long long *val, int kilo, void *data,
 		*val = strtoll(str, &endptr, base);
 		if (*val == 0 && endptr == str)
 			return 1;
+		if (! (*str != '\0' && *endptr == '\0') )
+			return 1;
 		if (*val == LONG_MAX && errno == ERANGE)
 			return 1;
 	}
