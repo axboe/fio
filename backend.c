@@ -1236,7 +1236,7 @@ static int init_io_u(struct thread_data *td)
 		ptr = fio_memalign(cl_align, sizeof(*io_u), td_offload_overlap(td));
 		if (!ptr) {
 			log_err("fio: unable to allocate aligned memory\n");
-			break;
+			return 1;
 		}
 
 		io_u = ptr;
