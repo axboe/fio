@@ -765,8 +765,8 @@ Target file/device
 	`filename` semantic (which generates a file for each clone if not
 	specified, but lets all clones use the same file if set).
 
-	See the :option:`filename` option for information on how to escape "``:``" and
-	"``\``" characters within the directory path itself.
+	See the :option:`filename` option for information on how to escape "``:``"
+	characters within the directory path itself.
 
 	Note: To control the directory fio will use for internal state files
 	use :option:`--aux-path`.
@@ -785,10 +785,10 @@ Target file/device
 	by this option will be :option:`size` divided by number of files unless an
 	explicit size is specified by :option:`filesize`.
 
-	Each colon and backslash in the wanted path must be escaped with a ``\``
+	Each colon in the wanted path must be escaped with a ``\``
 	character.  For instance, if the path is :file:`/dev/dsk/foo@3,0:c` then you
 	would use ``filename=/dev/dsk/foo@3,0\:c`` and if the path is
-	:file:`F:\\filename` then you would use ``filename=F\:\\filename``.
+	:file:`F:\\filename` then you would use ``filename=F\:\filename``.
 
 	On Windows, disk devices are accessed as :file:`\\\\.\\PhysicalDrive0` for
 	the first device, :file:`\\\\.\\PhysicalDrive1` for the second etc.
@@ -2564,7 +2564,7 @@ I/O replay
 	(``blkparse <device> -o /dev/null -d file_for_fio.bin``).
 	You can specify a number of files by separating the names with a ':'
 	character. See the :option:`filename` option for information on how to
-	escape ':' and '\' characters within the file names. These files will
+	escape ':' characters within the file names. These files will
 	be sequentially assigned to job clones created by :option:`numjobs`.
 
 .. option:: read_iolog_chunked=bool
