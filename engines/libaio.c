@@ -44,7 +44,6 @@ struct libaio_data {
 struct libaio_options {
 	void *pad;
 	unsigned int userspace_reap;
-	unsigned int hipri;
 };
 
 static struct fio_option options[] = {
