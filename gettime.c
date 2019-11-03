@@ -23,6 +23,7 @@ static unsigned int cycles_wrap;
 #endif
 #endif
 bool tsc_reliable = false;
+static bool cg_prefer_monotonic = false;
 
 struct tv_valid {
 	int warned;
@@ -127,10 +128,58 @@ static void fio_init gtod_init(void)
 
 #endif /* FIO_DEBUG_TIME */
 
+#if defined(CONFIG_CLOCK_MONOTONIC_RAW) && defined(CONFIG_CLOCK_MONOTONIC)
+static uint64_t bench_clock_gettime(clockid_t clkid, int rounds)
+{
+	int i;
+	struct timespec start, ts;
+
+	fio_gettime(&start, NULL);
+	for (i = 0; i < rounds; ++i)
+		clock_gettime(clkid, &ts);
+	return utime_since_now(&start);
+}
+
+/*
+ * There are platforms using Linux kernels prior to 5.3 where
+ * clock_gettime(CLOCK_MONOTONIC, ...) is implemented via vDSO but
+ * clock_gettime(CLOCK_MONOTONIC_RAW, ...) is not (and falls back to a "slow"
+ * syscall) so check for a dramatic difference in reported times.
+ */
+static bool cg_monotonic_raw_slow(void)
+{
+	uint64_t bench_monotonic_raw, bench_monotonic;
+	const int rounds = 1000;
+
+	bench_monotonic = bench_clock_gettime(CLOCK_MONOTONIC, rounds);
+	bench_monotonic_raw = bench_clock_gettime(CLOCK_MONOTONIC_RAW, rounds);
+	dprint(FD_TIME,
+	       "CLOCK_MONOTONIC=%" PRIu64 "us, CLOCK_MONOTONIC_RAW=%" PRIu64
+	       "us (%d rounds)\n",
+	       bench_monotonic, bench_monotonic_raw, rounds);
+	if ((bench_monotonic * 2) < bench_monotonic_raw) {
+		dprint(FD_TIME,
+		       "Forcing CLOCK_MONOTONIC as clock_gettime()'s clock\n");
+		return true;
+	} else
+		return false;
+}
+#else
+static bool cg_monotonic_raw_slow(void)
+{
+	return false;
+}
+#endif /* defined(CONFIG_CLOCK_MONOTONIC_RAW) && defined(CONFIG_CLOCK_MONOTONIC) */
+
 #ifdef CONFIG_CLOCK_GETTIME
 static int fill_clock_gettime(struct timespec *ts)
 {
-#if defined(CONFIG_CLOCK_MONOTONIC_RAW)
+#if defined(CONFIG_CLOCK_MONOTONIC_RAW) && defined(CONFIG_CLOCK_MONOTONIC_RAW)
+	if (cg_prefer_monotonic)
+		return clock_gettime(CLOCK_MONOTONIC, ts);
+	else
+		return clock_gettime(CLOCK_MONOTONIC_RAW, ts);
+#elif defined(CONFIG_CLOCK_MONOTONIC_RAW)
 	return clock_gettime(CLOCK_MONOTONIC_RAW, ts);
 #elif defined(CONFIG_CLOCK_MONOTONIC)
 	return clock_gettime(CLOCK_MONOTONIC, ts);
@@ -404,6 +453,8 @@ void fio_clock_init(void)
 #endif
 
 	fio_clock_source_inited = fio_clock_source;
+	if (cg_monotonic_raw_slow())
+		cg_prefer_monotonic = true;
 
 	if (calibrate_cpu_clock())
 		tsc_reliable = false;
