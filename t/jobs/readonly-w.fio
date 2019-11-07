@@ -1,5 +1,0 @@
-[test]
-filename=${DUT}
-rw=randwrite
-time_based
-runtime=1s

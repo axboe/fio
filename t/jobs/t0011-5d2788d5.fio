@@ -1,7 +1,7 @@
 # Expected results: no parse warnings, runs and with roughly 1/8 iops between
 #			the two jobs.
 # Buggy result: parse warning on flow value overflow, no 1/8 division between
-			jobs.
+#			jobs.
 #
 [global]
 bs=4k

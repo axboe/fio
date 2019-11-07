@@ -202,20 +202,20 @@ if __name__ == '__main__':
                 # lfsr
                 {
                     "random_generator": "lfsr",
-                    "zonerange": 4096,
-                    "zonesize": 4096,
+                    "zonerange": 4096*1024,
+                    "zonesize": 4096*1024,
                     "bs": 4096,
-                    "offset": 8*4096,
-                    "size": 16*4096,
-                    "io_size": 16*4096,
+                    "offset": 8*4096*1024,
+                    "size": 16*4096*1024,
+                    "io_size": 16*4096*1024,
                 },
                 {
                     "random_generator": "lfsr",
-                    "zonerange": 4096,
-                    "zonesize": 4096,
+                    "zonerange": 4096*1024,
+                    "zonesize": 4096*1024,
                     "bs": 4096,
-                    "size": 16*4096,
-                    "io_size": 16*4096,
+                    "size": 16*4096*1024,
+                    "io_size": 16*4096*1024,
                 },
                 {
                     "random_generator": "lfsr",
@@ -227,11 +227,11 @@ if __name__ == '__main__':
                 },
                 {
                     "random_generator": "lfsr",
-                    "zonerange": 4096,
-                    "zonesize": 4*4096,
+                    "zonerange": 4096*1024,
+                    "zonesize": 4*4096*1024,
                     "bs": 4096,
-                    "size": 16*4096,
-                    "io_size": 16*4096,
+                    "size": 16*4096*1024,
+                    "io_size": 16*4096*1024,
                 },
                 {
                     "random_generator": "lfsr",
@@ -243,11 +243,11 @@ if __name__ == '__main__':
                 },
                 {
                     "random_generator": "lfsr",
-                    "zonerange": 8192,
-                    "zonesize": 4096,
+                    "zonerange": 8192*1024,
+                    "zonesize": 4096*1024,
                     "bs": 4096,
-                    "size": 16*4096,
-                    "io_size": 16*4096,
+                    "size": 16*4096*1024,
+                    "io_size": 16*4096*1024,
                 },
                 {
                     "random_generator": "lfsr",
@@ -313,7 +313,7 @@ if __name__ == '__main__':
                     "zonesize": 8*1024*1024,
                     "bs": 4096,
                     "size": 256*1024*1024,
-                    "io_size": 256*1024*204,
+                    "io_size": 256*1024*1024,
                 },
 
             ]

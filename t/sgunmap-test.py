@@ -45,7 +45,6 @@ import json
 import argparse
 import traceback
 import subprocess
-from six.moves import range
 
 
 def parse_args():

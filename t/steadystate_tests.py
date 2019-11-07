@@ -1,5 +1,5 @@
-#!/usr/bin/python2.7
-# Note: this script is python2 and python 3 compatible.
+#!/usr/bin/env python
+# Note: this script is python2 and python3 compatible.
 #
 # steadystate_tests.py
 #
@@ -24,12 +24,10 @@ from __future__ import print_function
 import os
 import sys
 import json
-import uuid
 import pprint
 import argparse
 import subprocess
 from scipy import stats
-from six.moves import range
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -53,7 +51,7 @@ def check(data, iops, slope, pct, limit, dur, criterion):
         m, intercept, r_value, p_value, std_err = stats.linregress(x,data)
         m = abs(m)
         if pct:
-            target = m / mean * 100
+            target = (m / mean * 100) if mean != 0 else 0
             criterion = criterion[:-1]
         else:
             target = m
@@ -68,13 +66,20 @@ def check(data, iops, slope, pct, limit, dur, criterion):
             target = maxdev
 
     criterion = float(criterion)
-    return (abs(target - criterion) / criterion < 0.005), target < limit, mean, target
+    if criterion == 0.0:
+        objsame = False
+    else:
+        objsame = abs(target - criterion) / criterion < 0.005
+    return (objsame, target < limit, mean, target)
 
 
 if __name__ == '__main__':
     args = parse_args()
 
     pp = pprint.PrettyPrinter(indent=4)
+
+    passed = 0
+    failed = 0
 
 #
 # test option parsing
@@ -96,8 +101,10 @@ if __name__ == '__main__':
         output = subprocess.check_output([args.fio] + test['args'])
         if test['output'] in output.decode():
             print("PASSED '{0}' found with arguments {1}".format(test['output'], test['args']))
+            passed = passed + 1
         else:
             print("FAILED '{0}' NOT found with arguments {1}".format(test['output'], test['args']))
+            failed = failed + 1
 
 #
 # test some read workloads
@@ -119,7 +126,7 @@ if __name__ == '__main__':
     if args.read == None:
         if os.name == 'posix':
             args.read = '/dev/zero'
-            extra = [ "--size=134217728" ]  # 128 MiB
+            extra = [ "--size=128M" ]
         else:
             print("ERROR: file for read testing must be specified on non-posix systems")
             sys.exit(1)
@@ -129,7 +136,7 @@ if __name__ == '__main__':
     jobnum = 0
     for job in reads:
 
-        tf = uuid.uuid4().hex
+        tf = "steadystate_job{0}.json".format(jobnum)
         parameters = [ "--name=job{0}".format(jobnum) ]
         parameters.extend(extra)
         parameters.extend([ "--thread",
@@ -160,10 +167,10 @@ if __name__ == '__main__':
         output = subprocess.call([args.fio] + parameters)
         with open(tf, 'r') as source:
             jsondata = json.loads(source.read())
-        os.remove(tf)
+            source.close()
 
         for jsonjob in jsondata['jobs']:
-            line = "job {0}".format(jsonjob['job options']['name'])
+            line = "{0}".format(jsonjob['job options']['name'])
             if job['s']:
                 if jsonjob['steadystate']['attained'] == 1:
                     # check runtime >= ss_dur + ss_ramp, check criterion, check criterion < limit
@@ -171,6 +178,7 @@ if __name__ == '__main__':
                     actual = jsonjob['read']['runtime']
                     if mintime > actual:
                         line = 'FAILED ' + line + ' ss attained, runtime {0} < ss_dur {1} + ss_ramp {2}'.format(actual, job['ss_dur'], job['ss_ramp'])
+                        failed = failed + 1
                     else:
                         line = line + ' ss attained, runtime {0} > ss_dur {1} + ss_ramp {2},'.format(actual, job['ss_dur'], job['ss_ramp'])
                         objsame, met, mean, target = check(data=jsonjob['steadystate']['data'],
@@ -182,11 +190,14 @@ if __name__ == '__main__':
                             criterion=jsonjob['steadystate']['criterion'])
                         if not objsame:
                             line = 'FAILED ' + line + ' fio criterion {0} != calculated criterion {1} '.format(jsonjob['steadystate']['criterion'], target)
+                            failed = failed + 1
                         else:
                             if met:
                                 line = 'PASSED ' + line + ' target {0} < limit {1}'.format(target, job['ss_limit'])
+                                passed = passed + 1
                             else:
                                 line = 'FAILED ' + line + ' target {0} < limit {1} but fio reports ss not attained '.format(target, job['ss_limit'])
+                                failed = failed + 1
                 else:
                     # check runtime, confirm criterion calculation, and confirm that criterion was not met
                     expected = job['timeout'] * 1000
@@ -205,22 +216,31 @@ if __name__ == '__main__':
                         if not objsame:
                             if actual > (job['ss_dur'] + job['ss_ramp'])*1000:
                                 line = 'FAILED ' + line + ' fio criterion {0} != calculated criterion {1} '.format(jsonjob['steadystate']['criterion'], target)
+                                failed = failed + 1
                             else:
                                 line = 'PASSED ' + line + ' fio criterion {0} == 0.0 since ss_dur + ss_ramp has not elapsed '.format(jsonjob['steadystate']['criterion'])
+                                passed = passed + 1
                         else:
                             if met:
                                 line = 'FAILED ' + line + ' target {0} < threshold {1} but fio reports ss not attained '.format(target, job['ss_limit'])
+                                failed = failed + 1
                             else:
                                 line = 'PASSED ' + line + ' criterion {0} > threshold {1}'.format(target, job['ss_limit'])
+                                passed = passed + 1
             else:
                 expected = job['timeout'] * 1000
                 actual = jsonjob['read']['runtime']
                 if abs(expected - actual) < 10:
                     result = 'PASSED '
+                    passed = passed + 1
                 else:
                     result = 'FAILED '
+                    failed = failed + 1
                 line = result + line + ' no ss, expected runtime {0} ~= actual runtime {1}'.format(expected, actual)
             print(line)
             if 'steadystate' in jsonjob:
                 pp.pprint(jsonjob['steadystate'])
         jobnum += 1
+
+    print("{0} test(s) PASSED, {1} test(s) FAILED".format(passed,failed))
+    sys.exit(failed)
