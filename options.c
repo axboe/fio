@@ -2412,14 +2412,17 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.parent = "nrfiles",
 		.hide	= 1,
 	},
-#ifdef FIO_HAVE_ANY_FALLOCATE
 	{
 		.name	= "fallocate",
 		.lname	= "Fallocate",
 		.type	= FIO_OPT_STR,
 		.off1	= offsetof(struct thread_options, fallocate_mode),
 		.help	= "Whether pre-allocation is performed when laying out files",
+#ifdef FIO_HAVE_DEFAULT_FALLOCATE
 		.def	= "native",
+#else
+		.def	= "none",
+#endif
 		.category = FIO_OPT_C_FILE,
 		.group	= FIO_OPT_G_INVALID,
 		.posval	= {
@@ -2443,6 +2446,10 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .help = "Use fallocate(..., FALLOC_FL_KEEP_SIZE, ...)",
 			  },
 #endif
+			  { .ival = "truncate",
+			    .oval = FIO_FALLOCATE_TRUNCATE,
+			    .help = "Truncate file to final size instead of allocating"
+			  },
 			  /* Compatibility with former boolean values */
 			  { .ival = "0",
 			    .oval = FIO_FALLOCATE_NONE,
@@ -2456,14 +2463,6 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 #endif
 		},
 	},
-#else	/* FIO_HAVE_ANY_FALLOCATE */
-	{
-		.name	= "fallocate",
-		.lname	= "Fallocate",
-		.type	= FIO_OPT_UNSUPPORTED,
-		.help	= "Your platform does not support fallocate",
-	},
-#endif /* FIO_HAVE_ANY_FALLOCATE */
 	{
 		.name	= "fadvise_hint",
 		.lname	= "Fadvise hint",

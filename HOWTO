@@ -1173,6 +1173,10 @@ I/O type
 			Pre-allocate via :manpage:`fallocate(2)` with
 			FALLOC_FL_KEEP_SIZE set.
 
+		**truncate**
+			Extend file to final size via :manpage:`ftruncate(2)`
+			instead of allocating.
+
 		**0**
 			Backward-compatible alias for **none**.
 
@@ -1182,7 +1186,15 @@ I/O type
 	May not be available on all supported platforms. **keep** is only available
 	on Linux. If using ZFS on Solaris this cannot be set to **posix**
 	because ZFS doesn't support pre-allocation. Default: **native** if any
-	pre-allocation methods are available, **none** if not.
+	pre-allocation methods except **truncate** are available, **none** if not.
+
+	Note that using **truncate** on Windows will interact surprisingly
+	with non-sequential write patterns. When writing to a file that has
+	been extended by setting the end-of-file information, Windows will
+	backfill the unwritten portion of the file up to that offset with
+	zeroes before issuing the new write. This means that a single small
+	write to the end of an extended file will stall until the entire
+	file has been filled with zeroes.
 
 .. option:: fadvise_hint=str
 

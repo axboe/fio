@@ -95,6 +95,18 @@ static void fallocate_file(struct thread_data *td, struct fio_file *f)
 		break;
 		}
 #endif /* CONFIG_LINUX_FALLOCATE */
+	case FIO_FALLOCATE_TRUNCATE: {
+		int r;
+
+		dprint(FD_FILE, "ftruncate file %s size %llu\n",
+				f->file_name,
+				(unsigned long long) f->real_file_size);
+		r = ftruncate(f->fd, f->real_file_size);
+		if (r != 0)
+			td_verror(td, errno, "ftruncate");
+
+		break;
+	}
 	default:
 		log_err("fio: unknown fallocate mode: %d\n", td->o.fallocate_mode);
 		assert(0);
