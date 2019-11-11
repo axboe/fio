@@ -14,7 +14,7 @@
 #
 #
 # EXAMPLE
-# # git clone [fio-repository]
+# # git clone git://git.kernel.dk/fio.git
 # # cd fio
 # # make -j
 # # python3 t/run-fio-tests.py
@@ -123,6 +123,7 @@ class FioExeTest(FioTest):
         stderr_file = open(self.stderr_file, "w+")
         exticode_file = open(self.exticode_file, "w+")
         try:
+            proc = None
             # Avoid using subprocess.run() here because when a timeout occurs,
             # fio will be stopped with SIGKILL. This does not give fio a
             # chance to clean up and means that child processes may continue
@@ -142,9 +143,10 @@ class FioExeTest(FioTest):
             assert proc.poll()
             self.output['failure'] = 'timeout'
         except Exception:
-            if not proc.poll():
-                proc.terminate()
-                proc.communicate()
+            if proc:
+                if not proc.poll():
+                    proc.terminate()
+                    proc.communicate()
             self.output['failure'] = 'exception'
             self.output['exc_info'] = sys.exc_info()
         finally:
