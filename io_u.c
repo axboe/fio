@@ -850,8 +850,7 @@ static void setup_strided_zone_mode(struct thread_data *td, struct io_u *io_u)
 	/*
 	 * See if it's time to switch to a new zone
 	 */
-	if (td->zone_bytes >= td->o.zone_size &&
-			fio_option_is_set(&td->o, zone_skip)) {
+	if (td->zone_bytes >= td->o.zone_size) {
 		td->zone_bytes = 0;
 		f->file_offset += td->o.zone_range + td->o.zone_skip;
 

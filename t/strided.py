@@ -22,7 +22,7 @@
 #
 # ===TEST MATRIX===
 #
-# --zonemode=strided, zoneskip >= 0
+# --zonemode=strided, zoneskip unset
 #   w/ randommap and LFSR
 #       zonesize=zonerange  all blocks in zonerange touched
 #       zonesize>zonerange  all blocks touched and roll-over back into zone
@@ -57,7 +57,6 @@ def run_fio(fio, test, index):
                 "--log_offset=1",
                 "--randrepeat=0",
                 "--rw=randread",
-                "--zoneskip=0",
                 "--write_iops_log={0}{1:03d}".format(filename, index),
                 "--output={0}{1:03d}.out".format(filename, index),
                 "--zonerange={zonerange}".format(**test),
