@@ -1354,6 +1354,9 @@ bool init_random_map(struct thread_data *td)
 			if (!lfsr_init(&f->lfsr, blocks, seed, 0)) {
 				fio_file_set_lfsr(f);
 				continue;
+			} else {
+				log_err("fio: failed initializing LFSR\n");
+				return false;
 			}
 		} else if (!td->o.norandommap) {
 			f->io_axmap = axmap_new(blocks);
