@@ -1048,7 +1048,20 @@ struct fio_option *find_option(struct fio_option *options, const char *opt)
 const struct fio_option *
 find_option_c(const struct fio_option *options, const char *opt)
 {
-	return find_option((struct fio_option *)options, opt);
+	const struct fio_option *o;
+
+	for (o = &options[0]; o->name; o++) {
+		if (!o_match(o, opt))
+			continue;
+		if (o->type == FIO_OPT_UNSUPPORTED) {
+			log_err("Option <%s>: %s\n", o->name, o->help);
+			continue;
+		}
+
+		return o;
+	}
+
+	return NULL;
 }
 
 static const struct fio_option *
