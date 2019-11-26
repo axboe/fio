@@ -943,6 +943,10 @@ Pre-allocate via \fBposix_fallocate\fR\|(3).
 Pre-allocate via \fBfallocate\fR\|(2) with
 FALLOC_FL_KEEP_SIZE set.
 .TP
+.B truncate
+Extend file to final size using \fBftruncate\fR|(2)
+instead of allocating.
+.TP
 .B 0
 Backward-compatible alias for \fBnone\fR.
 .TP
@@ -953,7 +957,15 @@ Backward-compatible alias for \fBposix\fR.
 May not be available on all supported platforms. \fBkeep\fR is only available
 on Linux. If using ZFS on Solaris this cannot be set to \fBposix\fR
 because ZFS doesn't support pre-allocation. Default: \fBnative\fR if any
-pre-allocation methods are available, \fBnone\fR if not.
+pre-allocation methods except \fBtruncate\fR are available, \fBnone\fR if not.
+.P
+Note that using \fBtruncate\fR on Windows will interact surprisingly
+with non-sequential write patterns. When writing to a file that has
+been extended by setting the end-of-file information, Windows will
+backfill the unwritten portion of the file up to that offset with
+zeroes before issuing the new write. This means that a single small
+write to the end of an extended file will stall until the entire
+file has been filled with zeroes.
 .RE
 .TP
 .BI fadvise_hint \fR=\fPstr
