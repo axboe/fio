@@ -201,7 +201,8 @@ struct thread_options {
 
 	unsigned long long max_latency;
 
-	unsigned int stonewall;
+	unsigned short exit_what;
+	unsigned short stonewall;
 	unsigned int new_group;
 	unsigned int numjobs;
 	os_cpu_mask_t cpumask;
@@ -489,7 +490,8 @@ struct thread_options_pack {
 	uint32_t mem_type;
 	uint32_t mem_align;
 
-	uint32_t stonewall;
+	uint16_t exit_what;
+	uint16_t stonewall;
 	uint32_t new_group;
 	uint32_t numjobs;
 	/*

@@ -975,7 +975,7 @@ static int handle_trigger_cmd(struct fio_net_cmd *cmd, struct flist_head *job_li
 	} else
 		fio_net_queue_cmd(FIO_NET_CMD_VTRIGGER, rep, sz, NULL, SK_F_FREE | SK_F_INLINE);
 
-	fio_terminate_threads(TERMINATE_ALL);
+	fio_terminate_threads(TERMINATE_ALL, TERMINATE_ALL);
 	fio_server_check_jobs(job_list);
 	exec_trigger(buf);
 	return 0;
@@ -992,7 +992,7 @@ static int handle_command(struct sk_out *sk_out, struct flist_head *job_list,
 
 	switch (cmd->opcode) {
 	case FIO_NET_CMD_QUIT:
-		fio_terminate_threads(TERMINATE_ALL);
+		fio_terminate_threads(TERMINATE_ALL, TERMINATE_ALL);
 		ret = 0;
 		break;
 	case FIO_NET_CMD_EXIT:
