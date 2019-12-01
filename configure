@@ -607,9 +607,9 @@ int main(void)
   return 0;
 }
 EOF
-  if test "$libaio_uring" = "yes" && compile_prog "" "-luring" "libaio io_uring" ; then
+  if test "$libaio_uring" = "yes" && compile_prog "" "-laio -luring" "libaio io_uring" ; then
     libaio=yes
-    LIBS="-luring $LIBS"
+    LIBS="-laio -luring $LIBS"
   elif compile_prog "" "-laio" "libaio" ; then
     libaio=yes
     libaio_uring=no
