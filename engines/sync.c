@@ -39,6 +39,7 @@ struct psyncv2_options {
 	void *pad;
 	unsigned int hipri;
 	unsigned int hipri_percentage;
+	unsigned int uncached;
 };
 
 static struct fio_option options[] = {
@@ -60,6 +61,15 @@ static struct fio_option options[] = {
 		.maxval	= 100,
 		.def    = "100",
 		.help	= "Probabilistically set RWF_HIPRI for pwritev2/preadv2",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
+		.name	= "uncached",
+		.lname	= "Uncached",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct psyncv2_options, uncached),
+		.help	= "Use RWF_UNCACHED for buffered read/writes",
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_INVALID,
 	},
@@ -152,6 +162,8 @@ static enum fio_q_status fio_pvsyncio2_queue(struct thread_data *td,
 	if (o->hipri &&
 	    (rand_between(&sd->rand_state, 1, 100) <= o->hipri_percentage))
 		flags |= RWF_HIPRI;
+	if (!td->o.odirect && o->uncached)
+		flags |= RWF_UNCACHED;
 
 	iov->iov_base = io_u->xfer_buf;
 	iov->iov_len = io_u->xfer_buflen;
