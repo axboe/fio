@@ -326,6 +326,10 @@ static inline int fio_set_sched_idle(void)
 #define RWF_SYNC	0x00000004
 #endif
 
+#ifndef RWF_UNCACHED
+#define RWF_UNCACHED	0x00000020
+#endif
+
 #ifndef RWF_WRITE_LIFE_SHIFT
 #define RWF_WRITE_LIFE_SHIFT		4
 #define RWF_WRITE_LIFE_SHORT		(1 << RWF_WRITE_LIFE_SHIFT)

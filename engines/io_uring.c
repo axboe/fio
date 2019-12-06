@@ -75,6 +75,7 @@ struct ioring_options {
 	unsigned int sqpoll_thread;
 	unsigned int sqpoll_set;
 	unsigned int sqpoll_cpu;
+	unsigned int uncached;
 };
 
 static int fio_ioring_sqpoll_cb(void *data, unsigned long long *val)
@@ -133,6 +134,15 @@ static struct fio_option options[] = {
 		.group	= FIO_OPT_G_IOURING,
 	},
 	{
+		.name	= "uncached",
+		.lname	= "Uncached",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct ioring_options, uncached),
+		.help	= "Use RWF_UNCACHED for buffered read/writes",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_IOURING,
+	},
+	{
 		.name	= NULL,
 	},
 };
@@ -180,6 +190,8 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 			sqe->addr = (unsigned long) &ld->iovecs[io_u->index];
 			sqe->len = 1;
 		}
+		if (!td->o.odirect && o->uncached)
+			sqe->rw_flags = RWF_UNCACHED;
 		sqe->off = io_u->offset;
 	} else if (ddir_sync(io_u->ddir)) {
 		if (io_u->ddir == DDIR_SYNC_FILE_RANGE) {
