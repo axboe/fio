@@ -1287,7 +1287,9 @@ static bool init_rand_distribution(struct thread_data *td)
 	unsigned int i;
 	int state;
 
-	if (td->o.random_distribution == FIO_RAND_DIST_RANDOM)
+	if (td->o.random_distribution == FIO_RAND_DIST_RANDOM ||
+	    td->o.random_distribution == FIO_RAND_DIST_ZONED ||
+	    td->o.random_distribution == FIO_RAND_DIST_ZONED_ABS)
 		return false;
 
 	state = td_bump_runstate(td, TD_SETTING_UP);
