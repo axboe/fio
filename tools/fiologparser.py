@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 # Note: this script is python2 and python 3 compatible.
 #
 # fiologparser.py
