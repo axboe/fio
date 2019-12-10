@@ -406,9 +406,10 @@ class FioJobTest_t0011(FioJobTest):
         iops1 = self.json_data['jobs'][0]['read']['iops']
         iops2 = self.json_data['jobs'][1]['read']['iops']
         ratio = iops2 / iops1
+        logging.debug("Test %d: iops1: %f" % (self.testnum, iops1))
         logging.debug("Test %d: ratio: %f" % (self.testnum, ratio))
 
-        if iops1 < 999 or iops1 > 1001:
+        if iops1 < 998 or iops1 > 1002:
             self.failure_reason = "{0} iops value mismatch,".format(self.failure_reason)
             self.passed = False
 
