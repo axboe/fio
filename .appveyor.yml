@@ -13,8 +13,9 @@ environment:
       CONFIGURE_OPTIONS: --build-32bit-win --target-win-ver=xp
 
 install:
-  - '%CYG_ROOT%\setup-x86_64.exe --quiet-mode --no-shortcuts --only-site --site "%CYG_MIRROR%" --packages "mingw64-%PACKAGE_ARCH%-zlib" > NUL'
-  - SET PATH=%CYG_ROOT%\bin;%PATH% # NB: Changed env variables persist to later sections
+  - '%CYG_ROOT%\setup-x86_64.exe --quiet-mode --no-shortcuts --only-site --site "%CYG_MIRROR%" --packages "mingw64-%PACKAGE_ARCH%-zlib,mingw64-%PACKAGE_ARCH%-CUnit" > NUL'
+  - SET PATH=C:\Python38-x64;%CYG_ROOT%\bin;%PATH% # NB: Changed env variables persist to later sections
+  - python.exe -m pip install scipy
 
 build_script:
   - 'bash.exe -lc "cd \"${APPVEYOR_BUILD_FOLDER}\" && ./configure --disable-native --extra-cflags=\"-Werror\" ${CONFIGURE_OPTIONS} && make.exe'
@@ -24,6 +25,7 @@ after_build:
 
 test_script:
   - 'bash.exe -lc "cd \"${APPVEYOR_BUILD_FOLDER}\" && file.exe fio.exe && make.exe test'
+  - 'bash.exe -lc "cd \"${APPVEYOR_BUILD_FOLDER}\" && python.exe t/run-fio-tests.py --skip 5 --debug'
 
 artifacts:
   - path: os\windows\*.msi
