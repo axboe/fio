@@ -428,11 +428,13 @@ class Requirements(object):
     _root = False
     _zoned_nullb = False
     _not_macos = False
+    _not_windows = False
     _unittests = False
     _cpucount4 = False
 
     def __init__(self, fio_root):
         Requirements._not_macos = platform.system() != "Darwin"
+        Requirements._not_windows = platform.system() != "Windows"
         Requirements._linux = platform.system() == "Linux"
 
         if Requirements._linux:
@@ -470,6 +472,7 @@ class Requirements(object):
                     Requirements.root,
                     Requirements.zoned_nullb,
                     Requirements.not_macos,
+                    Requirements.not_windows,
                     Requirements.unittests,
                     Requirements.cpucount4]
         for req in req_list:
@@ -493,6 +496,9 @@ class Requirements(object):
 
     def not_macos():
         return Requirements._not_macos, "platform other than macOS required"
+
+    def not_windows():
+        return Requirements._not_windows, "platform other than Windows required"
 
     def unittests():
         return Requirements._unittests, "Unittests support required"
@@ -561,7 +567,7 @@ TEST_LIST = [
             'pre_job':          None,
             'pre_success':      None,
             'output_format':    'json',
-            'requirements':     [],
+            'requirements':     [Requirements.not_windows],
         },
         {
             'test_id':          6,
