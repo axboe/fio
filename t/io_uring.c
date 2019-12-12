@@ -133,10 +133,12 @@ static int io_uring_enter(struct submitter *s, unsigned int to_submit,
 			min_complete, flags, NULL, 0);
 }
 
+#ifndef CONFIG_HAVE_GETTID
 static int gettid(void)
 {
 	return syscall(__NR_gettid);
 }
+#endif
 
 static unsigned file_depth(struct submitter *s)
 {
