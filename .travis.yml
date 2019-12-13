@@ -43,17 +43,16 @@ before_install:
         fi;
         sudo apt-get -qq update;
         sudo apt-get install --no-install-recommends -qq -y "${pkgs[@]}";
-    fi
+    fi;
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
         brew update;
         brew install cunit;
         if [[ "$TRAVIS_OSX_IMAGE" == "xcode11.2" ]]; then
             pip3 install scipy;
-        else
-            pip install scipy;
         fi;
-    fi
+        pip install scipy;
+    fi;
 script:
   - ./configure --extra-cflags="${EXTRA_CFLAGS}" && make
   - make test
-  - sudo python3 t/run-fio-tests.py --skip 6 1007 1008
+  - sudo python3 t/run-fio-tests.py --skip 6 1007 1008 --debug
