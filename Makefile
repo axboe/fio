@@ -209,7 +209,7 @@ ifeq ($(CONFIG_TARGET_OS), Darwin)
 endif
 ifneq (,$(findstring CYGWIN,$(CONFIG_TARGET_OS)))
   SOURCE += os/windows/posix.c
-  LIBS	 += -lpthread -lpsapi -lws2_32
+  LIBS	 += -lpthread -lpsapi -lws2_32 -lssp
   CFLAGS += -DPSAPI_VERSION=1 -Ios/windows/posix/include -Wno-format
 endif
 
@@ -506,7 +506,7 @@ t/time-test: $(T_TT_OBJS)
 
 ifdef CONFIG_HAVE_CUNIT
 unittests/unittest: $(UT_OBJS) $(UT_TARGET_OBJS)
-	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(UT_OBJS) $(UT_TARGET_OBJS) -lcunit
+	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(UT_OBJS) $(UT_TARGET_OBJS) -lcunit $(LIBS)
 endif
 
 clean: FORCE
