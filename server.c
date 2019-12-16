@@ -1490,6 +1490,7 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 		convert_io_stat(&p.ts.bw_stat[i], &ts->bw_stat[i]);
 		convert_io_stat(&p.ts.iops_stat[i], &ts->iops_stat[i]);
 	}
+	convert_io_stat(&p.ts.sync_stat, &ts->sync_stat);
 
 	p.ts.usr_time		= cpu_to_le64(ts->usr_time);
 	p.ts.sys_time		= cpu_to_le64(ts->sys_time);
@@ -1524,8 +1525,13 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 		for (j = 0; j < FIO_IO_U_PLAT_NR; j++)
 			p.ts.io_u_plat[i][j] = cpu_to_le64(ts->io_u_plat[i][j]);
 
-	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
+	for (j = 0; j < FIO_IO_U_PLAT_NR; j++)
+		p.ts.io_u_sync_plat[j] = cpu_to_le64(ts->io_u_sync_plat[j]);
+
+	for (i = 0; i < DDIR_RWDIR_SYNC_CNT; i++)
 		p.ts.total_io_u[i]	= cpu_to_le64(ts->total_io_u[i]);
+
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		p.ts.short_io_u[i]	= cpu_to_le64(ts->short_io_u[i]);
 		p.ts.drop_io_u[i]	= cpu_to_le64(ts->drop_io_u[i]);
 	}
