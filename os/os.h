@@ -407,4 +407,8 @@ static inline bool os_cpu_has(cpu_features feature)
 }
 #endif
 
+#ifndef FIO_EMULATED_MKDIR_TWO
+# define fio_mkdir(path, mode)	mkdir(path, mode)
 #endif
+
+#endif /* FIO_OS_H */

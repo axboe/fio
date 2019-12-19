@@ -918,26 +918,18 @@ static bool create_work_dirs(struct thread_data *td, const char *fname)
 	char path[PATH_MAX];
 	char *start, *end;
 
-	if (td->o.directory) {
-		snprintf(path, PATH_MAX, "%s%c%s", td->o.directory,
-			 FIO_OS_PATH_SEPARATOR, fname);
-		start = strstr(path, fname);
-	} else {
-		snprintf(path, PATH_MAX, "%s", fname);
-		start = path;
-	}
+	snprintf(path, PATH_MAX, "%s", fname);
+	start = path;
 
 	end = start;
 	while ((end = strchr(end, FIO_OS_PATH_SEPARATOR)) != NULL) {
-		if (end == start)
-			break;
+		if (end == start) {
+			end++;
+			continue;
+		}
 		*end = '\0';
 		errno = 0;
-#ifdef CONFIG_HAVE_MKDIR_TWO
-		if (mkdir(path, 0600) && errno != EEXIST) {
-#else
-		if (mkdir(path) && errno != EEXIST) {
-#endif
+		if (fio_mkdir(path, 0700) && errno != EEXIST) {
 			log_err("fio: failed to create dir (%s): %d\n",
 				start, errno);
 			return false;

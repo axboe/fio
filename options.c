@@ -1235,7 +1235,8 @@ int set_name_idx(char *target, size_t tlen, char *input, int index,
 		len = snprintf(target, tlen, "%s/%s.", fname,
 				client_sockaddr_str);
 	} else
-		len = snprintf(target, tlen, "%s/", fname);
+		len = snprintf(target, tlen, "%s%c", fname,
+				FIO_OS_PATH_SEPARATOR);
 
 	target[tlen - 1] = '\0';
 	free(p);

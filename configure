@@ -2317,22 +2317,6 @@ fi
 print_config "cuda" "$cuda"
 
 ##########################################
-# mkdir() probe. mingw apparently has a one-argument mkdir :/
-mkdir_two="no"
-cat > $TMPC << EOF
-#include <sys/stat.h>
-#include <sys/types.h>
-int main(int argc, char **argv)
-{
-  return mkdir("/tmp/bla", 0600);
-}
-EOF
-if compile_prog "" "" "mkdir(a, b)"; then
-  mkdir_two="yes"
-fi
-print_config "mkdir(a, b)" "$mkdir_two"
-
-##########################################
 # check for cc -march=native
 build_native="no"
 cat > $TMPC << EOF
@@ -2704,9 +2688,6 @@ if test "$march_armv8_a_crc_crypto" = "yes" ; then
 fi
 if test "$cuda" = "yes" ; then
   output_sym "CONFIG_CUDA"
-fi
-if test "$mkdir_two" = "yes" ; then
-  output_sym "CONFIG_HAVE_MKDIR_TWO"
 fi
 if test "$march_set" = "no" && test "$build_native" = "yes" ; then
   output_sym "CONFIG_BUILD_NATIVE"

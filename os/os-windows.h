@@ -35,6 +35,7 @@ int rand_r(unsigned *);
 #define FIO_HAVE_CPU_AFFINITY
 #define FIO_HAVE_CHARDEV_SIZE
 #define FIO_HAVE_GETTID
+#define FIO_EMULATED_MKDIR_TWO
 
 #define FIO_PREFERRED_ENGINE		"windowsaio"
 #define FIO_PREFERRED_CLOCK_SOURCE	CS_CGETTIME
@@ -195,6 +196,24 @@ static inline int fio_set_sched_idle(void)
 {
 	/* SetThreadPriority returns nonzero for success */
 	return (SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_IDLE))? 0 : -1;
+}
+
+static inline int fio_mkdir(const char *path, mode_t mode) {
+	DWORD dwAttr = GetFileAttributesA(path);
+
+	if (dwAttr != INVALID_FILE_ATTRIBUTES &&
+	    (dwAttr & FILE_ATTRIBUTE_DIRECTORY)) {
+		errno = EEXIST;
+		return -1;
+	}
+
+	if (CreateDirectoryA(path, NULL) == 0) {
+		log_err("CreateDirectoryA = %d\n", GetLastError());
+		errno = win_to_posix_error(GetLastError());
+		return -1;
+	}
+
+	return 0;
 }
 
 #ifdef CONFIG_WINDOWS_XP
