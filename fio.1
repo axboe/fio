@@ -2509,9 +2509,20 @@ wall also implies starting a new reporting group, see
 \fBgroup_reporting\fR.
 .TP
 .BI exitall
-By default, fio will continue running all other jobs when one job finishes
-but sometimes this is not the desired action. Setting \fBexitall\fR will
-instead make fio terminate all other jobs when one job finishes.
+By default, fio will continue running all other jobs when one job finishes.
+Sometimes this is not the desired action. Setting \fBexitall\fR will instead
+make fio terminate all jobs in the same group, as soon as one job of that
+group finishes.
+.TP
+.BI exit_what
+By default, fio will continue running all other jobs when one job finishes.
+Sometimes this is not the desired action. Setting \fBexit_all\fR will instead
+make fio terminate all jobs in the same group. The option \fBexit_what\fR
+allows to control which jobs get terminated when \fBexitall\fR is enabled. The
+default is \fBgroup\fR and does not change the behaviour of \fBexitall\fR. The
+setting \fBall\fR terminates all jobs. The setting \fBstonewall\fR terminates
+all currently running jobs across all groups and continues execution with the
+next stonewalled group.
 .TP
 .BI exec_prerun \fR=\fPstr
 Before running this job, issue the command specified through

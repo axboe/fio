@@ -660,8 +660,14 @@ extern const char *runstate_to_name(int runstate);
  */
 #define FIO_REAP_TIMEOUT	300
 
-#define TERMINATE_ALL		(-1U)
-extern void fio_terminate_threads(unsigned int);
+enum {
+	TERMINATE_NONE = 0,
+	TERMINATE_GROUP = 1,
+	TERMINATE_STONEWALL = 2,
+	TERMINATE_ALL = -1,
+};
+
+extern void fio_terminate_threads(unsigned int, unsigned int);
 extern void fio_mark_td_terminate(struct thread_data *);
 
 /*

@@ -1,0 +1,56 @@
+# We want to run fast1 as long as slow1 is running, but also have a cumulative
+# report of fast1 (group_reporting=1/new_group=1).  exitall=1 would not cause
+# fast1 to stop after slow1 is done. Setting exit_what=stonewall will cause
+# alls jobs up until the next stonewall=1 setting to be stopped, when job slow1
+# finishes.
+# In this example skipping forward to slow2/fast2. slow2 has exit_what=all set,
+# which means all jobs will be cancelled when slow2 finishes. In particular,
+# runsnever will never run.
+
+[global]
+filename=/tmp/test
+filesize=1G
+blocksize=4096
+group_reporting=1
+exitall=1
+
+[slow1]
+rw=r
+numjobs=1
+ioengine=sync
+new_group=1
+thinktime=2000
+number_ios=1000
+exit_what=stonewall
+
+[fast1]
+new_group=1
+rw=randrw
+numjobs=3
+ioengine=libaio
+iodepth=32
+rate=300,300,300
+
+[slow2]
+stonewall=1
+rw=w
+numjobs=1
+ioengine=sync
+new_group=1
+thinktime=2000
+number_ios=1000
+exit_what=all
+
+[fast2]
+rw=randrw
+numjobs=3
+ioengine=libaio
+iodepth=32
+rate=300,300,300
+
+[runsnever]
+rw=randrw
+numjobs=3
+ioengine=libaio
+iodepth=32
+rate=300,300,300

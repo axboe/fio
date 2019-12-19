@@ -81,7 +81,7 @@ static void sig_int(int sig)
 			exit_value = 128;
 		}
 
-		fio_terminate_threads(TERMINATE_ALL);
+		fio_terminate_threads(TERMINATE_ALL, TERMINATE_ALL);
 	}
 }
 
@@ -1091,7 +1091,7 @@ reap:
 		if (!in_ramp_time(td) && should_check_rate(td)) {
 			if (check_min_rate(td, &comp_time)) {
 				if (exitall_on_terminate || td->o.exitall_error)
-					fio_terminate_threads(td->groupid);
+					fio_terminate_threads(td->groupid, td->o.exit_what);
 				td_verror(td, EIO, "check_min_rate");
 				break;
 			}
@@ -1898,7 +1898,7 @@ static void *thread_main(void *data)
 		exec_string(o, o->exec_postrun, (const char *)"postrun");
 
 	if (exitall_on_terminate || (o->exitall_error && td->error))
-		fio_terminate_threads(td->groupid);
+		fio_terminate_threads(td->groupid, td->o.exit_what);
 
 err:
 	if (td->error)
@@ -2050,7 +2050,7 @@ reaped:
 	}
 
 	if (*nr_running == cputhreads && !pending && realthreads)
-		fio_terminate_threads(TERMINATE_ALL);
+		fio_terminate_threads(TERMINATE_ALL, TERMINATE_ALL);
 }
 
 static bool __check_trigger_file(void)
@@ -2100,7 +2100,7 @@ void check_trigger_file(void)
 			fio_clients_send_trigger(trigger_remote_cmd);
 		else {
 			verify_save_state(IO_LIST_ALL);
-			fio_terminate_threads(TERMINATE_ALL);
+			fio_terminate_threads(TERMINATE_ALL, TERMINATE_ALL);
 			exec_trigger(trigger_cmd);
 		}
 	}
@@ -2373,7 +2373,7 @@ reap:
 			dprint(FD_MUTEX, "wait on startup_sem\n");
 			if (fio_sem_down_timeout(startup_sem, 10000)) {
 				log_err("fio: job startup hung? exiting.\n");
-				fio_terminate_threads(TERMINATE_ALL);
+				fio_terminate_threads(TERMINATE_ALL, TERMINATE_ALL);
 				fio_abort = true;
 				nr_started--;
 				free(fd);
