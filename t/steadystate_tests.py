@@ -187,7 +187,7 @@ if __name__ == '__main__':
                     # check runtime, confirm criterion calculation, and confirm that criterion was not met
                     expected = job['timeout'] * 1000
                     actual = jsonjob['read']['runtime']
-                    if abs(expected - actual) > 10:
+                    if abs(expected - actual) > 50:
                         line = 'FAILED ' + line + ' ss not attained, expected runtime {0} != actual runtime {1}'.format(expected, actual)
                     else:
                         line = line + ' ss not attained, runtime {0} != ss_dur {1} + ss_ramp {2},'.format(actual, job['ss_dur'], job['ss_ramp'])
@@ -215,12 +215,12 @@ if __name__ == '__main__':
             else:
                 expected = job['timeout'] * 1000
                 actual = jsonjob['read']['runtime']
-                if abs(expected - actual) < 10:
-                    result = 'PASSED '
-                    passed = passed + 1
-                else:
+                if abs(expected - actual) > 50:
                     result = 'FAILED '
                     failed = failed + 1
+                else:
+                    result = 'PASSED '
+                    passed = passed + 1
                 line = result + line + ' no ss, expected runtime {0} ~= actual runtime {1}'.format(expected, actual)
             print(line)
             if 'steadystate' in jsonjob:
