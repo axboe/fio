@@ -536,7 +536,7 @@ set fio will use the first listed directory, and thereby matching the
 specified, but lets all clones use the same file if set).
 .RS
 .P
-See the \fBfilename\fR option for information on how to escape ':' and '\\'
+See the \fBfilename\fR option for information on how to escape ':'
 characters within the directory path itself.
 .P
 Note: To control the directory fio will use for internal state files
@@ -557,10 +557,10 @@ by this option will be \fBsize\fR divided by number of files unless an
 explicit size is specified by \fBfilesize\fR.
 .RS
 .P
-Each colon and backslash in the wanted path must be escaped with a '\\'
+Each colon in the wanted path must be escaped with a '\\'
 character. For instance, if the path is `/dev/dsk/foo@3,0:c' then you
 would use `filename=/dev/dsk/foo@3,0\\:c' and if the path is
-`F:\\filename' then you would use `filename=F\\:\\\\filename'.
+`F:\\filename' then you would use `filename=F\\:\\filename'.
 .P
 On Windows, disk devices are accessed as `\\\\.\\PhysicalDrive0' for
 the first device, `\\\\.\\PhysicalDrive1' for the second etc.
@@ -2277,7 +2277,7 @@ to replay a workload captured by blktrace. See
 replay, the file needs to be turned into a blkparse binary data file first
 (`blkparse <device> \-o /dev/null \-d file_for_fio.bin').
 You can specify a number of files by separating the names with a ':' character.
-See the \fBfilename\fR option for information on how to escape ':' and '\'
+See the \fBfilename\fR option for information on how to escape ':'
 characters within the file names. These files will be sequentially assigned to
 job clones created by \fBnumjobs\fR.
 .TP
