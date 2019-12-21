@@ -3991,7 +3991,7 @@ only file passed to :option:`read_iolog`. An example would look like::
 	$ fio --read_iolog="<file1>:<file2>" --merge_blktrace_file="<output_file>"
 
 Creating only the merged file can be done by passing the command line argument
-:option:`merge-blktrace-only`.
+:option:`--merge-blktrace-only`.
 
 Scaling traces can be done to see the relative impact of any particular trace
 being slowed down or sped up. :option:`merge_blktrace_scalars` takes in a colon
