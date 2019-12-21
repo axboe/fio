@@ -22,5 +22,6 @@ CU_ErrorCode fio_unittest_lib_memalign(void);
 CU_ErrorCode fio_unittest_lib_strntol(void);
 CU_ErrorCode fio_unittest_oslib_strlcat(void);
 CU_ErrorCode fio_unittest_oslib_strndup(void);
+CU_ErrorCode fio_unittest_oslib_strcasestr(void);
 
 #endif
