@@ -1,4 +1,5 @@
 language: c
+dist: bionic
 os:
   - linux
 compiler:
@@ -12,13 +13,11 @@ env:
     - MAKEFLAGS="-j 2"
 matrix:
   include:
+    # Default xcode image
     - os: osx
       compiler: clang # Workaround travis setting CC=["clang", "gcc"]
       env: BUILD_ARCH="x86_64"
-    - os: osx
-      compiler: clang
-      osx_image: xcode9.4
-      env: BUILD_ARCH="x86_64"
+    # Latest xcode image (needs periodic updating)
     - os: osx
       compiler: clang
       osx_image: xcode11.2
@@ -33,7 +32,7 @@ matrix:
 before_install:
   - EXTRA_CFLAGS="-Werror"
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-        pkgs=(libaio-dev libnuma-dev libz-dev librbd-dev libibverbs-dev librdmacm-dev libcunit1 libcunit1-dev);
+        pkgs=(libaio-dev libcunit1 libcunit1-dev libgoogle-perftools4 libibverbs-dev libiscsi-dev libnuma-dev librbd-dev librdmacm-dev libz-dev);
         if [[ "$BUILD_ARCH" == "x86" ]]; then
             pkgs=("${pkgs[@]/%/:i386}");
             pkgs+=(gcc-multilib python-scipy);
