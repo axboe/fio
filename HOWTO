@@ -2046,6 +2046,7 @@ with the caveat that when used on the command line, they must come after the
 	IO latency as well.
 
 .. option:: registerfiles : [io_uring]
+
 	With this option, fio registers the set of files being used with the
 	kernel. This avoids the overhead of managing file counts in the kernel,
 	making the submission and completion part more lightweight. Required
