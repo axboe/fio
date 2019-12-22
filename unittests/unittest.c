@@ -63,6 +63,7 @@ int main(void)
 	fio_unittest_register(fio_unittest_oslib_strlcat);
 	fio_unittest_register(fio_unittest_oslib_strndup);
 	fio_unittest_register(fio_unittest_oslib_strcasestr);
+	fio_unittest_register(fio_unittest_oslib_strsep);
 
 	CU_basic_set_mode(CU_BRM_VERBOSE);
 	CU_basic_run_tests();
