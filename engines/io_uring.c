@@ -75,7 +75,13 @@ struct ioring_options {
 	unsigned int sqpoll_thread;
 	unsigned int sqpoll_set;
 	unsigned int sqpoll_cpu;
+	unsigned int nonvectored;
 	unsigned int uncached;
+};
+
+static const int ddir_to_op[2][2] = {
+	{ IORING_OP_READV, IORING_OP_READ },
+	{ IORING_OP_WRITEV, IORING_OP_WRITE }
 };
 
 static int fio_ioring_sqpoll_cb(void *data, unsigned long long *val)
@@ -134,6 +140,15 @@ static struct fio_option options[] = {
 		.group	= FIO_OPT_G_IOURING,
 	},
 	{
+		.name	= "nonvectored",
+		.lname	= "Non-vectored",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct ioring_options, nonvectored),
+		.help	= "Use non-vectored read/write commands",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_IOURING,
+	},
+	{
 		.name	= "uncached",
 		.lname	= "Uncached",
 		.type	= FIO_OPT_INT,
@@ -174,21 +189,20 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 	}
 
 	if (io_u->ddir == DDIR_READ || io_u->ddir == DDIR_WRITE) {
+		sqe->opcode = ddir_to_op[io_u->ddir][!!o->nonvectored];
 		if (o->fixedbufs) {
-			if (io_u->ddir == DDIR_READ)
-				sqe->opcode = IORING_OP_READ_FIXED;
-			else
-				sqe->opcode = IORING_OP_WRITE_FIXED;
 			sqe->addr = (unsigned long) io_u->xfer_buf;
 			sqe->len = io_u->xfer_buflen;
 			sqe->buf_index = io_u->index;
 		} else {
-			if (io_u->ddir == DDIR_READ)
-				sqe->opcode = IORING_OP_READV;
-			else
-				sqe->opcode = IORING_OP_WRITEV;
-			sqe->addr = (unsigned long) &ld->iovecs[io_u->index];
-			sqe->len = 1;
+			if (o->nonvectored) {
+				sqe->addr = (unsigned long)
+						ld->iovecs[io_u->index].iov_base;
+				sqe->len = ld->iovecs[io_u->index].iov_len;
+			} else {
+				sqe->addr = (unsigned long) &ld->iovecs[io_u->index];
+				sqe->len = 1;
+			}
 		}
 		if (!td->o.odirect && o->uncached)
 			sqe->rw_flags = RWF_UNCACHED;
