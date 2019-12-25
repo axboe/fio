@@ -8,6 +8,18 @@
 
 #define FIO_ARCH	(arch_aarch64)
 
+#define ARCH_HAVE_IOURING
+
+#ifndef __NR_sys_io_uring_setup
+#define __NR_sys_io_uring_setup		425
+#endif
+#ifndef __NR_sys_io_uring_enter
+#define __NR_sys_io_uring_enter		426
+#endif
+#ifndef __NR_sys_io_uring_register
+#define __NR_sys_io_uring_register	427
+#endif
+
 #define nop		do { __asm__ __volatile__ ("yield"); } while (0)
 #define read_barrier()	do { __sync_synchronize(); } while (0)
 #define write_barrier()	do { __sync_synchronize(); } while (0)
