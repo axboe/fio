@@ -78,15 +78,16 @@ static void *helper_thread_main(void *data)
 {
 	struct helper_data *hd = data;
 	unsigned int msec_to_next_event, next_log, next_ss = STEADYSTATE_MSEC;
-	struct timeval tv;
 	struct timespec ts, last_du, last_ss;
 	int ret = 0;
 
 	sk_out_assign(hd->sk_out);
 
-	gettimeofday(&tv, NULL);
-	ts.tv_sec = tv.tv_sec;
-	ts.tv_nsec = tv.tv_usec * 1000;
+#ifdef CONFIG_PTHREAD_CONDATTR_SETCLOCK
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+#else
+	clock_gettime(CLOCK_REALTIME, &ts);
+#endif
 	memcpy(&last_du, &ts, sizeof(ts));
 	memcpy(&last_ss, &ts, sizeof(ts));
 
@@ -101,9 +102,11 @@ static void *helper_thread_main(void *data)
 		pthread_mutex_lock(&hd->lock);
 		pthread_cond_timedwait(&hd->cond, &hd->lock, &ts);
 
-		gettimeofday(&tv, NULL);
-		ts.tv_sec = tv.tv_sec;
-		ts.tv_nsec = tv.tv_usec * 1000;
+#ifdef CONFIG_PTHREAD_CONDATTR_SETCLOCK
+		clock_gettime(CLOCK_MONOTONIC, &ts);
+#else
+		clock_gettime(CLOCK_REALTIME, &ts);
+#endif
 
 		if (hd->reset) {
 			memcpy(&last_du, &ts, sizeof(ts));

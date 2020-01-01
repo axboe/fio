@@ -21,6 +21,15 @@ int cond_init_pshared(pthread_cond_t *cond)
 		return ret;
 	}
 #endif
+
+#ifdef CONFIG_PTHREAD_CONDATTR_SETCLOCK
+	ret = pthread_condattr_setclock(&cattr, CLOCK_MONOTONIC);
+	if (ret) {
+		log_err("pthread_condattr_setclock: %s\n", strerror(ret));
+		return ret;
+	}
+#endif
+
 	ret = pthread_cond_init(cond, &cattr);
 	if (ret) {
 		log_err("pthread_cond_init: %s\n", strerror(ret));

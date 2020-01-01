@@ -705,6 +705,25 @@ fi
 print_config "POSIX pshared support" "$posix_pshared"
 
 ##########################################
+# POSIX pthread_condattr_setclock() probe
+if test "$pthread_condattr_setclock" != "yes" ; then
+  pthread_condattr_setclock="no"
+fi
+cat > $TMPC <<EOF
+#include <pthread.h>
+int main(void)
+{
+  pthread_condattr_t condattr;
+  pthread_condattr_setclock(&condattr, CLOCK_MONOTONIC);
+  return 0;
+}
+EOF
+if compile_prog "" "$LIBS" "pthread_condattr_setclock" ; then
+  pthread_condattr_setclock=yes
+fi
+print_config "pthread_condattr_setclock() support" "$pthread_condattr_setclock"
+
+##########################################
 # solaris aio probe
 if test "$solaris_aio" != "yes" ; then
   solaris_aio="no"
@@ -2455,6 +2474,9 @@ if test "$posix_aio_fsync" = "yes" ; then
 fi
 if test "$posix_pshared" = "yes" ; then
   output_sym "CONFIG_PSHARED"
+fi
+if test "$pthread_condattr_setclock" = "yes" ; then
+  output_sym "CONFIG_PTHREAD_CONDATTR_SETCLOCK"
 fi
 if test "$have_asprintf" = "yes" ; then
     output_sym "CONFIG_HAVE_ASPRINTF"
