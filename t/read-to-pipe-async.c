@@ -101,13 +101,13 @@ struct work_item {
 static struct reader_thread reader_thread;
 static struct writer_thread writer_thread;
 
-uint64_t utime_since(const struct timeval *s, const struct timeval *e)
+uint64_t utime_since(const struct timespec *s, const struct timespec *e)
 {
 	long sec, usec;
 	uint64_t ret;
 
 	sec = e->tv_sec - s->tv_sec;
-	usec = e->tv_usec - s->tv_usec;
+	usec = (e->tv_nsec - s->tv_nsec) / 1000;
 	if (sec > 0 && usec < 0) {
 		sec--;
 		usec += 1000000;
@@ -219,12 +219,12 @@ static void add_lat(struct stats *s, unsigned int us, const char *name)
 
 static int write_work(struct work_item *work)
 {
-	struct timeval s, e;
+	struct timespec s, e;
 	ssize_t ret;
 
-	gettimeofday(&s, NULL);
+	clock_gettime(CLOCK_MONOTONIC, &s);
 	ret = write(STDOUT_FILENO, work->buf, work->buf_size);
-	gettimeofday(&e, NULL);
+	clock_gettime(CLOCK_MONOTONIC, &e);
 	assert(ret == work->buf_size);
 
 	add_lat(&work->writer->s, utime_since(&s, &e), "write");
@@ -270,13 +270,13 @@ static void *writer_fn(void *data)
 
 static void reader_work(struct work_item *work)
 {
-	struct timeval s, e;
+	struct timespec s, e;
 	ssize_t ret;
 	size_t left;
 	void *buf;
 	off_t off;
 
-	gettimeofday(&s, NULL);
+	clock_gettime(CLOCK_MONOTONIC, &s);
 
 	left = work->buf_size;
 	buf = work->buf;
@@ -295,7 +295,7 @@ static void reader_work(struct work_item *work)
 		buf += ret;
 	}
 
-	gettimeofday(&e, NULL);
+	clock_gettime(CLOCK_MONOTONIC, &e);
 
 	add_lat(&work->reader->s, utime_since(&s, &e), "read");
 
@@ -575,7 +575,7 @@ static void prune_done_entries(struct writer_thread *wt)
 int main(int argc, char *argv[])
 {
 	pthread_condattr_t cattr;
-	struct timeval s, re, we;
+	struct timespec s, re, we;
 	struct reader_thread *rt;
 	struct writer_thread *wt;
 	unsigned long rate;
@@ -626,7 +626,7 @@ int main(int argc, char *argv[])
 	assert(ret == 0);
 #endif
 
-	gettimeofday(&s, NULL);
+	clock_gettime(CLOCK_MONOTONIC, &s);
 
 	while (sb.st_size) {
 		struct work_item *work;
@@ -673,10 +673,10 @@ int main(int argc, char *argv[])
 	}
 
 	exit_thread(&rt->thread, NULL, NULL);
-	gettimeofday(&re, NULL);
+	clock_gettime(CLOCK_MONOTONIC, &re);
 
 	exit_thread(&wt->thread, prune_done_entries, wt);
-	gettimeofday(&we, NULL);
+	clock_gettime(CLOCK_MONOTONIC, &we);
 
 	show_latencies(&rt->s, "READERS");
 	show_latencies(&wt->s, "WRITERS");
