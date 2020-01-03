@@ -1111,6 +1111,23 @@ fi
 print_config "fdatasync" "$fdatasync"
 
 ##########################################
+# pread() probe
+if test "$pread" != "yes" ; then
+  pread="no"
+fi
+cat > $TMPC << EOF
+#include <unistd.h>
+int main(int argc, char **argv)
+{
+  return pread(0, NULL, 0, 0);
+}
+EOF
+if compile_prog "" "" "pread"; then
+  pread="yes"
+fi
+print_config "pread()" "$pread"
+
+##########################################
 # sync_file_range() probe
 if test "$sync_file_range" != "yes" ; then
   sync_file_range="no"
@@ -2492,6 +2509,9 @@ if test "$posix_fallocate" = "yes" ; then
 fi
 if test "$fdatasync" = "yes" ; then
   output_sym "CONFIG_FDATASYNC"
+fi
+if test "$pread" = "yes" ; then
+  output_sym "CONFIG_PREAD"
 fi
 if test "$sync_file_range" = "yes" ; then
   output_sym "CONFIG_SYNC_FILE_RANGE"
