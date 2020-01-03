@@ -23,6 +23,9 @@ static struct helper_data {
 
 void helper_thread_destroy(void)
 {
+	if (!helper_data)
+		return;
+
 	pthread_cond_destroy(&helper_data->cond);
 	pthread_mutex_destroy(&helper_data->lock);
 	sfree(helper_data);
@@ -65,6 +68,9 @@ bool helper_should_exit(void)
 void helper_thread_exit(void)
 {
 	void *ret;
+
+	if (!helper_data)
+		return;
 
 	pthread_mutex_lock(&helper_data->lock);
 	helper_data->exit = 1;

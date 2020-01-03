@@ -2495,7 +2495,8 @@ int fio_backend(struct sk_out *sk_out)
 
 	set_genesis_time();
 	stat_init();
-	helper_thread_create(startup_sem, sk_out);
+	if (helper_thread_create(startup_sem, sk_out))
+		log_err("fio: failed to create helper thread\n");
 
 	cgroup_list = smalloc(sizeof(*cgroup_list));
 	if (cgroup_list)
