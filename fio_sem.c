@@ -85,16 +85,19 @@ static bool sem_timed_out(struct timespec *t, unsigned int msecs)
 
 int fio_sem_down_timeout(struct fio_sem *sem, unsigned int msecs)
 {
-	struct timeval tv_s;
 	struct timespec base;
 	struct timespec t;
 	int ret = 0;
 
 	assert(sem->magic == FIO_SEM_MAGIC);
 
-	gettimeofday(&tv_s, NULL);
-	base.tv_sec = t.tv_sec = tv_s.tv_sec;
-	base.tv_nsec = t.tv_nsec = tv_s.tv_usec * 1000;
+#ifdef CONFIG_PTHREAD_CONDATTR_SETCLOCK
+	clock_gettime(CLOCK_MONOTONIC, &t);
+#else
+	clock_gettime(CLOCK_REALTIME, &t);
+#endif
+
+	base = t;
 
 	t.tv_sec += msecs / 1000;
 	t.tv_nsec += ((msecs * 1000000ULL) % 1000000000);

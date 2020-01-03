@@ -2123,6 +2123,9 @@ static int check_status_file(void)
 	}
 	if (temp_dir == NULL)
 		temp_dir = "/tmp";
+#ifdef __COVERITY__
+	__coverity_tainted_data_sanitize__(temp_dir);
+#endif
 
 	snprintf(fio_status_file_path, sizeof(fio_status_file_path), "%s/%s", temp_dir, FIO_STATUS_FILE);
 

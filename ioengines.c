@@ -121,18 +121,15 @@ static struct ioengine_ops *dlopen_ioengine(struct thread_data *td,
 	return ops;
 }
 
-static struct ioengine_ops *__load_ioengine(const char *name)
+static struct ioengine_ops *__load_ioengine(const char *engine)
 {
-	char engine[64];
-
-	snprintf(engine, sizeof(engine), "%s", name);
-
 	/*
 	 * linux libaio has alias names, so convert to what we want
 	 */
 	if (!strncmp(engine, "linuxaio", 8)) {
-		dprint(FD_IO, "converting ioengine name: %s -> libaio\n", name);
-		strcpy(engine, "libaio");
+		dprint(FD_IO, "converting ioengine name: %s -> libaio\n",
+		       engine);
+		engine = "libaio";
 	}
 
 	dprint(FD_IO, "load ioengine %s\n", engine);

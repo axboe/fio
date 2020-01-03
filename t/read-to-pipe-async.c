@@ -20,6 +20,7 @@
  * Copyright (C) 2016 Jens Axboe
  *
  */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -100,13 +101,13 @@ struct work_item {
 static struct reader_thread reader_thread;
 static struct writer_thread writer_thread;
 
-uint64_t utime_since(const struct timeval *s, const struct timeval *e)
+uint64_t utime_since(const struct timespec *s, const struct timespec *e)
 {
 	long sec, usec;
 	uint64_t ret;
 
 	sec = e->tv_sec - s->tv_sec;
-	usec = e->tv_usec - s->tv_usec;
+	usec = (e->tv_nsec - s->tv_nsec) / 1000;
 	if (sec > 0 && usec < 0) {
 		sec--;
 		usec += 1000000;
@@ -218,12 +219,12 @@ static void add_lat(struct stats *s, unsigned int us, const char *name)
 
 static int write_work(struct work_item *work)
 {
-	struct timeval s, e;
+	struct timespec s, e;
 	ssize_t ret;
 
-	gettimeofday(&s, NULL);
+	clock_gettime(CLOCK_MONOTONIC, &s);
 	ret = write(STDOUT_FILENO, work->buf, work->buf_size);
-	gettimeofday(&e, NULL);
+	clock_gettime(CLOCK_MONOTONIC, &e);
 	assert(ret == work->buf_size);
 
 	add_lat(&work->writer->s, utime_since(&s, &e), "write");
@@ -269,13 +270,13 @@ static void *writer_fn(void *data)
 
 static void reader_work(struct work_item *work)
 {
-	struct timeval s, e;
+	struct timespec s, e;
 	ssize_t ret;
 	size_t left;
 	void *buf;
 	off_t off;
 
-	gettimeofday(&s, NULL);
+	clock_gettime(CLOCK_MONOTONIC, &s);
 
 	left = work->buf_size;
 	buf = work->buf;
@@ -294,7 +295,7 @@ static void reader_work(struct work_item *work)
 		buf += ret;
 	}
 
-	gettimeofday(&e, NULL);
+	clock_gettime(CLOCK_MONOTONIC, &e);
 
 	add_lat(&work->reader->s, utime_since(&s, &e), "read");
 
@@ -461,8 +462,17 @@ static void show_latencies(struct stats *s, const char *msg)
 
 static void init_thread(struct thread_data *thread)
 {
-	pthread_cond_init(&thread->cond, NULL);
-	pthread_cond_init(&thread->done_cond, NULL);
+	pthread_condattr_t cattr;
+	int ret;
+
+	ret = pthread_condattr_init(&cattr);
+	assert(ret == 0);
+#ifdef CONFIG_PTHREAD_CONDATTR_SETCLOCK
+	ret = pthread_condattr_setclock(&cattr, CLOCK_MONOTONIC);
+	assert(ret == 0);
+#endif
+	pthread_cond_init(&thread->cond, &cattr);
+	pthread_cond_init(&thread->done_cond, &cattr);
 	pthread_mutex_init(&thread->lock, NULL);
 	pthread_mutex_init(&thread->done_lock, NULL);
 	thread->exit = 0;
@@ -479,12 +489,14 @@ static void exit_thread(struct thread_data *thread,
 		pthread_mutex_lock(&thread->done_lock);
 
 		if (fn) {
-			struct timeval tv;
 			struct timespec ts;
 
-			gettimeofday(&tv, NULL);
-			ts.tv_sec = tv.tv_sec + 1;
-			ts.tv_nsec = tv.tv_usec * 1000ULL;
+#ifdef CONFIG_PTHREAD_CONDATTR_SETCLOCK
+			clock_gettime(CLOCK_MONOTONIC, &ts);
+#else
+			clock_gettime(CLOCK_REALTIME, &ts);
+#endif
+			ts.tv_sec++;
 
 			pthread_cond_timedwait(&thread->done_cond, &thread->done_lock, &ts);
 			fn(wt);
@@ -562,7 +574,8 @@ static void prune_done_entries(struct writer_thread *wt)
 
 int main(int argc, char *argv[])
 {
-	struct timeval s, re, we;
+	pthread_condattr_t cattr;
+	struct timespec s, re, we;
 	struct reader_thread *rt;
 	struct writer_thread *wt;
 	unsigned long rate;
@@ -570,6 +583,7 @@ int main(int argc, char *argv[])
 	size_t bytes;
 	off_t off;
 	int fd, seq;
+	int ret;
 
 	if (parse_options(argc, argv))
 		return 1;
@@ -605,13 +619,19 @@ int main(int argc, char *argv[])
 	seq = 0;
 	bytes = 0;
 
-	gettimeofday(&s, NULL);
+	ret = pthread_condattr_init(&cattr);
+	assert(ret == 0);
+#ifdef CONFIG_PTHREAD_CONDATTR_SETCLOCK
+	ret = pthread_condattr_setclock(&cattr, CLOCK_MONOTONIC);
+	assert(ret == 0);
+#endif
+
+	clock_gettime(CLOCK_MONOTONIC, &s);
 
 	while (sb.st_size) {
 		struct work_item *work;
 		size_t this_len;
 		struct timespec ts;
-		struct timeval tv;
 
 		prune_done_entries(wt);
 
@@ -627,14 +647,16 @@ int main(int argc, char *argv[])
 		work->seq = ++seq;
 		work->writer = wt;
 		work->reader = rt;
-		pthread_cond_init(&work->cond, NULL);
+		pthread_cond_init(&work->cond, &cattr);
 		pthread_mutex_init(&work->lock, NULL);
 
 		queue_work(rt, work);
 
-		gettimeofday(&tv, NULL);
-		ts.tv_sec = tv.tv_sec;
-		ts.tv_nsec = tv.tv_usec * 1000ULL;
+#ifdef CONFIG_PTHREAD_CONDATTR_SETCLOCK
+		clock_gettime(CLOCK_MONOTONIC, &ts);
+#else
+		clock_gettime(CLOCK_REALTIME, &ts);
+#endif
 		ts.tv_nsec += max_us * 1000ULL;
 		if (ts.tv_nsec >= 1000000000ULL) {
 			ts.tv_nsec -= 1000000000ULL;
@@ -651,10 +673,10 @@ int main(int argc, char *argv[])
 	}
 
 	exit_thread(&rt->thread, NULL, NULL);
-	gettimeofday(&re, NULL);
+	clock_gettime(CLOCK_MONOTONIC, &re);
 
 	exit_thread(&wt->thread, prune_done_entries, wt);
-	gettimeofday(&we, NULL);
+	clock_gettime(CLOCK_MONOTONIC, &we);
 
 	show_latencies(&rt->s, "READERS");
 	show_latencies(&wt->s, "WRITERS");

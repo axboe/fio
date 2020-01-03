@@ -10,48 +10,52 @@
 #include "steadystate.h"
 #include "pshared.h"
 
+enum action {
+	A_EXIT		= 1,
+	A_RESET		= 2,
+	A_DO_STAT	= 3,
+};
+
 static struct helper_data {
 	volatile int exit;
-	volatile int reset;
-	volatile int do_stat;
+	int pipe[2]; /* 0: read end; 1: write end. */
 	struct sk_out *sk_out;
 	pthread_t thread;
-	pthread_mutex_t lock;
-	pthread_cond_t cond;
 	struct fio_sem *startup_sem;
 } *helper_data;
 
 void helper_thread_destroy(void)
 {
-	pthread_cond_destroy(&helper_data->cond);
-	pthread_mutex_destroy(&helper_data->lock);
+	close(helper_data->pipe[0]);
+	close(helper_data->pipe[1]);
 	sfree(helper_data);
+}
+
+static void submit_action(enum action a)
+{
+	const uint8_t data = a;
+	int ret;
+
+	if (!helper_data)
+		return;
+
+	ret = write(helper_data->pipe[1], &data, sizeof(data));
+	assert(ret == 1);
 }
 
 void helper_reset(void)
 {
-	if (!helper_data)
-		return;
-
-	pthread_mutex_lock(&helper_data->lock);
-
-	if (!helper_data->reset) {
-		helper_data->reset = 1;
-		pthread_cond_signal(&helper_data->cond);
-	}
-
-	pthread_mutex_unlock(&helper_data->lock);
+	submit_action(A_RESET);
 }
 
+/*
+ * May be invoked in signal handler context and hence must only call functions
+ * that are async-signal-safe. See also
+ * https://pubs.opengroup.org/onlinepubs/9699919799/functions/V2_chap02.html#tag_15_04_03.
+ */
 void helper_do_stat(void)
 {
-	if (!helper_data)
-		return;
-
-	pthread_mutex_lock(&helper_data->lock);
-	helper_data->do_stat = 1;
-	pthread_cond_signal(&helper_data->cond);
-	pthread_mutex_unlock(&helper_data->lock);
+	submit_action(A_DO_STAT);
 }
 
 bool helper_should_exit(void)
@@ -64,29 +68,26 @@ bool helper_should_exit(void)
 
 void helper_thread_exit(void)
 {
-	void *ret;
-
-	pthread_mutex_lock(&helper_data->lock);
 	helper_data->exit = 1;
-	pthread_cond_signal(&helper_data->cond);
-	pthread_mutex_unlock(&helper_data->lock);
-
-	pthread_join(helper_data->thread, &ret);
+	submit_action(A_EXIT);
+	pthread_join(helper_data->thread, NULL);
 }
 
 static void *helper_thread_main(void *data)
 {
 	struct helper_data *hd = data;
 	unsigned int msec_to_next_event, next_log, next_ss = STEADYSTATE_MSEC;
-	struct timeval tv;
 	struct timespec ts, last_du, last_ss;
+	uint8_t action;
 	int ret = 0;
 
 	sk_out_assign(hd->sk_out);
 
-	gettimeofday(&tv, NULL);
-	ts.tv_sec = tv.tv_sec;
-	ts.tv_nsec = tv.tv_usec * 1000;
+#ifdef CONFIG_PTHREAD_CONDATTR_SETCLOCK
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+#else
+	clock_gettime(CLOCK_REALTIME, &ts);
+#endif
 	memcpy(&last_du, &ts, sizeof(ts));
 	memcpy(&last_ss, &ts, sizeof(ts));
 
@@ -95,23 +96,34 @@ static void *helper_thread_main(void *data)
 	msec_to_next_event = DISK_UTIL_MSEC;
 	while (!ret && !hd->exit) {
 		uint64_t since_du, since_ss = 0;
+		struct timeval timeout = {
+			.tv_sec  = DISK_UTIL_MSEC / 1000,
+			.tv_usec = (DISK_UTIL_MSEC % 1000) * 1000,
+		};
+		fd_set rfds, efds;
 
 		timespec_add_msec(&ts, msec_to_next_event);
 
-		pthread_mutex_lock(&hd->lock);
-		pthread_cond_timedwait(&hd->cond, &hd->lock, &ts);
-
-		gettimeofday(&tv, NULL);
-		ts.tv_sec = tv.tv_sec;
-		ts.tv_nsec = tv.tv_usec * 1000;
-
-		if (hd->reset) {
-			memcpy(&last_du, &ts, sizeof(ts));
-			memcpy(&last_ss, &ts, sizeof(ts));
-			hd->reset = 0;
+		if (read(hd->pipe[0], &action, sizeof(action)) < 0) {
+			FD_ZERO(&rfds);
+			FD_SET(hd->pipe[0], &rfds);
+			FD_ZERO(&efds);
+			FD_SET(hd->pipe[0], &efds);
+			select(1, &rfds, NULL, &efds, &timeout);
+			if (read(hd->pipe[0], &action, sizeof(action)) < 0)
+				action = 0;
 		}
 
-		pthread_mutex_unlock(&hd->lock);
+#ifdef CONFIG_PTHREAD_CONDATTR_SETCLOCK
+		clock_gettime(CLOCK_MONOTONIC, &ts);
+#else
+		clock_gettime(CLOCK_REALTIME, &ts);
+#endif
+
+		if (action == A_RESET) {
+			last_du = ts;
+			last_ss = ts;
+		}
 
 		since_du = mtime_since(&last_du, &ts);
 		if (since_du >= DISK_UTIL_MSEC || DISK_UTIL_MSEC - since_du < 10) {
@@ -123,10 +135,8 @@ static void *helper_thread_main(void *data)
 		} else
 			msec_to_next_event = DISK_UTIL_MSEC - since_du;
 
-		if (hd->do_stat) {
-			hd->do_stat = 0;
+		if (action == A_DO_STAT)
 			__show_running_run_stats();
-		}
 
 		next_log = calc_log_samples();
 		if (!next_log)
@@ -170,9 +180,16 @@ int helper_thread_create(struct fio_sem *startup_sem, struct sk_out *sk_out)
 
 	hd->sk_out = sk_out;
 
-	ret = mutex_cond_init_pshared(&hd->lock, &hd->cond);
+#ifdef __linux__
+	ret = pipe2(hd->pipe, O_CLOEXEC);
+#else
+	ret = pipe(hd->pipe);
+#endif
 	if (ret)
 		return 1;
+
+	ret = fcntl(hd->pipe[0], F_SETFL, O_NONBLOCK);
+	assert(ret >= 0);
 
 	hd->startup_sem = startup_sem;
 

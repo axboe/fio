@@ -186,6 +186,7 @@ void fio_idle_prof_init(void)
 	int i, ret;
 	struct timespec ts;
 	pthread_attr_t tattr;
+	pthread_condattr_t cattr;
 	struct idle_prof_thread *ipt;
 
 	ipc.nr_cpus = cpus_online();
@@ -193,6 +194,13 @@ void fio_idle_prof_init(void)
 
 	if (ipc.opt == IDLE_PROF_OPT_NONE)
 		return;
+
+	ret = pthread_condattr_init(&cattr);
+	assert(ret == 0);
+#ifdef CONFIG_PTHREAD_CONDATTR_SETCLOCK
+	ret = pthread_condattr_setclock(&cattr, CLOCK_MONOTONIC);
+	assert(ret == 0);
+#endif
 
 	if ((ret = pthread_attr_init(&tattr))) {
 		log_err("fio: pthread_attr_init %s\n", strerror(ret));
@@ -239,7 +247,7 @@ void fio_idle_prof_init(void)
 			break;
 		}
 
-		if ((ret = pthread_cond_init(&ipt->cond, NULL))) {
+		if ((ret = pthread_cond_init(&ipt->cond, &cattr))) {
 			ipc.status = IDLE_PROF_STATUS_ABORT;
 			log_err("fio: pthread_cond_init %s\n", strerror(ret));
 			break;
@@ -282,7 +290,11 @@ void fio_idle_prof_init(void)
 		pthread_mutex_lock(&ipt->init_lock);
 		while ((ipt->state != TD_EXITED) &&
 		       (ipt->state!=TD_INITIALIZED)) {
-			fio_gettime(&ts, NULL);
+#ifdef CONFIG_PTHREAD_CONDATTR_SETCLOCK
+			clock_gettime(CLOCK_MONOTONIC, &ts);
+#else
+			clock_gettime(CLOCK_REALTIME, &ts);
+#endif
 			ts.tv_sec += 1;
 			pthread_cond_timedwait(&ipt->cond, &ipt->init_lock, &ts);
 		}
