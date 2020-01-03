@@ -720,8 +720,11 @@ int main(void)
 EOF
 if compile_prog "" "$LIBS" "pthread_condattr_setclock" ; then
   pthread_condattr_setclock=yes
+elif compile_prog "" "$LIBS -lpthread" "pthread_condattr_setclock" ; then
+  pthread_condattr_setclock=yes
+  LIBS="$LIBS -lpthread"
 fi
-print_config "pthread_condattr_setclock() support" "$pthread_condattr_setclock"
+print_config "pthread_condattr_setclock()" "$pthread_condattr_setclock"
 
 ##########################################
 # solaris aio probe
