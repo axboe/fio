@@ -720,8 +720,11 @@ int main(void)
 EOF
 if compile_prog "" "$LIBS" "pthread_condattr_setclock" ; then
   pthread_condattr_setclock=yes
+elif compile_prog "" "$LIBS -lpthread" "pthread_condattr_setclock" ; then
+  pthread_condattr_setclock=yes
+  LIBS="$LIBS -lpthread"
 fi
-print_config "pthread_condattr_setclock() support" "$pthread_condattr_setclock"
+print_config "pthread_condattr_setclock()" "$pthread_condattr_setclock"
 
 ##########################################
 # solaris aio probe
@@ -1109,6 +1112,23 @@ if compile_prog "" "" "fdatasync"; then
   fdatasync="yes"
 fi
 print_config "fdatasync" "$fdatasync"
+
+##########################################
+# pread() probe
+if test "$pread" != "yes" ; then
+  pread="no"
+fi
+cat > $TMPC << EOF
+#include <unistd.h>
+int main(int argc, char **argv)
+{
+  return pread(0, NULL, 0, 0);
+}
+EOF
+if compile_prog "" "" "pread"; then
+  pread="yes"
+fi
+print_config "pread()" "$pread"
 
 ##########################################
 # sync_file_range() probe
@@ -2492,6 +2512,9 @@ if test "$posix_fallocate" = "yes" ; then
 fi
 if test "$fdatasync" = "yes" ; then
   output_sym "CONFIG_FDATASYNC"
+fi
+if test "$pread" = "yes" ; then
+  output_sym "CONFIG_PREAD"
 fi
 if test "$sync_file_range" = "yes" ; then
   output_sym "CONFIG_SYNC_FILE_RANGE"
