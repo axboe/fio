@@ -520,6 +520,8 @@ static int parse_options(int argc, char *argv[])
 	while ((c = getopt(argc, argv, "f:b:t:w:")) != -1) {
 		switch (c) {
 		case 'f':
+			if (file)
+				return usage(argv);
 			file = strdup(optarg);
 			break;
 		case 'b':
