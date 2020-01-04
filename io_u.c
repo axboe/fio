@@ -644,7 +644,7 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 	uint64_t now;
 
 	assert(ddir_rw(ddir));
-	now = utime_since_now(&td->start);
+	now = utime_since_now(&td->epoch);
 
 	/*
 	 * if rate_next_io_time is in the past, need to catch up to rate
