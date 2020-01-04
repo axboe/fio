@@ -1114,6 +1114,42 @@ fi
 print_config "fdatasync" "$fdatasync"
 
 ##########################################
+# pipe() probe
+if test "$pipe" != "yes" ; then
+  pipe="no"
+fi
+cat > $TMPC << EOF
+#include <unistd.h>
+int main(int argc, char **argv)
+{
+  int fd[2];
+  return pipe(fd);
+}
+EOF
+if compile_prog "" "" "pipe"; then
+  pipe="yes"
+fi
+print_config "pipe()" "$pipe"
+
+##########################################
+# pipe2() probe
+if test "$pipe2" != "yes" ; then
+  pipe2="no"
+fi
+cat > $TMPC << EOF
+#include <unistd.h>
+int main(int argc, char **argv)
+{
+  int fd[2];
+  return pipe2(fd, 0);
+}
+EOF
+if compile_prog "" "" "pipe2"; then
+  pipe2="yes"
+fi
+print_config "pipe2()" "$pipe2"
+
+##########################################
 # pread() probe
 if test "$pread" != "yes" ; then
   pread="no"
@@ -2512,6 +2548,12 @@ if test "$posix_fallocate" = "yes" ; then
 fi
 if test "$fdatasync" = "yes" ; then
   output_sym "CONFIG_FDATASYNC"
+fi
+if test "$pipe" = "yes" ; then
+  output_sym "CONFIG_PIPE"
+fi
+if test "$pipe2" = "yes" ; then
+  output_sym "CONFIG_PIPE2"
 fi
 if test "$pread" = "yes" ; then
   output_sym "CONFIG_PREAD"
