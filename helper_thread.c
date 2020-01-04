@@ -176,7 +176,10 @@ static void *helper_thread_main(void *data)
 			FD_SET(hd->pipe[0], &rfds);
 			FD_ZERO(&efds);
 			FD_SET(hd->pipe[0], &efds);
-			select(1, &rfds, NULL, &efds, &timeout);
+			ret = select(1, &rfds, NULL, &efds, &timeout);
+			if (ret < 0)
+				log_err("fio: select() call in helper thread failed: %s",
+					strerror(errno));
 			if (read_from_pipe(hd->pipe[0], &action, sizeof(action)) <
 			    0)
 				action = 0;
