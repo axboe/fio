@@ -26,6 +26,7 @@ static void *worker(void *data)
 			first = 0;
 		}
 	}
+	free(buf);
 	return NULL;
 }
 

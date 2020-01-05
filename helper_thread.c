@@ -1,3 +1,4 @@
+#include <signal.h>
 #ifdef CONFIG_VALGRIND_DEV
 #include <valgrind/drd.h>
 #else
@@ -137,6 +138,18 @@ static void *helper_thread_main(void *data)
 
 	sk_out_assign(hd->sk_out);
 
+#ifdef HAVE_PTHREAD_SIGMASK
+	{
+	sigset_t sigmask;
+
+	/* Let another thread handle signals. */
+	ret = pthread_sigmask(SIG_UNBLOCK, NULL, &sigmask);
+	assert(ret == 0);
+	ret = pthread_sigmask(SIG_BLOCK, &sigmask, NULL);
+	assert(ret == 0);
+	}
+#endif
+
 #ifdef CONFIG_PTHREAD_CONDATTR_SETCLOCK
 	clock_gettime(CLOCK_MONOTONIC, &ts);
 #else
@@ -163,7 +176,10 @@ static void *helper_thread_main(void *data)
 			FD_SET(hd->pipe[0], &rfds);
 			FD_ZERO(&efds);
 			FD_SET(hd->pipe[0], &efds);
-			select(1, &rfds, NULL, &efds, &timeout);
+			ret = select(1, &rfds, NULL, &efds, &timeout);
+			if (ret < 0)
+				log_err("fio: select() call in helper thread failed: %s",
+					strerror(errno));
 			if (read_from_pipe(hd->pipe[0], &action, sizeof(action)) <
 			    0)
 				action = 0;

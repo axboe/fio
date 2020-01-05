@@ -727,6 +727,27 @@ fi
 print_config "pthread_condattr_setclock()" "$pthread_condattr_setclock"
 
 ##########################################
+# pthread_sigmask() probe
+if test "$pthread_sigmask" != "yes" ; then
+  pthread_sigmask="no"
+fi
+cat > $TMPC <<EOF
+#include <stddef.h> /* NULL */
+#include <signal.h> /* pthread_sigmask() */
+int main(void)
+{
+  return pthread_sigmask(0, NULL, NULL);
+}
+EOF
+if compile_prog "" "$LIBS" "pthread_sigmask" ; then
+  pthread_sigmask=yes
+elif compile_prog "" "$LIBS -lpthread" "pthread_sigmask" ; then
+  pthread_sigmask=yes
+  LIBS="$LIBS -lpthread"
+fi
+print_config "pthread_sigmask()" "$pthread_sigmask"
+
+##########################################
 # solaris aio probe
 if test "$solaris_aio" != "yes" ; then
   solaris_aio="no"
@@ -2533,6 +2554,9 @@ if test "$posix_pshared" = "yes" ; then
 fi
 if test "$pthread_condattr_setclock" = "yes" ; then
   output_sym "CONFIG_PTHREAD_CONDATTR_SETCLOCK"
+fi
+if test "$pthread_sigmask" = "yes" ; then
+  output_sym "CONFIG_PTHREAD_SIGMASK"
 fi
 if test "$have_asprintf" = "yes" ; then
     output_sym "CONFIG_HAVE_ASPRINTF"
