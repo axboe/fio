@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include "../unittest.h"
 
 #include "../../lib/memalign.h"
@@ -5,7 +6,7 @@
 static void test_memalign_1(void)
 {
 	size_t align = 4096;
-	void *p = fio_memalign(align, 1234, false);
+	void *p = __fio_memalign(align, 1234, malloc);
 
 	if (p)
 		CU_ASSERT_EQUAL(((int)(uintptr_t)p) & (align - 1), 0);

@@ -4,7 +4,10 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
-extern void *fio_memalign(size_t alignment, size_t size, bool shared);
-extern void fio_memfree(void *ptr, size_t size, bool shared);
+typedef void* (*malloc_fn)(size_t);
+typedef void (*free_fn)(void*);
+
+extern void *__fio_memalign(size_t alignment, size_t size, malloc_fn fn);
+extern void __fio_memfree(void *ptr, size_t size, free_fn fn);
 
 #endif
