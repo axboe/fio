@@ -15,6 +15,7 @@
 #include "helper_thread.h"
 #include "smalloc.h"
 #include "zbd.h"
+#include "oslib/asprintf.h"
 
 #define LOG_MSEC_SLACK	1
 

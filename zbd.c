@@ -13,10 +13,12 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <linux/blkzoned.h>
+
 #include "file.h"
 #include "fio.h"
 #include "lib/pow2.h"
 #include "log.h"
+#include "oslib/asprintf.h"
 #include "smalloc.h"
 #include "verify.h"
 #include "zbd.h"
