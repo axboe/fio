@@ -35,8 +35,6 @@
 #define fio_swap32(x)	bswap32(x)
 #define fio_swap64(x)	bswap64(x)
 
-typedef off_t off64_t;
-
 static inline int blockdev_size(struct fio_file *f, unsigned long long *bytes)
 {
 	struct disklabel dl;

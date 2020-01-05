@@ -30,8 +30,6 @@
 #define fio_swap32(x)	bswap32(x)
 #define fio_swap64(x)	bswap64(x)
 
-typedef off_t off64_t;
-
 typedef cpuset_t os_cpu_mask_t;
 
 #define fio_cpu_clear(mask, cpu)        (void) CPU_CLR((cpu), (mask))

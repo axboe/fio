@@ -2182,7 +2182,7 @@ void io_u_fill_buffer(struct thread_data *td, struct io_u *io_u,
 static int do_sync_file_range(const struct thread_data *td,
 			      struct fio_file *f)
 {
-	off64_t offset, nbytes;
+	uint64_t offset, nbytes;
 
 	offset = f->first_write;
 	nbytes = f->last_write - f->first_write;

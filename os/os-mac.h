@@ -33,8 +33,6 @@
  */
 #define FIO_MAX_JOBS		128
 
-typedef off_t off64_t;
-
 #ifndef CONFIG_CLOCKID_T
 typedef unsigned int clockid_t;
 #endif
