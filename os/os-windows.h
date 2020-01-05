@@ -22,11 +22,6 @@
 
 #include "windows/posix.h"
 
-/* MinGW won't declare rand_r unless _POSIX is defined */
-#if defined(WIN32) && !defined(rand_r)
-int rand_r(unsigned *);
-#endif
-
 #ifndef PTHREAD_STACK_MIN
 #define PTHREAD_STACK_MIN 65535
 #endif
