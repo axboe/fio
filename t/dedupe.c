@@ -10,13 +10,13 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
+#include "../fio.h"
 #include "../flist.h"
 #include "../log.h"
 #include "../fio_sem.h"
 #include "../smalloc.h"
 #include "../minmax.h"
 #include "../crc/md5.h"
-#include "../lib/memalign.h"
 #include "../os/os.h"
 #include "../gettime.h"
 #include "../fio_time.h"

@@ -11,10 +11,6 @@ struct fio_unittest_entry {
 	CU_TestFunc fn;
 };
 
-/* XXX workaround lib/memalign.c's dependency on smalloc.c */
-void *smalloc(size_t);
-void sfree(void*);
-
 CU_ErrorCode fio_unittest_add_suite(const char*, CU_InitializeFunc,
 	CU_CleanupFunc, struct fio_unittest_entry*);
 

@@ -36,6 +36,8 @@
 #include "lib/rand.h"
 #include "lib/rbtree.h"
 #include "lib/num2str.h"
+#include "lib/memalign.h"
+#include "smalloc.h"
 #include "client.h"
 #include "server.h"
 #include "stat.h"
@@ -855,5 +857,15 @@ extern void check_trigger_file(void);
 
 extern bool in_flight_overlap(struct io_u_queue *q, struct io_u *io_u);
 extern pthread_mutex_t overlap_check;
+
+static inline void *fio_memalign(size_t alignment, size_t size, bool shared)
+{
+	return __fio_memalign(alignment, size, shared ? smalloc : malloc);
+}
+
+static inline void fio_memfree(void *ptr, size_t size, bool shared)
+{
+	return __fio_memfree(ptr, size, shared ? sfree : free);
+}
 
 #endif

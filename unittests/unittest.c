@@ -8,17 +8,6 @@
 
 #include "./unittest.h"
 
-/* XXX workaround lib/memalign.c's dependency on smalloc.c */
-void *smalloc(size_t size)
-{
-	return malloc(size);
-}
-
-void sfree(void *ptr)
-{
-	free(ptr);
-}
-
 CU_ErrorCode fio_unittest_add_suite(const char *name, CU_InitializeFunc initfn,
 	CU_CleanupFunc cleanfn, struct fio_unittest_entry *tvec)
 {
