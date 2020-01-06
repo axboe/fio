@@ -120,7 +120,7 @@ static inline void print_disk_util(struct disk_util_stat *du,
 				   struct buf_output *out)
 {
 }
-#define show_disk_util(terse, parent, out)
+#define show_disk_util(terse, parent, out) do { } while (0)
 #define disk_util_prune_entries()
 #define init_disk_util(td)
 #define setup_disk_util()
