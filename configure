@@ -841,7 +841,7 @@ cat > $TMPC << EOF
 int main(int argc, char **argv)
 {
   struct ibv_pd *pd = ibv_alloc_pd(NULL);
-  return 0;
+  return pd != NULL;
 }
 EOF
 if test "$disable_rdma" != "yes" && compile_prog "" "-libverbs" "libverbs" ; then
