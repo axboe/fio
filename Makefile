@@ -208,7 +208,8 @@ ifeq ($(CONFIG_TARGET_OS), Darwin)
   LIBS	 += -lpthread -ldl
 endif
 ifneq (,$(findstring CYGWIN,$(CONFIG_TARGET_OS)))
-  SOURCE += os/windows/posix.c
+  SOURCE += os/windows/cpu-affinity.c os/windows/posix.c
+  WINDOWS_OBJS = os/windows/cpu-affinity.o os/windows/posix.o lib/hweight.o
   LIBS	 += -lpthread -lpsapi -lws2_32 -lssp
   CFLAGS += -DPSAPI_VERSION=1 -Ios/windows/posix/include -Wno-format
 endif
@@ -299,9 +300,9 @@ T_OBJS += $(T_TT_OBJS)
 T_OBJS += $(T_IOU_RING_OBJS)
 
 ifneq (,$(findstring CYGWIN,$(CONFIG_TARGET_OS)))
-    T_DEDUPE_OBJS += os/windows/posix.o lib/hweight.o
-    T_SMALLOC_OBJS += os/windows/posix.o lib/hweight.o
-    T_LFSR_TEST_OBJS += os/windows/posix.o lib/hweight.o
+    T_DEDUPE_OBJS += $(WINDOWS_OBJS)
+    T_SMALLOC_OBJS += $(WINDOWS_OBJS)
+    T_LFSR_TEST_OBJS += $(WINDOWS_OBJS)
 endif
 
 T_TEST_PROGS = $(T_SMALLOC_PROGS)
