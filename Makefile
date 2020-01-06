@@ -387,13 +387,14 @@ override CFLAGS += -DFIO_VERSION='"$(FIO_VERSION)"'
 	@$(CC) -MM $(CFLAGS) $(CPPFLAGS) $(SRCDIR)/$*.c > $*.d
 	@mv -f $*.d $*.d.tmp
 	@sed -e 's|.*:|$*.o:|' < $*.d.tmp > $*.d
-ifeq ($(CONFIG_TARGET_OS), NetBSD)
-	@sed -e 's/.*://' -e 's/\\$$//' < $*.d.tmp | tr -cs "[:graph:]" "\n" | \
-		sed -e 's/^ *//' -e '/^$$/ d' -e 's/$$/:/' >> $*.d
-else
-	@sed -e 's/.*://' -e 's/\\$$//' < $*.d.tmp | fmt -w 1 | \
-		sed -e 's/^ *//' -e 's/$$/:/' >> $*.d
-endif
+	@if type -p fmt >/dev/null 2>&1; then				\
+		sed -e 's/.*://' -e 's/\\$$//' < $*.d.tmp | fmt -w 1 |	\
+		sed -e 's/^ *//' -e 's/$$/:/' >> $*.d;			\
+	else								\
+		sed -e 's/.*://' -e 's/\\$$//' < $*.d.tmp |		\
+		tr -cs "[:graph:]" "\n" |				\
+		sed -e 's/^ *//' -e '/^$$/ d' -e 's/$$/:/' >> $*.d;	\
+	fi
 	@rm -f $*.d.tmp
 
 ifdef CONFIG_ARITHMETIC
