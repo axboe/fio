@@ -28,10 +28,6 @@
 extern unsigned long mtime_since_now(struct timespec *);
 extern void fio_gettime(struct timespec *, void *);
 
-/* These aren't defined in the MinGW headers */
-HRESULT WINAPI StringCchCopyA(char *pszDest, size_t cchDest, const char *pszSrc);
-HRESULT WINAPI StringCchPrintfA(char *pszDest, size_t cchDest, const char *pszFormat, ...);
-
 int win_to_posix_error(DWORD winerr)
 {
 	switch (winerr) {
@@ -312,11 +308,11 @@ char *ctime_r(const time_t *t, char *buf)
 	 * We don't know how long `buf` is, but assume it's rounded up from
 	 * the minimum of 25 to 32
 	 */
-	StringCchPrintfA(buf, 31, "%s %s %d %02d:%02d:%02d %04d\n",
-				dayOfWeek[systime.wDayOfWeek % 7],
-				monthOfYear[(systime.wMonth - 1) % 12],
-				systime.wDay, systime.wHour, systime.wMinute,
-				systime.wSecond, systime.wYear);
+	snprintf(buf, 32, "%s %s %d %02d:%02d:%02d %04d\n",
+		 dayOfWeek[systime.wDayOfWeek % 7],
+		 monthOfYear[(systime.wMonth - 1) % 12],
+		 systime.wDay, systime.wHour, systime.wMinute,
+		 systime.wSecond, systime.wYear);
 	return buf;
 }
 
@@ -958,8 +954,8 @@ DIR *opendir(const char *dirname)
 				OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 	if (file != INVALID_HANDLE_VALUE) {
 		CloseHandle(file);
-		dc = (struct dirent_ctx*)malloc(sizeof(struct dirent_ctx));
-		StringCchCopyA(dc->dirname, MAX_PATH, dirname);
+		dc = malloc(sizeof(struct dirent_ctx));
+		snprintf(dc->dirname, sizeof(dc->dirname), "%s", dirname);
 		dc->find_handle = INVALID_HANDLE_VALUE;
 	} else {
 		DWORD error = GetLastError();
@@ -999,7 +995,8 @@ struct dirent *readdir(DIR *dirp)
 	if (dirp->find_handle == INVALID_HANDLE_VALUE) {
 		char search_pattern[MAX_PATH];
 
-		StringCchPrintfA(search_pattern, MAX_PATH-1, "%s\\*", dirp->dirname);
+		snprintf(search_pattern, sizeof(search_pattern), "%s\\*",
+			 dirp->dirname);
 		dirp->find_handle = FindFirstFileA(search_pattern, &find_data);
 		if (dirp->find_handle == INVALID_HANDLE_VALUE)
 			return NULL;
@@ -1008,7 +1005,7 @@ struct dirent *readdir(DIR *dirp)
 			return NULL;
 	}
 
-	StringCchCopyA(de.d_name, MAX_PATH, find_data.cFileName);
+	snprintf(de.d_name, sizeof(de.d_name), find_data.cFileName);
 	de.d_ino = 0;
 
 	return &de;
