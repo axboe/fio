@@ -307,23 +307,32 @@ int fio_getaffinity(int pid, os_cpu_mask_t *mask)
 		goto err;
 	}
 
-	group_count = 1;
+	group_count = 16;
 	/*
 	 * GetProcessGroupAffinity() seems to expect more than the natural
 	 * alignment for a USHORT from the area pointed to by current_groups so
 	 * arrange for maximum alignment by allocating via malloc()
 	 */
-	current_groups = malloc(sizeof(USHORT));
+	current_groups = malloc(group_count * sizeof(USHORT));
 	if (!current_groups) {
 		log_err("fio_getaffinity: malloc failed\n");
 		goto err;
 	}
-	if (GetProcessGroupAffinity(handle, &group_count, current_groups) == 0) {
-		/* NB: we also fail here if we are a multi-group process */
-		log_err("fio_getaffinity: failed to get single group affinity for pid %d\n", pid);
+	if (!GetProcessGroupAffinity(handle, &group_count, current_groups)) {
+		log_err("%s: failed to get single group affinity for pid %d (%d)\n",
+			__func__, pid, GetLastError());
 		goto err;
 	}
-	GetProcessAffinityMask(handle, &process_mask, &system_mask);
+	if (group_count > 1) {
+		log_err("%s: pid %d is associated with %d process groups\n",
+			__func__, pid, group_count);
+		goto err;
+	}
+	if (!GetProcessAffinityMask(handle, &process_mask, &system_mask)) {
+		log_err("%s: GetProcessAffinityMask() failed for pid\n",
+			__func__, pid);
+		goto err;
+	}
 
 	/* Convert group and group relative mask to full CPU mask */
 	online_groups = GetActiveProcessorGroupCount();
