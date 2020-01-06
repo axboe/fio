@@ -426,19 +426,6 @@ parse.o: lex.yy.o y.tab.o
 endif
 
 init.o: init.c FIO-VERSION-FILE
-	@mkdir -p $(dir $@)
-	$(QUIET_CC)$(CC) -o $@ $(CFLAGS) $(CPPFLAGS) -c $<
-	@$(CC) -MM $(CFLAGS) $(CPPFLAGS) $(SRCDIR)/$*.c > $*.d
-	@mv -f $*.d $*.d.tmp
-	@sed -e 's|.*:|$*.o:|' < $*.d.tmp > $*.d
-ifeq ($(CONFIG_TARGET_OS), NetBSD)
-	@sed -e 's/.*://' -e 's/\\$$//' < $*.d.tmp | tr -cs "[:graph:]" "\n" | \
-		sed -e 's/^ *//' -e '/^$$/ d' -e 's/$$/:/' >> $*.d
-else
-	@sed -e 's/.*://' -e 's/\\$$//' < $*.d.tmp | fmt -w 1 | \
-		sed -e 's/^ *//' -e 's/$$/:/' >> $*.d
-endif
-	@rm -f $*.d.tmp
 
 gcompat.o: gcompat.c gcompat.h
 	$(QUIET_CC)$(CC) $(CFLAGS) $(GTK_CFLAGS) $(CPPFLAGS) -c $<
