@@ -1374,7 +1374,7 @@ cat > $TMPC << EOF
 #include <getopt.h>
 int main(int argc, char **argv)
 {
-  int c = getopt_long_only(argc, argv, NULL, NULL, NULL);
+  int c = getopt_long_only(argc, argv, "", NULL, NULL);
   return c;
 }
 EOF
