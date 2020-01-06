@@ -230,7 +230,6 @@ int json_object_add_value_type(struct json_object *obj, const char *name, int ty
 	return 0;
 }
 
-static void json_print_array(struct json_array *array, struct buf_output *);
 int json_array_add_value_type(struct json_array *array, int type, ...)
 {
 	struct json_value *value;
@@ -296,8 +295,8 @@ static void json_print_level(int level, struct buf_output *out)
 }
 
 static void json_print_pair(struct json_pair *pair, struct buf_output *);
-static void json_print_array(struct json_array *array, struct buf_output *);
 static void json_print_value(struct json_value *value, struct buf_output *);
+
 void json_print_object(struct json_object *obj, struct buf_output *out)
 {
 	int i;
