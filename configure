@@ -381,15 +381,11 @@ CYGWIN*)
   # We now take the regular configuration path without having exit 0 here.
   # Flags below are still necessary mostly for MinGW.
   build_static="yes"
-  socklen_t="yes"
   rusage_thread="yes"
   fdatasync="yes"
   clock_gettime="yes" # clock_monotonic probe has dependency on this
   clock_monotonic="yes"
-  gettimeofday="yes"
   sched_idle="yes"
-  tcp_nodelay="yes"
-  ipv6="yes"
   ;;
 esac
 
@@ -841,7 +837,7 @@ cat > $TMPC << EOF
 int main(int argc, char **argv)
 {
   struct ibv_pd *pd = ibv_alloc_pd(NULL);
-  return 0;
+  return pd != NULL;
 }
 EOF
 if test "$disable_rdma" != "yes" && compile_prog "" "-libverbs" "libverbs" ; then
@@ -1374,7 +1370,7 @@ cat > $TMPC << EOF
 #include <getopt.h>
 int main(int argc, char **argv)
 {
-  int c = getopt_long_only(argc, argv, NULL, NULL, NULL);
+  int c = getopt_long_only(argc, argv, "", NULL, NULL);
   return c;
 }
 EOF
@@ -1389,8 +1385,12 @@ if test "$inet_aton" != "yes" ; then
   inet_aton="no"
 fi
 cat > $TMPC << EOF
+#ifdef _WIN32
+#include <winsock2.h>
+#else
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#endif
 #include <stdio.h>
 int main(int argc, char **argv)
 {
@@ -1409,7 +1409,12 @@ if test "$socklen_t" != "yes" ; then
   socklen_t="no"
 fi
 cat > $TMPC << EOF
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
 #include <sys/socket.h>
+#endif
 int main(int argc, char **argv)
 {
   socklen_t len = 0;
@@ -1533,10 +1538,14 @@ if test "$tcp_nodelay" != "yes" ; then
   tcp_nodelay="no"
 fi
 cat > $TMPC << EOF
+#ifdef _WIN32
+#include <winsock2.h>
+#else
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/tcp.h>
+#endif
 int main(int argc, char **argv)
 {
   return getsockopt(0, 0, TCP_NODELAY, NULL, NULL);
@@ -1544,6 +1553,9 @@ int main(int argc, char **argv)
 EOF
 if compile_prog "" "" "TCP_NODELAY"; then
   tcp_nodelay="yes"
+elif compile_prog "" "-lws2_32" "TCP_NODELAY"; then
+  tcp_nodelay="yes"
+  LIBS="$LIBS -lws2_32"
 fi
 print_config "TCP_NODELAY" "$tcp_nodelay"
 
@@ -1553,10 +1565,14 @@ if test "$window_size" != "yes" ; then
   window_size="no"
 fi
 cat > $TMPC << EOF
+#ifdef _WIN32
+#include <winsock2.h>
+#else
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/tcp.h>
+#endif
 int main(int argc, char **argv)
 {
   setsockopt(0, SOL_SOCKET, SO_SNDBUF, NULL, 0);
@@ -1565,6 +1581,9 @@ int main(int argc, char **argv)
 EOF
 if compile_prog "" "" "SO_SNDBUF"; then
   window_size="yes"
+elif compile_prog "" "-lws2_32" "SO_SNDBUF"; then
+  window_size="yes"
+  LIBS="$LIBS -lws2_32"
 fi
 print_config "Net engine window_size" "$window_size"
 
@@ -1574,12 +1593,16 @@ if test "$mss" != "yes" ; then
   mss="no"
 fi
 cat > $TMPC << EOF
+#ifdef _WIN32
+#include <winsock2.h>
+#else
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#endif
 int main(int argc, char **argv)
 {
   return setsockopt(0, IPPROTO_TCP, TCP_MAXSEG, NULL, 0);
@@ -1587,6 +1610,9 @@ int main(int argc, char **argv)
 EOF
 if compile_prog "" "" "TCP_MAXSEG"; then
   mss="yes"
+elif compile_prog "" "-lws2_32" "TCP_MAXSEG"; then
+  mss="yes"
+  LIBS="$LIBS -lws2_32"
 fi
 print_config "TCP_MAXSEG" "$mss"
 
@@ -1651,10 +1677,15 @@ if test "$ipv6" != "yes" ; then
   ipv6="no"
 fi
 cat > $TMPC << EOF
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#endif
 #include <stdio.h>
 int main(int argc, char **argv)
 {

@@ -14,6 +14,7 @@
 #include "lib/rand.h"
 #include "lib/hweight.h"
 #include "lib/pattern.h"
+#include "oslib/asprintf.h"
 
 #include "crc/md5.h"
 #include "crc/crc64.h"

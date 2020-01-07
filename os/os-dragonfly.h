@@ -47,7 +47,6 @@
 /* This is supposed to equal (sizeof(cpumask_t)*8) */
 #define FIO_MAX_CPUS	SMP_MAXCPU
 
-typedef off_t off64_t;
 typedef cpumask_t os_cpu_mask_t;
 
 /*

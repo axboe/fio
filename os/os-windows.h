@@ -22,11 +22,6 @@
 
 #include "windows/posix.h"
 
-/* MinGW won't declare rand_r unless _POSIX is defined */
-#if defined(WIN32) && !defined(rand_r)
-int rand_r(unsigned *);
-#endif
-
 #ifndef PTHREAD_STACK_MIN
 #define PTHREAD_STACK_MIN 65535
 #endif
@@ -219,7 +214,19 @@ static inline int fio_mkdir(const char *path, mode_t mode) {
 #ifdef CONFIG_WINDOWS_XP
 #include "os-windows-xp.h"
 #else
+#define FIO_HAVE_CPU_ONLINE_SYSCONF
+unsigned int cpus_online(void);
 #include "os-windows-7.h"
 #endif
+
+int first_set_cpu(os_cpu_mask_t *cpumask);
+int fio_setaffinity(int pid, os_cpu_mask_t cpumask);
+int fio_cpuset_init(os_cpu_mask_t *mask);
+int fio_getaffinity(int pid, os_cpu_mask_t *mask);
+void fio_cpu_clear(os_cpu_mask_t *mask, int cpu);
+void fio_cpu_set(os_cpu_mask_t *mask, int cpu);
+int fio_cpu_isset(os_cpu_mask_t *mask, int cpu);
+int fio_cpu_count(os_cpu_mask_t *mask);
+int fio_cpuset_exit(os_cpu_mask_t *mask);
 
 #endif /* FIO_OS_WINDOWS_H */

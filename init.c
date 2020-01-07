@@ -32,6 +32,7 @@
 #include "steadystate.h"
 #include "blktrace.h"
 
+#include "oslib/asprintf.h"
 #include "oslib/getopt.h"
 #include "oslib/strcasestr.h"
 
