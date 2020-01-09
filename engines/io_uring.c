@@ -206,6 +206,10 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 		}
 		if (!td->o.odirect && o->uncached)
 			sqe->rw_flags = RWF_UNCACHED;
+		if (fio_option_is_set(&td->o, ioprio_class))
+			sqe->ioprio = td->o.ioprio_class << 13;
+		if (fio_option_is_set(&td->o, ioprio))
+			sqe->ioprio |= td->o.ioprio;
 		sqe->off = io_u->offset;
 	} else if (ddir_sync(io_u->ddir)) {
 		if (io_u->ddir == DDIR_SYNC_FILE_RANGE) {
