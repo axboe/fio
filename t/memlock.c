@@ -43,6 +43,10 @@ int main(int argc, char *argv[])
 
 	mib = strtoul(argv[1], NULL, 10);
 	threads = strtoul(argv[2], NULL, 10);
+	if (threads < 1 || threads > 65536) {
+		printf("%s: invalid 'threads' argument\n", argv[0]);
+		return 1;
+	}
 
 	pthreads = calloc(threads, sizeof(pthread_t));
 	td.mib = mib;
