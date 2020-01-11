@@ -392,10 +392,13 @@ static void queue_work(struct reader_thread *rt, struct work_item *work)
 		pthread_cond_signal(&rt->thread.cond);
 	} else {
 		int ret = pthread_create(&work->thread, NULL, reader_one_off, work);
-		if (ret)
+		if (ret) {
 			fprintf(stderr, "pthread_create=%d\n", ret);
-		else
-			pthread_detach(work->thread);
+		} else {
+			ret = pthread_detach(work->thread);
+			if (ret)
+				fprintf(stderr, "pthread_detach=%d\n", ret);
+		}
 	}
 }
 
