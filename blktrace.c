@@ -719,9 +719,11 @@ int merge_blktrace_iologs(struct thread_data *td)
 	/* setup output file */
 	merge_fp = fopen(td->o.merge_blktrace_file, "w");
 	merge_buf = malloc(128 * 1024);
+	if (!merge_buf)
+		goto err_out_file;
 	ret = setvbuf(merge_fp, merge_buf, _IOFBF, 128 * 1024);
 	if (ret)
-		goto err_out_file;
+		goto err_merge_buf;
 
 	/* setup input files */
 	str = ptr = strdup(td->o.read_iolog_file);
@@ -784,10 +786,11 @@ err_file:
 		fifo_free(bcs[i].fifo);
 		close(bcs[i].fd);
 	}
+err_merge_buf:
+	free(merge_buf);
 err_out_file:
 	fflush(merge_fp);
 	fclose(merge_fp);
-	free(merge_buf);
 err_param:
 	free(bcs);
 
