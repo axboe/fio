@@ -733,6 +733,7 @@ int merge_blktrace_iologs(struct thread_data *td)
 		if (bcs[i].fd < 0) {
 			log_err("fio: could not open file: %s\n", name);
 			ret = bcs[i].fd;
+			free(str);
 			goto err_file;
 		}
 		bcs[i].fifo = fifo_alloc(TRACE_FIFO_SIZE);
@@ -740,11 +741,13 @@ int merge_blktrace_iologs(struct thread_data *td)
 
 		if (!is_blktrace(name, &bcs[i].swap)) {
 			log_err("fio: file is not a blktrace: %s\n", name);
+			free(str);
 			goto err_file;
 		}
 
 		ret = read_trace(td, &bcs[i]);
 		if (ret < 0) {
+			free(str);
 			goto err_file;
 		} else if (!ret) {
 			merge_finish_file(bcs, i, &nr_logs);
