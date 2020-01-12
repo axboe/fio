@@ -2154,7 +2154,8 @@ static int fio_init_server_ip(void)
 	/*
 	 * Not fatal if fails, so just ignore it if that happens
 	 */
-	setsockopt(sk, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
+	if (setsockopt(sk, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt))) {
+	}
 #endif
 
 	if (use_ipv6) {
