@@ -57,6 +57,13 @@ uint64_t usec_sleep(struct thread_data *td, unsigned long usec)
 		if (ts >= 1000000) {
 			req.tv_sec = ts / 1000000;
 			ts -= 1000000 * req.tv_sec;
+			/*
+			 * Limit sleep to ~1 second at most, otherwise we
+			 * don't notice then someone signaled the job to
+			 * exit manually.
+			 */
+			if (req.tv_sec > 1)
+				req.tv_sec = 1;
 		} else
 			req.tv_sec = 0;
 
