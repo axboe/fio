@@ -845,13 +845,11 @@ static int verify_header(struct io_u *io_u, struct thread_data *td,
 	 * For read-only workloads, the program cannot be certain of the
 	 * last numberio written to a block. Checking of numberio will be
 	 * done only for workloads that write data.  For verify_only,
-	 * numberio will be checked in the last iteration when the correct
-	 * state of numberio, that would have been written to each block
-	 * in a previous run of fio, has been reached.
+	 * numberio check is skipped.
 	 */
 	if (td_write(td) && (td_min_bs(td) == td_max_bs(td)) &&
 	    !td->o.time_based)
-		if (!td->o.verify_only || td->o.loops == 0)
+		if (!td->o.verify_only)
 			if (hdr->numberio != io_u->numberio) {
 				log_err("verify: bad header numberio %"PRIu16
 					", wanted %"PRIu16,
