@@ -84,6 +84,11 @@ static const int ddir_to_op[2][2] = {
 	{ IORING_OP_WRITEV, IORING_OP_WRITE }
 };
 
+static const int fixed_ddir_to_op[2] = {
+	IORING_OP_READ_FIXED,
+	IORING_OP_WRITE_FIXED
+};
+
 static int fio_ioring_sqpoll_cb(void *data, unsigned long long *val)
 {
 	struct ioring_options *o = data;
@@ -189,12 +194,13 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 	}
 
 	if (io_u->ddir == DDIR_READ || io_u->ddir == DDIR_WRITE) {
-		sqe->opcode = ddir_to_op[io_u->ddir][!!o->nonvectored];
 		if (o->fixedbufs) {
+			sqe->opcode = fixed_ddir_to_op[io_u->ddir];
 			sqe->addr = (unsigned long) io_u->xfer_buf;
 			sqe->len = io_u->xfer_buflen;
 			sqe->buf_index = io_u->index;
 		} else {
+			sqe->opcode = ddir_to_op[io_u->ddir][!!o->nonvectored];
 			if (o->nonvectored) {
 				sqe->addr = (unsigned long)
 						ld->iovecs[io_u->index].iov_base;
