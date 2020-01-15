@@ -3,6 +3,8 @@
 
 #include "iolog.h"
 #include "lib/output_buffer.h"
+#include "diskutil.h"
+#include "json.h"
 
 struct group_run_stats {
 	uint64_t max_run[DDIR_RWDIR_CNT], min_run[DDIR_RWDIR_CNT];
@@ -332,8 +334,12 @@ extern void add_iops_sample(struct thread_data *, struct io_u *,
 extern void add_bw_sample(struct thread_data *, struct io_u *,
 				unsigned int, unsigned long long);
 extern void add_sync_clat_sample(struct thread_stat *ts,
-					unsigned long long nsec);
+				unsigned long long nsec);
 extern int calc_log_samples(void);
+
+extern void print_disk_util(struct disk_util_stat *, struct disk_util_agg *, int terse, struct buf_output *);
+extern void json_array_add_disk_util(struct disk_util_stat *dus,
+				struct disk_util_agg *agg, struct json_array *parent);
 
 extern struct io_log *agg_io_log[DDIR_RWDIR_CNT];
 extern bool write_bw_log;

@@ -1,6 +1,5 @@
 #ifndef FIO_DISKUTIL_H
 #define FIO_DISKUTIL_H
-#include "json.h"
 #define FIO_DU_NAME_SZ		64
 
 #include "helper_thread.h"
@@ -105,26 +104,15 @@ extern struct flist_head disk_list;
  * disk util stuff
  */
 #ifdef FIO_HAVE_DISK_UTIL
-extern void print_disk_util(struct disk_util_stat *, struct disk_util_agg *, int terse, struct buf_output *);
-extern void show_disk_util(int terse, struct json_object *parent, struct buf_output *);
-extern void json_array_add_disk_util(struct disk_util_stat *dus,
-		struct disk_util_agg *agg, struct json_array *parent);
 extern void init_disk_util(struct thread_data *);
 extern int update_io_ticks(void);
 extern void setup_disk_util(void);
 extern void disk_util_prune_entries(void);
 #else
 /* keep this as a function to avoid a warning in handle_du() */
-static inline void print_disk_util(struct disk_util_stat *du,
-				   struct disk_util_agg *agg, int terse,
-				   struct buf_output *out)
-{
-}
-#define show_disk_util(terse, parent, out) do { } while (0)
 #define disk_util_prune_entries()
 #define init_disk_util(td)
 #define setup_disk_util()
-#define json_array_add_disk_util(dus, agg, parent)
 
 static inline int update_io_ticks(void)
 {
