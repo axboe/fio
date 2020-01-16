@@ -392,10 +392,13 @@ static void queue_work(struct reader_thread *rt, struct work_item *work)
 		pthread_cond_signal(&rt->thread.cond);
 	} else {
 		int ret = pthread_create(&work->thread, NULL, reader_one_off, work);
-		if (ret)
+		if (ret) {
 			fprintf(stderr, "pthread_create=%d\n", ret);
-		else
-			pthread_detach(work->thread);
+		} else {
+			ret = pthread_detach(work->thread);
+			if (ret)
+				fprintf(stderr, "pthread_detach=%d\n", ret);
+		}
 	}
 }
 
@@ -581,6 +584,7 @@ int main(int argc, char *argv[])
 	struct reader_thread *rt;
 	struct writer_thread *wt;
 	unsigned long rate;
+	uint64_t elapsed;
 	struct stat sb;
 	size_t bytes;
 	off_t off;
@@ -684,9 +688,11 @@ int main(int argc, char *argv[])
 	show_latencies(&wt->s, "WRITERS");
 
 	bytes /= 1024;
-	rate = (bytes * 1000UL * 1000UL) / utime_since(&s, &re);
+	elapsed = utime_since(&s, &re);
+	rate = elapsed ? (bytes * 1000UL * 1000UL) / elapsed : 0;
 	fprintf(stderr, "Read rate (KiB/sec) : %lu\n", rate);
-	rate = (bytes * 1000UL * 1000UL) / utime_since(&s, &we);
+	elapsed = utime_since(&s, &we);
+	rate = elapsed ? (bytes * 1000UL * 1000UL) / elapsed : 0;
 	fprintf(stderr, "Write rate (KiB/sec): %lu\n", rate);
 
 	close(fd);

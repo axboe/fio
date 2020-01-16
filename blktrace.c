@@ -28,8 +28,11 @@ static int refill_fifo(struct thread_data *td, struct fifo *fifo, int fd)
 
 	ret = read(fd, buf, total);
 	if (ret < 0) {
-		td_verror(td, errno, "read blktrace file");
-		return -1;
+		int read_err = errno;
+
+		assert(read_err > 0);
+		td_verror(td, read_err, "read blktrace file");
+		return -read_err;
 	}
 
 	if (ret > 0)
@@ -486,7 +489,7 @@ bool load_blktrace(struct thread_data *td, const char *filename, int need_swap)
 		}
 		ret = discard_pdu(td, fifo, fd, &t);
 		if (ret < 0) {
-			td_verror(td, ret, "blktrace lseek");
+			td_verror(td, -ret, "blktrace lseek");
 			goto err;
 		} else if (t.pdu_len != ret) {
 			log_err("fio: discarded %d of %d\n", ret, t.pdu_len);
@@ -663,7 +666,7 @@ read_skip:
 	    t_get_ddir(t) == DDIR_INVAL) {
 		ret = discard_pdu(td, bc->fifo, bc->fd, t);
 		if (ret < 0) {
-			td_verror(td, ret, "blktrace lseek");
+			td_verror(td, -ret, "blktrace lseek");
 			return ret;
 		} else if (t->pdu_len != ret) {
 			log_err("fio: discarded %d of %d\n", ret,
@@ -716,9 +719,11 @@ int merge_blktrace_iologs(struct thread_data *td)
 	/* setup output file */
 	merge_fp = fopen(td->o.merge_blktrace_file, "w");
 	merge_buf = malloc(128 * 1024);
+	if (!merge_buf)
+		goto err_out_file;
 	ret = setvbuf(merge_fp, merge_buf, _IOFBF, 128 * 1024);
 	if (ret)
-		goto err_out_file;
+		goto err_merge_buf;
 
 	/* setup input files */
 	str = ptr = strdup(td->o.read_iolog_file);
@@ -728,6 +733,7 @@ int merge_blktrace_iologs(struct thread_data *td)
 		if (bcs[i].fd < 0) {
 			log_err("fio: could not open file: %s\n", name);
 			ret = bcs[i].fd;
+			free(str);
 			goto err_file;
 		}
 		bcs[i].fifo = fifo_alloc(TRACE_FIFO_SIZE);
@@ -735,11 +741,13 @@ int merge_blktrace_iologs(struct thread_data *td)
 
 		if (!is_blktrace(name, &bcs[i].swap)) {
 			log_err("fio: file is not a blktrace: %s\n", name);
+			free(str);
 			goto err_file;
 		}
 
 		ret = read_trace(td, &bcs[i]);
 		if (ret < 0) {
+			free(str);
 			goto err_file;
 		} else if (!ret) {
 			merge_finish_file(bcs, i, &nr_logs);
@@ -755,7 +763,7 @@ int merge_blktrace_iologs(struct thread_data *td)
 		/* skip over the pdu */
 		ret = discard_pdu(td, bc->fifo, bc->fd, &bc->t);
 		if (ret < 0) {
-			td_verror(td, ret, "blktrace lseek");
+			td_verror(td, -ret, "blktrace lseek");
 			goto err_file;
 		} else if (bc->t.pdu_len != ret) {
 			log_err("fio: discarded %d of %d\n", ret,
@@ -781,10 +789,11 @@ err_file:
 		fifo_free(bcs[i].fifo);
 		close(bcs[i].fd);
 	}
+err_merge_buf:
+	free(merge_buf);
 err_out_file:
 	fflush(merge_fp);
 	fclose(merge_fp);
-	free(merge_buf);
 err_param:
 	free(bcs);
 
