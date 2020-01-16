@@ -2120,8 +2120,16 @@ static int fio_verify_load_state(struct thread_data *td)
 					td->thread_number - 1, &data);
 		if (!ret)
 			verify_assign_state(td, data);
-	} else
-		ret = verify_load_state(td, "local");
+	} else {
+		char prefix[PATH_MAX];
+
+		if (aux_path)
+			sprintf(prefix, "%s%clocal", aux_path,
+					FIO_OS_PATH_SEPARATOR);
+		else
+			strcpy(prefix, "local");
+		ret = verify_load_state(td, prefix);
+	}
 
 	return ret;
 }
