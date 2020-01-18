@@ -1309,6 +1309,8 @@ static void add_ddir_status_json(struct thread_stat *ts,
 		json_object_add_value_int(percentile_object, buf, ovals[i]);
 	}
 
+	free(ovals);
+
 	if (output_format & FIO_OUTPUT_JSON_PLUS) {
 		clat_bins_object = json_create_object();
 		if (ts->clat_percentiles)
@@ -1346,8 +1348,6 @@ static void add_ddir_status_json(struct thread_stat *ts,
 		json_object_add_value_object(tmp_object, "percentile", percentile_object);
 	if (output_format & FIO_OUTPUT_JSON_PLUS && ts->lat_percentiles)
 		json_object_add_value_object(tmp_object, "bins", clat_bins_object);
-
-	free(ovals);
 
 	if (calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
 		if (rs->agg[ddir]) {
