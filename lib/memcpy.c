@@ -201,6 +201,9 @@ static int setup_tests(void)
 	void *src, *dst;
 	int i;
 
+	if (!tests[0].name)
+		return 0;
+
 	src = malloc(BUF_SIZE);
 	dst = malloc(BUF_SIZE);
 	if (!src || !dst) {
