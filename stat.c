@@ -1206,7 +1206,8 @@ static void add_ddir_status_json(struct thread_stat *ts,
 	double mean, dev, iops;
 	unsigned int len;
 	int i;
-	struct json_object *dir_object, *tmp_object, *percentile_object, *clat_bins_object = NULL;
+	struct json_object *dir_object, *tmp_object, *percentile_object = NULL,
+		*clat_bins_object = NULL;
 	char buf[120];
 	double p_of_agg = 100.0;
 
@@ -1301,20 +1302,23 @@ static void add_ddir_status_json(struct thread_stat *ts,
 	} else
 		len = 0;
 
-	percentile_object = json_create_object();
-	if (ts->clat_percentiles)
+	if (ts->clat_percentiles) {
+		percentile_object = json_create_object();
 		json_object_add_value_object(tmp_object, "percentile", percentile_object);
-	for (i = 0; i < len; i++) {
-		snprintf(buf, sizeof(buf), "%f", ts->percentile_list[i].u.f);
-		json_object_add_value_int(percentile_object, buf, ovals[i]);
+		for (i = 0; i < len; i++) {
+			snprintf(buf, sizeof(buf), "%f",
+				 ts->percentile_list[i].u.f);
+			json_object_add_value_int(percentile_object, buf,
+						  ovals[i]);
+		}
 	}
 
 	free(ovals);
 
-	if (output_format & FIO_OUTPUT_JSON_PLUS) {
+	if (output_format & FIO_OUTPUT_JSON_PLUS && ts->clat_percentiles) {
 		clat_bins_object = json_create_object();
-		if (ts->clat_percentiles)
-			json_object_add_value_object(tmp_object, "bins", clat_bins_object);
+		json_object_add_value_object(tmp_object, "bins",
+					     clat_bins_object);
 
 		for(i = 0; i < FIO_IO_U_PLAT_NR; i++) {
 			if (ddir_rw(ddir)) {
