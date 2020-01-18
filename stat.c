@@ -1308,7 +1308,7 @@ static void add_ddir_status_json(struct thread_stat *ts,
 		json_object_add_value_object(tmp_object, "percentile", percentile_object);
 	for (i = 0; i < len; i++) {
 		snprintf(buf, sizeof(buf), "%f", ts->percentile_list[i].u.f);
-		json_object_add_value_int(percentile_object, (const char *)buf, ovals[i]);
+		json_object_add_value_int(percentile_object, buf, ovals[i]);
 	}
 
 	if (output_format & FIO_OUTPUT_JSON_PLUS) {
@@ -1320,12 +1320,12 @@ static void add_ddir_status_json(struct thread_stat *ts,
 			if (ddir_rw(ddir)) {
 				if (ts->io_u_plat[ddir][i]) {
 					snprintf(buf, sizeof(buf), "%llu", plat_idx_to_val(i));
-					json_object_add_value_int(clat_bins_object, (const char *)buf, ts->io_u_plat[ddir][i]);
+					json_object_add_value_int(clat_bins_object, buf, ts->io_u_plat[ddir][i]);
 				}
 			} else {
 				if (ts->io_u_sync_plat[i]) {
 					snprintf(buf, sizeof(buf), "%llu", plat_idx_to_val(i));
-					json_object_add_value_int(clat_bins_object, (const char *)buf, ts->io_u_sync_plat[i]);
+					json_object_add_value_int(clat_bins_object, buf, ts->io_u_sync_plat[i]);
 				}
 			}
 		}
@@ -1661,7 +1661,7 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 				snprintf(buf, sizeof(buf), "%f",
 					 ts->percentile_list[i].u.f);
 				json_object_add_value_int(percentile_object,
-							  (const char *)buf,
+							  buf,
 							  percentiles[i]);
 			}
 
