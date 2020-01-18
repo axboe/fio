@@ -1157,6 +1157,10 @@ static void handle_job_opt(struct fio_client *client, struct fio_net_cmd *cmd)
 		struct flist_head *opt_list = &client->opt_lists[pdu->groupid];
 
 		flist_add_tail(&p->list, opt_list);
+	} else {
+		free(p->value);
+		free(p->name);
+		free(p);
 	}
 }
 

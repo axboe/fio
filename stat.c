@@ -159,7 +159,7 @@ unsigned int calc_clat_percentiles(uint64_t *io_u_plat, unsigned long long nr,
 	 * isn't a worry. Also note that this does not work for NaN values.
 	 */
 	if (len > 1)
-		qsort((void *)plist, len, sizeof(plist[0]), double_cmp);
+		qsort(plist, len, sizeof(plist[0]), double_cmp);
 
 	ovals = malloc(len * sizeof(*ovals));
 	if (!ovals)
@@ -259,8 +259,7 @@ static void show_clat_percentiles(uint64_t *io_u_plat, unsigned long long nr,
 	}
 
 out:
-	if (ovals)
-		free(ovals);
+	free(ovals);
 }
 
 bool calc_lat(struct io_stat *is, unsigned long long *min,
@@ -684,7 +683,7 @@ static int calc_block_percentiles(int nr_block_infos, uint32_t *block_infos,
 	 * isn't a worry. Also note that this does not work for NaN values.
 	 */
 	if (len > 1)
-		qsort((void *)plist, len, sizeof(plist[0]), double_cmp);
+		qsort(plist, len, sizeof(plist[0]), double_cmp);
 
 	/* Start only after the uninit entries end */
 	for (nr_uninit = 0;
@@ -1168,8 +1167,7 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 	else
 		log_buf(out, ";%llu;%llu;%f;%f", 0ULL, 0ULL, 0.0, 0.0);
 
-	if (ovals)
-		free(ovals);
+	free(ovals);
 
 	bw_stat = calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev);
 	if (bw_stat) {
@@ -1208,7 +1206,8 @@ static void add_ddir_status_json(struct thread_stat *ts,
 	double mean, dev, iops;
 	unsigned int len;
 	int i;
-	struct json_object *dir_object, *tmp_object, *percentile_object, *clat_bins_object = NULL;
+	struct json_object *dir_object, *tmp_object, *percentile_object = NULL,
+		*clat_bins_object = NULL;
 	char buf[120];
 	double p_of_agg = 100.0;
 
@@ -1303,29 +1302,34 @@ static void add_ddir_status_json(struct thread_stat *ts,
 	} else
 		len = 0;
 
-	percentile_object = json_create_object();
-	if (ts->clat_percentiles)
+	if (ts->clat_percentiles) {
+		percentile_object = json_create_object();
 		json_object_add_value_object(tmp_object, "percentile", percentile_object);
-	for (i = 0; i < len; i++) {
-		snprintf(buf, sizeof(buf), "%f", ts->percentile_list[i].u.f);
-		json_object_add_value_int(percentile_object, (const char *)buf, ovals[i]);
+		for (i = 0; i < len; i++) {
+			snprintf(buf, sizeof(buf), "%f",
+				 ts->percentile_list[i].u.f);
+			json_object_add_value_int(percentile_object, buf,
+						  ovals[i]);
+		}
 	}
 
-	if (output_format & FIO_OUTPUT_JSON_PLUS) {
+	free(ovals);
+
+	if (output_format & FIO_OUTPUT_JSON_PLUS && ts->clat_percentiles) {
 		clat_bins_object = json_create_object();
-		if (ts->clat_percentiles)
-			json_object_add_value_object(tmp_object, "bins", clat_bins_object);
+		json_object_add_value_object(tmp_object, "bins",
+					     clat_bins_object);
 
 		for(i = 0; i < FIO_IO_U_PLAT_NR; i++) {
 			if (ddir_rw(ddir)) {
 				if (ts->io_u_plat[ddir][i]) {
 					snprintf(buf, sizeof(buf), "%llu", plat_idx_to_val(i));
-					json_object_add_value_int(clat_bins_object, (const char *)buf, ts->io_u_plat[ddir][i]);
+					json_object_add_value_int(clat_bins_object, buf, ts->io_u_plat[ddir][i]);
 				}
 			} else {
 				if (ts->io_u_sync_plat[i]) {
 					snprintf(buf, sizeof(buf), "%llu", plat_idx_to_val(i));
-					json_object_add_value_int(clat_bins_object, (const char *)buf, ts->io_u_sync_plat[i]);
+					json_object_add_value_int(clat_bins_object, buf, ts->io_u_sync_plat[i]);
 				}
 			}
 		}
@@ -1348,9 +1352,6 @@ static void add_ddir_status_json(struct thread_stat *ts,
 		json_object_add_value_object(tmp_object, "percentile", percentile_object);
 	if (output_format & FIO_OUTPUT_JSON_PLUS && ts->lat_percentiles)
 		json_object_add_value_object(tmp_object, "bins", clat_bins_object);
-
-	if (ovals)
-		free(ovals);
 
 	if (calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
 		if (rs->agg[ddir]) {
@@ -1661,7 +1662,7 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 				snprintf(buf, sizeof(buf), "%f",
 					 ts->percentile_list[i].u.f);
 				json_object_add_value_int(percentile_object,
-							  (const char *)buf,
+							  buf,
 							  percentiles[i]);
 			}
 

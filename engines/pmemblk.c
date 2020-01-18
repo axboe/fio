@@ -226,6 +226,8 @@ static fio_pmemblk_file_t pmb_open(const char *pathspec, int flags)
 
 	pthread_mutex_unlock(&CacheLock);
 
+	free(path);
+
 	return pmb;
 
 error:
