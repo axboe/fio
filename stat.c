@@ -159,7 +159,7 @@ unsigned int calc_clat_percentiles(uint64_t *io_u_plat, unsigned long long nr,
 	 * isn't a worry. Also note that this does not work for NaN values.
 	 */
 	if (len > 1)
-		qsort((void *)plist, len, sizeof(plist[0]), double_cmp);
+		qsort(plist, len, sizeof(plist[0]), double_cmp);
 
 	ovals = malloc(len * sizeof(*ovals));
 	if (!ovals)
@@ -684,7 +684,7 @@ static int calc_block_percentiles(int nr_block_infos, uint32_t *block_infos,
 	 * isn't a worry. Also note that this does not work for NaN values.
 	 */
 	if (len > 1)
-		qsort((void *)plist, len, sizeof(plist[0]), double_cmp);
+		qsort(plist, len, sizeof(plist[0]), double_cmp);
 
 	/* Start only after the uninit entries end */
 	for (nr_uninit = 0;
