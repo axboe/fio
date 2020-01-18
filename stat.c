@@ -259,8 +259,7 @@ static void show_clat_percentiles(uint64_t *io_u_plat, unsigned long long nr,
 	}
 
 out:
-	if (ovals)
-		free(ovals);
+	free(ovals);
 }
 
 bool calc_lat(struct io_stat *is, unsigned long long *min,
@@ -1168,8 +1167,7 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 	else
 		log_buf(out, ";%llu;%llu;%f;%f", 0ULL, 0ULL, 0.0, 0.0);
 
-	if (ovals)
-		free(ovals);
+	free(ovals);
 
 	bw_stat = calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev);
 	if (bw_stat) {
@@ -1349,8 +1347,7 @@ static void add_ddir_status_json(struct thread_stat *ts,
 	if (output_format & FIO_OUTPUT_JSON_PLUS && ts->lat_percentiles)
 		json_object_add_value_object(tmp_object, "bins", clat_bins_object);
 
-	if (ovals)
-		free(ovals);
+	free(ovals);
 
 	if (calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
 		if (rs->agg[ddir]) {
