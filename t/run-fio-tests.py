@@ -712,6 +712,14 @@ TEST_LIST = [
             'success':          SUCCESS_DEFAULT,
             'requirements':     [Requirements.unittests],
         },
+        {
+            'test_id':          1010,
+            'test_class':       FioExeTest,
+            'exe':              't/latency_percentiles.py',
+            'parameters':       ['-f', '{fio_path}'],
+            'success':          SUCCESS_DEFAULT,
+            'requirements':     [],
+        },
 ]
 
 
