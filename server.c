@@ -1262,7 +1262,7 @@ static int handle_connection(struct sk_out *sk_out)
 	_exit(ret);
 }
 
-/* get the address on this host bound by the input socket, 
+/* get the address on this host bound by the input socket,
  * whether it is ipv6 or ipv4 */
 
 static int get_my_addr_str(int sk)
