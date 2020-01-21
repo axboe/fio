@@ -1097,10 +1097,9 @@ static struct graph *setup_clat_graph(char *title, unsigned long long *ovals,
 
 static void gfio_show_clat_percentiles(struct gfio_client *gc,
 				       GtkWidget *vbox, struct thread_stat *ts,
-				       int ddir)
+				       int ddir, uint64_t *io_u_plat,
+				       unsigned long long nr, const char *type)
 {
-	uint64_t *io_u_plat = ts->io_u_plat[ddir];
-	unsigned long long nr = ts->clat_stat[ddir].samples;
 	fio_fp64_t *plist = ts->percentile_list;
 	unsigned int len, scale_down;
 	unsigned long long *ovals, minv, maxv;
@@ -1128,10 +1127,7 @@ static void gfio_show_clat_percentiles(struct gfio_client *gc,
 		base = "nsec";
         }
 
-	if (ts->clat_percentiles)
-		sprintf(tmp, "Completion percentiles (%s)", base);
-	else
-		sprintf(tmp, "Latency percentiles (%s)", base);
+	sprintf(tmp, "%s latency percentiles (%s)", type, base);
 
 	tree_view = gfio_output_clat_percentiles(ovals, plist, len, base, scale_down);
 	ge->clat_graph = setup_clat_graph(tmp, ovals, plist, len, 700.0, 300.0);
@@ -1285,8 +1281,21 @@ static void gfio_show_ddir_status(struct gfio_client *gc, GtkWidget *mbox,
 			gfio_show_lat(vbox, "Total latency", min[2], max[2], mean[2], dev[2]);
 	}
 
-	if (ts->clat_percentiles)
-		gfio_show_clat_percentiles(gc, main_vbox, ts, ddir);
+	if (ts->slat_percentiles && flags & GFIO_SLAT)
+		gfio_show_clat_percentiles(gc, main_vbox, ts, ddir,
+				ts->io_u_plat[FIO_SLAT][ddir],
+				ts->slat_stat[ddir].samples,
+				"Submission");
+	if (ts->clat_percentiles && flags & GFIO_CLAT)
+		gfio_show_clat_percentiles(gc, main_vbox, ts, ddir,
+				ts->io_u_plat[FIO_CLAT][ddir],
+				ts->clat_stat[ddir].samples,
+				"Completion");
+	if (ts->lat_percentiles && flags & GFIO_LAT)
+		gfio_show_clat_percentiles(gc, main_vbox, ts, ddir,
+				ts->io_u_plat[FIO_LAT][ddir],
+				ts->lat_stat[ddir].samples,
+				"Total");
 
 	free(io_p);
 	free(bw_p);
