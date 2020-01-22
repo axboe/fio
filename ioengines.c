@@ -318,6 +318,7 @@ enum fio_q_status td_io_queue(struct thread_data *td, struct io_u *io_u)
 					sizeof(io_u->issue_time));
 	}
 
+
 	if (ddir_rw(ddir)) {
 		if (!(io_u->flags & IO_U_F_VER_LIST)) {
 			td->io_issues[ddir]++;

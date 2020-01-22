@@ -1032,6 +1032,14 @@ static void convert_ts(struct thread_stat *dst, struct thread_stat *src)
 	dst->nr_block_infos	= le64_to_cpu(src->nr_block_infos);
 	for (i = 0; i < dst->nr_block_infos; i++)
 		dst->block_infos[i] = le32_to_cpu(src->block_infos[i]);
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
+		for (j = 0; j < FIO_IO_U_PLAT_NR; j++) {
+			dst->io_u_plat_high_prio[i][j] = le64_to_cpu(src->io_u_plat_high_prio[i][j]);
+			dst->io_u_plat_prio[i][j] = le64_to_cpu(src->io_u_plat_prio[i][j]);
+		}
+		convert_io_stat(&dst->clat_high_prio_stat[i], &src->clat_high_prio_stat[i]);
+		convert_io_stat(&dst->clat_prio_stat[i], &src->clat_prio_stat[i]);
+	}
 
 	dst->ss_dur		= le64_to_cpu(src->ss_dur);
 	dst->ss_state		= le32_to_cpu(src->ss_state);
@@ -1693,7 +1701,7 @@ static struct cmd_iolog_pdu *convert_iolog(struct fio_net_cmd *cmd,
 
 		s->time		= le64_to_cpu(s->time);
 		s->data.val	= le64_to_cpu(s->data.val);
-		s->__ddir	= le32_to_cpu(s->__ddir);
+		s->__ddir	= __le32_to_cpu(s->__ddir);
 		s->bs		= le64_to_cpu(s->bs);
 
 		if (ret->log_offset) {

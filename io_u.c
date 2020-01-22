@@ -1541,7 +1541,7 @@ again:
 		assert(io_u->flags & IO_U_F_FREE);
 		io_u_clear(td, io_u, IO_U_F_FREE | IO_U_F_NO_FILE_PUT |
 				 IO_U_F_TRIMMED | IO_U_F_BARRIER |
-				 IO_U_F_VER_LIST);
+				 IO_U_F_VER_LIST | IO_U_F_PRIORITY);
 
 		io_u->error = 0;
 		io_u->acct_ddir = -1;
@@ -1830,7 +1830,7 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 		unsigned long long tnsec;
 
 		tnsec = ntime_since(&io_u->start_time, &icd->time);
-		add_lat_sample(td, idx, tnsec, bytes, io_u->offset);
+		add_lat_sample(td, idx, tnsec, bytes, io_u->offset, io_u_is_prio(io_u));
 
 		if (td->flags & TD_F_PROFILE_OPS) {
 			struct prof_io_ops *ops = &td->prof_io_ops;
@@ -1849,7 +1849,7 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 
 	if (ddir_rw(idx)) {
 		if (!td->o.disable_clat) {
-			add_clat_sample(td, idx, llnsec, bytes, io_u->offset);
+			add_clat_sample(td, idx, llnsec, bytes, io_u->offset, io_u_is_prio(io_u));
 			io_u_mark_latency(td, llnsec);
 		}
 
@@ -2091,7 +2091,7 @@ void io_u_queued(struct thread_data *td, struct io_u *io_u)
 			td = td->parent;
 
 		add_slat_sample(td, io_u->ddir, slat_time, io_u->xfer_buflen,
-				io_u->offset);
+				io_u->offset, io_u_is_prio(io_u));
 	}
 }
 

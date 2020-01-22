@@ -896,18 +896,18 @@ void flush_samples(FILE *f, void *samples, uint64_t sample_size)
 		s = __get_sample(samples, log_offset, i);
 
 		if (!log_offset) {
-			fprintf(f, "%lu, %" PRId64 ", %u, %llu\n",
+			fprintf(f, "%lu, %" PRId64 ", %u, %llu, %u\n",
 					(unsigned long) s->time,
 					s->data.val,
-					io_sample_ddir(s), (unsigned long long) s->bs);
+					io_sample_ddir(s), (unsigned long long) s->bs, s->priority_bit);
 		} else {
 			struct io_sample_offset *so = (void *) s;
 
-			fprintf(f, "%lu, %" PRId64 ", %u, %llu, %llu\n",
+			fprintf(f, "%lu, %" PRId64 ", %u, %llu, %llu, %u\n",
 					(unsigned long) s->time,
 					s->data.val,
 					io_sample_ddir(s), (unsigned long long) s->bs,
-					(unsigned long long) so->offset);
+					(unsigned long long) so->offset, s->priority_bit);
 		}
 	}
 }
