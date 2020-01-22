@@ -1,0 +1,19 @@
+# Example filestat job
+
+# 'filestat' engine only do 'stat(filename)', file will not be open().
+# 'filesize' must be set, then files will be created at setup stage.
+
+[global]
+ioengine=filestat
+numjobs=1
+filesize=4k
+nrfiles=200
+thread
+
+[t0]
+[t1]
+[t2]
+[t3]
+[t4]
+[t5]
+
