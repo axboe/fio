@@ -2034,21 +2034,29 @@ In addition, there are some parameters which are only valid when a specific
 with the caveat that when used on the command line, they must come after the
 :option:`ioengine` that defines them is selected.
 
-.. option:: hipri : [io_uring]
+.. option:: cmdprio_percentage=int : [io_uring] [libaio]
 
-	If this option is set, fio will attempt to use polled IO completions.
-	Normal IO completions generate interrupts to signal the completion of
-	IO, polled completions do not. Hence they are require active reaping
-	by the application. The benefits are more efficient IO for high IOPS
-	scenarios, and lower latencies for low queue depth IO.
+    Set the percentage of I/O that will be issued with higher priority by setting
+    the priority bit. Non-read I/O is likely unaffected by ``cmdprio_percentage``.
+    This option cannot be used with the `prio` or `prioclass` options. For this
+    option to set the priority bit properly, NCQ priority must be supported and
+    enabled and :option:`direct`\=1 option must be used.
 
 .. option:: fixedbufs : [io_uring]
 
-	If fio is asked to do direct IO, then Linux will map pages for each
-	IO call, and release them when IO is done. If this option is set, the
-	pages are pre-mapped before IO is started. This eliminates the need to
-	map and release for each IO. This is more efficient, and reduces the
-	IO latency as well.
+    If fio is asked to do direct IO, then Linux will map pages for each
+    IO call, and release them when IO is done. If this option is set, the
+    pages are pre-mapped before IO is started. This eliminates the need to
+    map and release for each IO. This is more efficient, and reduces the
+    IO latency as well.
+
+.. option:: hipri : [io_uring]
+
+    If this option is set, fio will attempt to use polled IO completions.
+    Normal IO completions generate interrupts to signal the completion of
+    IO, polled completions do not. Hence they are require active reaping
+    by the application. The benefits are more efficient IO for high IOPS
+    scenarios, and lower latencies for low queue depth IO.
 
 .. option:: registerfiles : [io_uring]
 
@@ -2692,11 +2700,15 @@ Threads, processes and job synchronization
 	Set the I/O priority value of this job. Linux limits us to a positive value
 	between 0 and 7, with 0 being the highest.  See man
 	:manpage:`ionice(1)`. Refer to an appropriate manpage for other operating
-	systems since meaning of priority may differ.
+	systems since meaning of priority may differ. For per-command priority
+	setting, see I/O engine specific `cmdprio_percentage` and `hipri_percentage`
+	options.
 
 .. option:: prioclass=int
 
-	Set the I/O priority class. See man :manpage:`ionice(1)`.
+	Set the I/O priority class. See man :manpage:`ionice(1)`. For per-command
+	priority setting, see I/O engine specific `cmdprio_percentage` and
+	`hipri_percentage` options.
 
 .. option:: cpus_allowed=str
 

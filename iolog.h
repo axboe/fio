@@ -42,6 +42,7 @@ struct io_sample {
 	uint64_t time;
 	union io_sample_data data;
 	uint32_t __ddir;
+	uint8_t priority_bit;
 	uint64_t bs;
 };
 

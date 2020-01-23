@@ -139,6 +139,7 @@ enum {
 	FIO_RAND_ZONE_OFF,
 	FIO_RAND_POISSON2_OFF,
 	FIO_RAND_POISSON3_OFF,
+	FIO_RAND_PRIO_CMDS,
 	FIO_RAND_NR_OFFS,
 };
 
@@ -258,6 +259,7 @@ struct thread_data {
 	struct frand_state buf_state_prev;
 	struct frand_state dedupe_state;
 	struct frand_state zone_state;
+	struct frand_state prio_state;
 
 	struct zone_split_index **zone_state_index;
 
@@ -460,7 +462,7 @@ struct thread_data {
 	CUdevice  cu_dev;
 	CUcontext cu_ctx;
 	CUdeviceptr dev_mem_ptr;
-#endif	
+#endif
 
 };
 

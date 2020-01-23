@@ -70,6 +70,7 @@ struct ioring_data {
 struct ioring_options {
 	void *pad;
 	unsigned int hipri;
+	unsigned int cmdprio_percentage;
 	unsigned int fixedbufs;
 	unsigned int registerfiles;
 	unsigned int sqpoll_thread;
@@ -108,6 +109,26 @@ static struct fio_option options[] = {
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_IOURING,
 	},
+#ifdef FIO_HAVE_IOPRIO_CLASS
+	{
+		.name	= "cmdprio_percentage",
+		.lname	= "high priority percentage",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct ioring_options, cmdprio_percentage),
+		.minval	= 1,
+		.maxval	= 100,
+		.help	= "Send high priority I/O this percentage of the time",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_IOURING,
+	},
+#else
+	{
+		.name	= "cmdprio_percentage",
+		.lname	= "high priority percentage",
+		.type	= FIO_OPT_UNSUPPORTED,
+		.help	= "Your platform does not support I/O priority classes",
+	},
+#endif
 	{
 		.name	= "fixedbufs",
 		.lname	= "Fixed (pre-mapped) IO buffers",
@@ -313,11 +334,23 @@ static int fio_ioring_getevents(struct thread_data *td, unsigned int min,
 	return r < 0 ? r : events;
 }
 
+static void fio_ioring_prio_prep(struct thread_data *td, struct io_u *io_u)
+{
+	struct ioring_options *o = td->eo;
+	struct ioring_data *ld = td->io_ops_data;
+	if (rand_between(&td->prio_state, 0, 99) < o->cmdprio_percentage) {
+		ld->sqes[io_u->index].ioprio = IOPRIO_CLASS_RT << IOPRIO_CLASS_SHIFT;
+		io_u->flags |= IO_U_F_PRIORITY;
+	}
+	return;
+}
+
 static enum fio_q_status fio_ioring_queue(struct thread_data *td,
 					  struct io_u *io_u)
 {
 	struct ioring_data *ld = td->io_ops_data;
 	struct io_sq_ring *ring = &ld->sq_ring;
+	struct ioring_options *o = td->eo;
 	unsigned tail, next_tail;
 
 	fio_ro_check(td, io_u);
@@ -343,6 +376,8 @@ static enum fio_q_status fio_ioring_queue(struct thread_data *td,
 
 	/* ensure sqe stores are ordered with tail update */
 	write_barrier();
+	if (o->cmdprio_percentage)
+		fio_ioring_prio_prep(td, io_u);
 	ring->array[tail & ld->sq_ring_mask] = io_u->index;
 	*ring->tail = next_tail;
 	write_barrier();
@@ -618,6 +653,7 @@ static int fio_ioring_init(struct thread_data *td)
 {
 	struct ioring_options *o = td->eo;
 	struct ioring_data *ld;
+	struct thread_options *to = &td->o;
 
 	/* sqthread submission requires registered files */
 	if (o->sqpoll_thread)
@@ -640,6 +676,17 @@ static int fio_ioring_init(struct thread_data *td)
 	ld->iovecs = calloc(td->o.iodepth, sizeof(struct iovec));
 
 	td->io_ops_data = ld;
+
+	/*
+	 * Check for option conflicts
+	 */
+	if ((fio_option_is_set(to, ioprio) || fio_option_is_set(to, ioprio_class)) &&
+			o->cmdprio_percentage != 0) {
+		log_err("%s: cmdprio_percentage option and mutually exclusive "
+				"prio or prioclass option is set, exiting\n", to->name);
+		td_verror(td, EINVAL, "fio_io_uring_init");
+		return 1;
+	}
 	return 0;
 }
 

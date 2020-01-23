@@ -1042,6 +1042,7 @@ static void td_fill_rand_seeds_internal(struct thread_data *td, bool use64)
 	init_rand_seed(&td->poisson_state[2], td->rand_seeds[FIO_RAND_POISSON3_OFF], 0);
 	init_rand_seed(&td->dedupe_state, td->rand_seeds[FIO_DEDUPE_OFF], false);
 	init_rand_seed(&td->zone_state, td->rand_seeds[FIO_RAND_ZONE_OFF], false);
+	init_rand_seed(&td->prio_state, td->rand_seeds[FIO_RAND_PRIO_CMDS], false);
 
 	if (!td_random(td))
 		return;
@@ -1518,6 +1519,8 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		td->ts.lat_stat[i].min_val = ULONG_MAX;
 		td->ts.bw_stat[i].min_val = ULONG_MAX;
 		td->ts.iops_stat[i].min_val = ULONG_MAX;
+		td->ts.clat_high_prio_stat[i].min_val = ULONG_MAX;
+		td->ts.clat_prio_stat[i].min_val = ULONG_MAX;
 	}
 	td->ts.sync_stat.min_val = ULONG_MAX;
 	td->ddir_seq_nr = o->ddir_seq_nr;
