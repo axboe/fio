@@ -944,7 +944,7 @@ static void convert_io_stat(struct io_stat *dst, struct io_stat *src)
 
 static void convert_ts(struct thread_stat *dst, struct thread_stat *src)
 {
-	int i, j;
+	int i, j, k;
 
 	dst->error		= le32_to_cpu(src->error);
 	dst->thread_number	= le32_to_cpu(src->thread_number);
@@ -991,9 +991,10 @@ static void convert_ts(struct thread_stat *dst, struct thread_stat *src)
 	for (i = 0; i < FIO_IO_U_LAT_M_NR; i++)
 		dst->io_u_lat_m[i]	= le64_to_cpu(src->io_u_lat_m[i]);
 
-	for (i = 0; i < DDIR_RWDIR_CNT; i++)
-		for (j = 0; j < FIO_IO_U_PLAT_NR; j++)
-			dst->io_u_plat[i][j] = le64_to_cpu(src->io_u_plat[i][j]);
+	for (i = 0; i < FIO_LAT_CNT; i++)
+		for (j = 0; j < DDIR_RWDIR_CNT; j++)
+			for (k = 0; k < FIO_IO_U_PLAT_NR; k++)
+				dst->io_u_plat[i][j][k] = le64_to_cpu(src->io_u_plat[i][j][k]);
 
 	for (j = 0; j < FIO_IO_U_PLAT_NR; j++)
 		dst->io_u_sync_plat[j] = le64_to_cpu(src->io_u_sync_plat[j]);

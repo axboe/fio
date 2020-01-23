@@ -1463,7 +1463,7 @@ static void convert_gs(struct group_run_stats *dst, struct group_run_stats *src)
 void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 {
 	struct cmd_ts_pdu p;
-	int i, j;
+	int i, j, k;
 	void *ss_buf;
 	uint64_t *ss_iops, *ss_bw;
 
@@ -1521,9 +1521,10 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 	for (i = 0; i < FIO_IO_U_LAT_M_NR; i++)
 		p.ts.io_u_lat_m[i]	= cpu_to_le64(ts->io_u_lat_m[i]);
 
-	for (i = 0; i < DDIR_RWDIR_CNT; i++)
-		for (j = 0; j < FIO_IO_U_PLAT_NR; j++)
-			p.ts.io_u_plat[i][j] = cpu_to_le64(ts->io_u_plat[i][j]);
+	for (i = 0; i < FIO_LAT_CNT; i++)
+		for (j = 0; j < DDIR_RWDIR_CNT; j++)
+			for (k = 0; k < FIO_IO_U_PLAT_NR; k++)
+				p.ts.io_u_plat[i][j][k] = cpu_to_le64(ts->io_u_plat[i][j][k]);
 
 	for (j = 0; j < FIO_IO_U_PLAT_NR; j++)
 		p.ts.io_u_sync_plat[j] = cpu_to_le64(ts->io_u_sync_plat[j]);

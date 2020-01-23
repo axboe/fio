@@ -495,7 +495,7 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 		else
 			samples = ts->lat_stat[ddir].samples;
 
-		show_clat_percentiles(ts->io_u_plat[ddir],
+		show_clat_percentiles(ts->io_u_plat[FIO_CLAT][ddir],
 					samples,
 					ts->percentile_list,
 					ts->percentile_precision, name, out);
@@ -1171,7 +1171,7 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 		log_buf(out, ";%llu;%llu;%f;%f", 0ULL, 0ULL, 0.0, 0.0);
 
 	if (ts->clat_percentiles || ts->lat_percentiles) {
-		len = calc_clat_percentiles(ts->io_u_plat[ddir],
+		len = calc_clat_percentiles(ts->io_u_plat[FIO_CLAT][ddir],
 					ts->clat_stat[ddir].samples,
 					ts->percentile_list, &ovals, &maxv,
 					&minv);
@@ -1311,7 +1311,7 @@ static void add_ddir_status_json(struct thread_stat *ts,
 			else
 				samples = ts->lat_stat[ddir].samples;
 
-			len = calc_clat_percentiles(ts->io_u_plat[ddir],
+			len = calc_clat_percentiles(ts->io_u_plat[FIO_CLAT][ddir],
 					samples, ts->percentile_list, &ovals,
 					&maxv, &minv);
 		} else {
@@ -1346,9 +1346,9 @@ static void add_ddir_status_json(struct thread_stat *ts,
 
 		for(i = 0; i < FIO_IO_U_PLAT_NR; i++) {
 			if (ddir_rw(ddir)) {
-				if (ts->io_u_plat[ddir][i]) {
+				if (ts->io_u_plat[FIO_CLAT][ddir][i]) {
 					snprintf(buf, sizeof(buf), "%llu", plat_idx_to_val(i));
-					json_object_add_value_int(clat_bins_object, buf, ts->io_u_plat[ddir][i]);
+					json_object_add_value_int(clat_bins_object, buf, ts->io_u_plat[FIO_CLAT][ddir][i]);
 				}
 			} else {
 				if (ts->io_u_sync_plat[i]) {
@@ -1981,7 +1981,7 @@ void sum_group_stats(struct group_run_stats *dst, struct group_run_stats *src)
 void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src,
 		      bool first)
 {
-	int l, k;
+	int k, l, m;
 
 	for (l = 0; l < DDIR_RWDIR_CNT; l++) {
 		if (!dst->unified_rw_rep) {
@@ -2039,9 +2039,6 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src,
 	for (k = 0; k < FIO_IO_U_LAT_M_NR; k++)
 		dst->io_u_lat_m[k] += src->io_u_lat_m[k];
 
-	for (k = 0; k < FIO_IO_U_PLAT_NR; k++)
-		dst->io_u_sync_plat[k] += src->io_u_sync_plat[k];
-
 	for (k = 0; k < DDIR_RWDIR_CNT; k++) {
 		if (!dst->unified_rw_rep) {
 			dst->total_io_u[k] += src->total_io_u[k];
@@ -2056,16 +2053,23 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src,
 
 	dst->total_io_u[DDIR_SYNC] += src->total_io_u[DDIR_SYNC];
 
-	for (k = 0; k < DDIR_RWDIR_CNT; k++) {
-		int m;
+	for (k = 0; k < FIO_LAT_CNT; k++)
+		for (l = 0; l < DDIR_RWDIR_CNT; l++)
+			for (m = 0; m < FIO_IO_U_PLAT_NR; m++)
+				if (!dst->unified_rw_rep)
+					dst->io_u_plat[k][l][m] += src->io_u_plat[k][l][m];
+				else
+					dst->io_u_plat[k][0][m] += src->io_u_plat[k][l][m];
 
+	for (k = 0; k < FIO_IO_U_PLAT_NR; k++)
+		dst->io_u_sync_plat[k] += src->io_u_sync_plat[k];
+
+	for (k = 0; k < DDIR_RWDIR_CNT; k++) {
 		for (m = 0; m < FIO_IO_U_PLAT_NR; m++) {
 			if (!dst->unified_rw_rep) {
-				dst->io_u_plat[k][m] += src->io_u_plat[k][m];
 				dst->io_u_plat_high_prio[k][m] += src->io_u_plat_high_prio[k][m];
 				dst->io_u_plat_prio[k][m] += src->io_u_plat_prio[k][m];
 			} else {
-				dst->io_u_plat[0][m] += src->io_u_plat[k][m];
 				dst->io_u_plat_high_prio[0][m] += src->io_u_plat_high_prio[k][m];
 				dst->io_u_plat_prio[0][m] += src->io_u_plat_prio[k][m];
 			}
@@ -2728,7 +2732,7 @@ static inline void reset_io_stat(struct io_stat *ios)
 void reset_io_stats(struct thread_data *td)
 {
 	struct thread_stat *ts = &td->ts;
-	int i, j;
+	int i, j, k;
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		reset_io_stat(&ts->clat_high_prio_stat[i]);
@@ -2746,13 +2750,17 @@ void reset_io_stats(struct thread_data *td)
 		ts->drop_io_u[i] = 0;
 
 		for (j = 0; j < FIO_IO_U_PLAT_NR; j++) {
-			ts->io_u_plat[i][j] = 0;
 			ts->io_u_plat_high_prio[i][j] = 0;
 			ts->io_u_plat_prio[i][j] = 0;
 			if (!i)
 				ts->io_u_sync_plat[j] = 0;
 		}
 	}
+
+	for (i = 0; i < FIO_LAT_CNT; i++)
+		for (j = 0; j < DDIR_RWDIR_CNT; j++)
+			for (k = 0; k < FIO_IO_U_PLAT_NR; k++)
+				ts->io_u_plat[i][j][k] = 0;
 
 	ts->total_io_u[DDIR_SYNC] = 0;
 
@@ -2898,7 +2906,7 @@ static void add_clat_percentile_sample(struct thread_stat *ts,
 	unsigned int idx = plat_val_to_idx(nsec);
 	assert(idx < FIO_IO_U_PLAT_NR);
 
-	ts->io_u_plat[ddir][idx]++;
+	ts->io_u_plat[FIO_CLAT][ddir][idx]++;
 
 	if (!priority_bit) {
 		ts->io_u_plat_prio[ddir][idx]++;
@@ -2955,7 +2963,7 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 			 * located in iolog.c after printing this sample to the
 			 * log file.
 			 */
-			io_u_plat = (uint64_t *) td->ts.io_u_plat[ddir];
+			io_u_plat = (uint64_t *) td->ts.io_u_plat[FIO_CLAT][ddir];
 			dst = malloc(sizeof(struct io_u_plat_entry));
 			memcpy(&(dst->io_u_plat), io_u_plat,
 				FIO_IO_U_PLAT_NR * sizeof(uint64_t));

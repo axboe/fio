@@ -147,6 +147,14 @@ enum block_info_state {
 #define FIO_JOBDESC_SIZE	256
 #define FIO_VERROR_SIZE		128
 
+enum {
+	FIO_SLAT = 0,
+	FIO_CLAT,
+	FIO_LAT,
+
+	FIO_LAT_CNT = 3,
+};
+
 struct thread_stat {
 	char name[FIO_JOBNAME_SIZE];
 	char verror[FIO_VERROR_SIZE];
@@ -190,7 +198,7 @@ struct thread_stat {
 	uint64_t io_u_lat_n[FIO_IO_U_LAT_N_NR];
 	uint64_t io_u_lat_u[FIO_IO_U_LAT_U_NR];
 	uint64_t io_u_lat_m[FIO_IO_U_LAT_M_NR];
-	uint64_t io_u_plat[DDIR_RWDIR_CNT][FIO_IO_U_PLAT_NR];
+	uint64_t io_u_plat[FIO_LAT_CNT][DDIR_RWDIR_CNT][FIO_IO_U_PLAT_NR];
 	uint64_t io_u_sync_plat[FIO_IO_U_PLAT_NR];
 
 	uint64_t total_io_u[DDIR_RWDIR_SYNC_CNT];
