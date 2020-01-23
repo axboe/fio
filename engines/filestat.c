@@ -11,13 +11,36 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include "../fio.h"
+#include "../optgroup.h"
 
 struct fc_data {
 	enum fio_ddir stat_ddir;
 };
 
+struct filestat_options {
+	void *pad;
+	unsigned int lstat;
+};
+
+static struct fio_option options[] = {
+	{
+		.name	= "lstat",
+		.lname	= "lstat",
+		.type	= FIO_OPT_BOOL,
+		.off1	= offsetof(struct filestat_options, lstat),
+		.help	= "Use lstat(2) to measure lookup/getattr performance",
+		.def	= "0",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_FILESTAT,
+	},
+	{
+		.name	= NULL,
+	},
+};
+
 static int stat_file(struct thread_data *td, struct fio_file *f)
 {
+	struct filestat_options *o = td->eo;
 	struct timespec start;
 	int do_lat = !td->o.disable_lat;
 	struct stat statbuf;
@@ -37,13 +60,17 @@ static int stat_file(struct thread_data *td, struct fio_file *f)
 	if (do_lat)
 		fio_gettime(&start, NULL);
 
-	ret = stat(f->file_name, &statbuf);
+	if (o->lstat)
+		ret = lstat(f->file_name, &statbuf);
+	else
+		ret = stat(f->file_name, &statbuf);
 
 	if (ret == -1) {
 		char buf[FIO_VERROR_SIZE];
 		int e = errno;
 
-		snprintf(buf, sizeof(buf), "stat(%s)", f->file_name);
+		snprintf(buf, sizeof(buf), "%sstat(%s)",
+			o->lstat ? "l" : "", f->file_name);
 		td_verror(td, e, buf);
 		return 1;
 	}
@@ -103,6 +130,8 @@ static struct ioengine_ops ioengine = {
 	.open_file	= stat_file,
 	.flags		=  FIO_SYNCIO | FIO_FAKEIO |
 				FIO_NOSTATS | FIO_NOFILEHASH,
+	.options	= options,
+	.option_struct_size = sizeof(struct filestat_options),
 };
 
 static void fio_init fio_filestat_register(void)

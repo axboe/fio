@@ -65,6 +65,7 @@ enum opt_category_group {
 	__FIO_OPT_G_ISCSI,
 	__FIO_OPT_G_NBD,
 	__FIO_OPT_G_IOURING,
+	__FIO_OPT_G_FILESTAT,
 	__FIO_OPT_G_NR,
 
 	FIO_OPT_G_RATE		= (1ULL << __FIO_OPT_G_RATE),
@@ -106,6 +107,7 @@ enum opt_category_group {
 	FIO_OPT_G_ISCSI         = (1ULL << __FIO_OPT_G_ISCSI),
 	FIO_OPT_G_NBD		= (1ULL << __FIO_OPT_G_NBD),
 	FIO_OPT_G_IOURING	= (1ULL << __FIO_OPT_G_IOURING),
+	FIO_OPT_G_FILESTAT	= (1ULL << __FIO_OPT_G_FILESTAT),
 };
 
 extern const struct opt_group *opt_group_from_mask(uint64_t *mask);
