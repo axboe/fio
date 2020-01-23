@@ -2032,6 +2032,9 @@ on the client site it will be used in the rdma_resolve_add()
 function. This can be useful when multiple paths exist between the
 client and the server or in certain loopback configurations.
 .TP
+.BI (filestat)lstat \fR=\fPbool
+Use \fBlstat\fR\|(2) to measure lookup/getattr performance. Default: 0.
+.TP
 .BI (sg)readfua \fR=\fPbool
 With readfua option set to 1, read operations include the force
 unit access (fua) flag. Default: 0.

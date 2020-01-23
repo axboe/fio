@@ -2261,6 +2261,10 @@ with the caveat that when used on the command line, they must come after the
 	multiple paths exist between the client and the server or in certain loopback
 	configurations.
 
+.. option:: lstat=bool : [filestat]
+
+	Use lstat(2) to measure lookup/getattr performance. Default is 0.
+
 .. option:: readfua=bool : [sg]
 
 	With readfua option set to 1, read operations include
