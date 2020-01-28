@@ -31,9 +31,9 @@
 #define PTHREAD_STACK_MIN 4096
 #endif
 
-#define fio_swap16(x)	bswap16(x)
-#define fio_swap32(x)	bswap32(x)
-#define fio_swap64(x)	bswap64(x)
+#define fio_swap16(x)	swap16(x)
+#define fio_swap32(x)	swap32(x)
+#define fio_swap64(x)	swap64(x)
 
 static inline int blockdev_size(struct fio_file *f, unsigned long long *bytes)
 {
