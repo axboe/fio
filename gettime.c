@@ -371,7 +371,7 @@ static int calibrate_cpu_clock(void)
 }
 #endif // ARCH_HAVE_CPU_CLOCK
 
-#ifndef CONFIG_TLS_THREAD
+#if defined(ARCH_HAVE_CPU_CLOCK) && !defined(CONFIG_TLS_THREAD)
 void fio_local_clock_init(void)
 {
 	struct tv_valid *t;
@@ -398,7 +398,7 @@ void fio_clock_init(void)
 	if (fio_clock_source == fio_clock_source_inited)
 		return;
 
-#ifndef CONFIG_TLS_THREAD
+#if defined(ARCH_HAVE_CPU_CLOCK) && !defined(CONFIG_TLS_THREAD)
 	if (pthread_key_create(&tv_tls_key, kill_tv_tls_key))
 		log_err("fio: can't create TLS key\n");
 #endif
