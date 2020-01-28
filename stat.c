@@ -3106,7 +3106,7 @@ static int __add_samples(struct thread_data *td, struct timespec *parent_tv,
 		stat_io_bytes[ddir] = this_io_bytes[ddir];
 	}
 
-	timespec_add_msec(parent_tv, avg_time);
+	*parent_tv = *t;
 
 	if (needs_lock)
 		__td_io_u_unlock(td);
