@@ -37,7 +37,7 @@ struct group_run_stats {
 					list of percentiles */
 
 /*
- * Aggregate clat samples to report percentile(s) of them.
+ * Aggregate latency samples for reporting percentile(s).
  *
  * EXECUTIVE SUMMARY
  *
@@ -58,7 +58,7 @@ struct group_run_stats {
  *
  * DETAILS
  *
- * Suppose the clat varies from 0 to 999 (usec), the straightforward
+ * Suppose the lat varies from 0 to 999 (usec), the straightforward
  * method is to keep an array of (999 + 1) buckets, in which a counter
  * keeps the count of samples which fall in the bucket, e.g.,
  * {[0],[1],...,[999]}. However this consumes a huge amount of space,
@@ -147,7 +147,7 @@ enum block_info_state {
 #define FIO_JOBDESC_SIZE	256
 #define FIO_VERROR_SIZE		128
 
-enum {
+enum fio_lat {
 	FIO_SLAT = 0,
 	FIO_CLAT,
 	FIO_LAT,
@@ -189,6 +189,8 @@ struct thread_stat {
 	 */
 	uint32_t clat_percentiles;
 	uint32_t lat_percentiles;
+	uint32_t slat_percentiles;
+	uint32_t pad;
 	uint64_t percentile_precision;
 	fio_fp64_t percentile_list[FIO_IO_U_LIST_MAX_LEN];
 
@@ -339,7 +341,7 @@ extern void add_lat_sample(struct thread_data *, enum fio_ddir, unsigned long lo
 				unsigned long long, uint64_t, uint8_t);
 extern void add_clat_sample(struct thread_data *, enum fio_ddir, unsigned long long,
 				unsigned long long, uint64_t, uint8_t);
-extern void add_slat_sample(struct thread_data *, enum fio_ddir, unsigned long,
+extern void add_slat_sample(struct thread_data *, enum fio_ddir, unsigned long long,
 				unsigned long long, uint64_t, uint8_t);
 extern void add_agg_sample(union io_sample_data, enum fio_ddir, unsigned long long bs,
 				uint8_t priority_bit);

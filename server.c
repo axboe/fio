@@ -1499,6 +1499,7 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 	p.ts.majf		= cpu_to_le64(ts->majf);
 	p.ts.clat_percentiles	= cpu_to_le32(ts->clat_percentiles);
 	p.ts.lat_percentiles	= cpu_to_le32(ts->lat_percentiles);
+	p.ts.slat_percentiles	= cpu_to_le32(ts->slat_percentiles);
 	p.ts.percentile_precision = cpu_to_le64(ts->percentile_precision);
 
 	for (i = 0; i < FIO_IO_U_LIST_MAX_LEN; i++) {
