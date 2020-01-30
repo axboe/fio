@@ -250,9 +250,9 @@ struct thread_stat {
 	fio_fp64_t ss_criterion;
 
 	uint64_t io_u_plat_high_prio[DDIR_RWDIR_CNT][FIO_IO_U_PLAT_NR] __attribute__((aligned(8)));;
-	uint64_t io_u_plat_prio[DDIR_RWDIR_CNT][FIO_IO_U_PLAT_NR];
+	uint64_t io_u_plat_low_prio[DDIR_RWDIR_CNT][FIO_IO_U_PLAT_NR];
 	struct io_stat clat_high_prio_stat[DDIR_RWDIR_CNT] __attribute__((aligned(8)));
-	struct io_stat clat_prio_stat[DDIR_RWDIR_CNT];
+	struct io_stat clat_low_prio_stat[DDIR_RWDIR_CNT];
 
 	union {
 		uint64_t *ss_iops_data;

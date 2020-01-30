@@ -1579,10 +1579,10 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		for (j = 0; j < FIO_IO_U_PLAT_NR; j++) {
 			p.ts.io_u_plat_high_prio[i][j] = cpu_to_le64(ts->io_u_plat_high_prio[i][j]);
-			p.ts.io_u_plat_prio[i][j] = cpu_to_le64(ts->io_u_plat_prio[i][j]);
+			p.ts.io_u_plat_low_prio[i][j] = cpu_to_le64(ts->io_u_plat_low_prio[i][j]);
 		}
 		convert_io_stat(&p.ts.clat_high_prio_stat[i], &ts->clat_high_prio_stat[i]);
-		convert_io_stat(&p.ts.clat_prio_stat[i], &ts->clat_prio_stat[i]);
+		convert_io_stat(&p.ts.clat_low_prio_stat[i], &ts->clat_low_prio_stat[i]);
 	}
 
 	convert_gs(&p.rs, rs);
