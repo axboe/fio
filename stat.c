@@ -483,7 +483,8 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	if (calc_lat(&ts->lat_stat[ddir], &min, &max, &mean, &dev))
 		display_lat(" lat", min, max, mean, dev, out);
 	if (calc_lat(&ts->clat_high_prio_stat[ddir], &min, &max, &mean, &dev))
-		display_lat("prio_clat", min, max, mean, dev, out);
+		display_lat(ts->lat_percentiles ? "prio_lat" : "prio_clat",
+				min, max, mean, dev, out);
 
 	if (ts->slat_percentiles && ts->slat_stat[ddir].samples > 0)
 		show_clat_percentiles(ts->io_u_plat[FIO_SLAT][ddir],
@@ -502,7 +503,7 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 					ts->percentile_precision, "lat", out);
 
 	if (ts->clat_percentiles || ts->lat_percentiles) {
-		const char *name = ts->lat_percentiles ? " lat" : "clat";
+		const char *name = ts->lat_percentiles ? "lat" : "clat";
 		char prio_name[32];
 		uint64_t samples;
 
@@ -2826,10 +2827,11 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 
 	add_stat_sample(&ts->clat_stat[ddir], nsec);
 
-	if (priority_bit) {
-		add_stat_sample(&ts->clat_high_prio_stat[ddir], nsec);
-	} else {
-		add_stat_sample(&ts->clat_prio_stat[ddir], nsec);
+	if (!ts->lat_percentiles) {
+		if (priority_bit)
+			add_stat_sample(&ts->clat_high_prio_stat[ddir], nsec);
+		else
+			add_stat_sample(&ts->clat_prio_stat[ddir], nsec);
 	}
 
 	if (td->clat_log)
@@ -2930,9 +2932,14 @@ void add_lat_sample(struct thread_data *td, enum fio_ddir ddir,
 		add_log_sample(td, td->lat_log, sample_val(nsec), ddir, bs,
 			       offset, priority_bit);
 
-	if (ts->lat_percentiles)
+	if (ts->lat_percentiles) {
 		add_lat_percentile_sample(ts, nsec, ddir, priority_bit, FIO_LAT);
+		if (priority_bit)
+			add_stat_sample(&ts->clat_high_prio_stat[ddir], nsec);
+		else
+			add_stat_sample(&ts->clat_prio_stat[ddir], nsec);
 
+	}
 	if (needs_lock)
 		__td_io_u_unlock(td);
 }
