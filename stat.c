@@ -1888,8 +1888,8 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src,
 				dst->runtime[l] = src->runtime[l];
 		} else {
 			sum_stat(&dst->clat_stat[0], &src->clat_stat[l], first, false);
-			sum_stat(&dst->clat_high_prio_stat[l], &src->clat_high_prio_stat[l], first, false);
-			sum_stat(&dst->clat_low_prio_stat[l], &src->clat_low_prio_stat[l], first, false);
+			sum_stat(&dst->clat_high_prio_stat[0], &src->clat_high_prio_stat[l], first, false);
+			sum_stat(&dst->clat_low_prio_stat[0], &src->clat_low_prio_stat[l], first, false);
 			sum_stat(&dst->slat_stat[0], &src->slat_stat[l], first, false);
 			sum_stat(&dst->lat_stat[0], &src->lat_stat[l], first, false);
 			sum_stat(&dst->bw_stat[0], &src->bw_stat[l], first, true);
