@@ -510,17 +510,17 @@ class Requirements(object):
 SUCCESS_DEFAULT = {
         'zero_return': True,
         'stderr_empty': True,
-        'timeout': 300,
+        'timeout': 600,
         }
 SUCCESS_NONZERO = {
         'zero_return': False,
         'stderr_empty': False,
-        'timeout': 300,
+        'timeout': 600,
         }
 SUCCESS_STDERR = {
         'zero_return': True,
         'stderr_empty': False,
-        'timeout': 300,
+        'timeout': 600,
         }
 TEST_LIST = [
         {
