@@ -944,7 +944,7 @@ static void convert_io_stat(struct io_stat *dst, struct io_stat *src)
 
 static void convert_ts(struct thread_stat *dst, struct thread_stat *src)
 {
-	int i, j;
+	int i, j, k;
 
 	dst->error		= le32_to_cpu(src->error);
 	dst->thread_number	= le32_to_cpu(src->thread_number);
@@ -969,6 +969,7 @@ static void convert_ts(struct thread_stat *dst, struct thread_stat *src)
 	dst->majf		= le64_to_cpu(src->majf);
 	dst->clat_percentiles	= le32_to_cpu(src->clat_percentiles);
 	dst->lat_percentiles	= le32_to_cpu(src->lat_percentiles);
+	dst->slat_percentiles	= le32_to_cpu(src->slat_percentiles);
 	dst->percentile_precision = le64_to_cpu(src->percentile_precision);
 
 	for (i = 0; i < FIO_IO_U_LIST_MAX_LEN; i++) {
@@ -991,9 +992,10 @@ static void convert_ts(struct thread_stat *dst, struct thread_stat *src)
 	for (i = 0; i < FIO_IO_U_LAT_M_NR; i++)
 		dst->io_u_lat_m[i]	= le64_to_cpu(src->io_u_lat_m[i]);
 
-	for (i = 0; i < DDIR_RWDIR_CNT; i++)
-		for (j = 0; j < FIO_IO_U_PLAT_NR; j++)
-			dst->io_u_plat[i][j] = le64_to_cpu(src->io_u_plat[i][j]);
+	for (i = 0; i < FIO_LAT_CNT; i++)
+		for (j = 0; j < DDIR_RWDIR_CNT; j++)
+			for (k = 0; k < FIO_IO_U_PLAT_NR; k++)
+				dst->io_u_plat[i][j][k] = le64_to_cpu(src->io_u_plat[i][j][k]);
 
 	for (j = 0; j < FIO_IO_U_PLAT_NR; j++)
 		dst->io_u_sync_plat[j] = le64_to_cpu(src->io_u_sync_plat[j]);
@@ -1035,10 +1037,10 @@ static void convert_ts(struct thread_stat *dst, struct thread_stat *src)
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		for (j = 0; j < FIO_IO_U_PLAT_NR; j++) {
 			dst->io_u_plat_high_prio[i][j] = le64_to_cpu(src->io_u_plat_high_prio[i][j]);
-			dst->io_u_plat_prio[i][j] = le64_to_cpu(src->io_u_plat_prio[i][j]);
+			dst->io_u_plat_low_prio[i][j] = le64_to_cpu(src->io_u_plat_low_prio[i][j]);
 		}
 		convert_io_stat(&dst->clat_high_prio_stat[i], &src->clat_high_prio_stat[i]);
-		convert_io_stat(&dst->clat_prio_stat[i], &src->clat_prio_stat[i]);
+		convert_io_stat(&dst->clat_low_prio_stat[i], &src->clat_low_prio_stat[i]);
 	}
 
 	dst->ss_dur		= le64_to_cpu(src->ss_dur);

@@ -3001,23 +3001,24 @@ Disable measurements of submission latency numbers. See
 Disable measurements of throughput/bandwidth numbers. See
 \fBdisable_lat\fR.
 .TP
+.BI slat_percentiles \fR=\fPbool
+Report submission latency percentiles. Submission latency is not recorded
+for synchronous ioengines.
+.TP
 .BI clat_percentiles \fR=\fPbool
-Enable the reporting of percentiles of completion latencies. This option is
-mutually exclusive with \fBlat_percentiles\fR.
+Report completion latency percentiles.
 .TP
 .BI lat_percentiles \fR=\fPbool
-Enable the reporting of percentiles of I/O latencies. This is similar to
-\fBclat_percentiles\fR, except that this includes the submission latency.
-This option is mutually exclusive with \fBclat_percentiles\fR.
+Report total latency percentiles. Total latency is the sum of submission
+latency and completion latency.
 .TP
 .BI percentile_list \fR=\fPfloat_list
-Overwrite the default list of percentiles for completion latencies and the
-block error histogram. Each number is a floating number in the range
+Overwrite the default list of percentiles for latencies and the
+block error histogram. Each number is a floating point number in the range
 (0,100], and the maximum length of the list is 20. Use ':' to separate the
-numbers, and list the numbers in ascending order. For example,
-`\-\-percentile_list=99.5:99.9' will cause fio to report the values of
-completion latency below which 99.5% and 99.9% of the observed latencies
-fell, respectively.
+numbers. For example, `\-\-percentile_list=99.5:99.9' will cause fio to
+report the latency durations below which 99.5% and 99.9% of the observed
+latencies fell, respectively.
 .TP
 .BI significant_figures \fR=\fPint
 If using \fB\-\-output\-format\fR of `normal', set the significant figures

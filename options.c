@@ -1408,13 +1408,20 @@ static int str_gtod_reduce_cb(void *data, int *il)
 	struct thread_data *td = cb_data_to_td(data);
 	int val = *il;
 
-	td->o.disable_lat = !!val;
-	td->o.disable_clat = !!val;
-	td->o.disable_slat = !!val;
-	td->o.disable_bw = !!val;
-	td->o.clat_percentiles = !val;
-	if (val)
+	/*
+	 * Only modfiy options if gtod_reduce==1
+	 * Otherwise leave settings alone.
+	 */
+	if (val) {
+		td->o.disable_lat = 1;
+		td->o.disable_clat = 1;
+		td->o.disable_slat = 1;
+		td->o.disable_bw = 1;
+		td->o.clat_percentiles = 0;
+		td->o.lat_percentiles = 0;
+		td->o.slat_percentiles = 0;
 		td->ts_cache_mask = 63;
+	}
 
 	return 0;
 }
@@ -4312,7 +4319,6 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= offsetof(struct thread_options, clat_percentiles),
 		.help	= "Enable the reporting of completion latency percentiles",
 		.def	= "1",
-		.inverse = "lat_percentiles",
 		.category = FIO_OPT_C_STAT,
 		.group	= FIO_OPT_G_INVALID,
 	},
@@ -4323,7 +4329,16 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= offsetof(struct thread_options, lat_percentiles),
 		.help	= "Enable the reporting of IO latency percentiles",
 		.def	= "0",
-		.inverse = "clat_percentiles",
+		.category = FIO_OPT_C_STAT,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
+		.name	= "slat_percentiles",
+		.lname	= "Submission latency percentiles",
+		.type	= FIO_OPT_BOOL,
+		.off1	= offsetof(struct thread_options, slat_percentiles),
+		.help	= "Enable the reporting of submission latency percentiles",
+		.def	= "0",
 		.category = FIO_OPT_C_STAT,
 		.group	= FIO_OPT_G_INVALID,
 	},

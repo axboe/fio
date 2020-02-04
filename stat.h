@@ -37,7 +37,7 @@ struct group_run_stats {
 					list of percentiles */
 
 /*
- * Aggregate clat samples to report percentile(s) of them.
+ * Aggregate latency samples for reporting percentile(s).
  *
  * EXECUTIVE SUMMARY
  *
@@ -58,7 +58,7 @@ struct group_run_stats {
  *
  * DETAILS
  *
- * Suppose the clat varies from 0 to 999 (usec), the straightforward
+ * Suppose the lat varies from 0 to 999 (usec), the straightforward
  * method is to keep an array of (999 + 1) buckets, in which a counter
  * keeps the count of samples which fall in the bucket, e.g.,
  * {[0],[1],...,[999]}. However this consumes a huge amount of space,
@@ -147,6 +147,14 @@ enum block_info_state {
 #define FIO_JOBDESC_SIZE	256
 #define FIO_VERROR_SIZE		128
 
+enum fio_lat {
+	FIO_SLAT = 0,
+	FIO_CLAT,
+	FIO_LAT,
+
+	FIO_LAT_CNT = 3,
+};
+
 struct thread_stat {
 	char name[FIO_JOBNAME_SIZE];
 	char verror[FIO_VERROR_SIZE];
@@ -181,6 +189,8 @@ struct thread_stat {
 	 */
 	uint32_t clat_percentiles;
 	uint32_t lat_percentiles;
+	uint32_t slat_percentiles;
+	uint32_t pad;
 	uint64_t percentile_precision;
 	fio_fp64_t percentile_list[FIO_IO_U_LIST_MAX_LEN];
 
@@ -190,7 +200,7 @@ struct thread_stat {
 	uint64_t io_u_lat_n[FIO_IO_U_LAT_N_NR];
 	uint64_t io_u_lat_u[FIO_IO_U_LAT_U_NR];
 	uint64_t io_u_lat_m[FIO_IO_U_LAT_M_NR];
-	uint64_t io_u_plat[DDIR_RWDIR_CNT][FIO_IO_U_PLAT_NR];
+	uint64_t io_u_plat[FIO_LAT_CNT][DDIR_RWDIR_CNT][FIO_IO_U_PLAT_NR];
 	uint64_t io_u_sync_plat[FIO_IO_U_PLAT_NR];
 
 	uint64_t total_io_u[DDIR_RWDIR_SYNC_CNT];
@@ -240,9 +250,9 @@ struct thread_stat {
 	fio_fp64_t ss_criterion;
 
 	uint64_t io_u_plat_high_prio[DDIR_RWDIR_CNT][FIO_IO_U_PLAT_NR] __attribute__((aligned(8)));;
-	uint64_t io_u_plat_prio[DDIR_RWDIR_CNT][FIO_IO_U_PLAT_NR];
+	uint64_t io_u_plat_low_prio[DDIR_RWDIR_CNT][FIO_IO_U_PLAT_NR];
 	struct io_stat clat_high_prio_stat[DDIR_RWDIR_CNT] __attribute__((aligned(8)));
-	struct io_stat clat_prio_stat[DDIR_RWDIR_CNT];
+	struct io_stat clat_low_prio_stat[DDIR_RWDIR_CNT];
 
 	union {
 		uint64_t *ss_iops_data;
@@ -331,7 +341,7 @@ extern void add_lat_sample(struct thread_data *, enum fio_ddir, unsigned long lo
 				unsigned long long, uint64_t, uint8_t);
 extern void add_clat_sample(struct thread_data *, enum fio_ddir, unsigned long long,
 				unsigned long long, uint64_t, uint8_t);
-extern void add_slat_sample(struct thread_data *, enum fio_ddir, unsigned long,
+extern void add_slat_sample(struct thread_data *, enum fio_ddir, unsigned long long,
 				unsigned long long, uint64_t, uint8_t);
 extern void add_agg_sample(union io_sample_data, enum fio_ddir, unsigned long long bs,
 				uint8_t priority_bit);

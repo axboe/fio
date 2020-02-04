@@ -510,17 +510,17 @@ class Requirements(object):
 SUCCESS_DEFAULT = {
         'zero_return': True,
         'stderr_empty': True,
-        'timeout': 300,
+        'timeout': 600,
         }
 SUCCESS_NONZERO = {
         'zero_return': False,
         'stderr_empty': False,
-        'timeout': 300,
+        'timeout': 600,
         }
 SUCCESS_STDERR = {
         'zero_return': True,
         'stderr_empty': False,
-        'timeout': 300,
+        'timeout': 600,
         }
 TEST_LIST = [
         {
@@ -711,6 +711,14 @@ TEST_LIST = [
             'parameters':       None,
             'success':          SUCCESS_DEFAULT,
             'requirements':     [Requirements.unittests],
+        },
+        {
+            'test_id':          1010,
+            'test_class':       FioExeTest,
+            'exe':              't/latency_percentiles.py',
+            'parameters':       ['-f', '{fio_path}'],
+            'success':          SUCCESS_DEFAULT,
+            'requirements':     [],
         },
 ]
 

@@ -944,24 +944,12 @@ static int fixup_options(struct thread_data *td)
 		ret |= 1;
 	}
 
-	if (fio_option_is_set(o, clat_percentiles) &&
-	    !fio_option_is_set(o, lat_percentiles)) {
-		o->lat_percentiles = !o->clat_percentiles;
-	} else if (fio_option_is_set(o, lat_percentiles) &&
-		   !fio_option_is_set(o, clat_percentiles)) {
-		o->clat_percentiles = !o->lat_percentiles;
-	} else if (fio_option_is_set(o, lat_percentiles) &&
-		   fio_option_is_set(o, clat_percentiles) &&
-		   o->lat_percentiles && o->clat_percentiles) {
-		log_err("fio: lat_percentiles and clat_percentiles are "
-			"mutually exclusive\n");
-		ret |= 1;
-	}
-
 	if (o->disable_lat)
 		o->lat_percentiles = 0;
 	if (o->disable_clat)
 		o->clat_percentiles = 0;
+	if (o->disable_slat)
+		o->slat_percentiles = 0;
 
 	/*
 	 * Fix these up to be nsec internally
@@ -1509,6 +1497,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 
 	td->ts.clat_percentiles = o->clat_percentiles;
 	td->ts.lat_percentiles = o->lat_percentiles;
+	td->ts.slat_percentiles = o->slat_percentiles;
 	td->ts.percentile_precision = o->percentile_precision;
 	memcpy(td->ts.percentile_list, o->percentile_list, sizeof(o->percentile_list));
 	td->ts.sig_figs = o->sig_figs;
@@ -1520,7 +1509,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		td->ts.bw_stat[i].min_val = ULONG_MAX;
 		td->ts.iops_stat[i].min_val = ULONG_MAX;
 		td->ts.clat_high_prio_stat[i].min_val = ULONG_MAX;
-		td->ts.clat_prio_stat[i].min_val = ULONG_MAX;
+		td->ts.clat_low_prio_stat[i].min_val = ULONG_MAX;
 	}
 	td->ts.sync_stat.min_val = ULONG_MAX;
 	td->ddir_seq_nr = o->ddir_seq_nr;
