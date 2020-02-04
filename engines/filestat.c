@@ -19,17 +19,39 @@ struct fc_data {
 
 struct filestat_options {
 	void *pad;
-	unsigned int lstat;
+	unsigned int stat_type;
+};
+
+enum {
+	FIO_FILESTAT_STAT	= 1,
+	FIO_FILESTAT_LSTAT	= 2,
+	/*FIO_FILESTAT_STATX	= 3,*/
 };
 
 static struct fio_option options[] = {
 	{
-		.name	= "lstat",
-		.lname	= "lstat",
-		.type	= FIO_OPT_BOOL,
-		.off1	= offsetof(struct filestat_options, lstat),
-		.help	= "Use lstat(2) to measure lookup/getattr performance",
-		.def	= "0",
+		.name	= "stat_type",
+		.lname	= "stat_type",
+		.type	= FIO_OPT_STR,
+		.off1	= offsetof(struct filestat_options, stat_type),
+		.help	= "Specify stat system call type to measure lookup/getattr performance",
+		.def	= "stat",
+		.posval = {
+			  { .ival = "stat",
+			    .oval = FIO_FILESTAT_STAT,
+			    .help = "Use stat(2)",
+			  },
+			  { .ival = "lstat",
+			    .oval = FIO_FILESTAT_LSTAT,
+			    .help = "Use lstat(2)",
+			  },
+			  /*
+			  { .ival = "statx",
+			    .oval = FIO_FILESTAT_STATX,
+			    .help = "Use statx(2)",
+			  },
+			  */
+		},
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_FILESTAT,
 	},
@@ -60,17 +82,24 @@ static int stat_file(struct thread_data *td, struct fio_file *f)
 	if (do_lat)
 		fio_gettime(&start, NULL);
 
-	if (o->lstat)
-		ret = lstat(f->file_name, &statbuf);
-	else
+	switch (o->stat_type){
+	case FIO_FILESTAT_STAT:
 		ret = stat(f->file_name, &statbuf);
+		break;
+	case FIO_FILESTAT_LSTAT:
+		ret = lstat(f->file_name, &statbuf);
+		break;
+	default:
+		ret = -1;
+		break;
+	}
 
 	if (ret == -1) {
 		char buf[FIO_VERROR_SIZE];
 		int e = errno;
 
-		snprintf(buf, sizeof(buf), "%sstat(%s)",
-			o->lstat ? "l" : "", f->file_name);
+		snprintf(buf, sizeof(buf), "stat(%s) type=%u", f->file_name,
+			o->stat_type);
 		td_verror(td, e, buf);
 		return 1;
 	}
