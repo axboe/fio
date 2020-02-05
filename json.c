@@ -194,25 +194,31 @@ static int json_object_add_pair(struct json_object *obj, struct json_pair *pair)
 	return 0;
 }
 
-int json_object_add_value_type(struct json_object *obj, const char *name, int type, ...)
+int json_object_add_value_type(struct json_object *obj, const char *name,
+			       const struct json_value *arg)
 {
 	struct json_value *value;
 	struct json_pair *pair;
-	va_list args;
 	int ret;
 
-	va_start(args, type);
-	if (type == JSON_TYPE_STRING)
-		value = json_create_value_string(va_arg(args, char *));
-	else if (type == JSON_TYPE_INTEGER)
-		value = json_create_value_int(va_arg(args, long long));
-	else if (type == JSON_TYPE_FLOAT)
-		value = json_create_value_float(va_arg(args, double));
-	else if (type == JSON_TYPE_OBJECT)
-		value = json_create_value_object(va_arg(args, struct json_object *));
-	else
-		value = json_create_value_array(va_arg(args, struct json_array *));
-	va_end(args);
+	switch (arg->type) {
+	case JSON_TYPE_STRING:
+		value = json_create_value_string(arg->string);
+		break;
+	case JSON_TYPE_INTEGER:
+		value = json_create_value_int(arg->integer_number);
+		break;
+	case JSON_TYPE_FLOAT:
+		value = json_create_value_float(arg->float_number);
+		break;
+	case JSON_TYPE_OBJECT:
+		value = json_create_value_object(arg->object);
+		break;
+	default:
+	case JSON_TYPE_ARRAY:
+		value = json_create_value_array(arg->array);
+		break;
+	}
 
 	if (!value)
 		return ENOMEM;
@@ -230,24 +236,30 @@ int json_object_add_value_type(struct json_object *obj, const char *name, int ty
 	return 0;
 }
 
-int json_array_add_value_type(struct json_array *array, int type, ...)
+int json_array_add_value_type(struct json_array *array,
+			      const struct json_value *arg)
 {
 	struct json_value *value;
-	va_list args;
 	int ret;
 
-	va_start(args, type);
-	if (type == JSON_TYPE_STRING)
-		value = json_create_value_string(va_arg(args, char *));
-	else if (type == JSON_TYPE_INTEGER)
-		value = json_create_value_int(va_arg(args, long long));
-	else if (type == JSON_TYPE_FLOAT)
-		value = json_create_value_float(va_arg(args, double));
-	else if (type == JSON_TYPE_OBJECT)
-		value = json_create_value_object(va_arg(args, struct json_object *));
-	else
-		value = json_create_value_array(va_arg(args, struct json_array *));
-	va_end(args);
+	switch (arg->type) {
+	case JSON_TYPE_STRING:
+		value = json_create_value_string(arg->string);
+		break;
+	case JSON_TYPE_INTEGER:
+		value = json_create_value_int(arg->integer_number);
+		break;
+	case JSON_TYPE_FLOAT:
+		value = json_create_value_float(arg->float_number);
+		break;
+	case JSON_TYPE_OBJECT:
+		value = json_create_value_object(arg->object);
+		break;
+	default:
+	case JSON_TYPE_ARRAY:
+		value = json_create_value_array(arg->array);
+		break;
+	}
 
 	if (!value)
 		return ENOMEM;

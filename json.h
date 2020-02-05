@@ -49,28 +49,124 @@ struct json_array *json_create_array(void);
 
 void json_free_object(struct json_object *obj);
 
-int json_object_add_value_type(struct json_object *obj, const char *name, int type, ...);
-#define json_object_add_value_int(obj, name, val) \
-	json_object_add_value_type((obj), name, JSON_TYPE_INTEGER, (long long) (val))
-#define json_object_add_value_float(obj, name, val) \
-	json_object_add_value_type((obj), name, JSON_TYPE_FLOAT, (val))
-#define json_object_add_value_string(obj, name, val) \
-	json_object_add_value_type((obj), name, JSON_TYPE_STRING, (val))
-#define json_object_add_value_object(obj, name, val) \
-	json_object_add_value_type((obj), name, JSON_TYPE_OBJECT, (val))
-#define json_object_add_value_array(obj, name, val) \
-	json_object_add_value_type((obj), name, JSON_TYPE_ARRAY, (val))
-int json_array_add_value_type(struct json_array *array, int type, ...);
-#define json_array_add_value_int(obj, val) \
-	json_array_add_value_type((obj), JSON_TYPE_INTEGER, (val))
-#define json_array_add_value_float(obj, val) \
-	json_array_add_value_type((obj), JSON_TYPE_FLOAT, (val))
-#define json_array_add_value_string(obj, val) \
-	json_array_add_value_type((obj), JSON_TYPE_STRING, (val))
-#define json_array_add_value_object(obj, val) \
-	json_array_add_value_type((obj), JSON_TYPE_OBJECT, (val))
-#define json_array_add_value_array(obj, val) \
-	json_array_add_value_type((obj), JSON_TYPE_ARRAY, (val))
+int json_object_add_value_type(struct json_object *obj, const char *name,
+			       const struct json_value *val);
+
+static inline int json_object_add_value_int(struct json_object *obj,
+					    const char *name, long long val)
+{
+	struct json_value arg = {
+		.type = JSON_TYPE_INTEGER,
+		.integer_number = val,
+	};
+
+	return json_object_add_value_type(obj, name, &arg);
+}
+
+static inline int json_object_add_value_float(struct json_object *obj,
+					      const char *name, double val)
+{
+	struct json_value arg = {
+		.type = JSON_TYPE_FLOAT,
+		.float_number = val,
+	};
+
+	return json_object_add_value_type(obj, name, &arg);
+}
+
+static inline int json_object_add_value_string(struct json_object *obj,
+					       const char *name,
+					       const char *val)
+{
+	struct json_value arg = {
+		.type = JSON_TYPE_STRING,
+		.string = (char *)val,
+	};
+
+	return json_object_add_value_type(obj, name, &arg);
+}
+
+static inline int json_object_add_value_object(struct json_object *obj,
+					       const char *name,
+					       struct json_object *val)
+{
+	struct json_value arg = {
+		.type = JSON_TYPE_OBJECT,
+		.object = val,
+	};
+
+	return json_object_add_value_type(obj, name, &arg);
+}
+
+static inline int json_object_add_value_array(struct json_object *obj,
+					      const char *name,
+					      struct json_array *val)
+{
+	struct json_value arg = {
+		.type = JSON_TYPE_ARRAY,
+		.array = val,
+	};
+
+	return json_object_add_value_type(obj, name, &arg);
+}
+
+int json_array_add_value_type(struct json_array *array,
+			      const struct json_value *val);
+
+static inline int json_array_add_value_int(struct json_array *obj,
+					   long long val)
+{
+	struct json_value arg = {
+		.type = JSON_TYPE_INTEGER,
+		.integer_number = val,
+	};
+
+	return json_array_add_value_type(obj, &arg);
+}
+
+static inline int json_array_add_value_float(struct json_array *obj,
+					     double val)
+{
+	struct json_value arg = {
+		.type = JSON_TYPE_FLOAT,
+		.float_number = val,
+	};
+
+	return json_array_add_value_type(obj, &arg);
+}
+
+static inline int json_array_add_value_string(struct json_array *obj,
+					      const char *val)
+{
+	struct json_value arg = {
+		.type = JSON_TYPE_STRING,
+		.string = (char *)val,
+	};
+
+	return json_array_add_value_type(obj, &arg);
+}
+
+static inline int json_array_add_value_object(struct json_array *obj,
+					      struct json_object *val)
+{
+	struct json_value arg = {
+		.type = JSON_TYPE_OBJECT,
+		.object = val,
+	};
+
+	return json_array_add_value_type(obj, &arg);
+}
+
+static inline int json_array_add_value_array(struct json_array *obj,
+					     struct json_array *val)
+{
+	struct json_value arg = {
+		.type = JSON_TYPE_ARRAY,
+		.array = val,
+	};
+
+	return json_array_add_value_type(obj, &arg);
+}
 
 #define json_array_last_value_object(obj) \
 	(obj->values[obj->value_cnt - 1]->object)
