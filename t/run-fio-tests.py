@@ -67,8 +67,14 @@ class FioTest(object):
         self.test_dir = None
         self.passed = True
         self.failure_reason = ''
+        self.command_file = None
+        self.stdout_file = None
+        self.stderr_file = None
+        self.exitcode_file = None
 
     def setup(self, artifact_root, testnum):
+        """Setup instance variables for test."""
+
         self.artifact_root = artifact_root
         self.testnum = testnum
         self.test_dir = os.path.join(artifact_root, "{:04d}".format(testnum))
@@ -76,22 +82,26 @@ class FioTest(object):
             os.mkdir(self.test_dir)
 
         self.command_file = os.path.join(
-                self.test_dir,
-                "{0}.command".format(os.path.basename(self.exe_path)))
+            self.test_dir,
+            "{0}.command".format(os.path.basename(self.exe_path)))
         self.stdout_file = os.path.join(
-                self.test_dir,
-                "{0}.stdout".format(os.path.basename(self.exe_path)))
+            self.test_dir,
+            "{0}.stdout".format(os.path.basename(self.exe_path)))
         self.stderr_file = os.path.join(
-                self.test_dir,
-                "{0}.stderr".format(os.path.basename(self.exe_path)))
-        self.exticode_file = os.path.join(
-                self.test_dir,
-                "{0}.exitcode".format(os.path.basename(self.exe_path)))
+            self.test_dir,
+            "{0}.stderr".format(os.path.basename(self.exe_path)))
+        self.exitcode_file = os.path.join(
+            self.test_dir,
+            "{0}.exitcode".format(os.path.basename(self.exe_path)))
 
     def run(self):
+        """Run the test."""
+
         raise NotImplementedError()
 
     def check_result(self):
+        """Check test results."""
+
         raise NotImplementedError()
 
 
@@ -109,10 +119,9 @@ class FioExeTest(FioTest):
 
         FioTest.__init__(self, exe_path, parameters, success)
 
-    def setup(self, artifact_root, testnum):
-        super(FioExeTest, self).setup(artifact_root, testnum)
-
     def run(self):
+        """Execute the binary or script described by this instance."""
+
         if self.parameters:
             command = [self.exe_path] + self.parameters
         else:
@@ -123,7 +132,7 @@ class FioExeTest(FioTest):
 
         stdout_file = open(self.stdout_file, "w+")
         stderr_file = open(self.stderr_file, "w+")
-        exticode_file = open(self.exticode_file, "w+")
+        exitcode_file = open(self.exitcode_file, "w+")
         try:
             proc = None
             # Avoid using subprocess.run() here because when a timeout occurs,
@@ -136,8 +145,8 @@ class FioExeTest(FioTest):
                                     cwd=self.test_dir,
                                     universal_newlines=True)
             proc.communicate(timeout=self.success['timeout'])
-            exticode_file.write('{0}\n'.format(proc.returncode))
-            logging.debug("Test %d: return code: %d" % (self.testnum, proc.returncode))
+            exitcode_file.write('{0}\n'.format(proc.returncode))
+            logging.debug("Test %d: return code: %d", self.testnum, proc.returncode)
             self.output['proc'] = proc
         except subprocess.TimeoutExpired:
             proc.terminate()
@@ -154,17 +163,19 @@ class FioExeTest(FioTest):
         finally:
             stdout_file.close()
             stderr_file.close()
-            exticode_file.close()
+            exitcode_file.close()
 
     def check_result(self):
+        """Check results of test run."""
+
         if 'proc' not in self.output:
             if self.output['failure'] == 'timeout':
                 self.failure_reason = "{0} timeout,".format(self.failure_reason)
             else:
                 assert self.output['failure'] == 'exception'
                 self.failure_reason = '{0} exception: {1}, {2}'.format(
-                        self.failure_reason, self.output['exc_info'][0],
-                        self.output['exc_info'][1])
+                    self.failure_reason, self.output['exc_info'][0],
+                    self.output['exc_info'][1])
 
             self.passed = False
             return
@@ -222,22 +233,26 @@ class FioJobTest(FioExeTest):
         FioExeTest.__init__(self, fio_path, self.fio_args, success)
 
     def setup(self, artifact_root, testnum):
+        """Setup instance variables for fio job test."""
+
         super(FioJobTest, self).setup(artifact_root, testnum)
 
         self.command_file = os.path.join(
-                self.test_dir,
-                "{0}.command".format(os.path.basename(self.fio_job)))
+            self.test_dir,
+            "{0}.command".format(os.path.basename(self.fio_job)))
         self.stdout_file = os.path.join(
-                self.test_dir,
-                "{0}.stdout".format(os.path.basename(self.fio_job)))
+            self.test_dir,
+            "{0}.stdout".format(os.path.basename(self.fio_job)))
         self.stderr_file = os.path.join(
-                self.test_dir,
-                "{0}.stderr".format(os.path.basename(self.fio_job)))
-        self.exticode_file = os.path.join(
-                self.test_dir,
-                "{0}.exitcode".format(os.path.basename(self.fio_job)))
+            self.test_dir,
+            "{0}.stderr".format(os.path.basename(self.fio_job)))
+        self.exitcode_file = os.path.join(
+            self.test_dir,
+            "{0}.exitcode".format(os.path.basename(self.fio_job)))
 
     def run_pre_job(self):
+        """Run fio job precondition step."""
+
         precon = FioJobTest(self.exe_path, self.fio_pre_job,
                             self.fio_pre_success,
                             output_format=self.output_format)
@@ -248,15 +263,19 @@ class FioJobTest(FioExeTest):
         self.failure_reason = precon.failure_reason
 
     def run(self):
+        """Run fio job test."""
+
         if self.fio_pre_job:
             self.run_pre_job()
 
         if not self.precon_failed:
             super(FioJobTest, self).run()
         else:
-            logging.debug("Test %d: precondition step failed" % self.testnum)
+            logging.debug("Test %d: precondition step failed", self.testnum)
 
     def check_result(self):
+        """Check fio job results."""
+
         if self.precon_failed:
             self.passed = False
             self.failure_reason = "{0} precondition step failed,".format(self.failure_reason)
@@ -267,7 +286,7 @@ class FioJobTest(FioExeTest):
         if not self.passed:
             return
 
-        if not 'json' in self.output_format:
+        if 'json' not in self.output_format:
             return
 
         try:
@@ -291,7 +310,7 @@ class FioJobTest(FioExeTest):
             except json.JSONDecodeError:
                 continue
             else:
-                logging.debug("Test %d: skipped %d lines decoding JSON data" % (self.testnum, i))
+                logging.debug("Test %d: skipped %d lines decoding JSON data", self.testnum, i)
                 return
 
         self.failure_reason = "{0} unable to decode JSON data,".format(self.failure_reason)
@@ -328,7 +347,7 @@ class FioJobTest_t0006(FioJobTest):
 
         ratio = self.json_data['jobs'][0]['read']['io_kbytes'] \
             / self.json_data['jobs'][0]['write']['io_kbytes']
-        logging.debug("Test %d: ratio: %f" % (self.testnum, ratio))
+        logging.debug("Test %d: ratio: %f", self.testnum, ratio)
         if ratio < 1.99 or ratio > 2.01:
             self.failure_reason = "{0} read/write ratio mismatch,".format(self.failure_reason)
             self.passed = False
@@ -364,7 +383,7 @@ class FioJobTest_t0008(FioJobTest):
             return
 
         ratio = self.json_data['jobs'][0]['write']['io_kbytes'] / 16568
-        logging.debug("Test %d: ratio: %f" % (self.testnum, ratio))
+        logging.debug("Test %d: ratio: %f", self.testnum, ratio)
 
         if ratio < 0.99 or ratio > 1.01:
             self.failure_reason = "{0} bytes written mismatch,".format(self.failure_reason)
@@ -384,7 +403,7 @@ class FioJobTest_t0009(FioJobTest):
         if not self.passed:
             return
 
-        logging.debug('Test %d: elapsed: %d' % (self.testnum, self.json_data['jobs'][0]['elapsed']))
+        logging.debug('Test %d: elapsed: %d', self.testnum, self.json_data['jobs'][0]['elapsed'])
 
         if self.json_data['jobs'][0]['elapsed'] < 60:
             self.failure_reason = "{0} elapsed time mismatch,".format(self.failure_reason)
@@ -406,8 +425,8 @@ class FioJobTest_t0011(FioJobTest):
         iops1 = self.json_data['jobs'][0]['read']['iops']
         iops2 = self.json_data['jobs'][1]['read']['iops']
         ratio = iops2 / iops1
-        logging.debug("Test %d: iops1: %f" % (self.testnum, iops1))
-        logging.debug("Test %d: ratio: %f" % (self.testnum, ratio))
+        logging.debug("Test %d: iops1: %f", self.testnum, iops1)
+        logging.debug("Test %d: ratio: %f", self.testnum, ratio)
 
         if iops1 < 998 or iops1 > 1002:
             self.failure_reason = "{0} iops value mismatch,".format(self.failure_reason)
@@ -451,11 +470,11 @@ class Requirements(object):
 
             Requirements._root = (os.geteuid() == 0)
             if Requirements._zbd and Requirements._root:
-                    subprocess.run(["modprobe", "null_blk"],
-                                   stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE)
-                    if os.path.exists("/sys/module/null_blk/parameters/zoned"):
-                        Requirements._zoned_nullb = True
+                subprocess.run(["modprobe", "null_blk"],
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE)
+                if os.path.exists("/sys/module/null_blk/parameters/zoned"):
+                    Requirements._zoned_nullb = True
 
         if platform.system() == "Windows":
             utest_exe = "unittest.exe"
@@ -477,253 +496,273 @@ class Requirements(object):
                     Requirements.cpucount4]
         for req in req_list:
             value, desc = req()
-            logging.debug("Requirements: Requirement '%s' met? %s" % (desc, value))
+            logging.debug("Requirements: Requirement '%s' met? %s", desc, value)
 
-    def linux():
+    @classmethod
+    def linux(cls):
+        """Are we running on Linux?"""
         return Requirements._linux, "Linux required"
 
-    def libaio():
+    @classmethod
+    def libaio(cls):
+        """Is libaio available?"""
         return Requirements._libaio, "libaio required"
 
-    def zbd():
+    @classmethod
+    def zbd(cls):
+        """Is ZBD support available?"""
         return Requirements._zbd, "Zoned block device support required"
 
-    def root():
+    @classmethod
+    def root(cls):
+        """Are we running as root?"""
         return Requirements._root, "root required"
 
-    def zoned_nullb():
+    @classmethod
+    def zoned_nullb(cls):
+        """Are zoned null block devices available?"""
         return Requirements._zoned_nullb, "Zoned null block device support required"
 
-    def not_macos():
+    @classmethod
+    def not_macos(cls):
+        """Are we running on a platform other than macOS?"""
         return Requirements._not_macos, "platform other than macOS required"
 
-    def not_windows():
+    @classmethod
+    def not_windows(cls):
+        """Are we running on a platform other than Windws?"""
         return Requirements._not_windows, "platform other than Windows required"
 
-    def unittests():
+    @classmethod
+    def unittests(cls):
+        """Were unittests built?"""
         return Requirements._unittests, "Unittests support required"
 
-    def cpucount4():
+    @classmethod
+    def cpucount4(cls):
+        """Do we have at least 4 CPUs?"""
         return Requirements._cpucount4, "4+ CPUs required"
 
 
 SUCCESS_DEFAULT = {
-        'zero_return': True,
-        'stderr_empty': True,
-        'timeout': 600,
-        }
+    'zero_return': True,
+    'stderr_empty': True,
+    'timeout': 600,
+    }
 SUCCESS_NONZERO = {
-        'zero_return': False,
-        'stderr_empty': False,
-        'timeout': 600,
-        }
+    'zero_return': False,
+    'stderr_empty': False,
+    'timeout': 600,
+    }
 SUCCESS_STDERR = {
-        'zero_return': True,
-        'stderr_empty': False,
-        'timeout': 600,
-        }
+    'zero_return': True,
+    'stderr_empty': False,
+    'timeout': 600,
+    }
 TEST_LIST = [
-        {
-            'test_id':          1,
-            'test_class':       FioJobTest,
-            'job':              't0001-52c58027.fio',
-            'success':          SUCCESS_DEFAULT,
-            'pre_job':          None,
-            'pre_success':      None,
-            'requirements':     [],
-        },
-        {
-            'test_id':          2,
-            'test_class':       FioJobTest,
-            'job':              't0002-13af05ae-post.fio',
-            'success':          SUCCESS_DEFAULT,
-            'pre_job':          't0002-13af05ae-pre.fio',
-            'pre_success':      None,
-            'requirements':     [Requirements.linux, Requirements.libaio],
-        },
-        {
-            'test_id':          3,
-            'test_class':       FioJobTest,
-            'job':              't0003-0ae2c6e1-post.fio',
-            'success':          SUCCESS_NONZERO,
-            'pre_job':          't0003-0ae2c6e1-pre.fio',
-            'pre_success':      SUCCESS_DEFAULT,
-            'requirements':     [Requirements.linux, Requirements.libaio],
-        },
-        {
-            'test_id':          4,
-            'test_class':       FioJobTest,
-            'job':              't0004-8a99fdf6.fio',
-            'success':          SUCCESS_DEFAULT,
-            'pre_job':          None,
-            'pre_success':      None,
-            'requirements':     [Requirements.linux, Requirements.libaio],
-        },
-        {
-            'test_id':          5,
-            'test_class':       FioJobTest_t0005,
-            'job':              't0005-f7078f7b.fio',
-            'success':          SUCCESS_DEFAULT,
-            'pre_job':          None,
-            'pre_success':      None,
-            'output_format':    'json',
-            'requirements':     [Requirements.not_windows],
-        },
-        {
-            'test_id':          6,
-            'test_class':       FioJobTest_t0006,
-            'job':              't0006-82af2a7c.fio',
-            'success':          SUCCESS_DEFAULT,
-            'pre_job':          None,
-            'pre_success':      None,
-            'output_format':    'json',
-            'requirements':     [Requirements.linux, Requirements.libaio],
-        },
-        {
-            'test_id':          7,
-            'test_class':       FioJobTest_t0007,
-            'job':              't0007-37cf9e3c.fio',
-            'success':          SUCCESS_DEFAULT,
-            'pre_job':          None,
-            'pre_success':      None,
-            'output_format':    'json',
-            'requirements':     [],
-        },
-        {
-            'test_id':          8,
-            'test_class':       FioJobTest_t0008,
-            'job':              't0008-ae2fafc8.fio',
-            'success':          SUCCESS_DEFAULT,
-            'pre_job':          None,
-            'pre_success':      None,
-            'output_format':    'json',
-            'requirements':     [],
-        },
-        {
-            'test_id':          9,
-            'test_class':       FioJobTest_t0009,
-            'job':              't0009-f8b0bd10.fio',
-            'success':          SUCCESS_DEFAULT,
-            'pre_job':          None,
-            'pre_success':      None,
-            'output_format':    'json',
-            'requirements':     [Requirements.not_macos,
-                                 Requirements.cpucount4],
-                                # mac os does not support CPU affinity
-        },
-        {
-            'test_id':          10,
-            'test_class':       FioJobTest,
-            'job':              't0010-b7aae4ba.fio',
-            'success':          SUCCESS_DEFAULT,
-            'pre_job':          None,
-            'pre_success':      None,
-            'requirements':     [],
-        },
-        {
-            'test_id':          11,
-            'test_class':       FioJobTest_t0011,
-            'job':              't0011-5d2788d5.fio',
-            'success':          SUCCESS_DEFAULT,
-            'pre_job':          None,
-            'pre_success':      None,
-            'output_format':    'json',
-            'requirements':     [],
-        },
-        {
-            'test_id':          1000,
-            'test_class':       FioExeTest,
-            'exe':              't/axmap',
-            'parameters':       None,
-            'success':          SUCCESS_DEFAULT,
-            'requirements':     [],
-        },
-        {
-            'test_id':          1001,
-            'test_class':       FioExeTest,
-            'exe':              't/ieee754',
-            'parameters':       None,
-            'success':          SUCCESS_DEFAULT,
-            'requirements':     [],
-        },
-        {
-            'test_id':          1002,
-            'test_class':       FioExeTest,
-            'exe':              't/lfsr-test',
-            'parameters':       ['0xFFFFFF', '0', '0', 'verify'],
-            'success':          SUCCESS_STDERR,
-            'requirements':     [],
-        },
-        {
-            'test_id':          1003,
-            'test_class':       FioExeTest,
-            'exe':              't/readonly.py',
-            'parameters':       ['-f', '{fio_path}'],
-            'success':          SUCCESS_DEFAULT,
-            'requirements':     [],
-        },
-        {
-            'test_id':          1004,
-            'test_class':       FioExeTest,
-            'exe':              't/steadystate_tests.py',
-            'parameters':       ['{fio_path}'],
-            'success':          SUCCESS_DEFAULT,
-            'requirements':     [],
-        },
-        {
-            'test_id':          1005,
-            'test_class':       FioExeTest,
-            'exe':              't/stest',
-            'parameters':       None,
-            'success':          SUCCESS_STDERR,
-            'requirements':     [],
-        },
-        {
-            'test_id':          1006,
-            'test_class':       FioExeTest,
-            'exe':              't/strided.py',
-            'parameters':       ['{fio_path}'],
-            'success':          SUCCESS_DEFAULT,
-            'requirements':     [],
-        },
-        {
-            'test_id':          1007,
-            'test_class':       FioExeTest,
-            'exe':              't/zbd/run-tests-against-regular-nullb',
-            'parameters':       None,
-            'success':          SUCCESS_DEFAULT,
-            'requirements':     [Requirements.linux, Requirements.zbd,
-                                 Requirements.root],
-        },
-        {
-            'test_id':          1008,
-            'test_class':       FioExeTest,
-            'exe':              't/zbd/run-tests-against-zoned-nullb',
-            'parameters':       None,
-            'success':          SUCCESS_DEFAULT,
-            'requirements':     [Requirements.linux, Requirements.zbd,
-                                 Requirements.root, Requirements.zoned_nullb],
-        },
-        {
-            'test_id':          1009,
-            'test_class':       FioExeTest,
-            'exe':              'unittests/unittest',
-            'parameters':       None,
-            'success':          SUCCESS_DEFAULT,
-            'requirements':     [Requirements.unittests],
-        },
-        {
-            'test_id':          1010,
-            'test_class':       FioExeTest,
-            'exe':              't/latency_percentiles.py',
-            'parameters':       ['-f', '{fio_path}'],
-            'success':          SUCCESS_DEFAULT,
-            'requirements':     [],
-        },
+    {
+        'test_id':          1,
+        'test_class':       FioJobTest,
+        'job':              't0001-52c58027.fio',
+        'success':          SUCCESS_DEFAULT,
+        'pre_job':          None,
+        'pre_success':      None,
+        'requirements':     [],
+    },
+    {
+        'test_id':          2,
+        'test_class':       FioJobTest,
+        'job':              't0002-13af05ae-post.fio',
+        'success':          SUCCESS_DEFAULT,
+        'pre_job':          't0002-13af05ae-pre.fio',
+        'pre_success':      None,
+        'requirements':     [Requirements.linux, Requirements.libaio],
+    },
+    {
+        'test_id':          3,
+        'test_class':       FioJobTest,
+        'job':              't0003-0ae2c6e1-post.fio',
+        'success':          SUCCESS_NONZERO,
+        'pre_job':          't0003-0ae2c6e1-pre.fio',
+        'pre_success':      SUCCESS_DEFAULT,
+        'requirements':     [Requirements.linux, Requirements.libaio],
+    },
+    {
+        'test_id':          4,
+        'test_class':       FioJobTest,
+        'job':              't0004-8a99fdf6.fio',
+        'success':          SUCCESS_DEFAULT,
+        'pre_job':          None,
+        'pre_success':      None,
+        'requirements':     [Requirements.linux, Requirements.libaio],
+    },
+    {
+        'test_id':          5,
+        'test_class':       FioJobTest_t0005,
+        'job':              't0005-f7078f7b.fio',
+        'success':          SUCCESS_DEFAULT,
+        'pre_job':          None,
+        'pre_success':      None,
+        'output_format':    'json',
+        'requirements':     [Requirements.not_windows],
+    },
+    {
+        'test_id':          6,
+        'test_class':       FioJobTest_t0006,
+        'job':              't0006-82af2a7c.fio',
+        'success':          SUCCESS_DEFAULT,
+        'pre_job':          None,
+        'pre_success':      None,
+        'output_format':    'json',
+        'requirements':     [Requirements.linux, Requirements.libaio],
+    },
+    {
+        'test_id':          7,
+        'test_class':       FioJobTest_t0007,
+        'job':              't0007-37cf9e3c.fio',
+        'success':          SUCCESS_DEFAULT,
+        'pre_job':          None,
+        'pre_success':      None,
+        'output_format':    'json',
+        'requirements':     [],
+    },
+    {
+        'test_id':          8,
+        'test_class':       FioJobTest_t0008,
+        'job':              't0008-ae2fafc8.fio',
+        'success':          SUCCESS_DEFAULT,
+        'pre_job':          None,
+        'pre_success':      None,
+        'output_format':    'json',
+        'requirements':     [],
+    },
+    {
+        'test_id':          9,
+        'test_class':       FioJobTest_t0009,
+        'job':              't0009-f8b0bd10.fio',
+        'success':          SUCCESS_DEFAULT,
+        'pre_job':          None,
+        'pre_success':      None,
+        'output_format':    'json',
+        'requirements':     [Requirements.not_macos,
+                             Requirements.cpucount4],
+        # mac os does not support CPU affinity
+    },
+    {
+        'test_id':          10,
+        'test_class':       FioJobTest,
+        'job':              't0010-b7aae4ba.fio',
+        'success':          SUCCESS_DEFAULT,
+        'pre_job':          None,
+        'pre_success':      None,
+        'requirements':     [],
+    },
+    {
+        'test_id':          11,
+        'test_class':       FioJobTest_t0011,
+        'job':              't0011-5d2788d5.fio',
+        'success':          SUCCESS_DEFAULT,
+        'pre_job':          None,
+        'pre_success':      None,
+        'output_format':    'json',
+        'requirements':     [],
+    },
+    {
+        'test_id':          1000,
+        'test_class':       FioExeTest,
+        'exe':              't/axmap',
+        'parameters':       None,
+        'success':          SUCCESS_DEFAULT,
+        'requirements':     [],
+    },
+    {
+        'test_id':          1001,
+        'test_class':       FioExeTest,
+        'exe':              't/ieee754',
+        'parameters':       None,
+        'success':          SUCCESS_DEFAULT,
+        'requirements':     [],
+    },
+    {
+        'test_id':          1002,
+        'test_class':       FioExeTest,
+        'exe':              't/lfsr-test',
+        'parameters':       ['0xFFFFFF', '0', '0', 'verify'],
+        'success':          SUCCESS_STDERR,
+        'requirements':     [],
+    },
+    {
+        'test_id':          1003,
+        'test_class':       FioExeTest,
+        'exe':              't/readonly.py',
+        'parameters':       ['-f', '{fio_path}'],
+        'success':          SUCCESS_DEFAULT,
+        'requirements':     [],
+    },
+    {
+        'test_id':          1004,
+        'test_class':       FioExeTest,
+        'exe':              't/steadystate_tests.py',
+        'parameters':       ['{fio_path}'],
+        'success':          SUCCESS_DEFAULT,
+        'requirements':     [],
+    },
+    {
+        'test_id':          1005,
+        'test_class':       FioExeTest,
+        'exe':              't/stest',
+        'parameters':       None,
+        'success':          SUCCESS_STDERR,
+        'requirements':     [],
+    },
+    {
+        'test_id':          1006,
+        'test_class':       FioExeTest,
+        'exe':              't/strided.py',
+        'parameters':       ['{fio_path}'],
+        'success':          SUCCESS_DEFAULT,
+        'requirements':     [],
+    },
+    {
+        'test_id':          1007,
+        'test_class':       FioExeTest,
+        'exe':              't/zbd/run-tests-against-regular-nullb',
+        'parameters':       None,
+        'success':          SUCCESS_DEFAULT,
+        'requirements':     [Requirements.linux, Requirements.zbd,
+                             Requirements.root],
+    },
+    {
+        'test_id':          1008,
+        'test_class':       FioExeTest,
+        'exe':              't/zbd/run-tests-against-zoned-nullb',
+        'parameters':       None,
+        'success':          SUCCESS_DEFAULT,
+        'requirements':     [Requirements.linux, Requirements.zbd,
+                             Requirements.root, Requirements.zoned_nullb],
+    },
+    {
+        'test_id':          1009,
+        'test_class':       FioExeTest,
+        'exe':              'unittests/unittest',
+        'parameters':       None,
+        'success':          SUCCESS_DEFAULT,
+        'requirements':     [Requirements.unittests],
+    },
+    {
+        'test_id':          1010,
+        'test_class':       FioExeTest,
+        'exe':              't/latency_percentiles.py',
+        'parameters':       ['-f', '{fio_path}'],
+        'success':          SUCCESS_DEFAULT,
+        'requirements':     [],
+    },
 ]
 
 
 def parse_args():
+    """Parse command-line arguments."""
+
     parser = argparse.ArgumentParser()
     parser.add_argument('-r', '--fio-root',
                         help='fio root path')
@@ -745,6 +784,8 @@ def parse_args():
 
 
 def main():
+    """Entry point."""
+
     args = parse_args()
     if args.debug:
         logging.basicConfig(level=logging.DEBUG)
@@ -829,14 +870,14 @@ def main():
             continue
 
         if not args.skip_req:
-            skip = False
+            reqs_met = True
             for req in config['requirements']:
-                ok, reason = req()
-                skip = not ok
-                logging.debug("Test %d: Requirement '%s' met? %s" % (config['test_id'], reason, ok))
-                if skip:
+                reqs_met, reason = req()
+                logging.debug("Test %d: Requirement '%s' met? %s", config['test_id'], reason,
+                              reqs_met)
+                if not reqs_met:
                     break
-            if skip:
+            if not reqs_met:
                 print("Test {0} SKIPPED ({1})".format(config['test_id'], reason))
                 skipped = skipped + 1
                 continue
@@ -851,9 +892,9 @@ def main():
             result = "FAILED: {0}".format(test.failure_reason)
             failed = failed + 1
             with open(test.stderr_file, "r") as stderr_file:
-                logging.debug("Test %d: stderr:\n%s" % (config['test_id'], stderr_file.read()))
+                logging.debug("Test %d: stderr:\n%s", config['test_id'], stderr_file.read())
             with open(test.stdout_file, "r") as stdout_file:
-                logging.debug("Test %d: stdout:\n%s" % (config['test_id'], stdout_file.read()))
+                logging.debug("Test %d: stdout:\n%s", config['test_id'], stdout_file.read())
         print("Test {0} {1}".format(config['test_id'], result))
 
     print("{0} test(s) passed, {1} failed, {2} skipped".format(passed, failed, skipped))
