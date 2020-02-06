@@ -950,7 +950,7 @@ void json_array_add_disk_util(struct disk_util_stat *dus,
 	obj = json_create_object();
 	json_array_add_value_object(array, obj);
 
-	json_object_add_value_string(obj, "name", dus->name);
+	json_object_add_value_string(obj, "name", (const char *)dus->name);
 	json_object_add_value_int(obj, "read_ios", dus->s.ios[0]);
 	json_object_add_value_int(obj, "write_ios", dus->s.ios[1]);
 	json_object_add_value_int(obj, "read_merges", dus->s.merges[0]);
