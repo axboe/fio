@@ -16,7 +16,10 @@
 /t/fio-verify-state
 /t/gen-rand
 /t/ieee754
+t/io_uring
 /t/lfsr-test
+t/memlock
+t/read-to-pipe-async
 /t/stest
 /unittests/unittest
 y.tab.*

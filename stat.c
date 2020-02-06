@@ -482,9 +482,13 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 		display_lat("clat", min, max, mean, dev, out);
 	if (calc_lat(&ts->lat_stat[ddir], &min, &max, &mean, &dev))
 		display_lat(" lat", min, max, mean, dev, out);
-	if (calc_lat(&ts->clat_high_prio_stat[ddir], &min, &max, &mean, &dev))
-		display_lat(ts->lat_percentiles ? "prio_lat" : "prio_clat",
+	if (calc_lat(&ts->clat_high_prio_stat[ddir], &min, &max, &mean, &dev)) {
+		display_lat(ts->lat_percentiles ? "high prio_lat" : "high prio_clat",
 				min, max, mean, dev, out);
+		if (calc_lat(&ts->clat_low_prio_stat[ddir], &min, &max, &mean, &dev))
+			display_lat(ts->lat_percentiles ? "low prio_lat" : "low prio_clat",
+					min, max, mean, dev, out);
+	}
 
 	if (ts->slat_percentiles && ts->slat_stat[ddir].samples > 0)
 		show_clat_percentiles(ts->io_u_plat[FIO_SLAT][ddir],
