@@ -191,7 +191,7 @@ static struct fio_option options[] = {
 static int io_uring_enter(struct ioring_data *ld, unsigned int to_submit,
 			 unsigned int min_complete, unsigned int flags)
 {
-	return syscall(__NR_sys_io_uring_enter, ld->ring_fd, to_submit,
+	return syscall(__NR_io_uring_enter, ld->ring_fd, to_submit,
 			min_complete, flags, NULL, 0);
 }
 
@@ -548,7 +548,7 @@ static int fio_ioring_queue_init(struct thread_data *td)
 		}
 	}
 
-	ret = syscall(__NR_sys_io_uring_setup, depth, &p);
+	ret = syscall(__NR_io_uring_setup, depth, &p);
 	if (ret < 0)
 		return ret;
 
@@ -563,7 +563,7 @@ static int fio_ioring_queue_init(struct thread_data *td)
 		if (setrlimit(RLIMIT_MEMLOCK, &rlim) < 0)
 			return -1;
 
-		ret = syscall(__NR_sys_io_uring_register, ld->ring_fd,
+		ret = syscall(__NR_io_uring_register, ld->ring_fd,
 				IORING_REGISTER_BUFFERS, ld->iovecs, depth);
 		if (ret < 0)
 			return ret;
@@ -589,7 +589,7 @@ static int fio_ioring_register_files(struct thread_data *td)
 		f->engine_pos = i;
 	}
 
-	ret = syscall(__NR_sys_io_uring_register, ld->ring_fd,
+	ret = syscall(__NR_io_uring_register, ld->ring_fd,
 			IORING_REGISTER_FILES, ld->fds, td->o.nr_files);
 	if (ret) {
 err:

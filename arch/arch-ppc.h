@@ -24,18 +24,6 @@
 #define PPC_CNTLZL "cntlzw"
 #endif
 
-#define ARCH_HAVE_IOURING
-
-#ifndef __NR_sys_io_uring_setup
-#define __NR_sys_io_uring_setup		425
-#endif
-#ifndef __NR_sys_io_uring_enter
-#define __NR_sys_io_uring_enter		426
-#endif
-#ifndef __NR_sys_io_uring_register
-#define __NR_sys_io_uring_register	427
-#endif
-
 static inline int __ilog2(unsigned long bitmask)
 {
 	int lz;
