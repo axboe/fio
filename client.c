@@ -1141,14 +1141,14 @@ static void handle_job_opt(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 	struct cmd_job_option *pdu = (struct cmd_job_option *) cmd->payload;
 
-	if (!job_opt_object)
-		return;
-
 	pdu->global = le16_to_cpu(pdu->global);
 	pdu->truncated = le16_to_cpu(pdu->truncated);
 	pdu->groupid = le32_to_cpu(pdu->groupid);
 
 	if (pdu->global) {
+		if (!job_opt_object)
+			return;
+
 		json_object_add_value_string(job_opt_object,
 					     (const char *)pdu->name,
 					     (const char *)pdu->value);
