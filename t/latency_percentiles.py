@@ -395,6 +395,11 @@ class FioLatTest():
         approximation   value of the bin used by fio to store a given latency
         actual          actual latency value
         """
+
+        # Avoid a division by zero. The smallest latency values have no error.
+        if actual == 0:
+            return approximation == 0
+
         delta = abs(approximation - actual) / actual
         return delta <= 1/128
 
