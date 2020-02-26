@@ -172,6 +172,7 @@ libiscsi="no"
 libnbd="no"
 libzbc=""
 dfs=""
+libnfs="no"
 dynamic_engines="no"
 prefix=/usr/local
 
@@ -241,6 +242,8 @@ for opt do
   ;;
   --disable-tcmalloc) disable_tcmalloc="yes"
   ;;
+  --enable-libnfs) libnfs="yes"
+  ;;
   --dynamic-libengines) dynamic_engines="yes"
   ;;
   --disable-dfs) dfs="no"
@@ -273,6 +276,7 @@ if test "$show_help" = "yes" ; then
   echo "--disable-http          Disable HTTP support even if found"
   echo "--disable-gfapi         Disable gfapi"
   echo "--enable-libhdfs        Enable hdfs support"
+  echo "--enable-libnfs         Enable nfs support"
   echo "--disable-lex           Disable use of lex/yacc for math"
   echo "--disable-pmem          Disable pmem based engines even if found"
   echo "--enable-lex            Enable use of lex/yacc for math"
@@ -2276,6 +2280,21 @@ EOF
   fi
 fi
 print_config "DAOS File System (dfs) Engine" "$dfs"
+# Check if we have libnfs (for nfs support).
+if test "$libnfs" = "yes" ; then
+  if $(pkg-config libnfs); then
+    libnfs="yes"
+    libnfs_cflags=$(pkg-config --cflags libnfs)
+    # libnfs_libs=$(pkg-config --libs libnfs)
+    libnfs_libs=/usr/local/lib/libnfs.a
+  else
+    if test "$libnfs" = "yes" ; then
+      echo "libnfs" "Install libnfs"
+    fi
+    libnfs="no"
+  fi
+fi
+print_config "nfs engine" "$libnfs"
 
 ##########################################
 # Check if we have lex/yacc available
@@ -3101,6 +3120,9 @@ fi
 if test "$dfs" = "yes" ; then
   output_sym "CONFIG_DFS"
 fi
+if test "$libnfs" = "yes" ; then
+  output_sym "CONFIG_NFS"
+fi
 if test "$march_set" = "no" && test "$build_native" = "yes" ; then
   output_sym "CONFIG_BUILD_NATIVE"
 fi
@@ -3139,6 +3161,12 @@ if test "$libnbd" = "yes" ; then
   echo "CONFIG_LIBNBD=m" >> $config_host_mak
   echo "LIBNBD_CFLAGS=$libnbd_cflags" >> $config_host_mak
   echo "LIBNBD_LIBS=$libnbd_libs" >> $config_host_mak
+fi
+if test "$libnfs" = "yes" ; then
+  output_sym "CONFIG_LIBNFS"
+  echo "CONFIG_LIBNFS=m" >> $config_host_mak
+  echo "LIBNFS_CFLAGS=$libnfs_cflags" >> $config_host_mak
+  echo "LIBNFS_LIBS=$libnfs_libs" >> $config_host_mak
 fi
 if test "$dynamic_engines" = "yes" ; then
   output_sym "CONFIG_DYNAMIC_ENGINES"

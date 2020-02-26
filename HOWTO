@@ -1168,7 +1168,7 @@ I/O type
 
 		**1**
 			Backward-compatible alias for **mixed**.
-		
+
 		**2**
 			Alias for **both**.
 
@@ -2091,6 +2091,12 @@ I/O engine
 			I/O engine supporting asynchronous read and write operations to the
 			DAOS File System (DFS) via libdfs.
 
+		**nfs**
+			I/O engine supporting asynchronous read and write operations to
+			NFS filesystems from userspace via libnfs. This is useful for
+			achieving higher concurrency and thus throughput than is possible
+			via kernel NFS.
+
 I/O engine specific parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -2507,6 +2513,11 @@ with the caveat that when used on the command line, they must come after the
 
 	Specificy a different object class for the dfs file.
 	Use DAOS container's object class by default.
+
+.. option:: nfs_url=str : [nfs]
+
+	URL in libnfs format, eg nfs://<server|ipv4|ipv6>/path[?arg=val[&arg=val]*]
+	Refer to the libnfs README for more details.
 
 I/O depth
 ~~~~~~~~~
