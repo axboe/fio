@@ -216,8 +216,6 @@ static int prep_more_ios(struct submitter *s, int max_ios)
 	} while (prepped < max_ios);
 
 	if (*ring->tail != tail) {
-		/* order tail store with writes to sqes above */
-		write_barrier();
 		*ring->tail = tail;
 		write_barrier();
 	}

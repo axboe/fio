@@ -374,8 +374,6 @@ static enum fio_q_status fio_ioring_queue(struct thread_data *td,
 	if (next_tail == *ring->head)
 		return FIO_Q_BUSY;
 
-	/* ensure sqe stores are ordered with tail update */
-	write_barrier();
 	if (o->cmdprio_percentage)
 		fio_ioring_prio_prep(td, io_u);
 	ring->array[tail & ld->sq_ring_mask] = io_u->index;
