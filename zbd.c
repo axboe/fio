@@ -707,7 +707,7 @@ static int zbd_reset_zones(struct thread_data *td, struct fio_file *f,
 			   struct fio_zone_info *const zb,
 			   struct fio_zone_info *const ze, bool all_zones)
 {
-	struct fio_zone_info *z, *start_z = ze;
+	struct fio_zone_info *z;
 	const uint32_t min_bs = td->o.min_bs[DDIR_WRITE];
 	bool reset_wp;
 	int res = 0;
@@ -717,48 +717,20 @@ static int zbd_reset_zones(struct thread_data *td, struct fio_file *f,
 	assert(f->fd != -1);
 	for (z = zb; z < ze; z++) {
 		pthread_mutex_lock(&z->mutex);
-		switch (z->type) {
-		case BLK_ZONE_TYPE_SEQWRITE_REQ:
+		if (z->type == BLK_ZONE_TYPE_SEQWRITE_REQ) {
 			reset_wp = all_zones ? z->wp != z->start :
 					(td->o.td_ddir & TD_DDIR_WRITE) &&
 					z->wp % min_bs != 0;
-			if (start_z == ze && reset_wp) {
-				start_z = z;
-			} else if (start_z < ze && !reset_wp) {
-				dprint(FD_ZBD,
-				       "%s: resetting zones %u .. %u\n",
+			if (reset_wp) {
+				dprint(FD_ZBD, "%s: resetting zone %u\n",
 				       f->file_name,
-					zbd_zone_nr(f->zbd_info, start_z),
-					zbd_zone_nr(f->zbd_info, z));
-				if (zbd_reset_range(td, f, start_z->start,
-						z->start - start_z->start) < 0)
+				       zbd_zone_nr(f->zbd_info, z));
+				if (zbd_reset_zone(td, f, z) < 0)
 					res = 1;
-				start_z = ze;
 			}
-			break;
-		default:
-			if (start_z == ze)
-				break;
-			dprint(FD_ZBD, "%s: resetting zones %u .. %u\n",
-			       f->file_name, zbd_zone_nr(f->zbd_info, start_z),
-			       zbd_zone_nr(f->zbd_info, z));
-			if (zbd_reset_range(td, f, start_z->start,
-					    z->start - start_z->start) < 0)
-				res = 1;
-			start_z = ze;
-			break;
 		}
-	}
-	if (start_z < ze) {
-		dprint(FD_ZBD, "%s: resetting zones %u .. %u\n", f->file_name,
-			zbd_zone_nr(f->zbd_info, start_z),
-			zbd_zone_nr(f->zbd_info, z));
-		if (zbd_reset_range(td, f, start_z->start,
-				    z->start - start_z->start) < 0)
-			res = 1;
-	}
-	for (z = zb; z < ze; z++)
 		pthread_mutex_unlock(&z->mutex);
+	}
 
 	return res;
 }
