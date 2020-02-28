@@ -606,7 +606,7 @@ static inline enum fio_ddir get_rand_ddir(struct thread_data *td)
 
 int io_u_quiesce(struct thread_data *td)
 {
-	int ret = 0, completed = 0;
+	int ret = 0, completed = 0, err = 0;
 
 	/*
 	 * We are going to sleep, ensure that we flush anything pending as
@@ -625,7 +625,7 @@ int io_u_quiesce(struct thread_data *td)
 		if (ret > 0)
 			completed += ret;
 		else if (ret < 0)
-			break;
+			err = ret;
 	}
 
 	if (td->flags & TD_F_REGROW_LOGS)
@@ -634,7 +634,7 @@ int io_u_quiesce(struct thread_data *td)
 	if (completed)
 		return completed;
 
-	return ret;
+	return err;
 }
 
 static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
