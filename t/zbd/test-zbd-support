@@ -755,6 +755,36 @@ test47() {
     grep -q 'zoneskip 1 is not a multiple of the device zone size' "${logfile}.${test_number}"
 }
 
+# Multiple overlapping random write jobs for the same drive and with a
+# limited number of open zones. This is similar to test29, but uses libaio
+# to stress test zone locking.
+test48() {
+    local i jobs=16 off opts=()
+
+    off=$((first_sequential_zone_sector * 512 + 64 * zone_size))
+    size=$((16*zone_size))
+    [ -n "$is_zbd" ] && reset_zone "$dev" $((off / 512))
+    opts=("--aux-path=/tmp" "--allow_file_create=0" "--significant_figures=10")
+    opts+=("--debug=zbd")
+    opts+=("--ioengine=libaio" "--rw=randwrite" "--direct=1")
+    opts+=("--time_based" "--runtime=30")
+    opts+=("--zonemode=zbd" "--zonesize=${zone_size}")
+    opts+=("--max_open_zones=4")
+    for ((i=0;i<jobs;i++)); do
+	opts+=("--name=job$i" "--filename=$dev" "--offset=$off" "--bs=16K")
+	opts+=("--io_size=$zone_size" "--iodepth=256" "--thread=1")
+	opts+=("--group_reporting=1")
+    done
+
+    fio=$(dirname "$0")/../../fio
+
+    { echo; echo "fio ${opts[*]}"; echo; } >>"${logfile}.${test_number}"
+
+    timeout -v -s KILL 45s \
+	    "${dynamic_analyzer[@]}" "$fio" "${opts[@]}" \
+	    >> "${logfile}.${test_number}" 2>&1 || return $?
+}
+
 tests=()
 dynamic_analyzer=()
 reset_all_zones=
