@@ -237,15 +237,10 @@ static void cleanup_pending_aio(struct thread_data *td)
 {
 	int r;
 
-	if (td->error)
-		return;
-
 	/*
 	 * get immediately available events, if any
 	 */
 	r = io_u_queued_complete(td, 0);
-	if (r < 0)
-		return;
 
 	/*
 	 * now cancel remaining active events
