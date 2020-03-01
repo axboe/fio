@@ -913,15 +913,61 @@ uint64_t get_start_offset(struct thread_data *td, struct fio_file *f)
 	return offset;
 }
 
+/*
+ * Find longest path component that exists and return its length
+ */
+int longest_existing_path(char *path) {
+	char buf[PATH_MAX];
+	bool done;
+	char *buf_pos;
+	int offset;
+#ifdef WIN32
+	DWORD dwAttr;
+#else
+	struct stat sb;
+#endif
+
+	sprintf(buf, "%s", path);
+	done = false;
+	while (!done) {
+		buf_pos = strrchr(buf, FIO_OS_PATH_SEPARATOR);
+		if (!buf_pos) {
+			done = true;
+			offset = 0;
+			break;
+		}
+
+		*(buf_pos + 1) = '\0';
+
+#ifdef WIN32
+		dwAttr = GetFileAttributesA(buf);
+		if (dwAttr != INVALID_FILE_ATTRIBUTES) {
+			done = true;
+		}
+#else
+		if (stat(buf, &sb) == 0)
+			done = true;
+#endif
+		if (done)
+			offset = buf_pos - buf;
+		else
+			*buf_pos = '\0';
+	}
+
+	return offset;
+}
+
 static bool create_work_dirs(struct thread_data *td, const char *fname)
 {
 	char path[PATH_MAX];
 	char *start, *end;
+	int offset;
 
 	snprintf(path, PATH_MAX, "%s", fname);
 	start = path;
 
-	end = start;
+	offset = longest_existing_path(path);
+	end = start + offset;
 	while ((end = strchr(end, FIO_OS_PATH_SEPARATOR)) != NULL) {
 		if (end == start) {
 			end++;
@@ -930,8 +976,8 @@ static bool create_work_dirs(struct thread_data *td, const char *fname)
 		*end = '\0';
 		errno = 0;
 		if (fio_mkdir(path, 0700) && errno != EEXIST) {
-			log_err("fio: failed to create dir (%s): %d\n",
-				start, errno);
+			log_err("fio: failed to create dir (%s): %s\n",
+				start, strerror(errno));
 			return false;
 		}
 		*end = FIO_OS_PATH_SEPARATOR;
