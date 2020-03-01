@@ -203,7 +203,11 @@ static inline int fio_mkdir(const char *path, mode_t mode) {
 	}
 
 	if (CreateDirectoryA(path, NULL) == 0) {
-		log_err("CreateDirectoryA = %d\n", GetLastError());
+		/* Ignore errors if path is a device namespace */
+		if (strcmp(path, "\\\\.") == 0) {
+			errno = EEXIST;
+			return -1;
+		}
 		errno = win_to_posix_error(GetLastError());
 		return -1;
 	}
