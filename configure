@@ -2551,6 +2551,50 @@ if compile_prog "" "" "gettid"; then
 fi
 print_config "gettid" "$gettid"
 
+##########################################
+# check for statx(2) support by libc
+statx="no"
+cat > $TMPC << EOF
+#include <unistd.h>
+#include <sys/stat.h>
+
+int main(int argc, char **argv)
+{
+	struct statx st;
+	return statx(-1, *argv, 0, 0, &st);
+}
+EOF
+if compile_prog "" "" "statx"; then
+  statx="yes"
+fi
+print_config "statx(2)/libc" "$statx"
+
+##########################################
+# check for statx(2) support by kernel
+statx_syscall="no"
+cat > $TMPC << EOF
+#include <unistd.h>
+#include <linux/stat.h>
+#include <sys/stat.h>
+#include <sys/syscall.h>
+
+static int _statx(int dfd, const char *pathname, int flags, unsigned int mask,
+		  struct statx *buffer)
+{
+	return syscall(__NR_statx, dfd, pathname, flags, mask, buffer);
+}
+
+int main(int argc, char **argv)
+{
+	struct statx st;
+	return _statx(-1, *argv, 0, 0, &st);
+}
+EOF
+if compile_prog "" "" "statx_syscall"; then
+  statx_syscall="yes"
+fi
+print_config "statx(2)/syscall" "$statx_syscall"
+
 #############################################################################
 
 if test "$wordsize" = "64" ; then
@@ -2842,6 +2886,12 @@ if test "$__kernel_rwf_t" = "yes"; then
 fi
 if test "$gettid" = "yes"; then
   output_sym "CONFIG_HAVE_GETTID"
+fi
+if test "$statx" = "yes"; then
+  output_sym "CONFIG_HAVE_STATX"
+fi
+if test "$statx_syscall" = "yes"; then
+  output_sym "CONFIG_HAVE_STATX_SYSCALL"
 fi
 if test "$fallthrough" = "yes"; then
   CFLAGS="$CFLAGS -Wimplicit-fallthrough"

@@ -5,6 +5,7 @@
  * of the file stat.
  */
 #include <stdio.h>
+#include <stdlib.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/types.h>
@@ -12,6 +13,7 @@
 #include <unistd.h>
 #include "../fio.h"
 #include "../optgroup.h"
+#include "../oslib/statx.h"
 
 struct fc_data {
 	enum fio_ddir stat_ddir;
@@ -25,7 +27,7 @@ struct filestat_options {
 enum {
 	FIO_FILESTAT_STAT	= 1,
 	FIO_FILESTAT_LSTAT	= 2,
-	/*FIO_FILESTAT_STATX	= 3,*/
+	FIO_FILESTAT_STATX	= 3,
 };
 
 static struct fio_option options[] = {
@@ -45,12 +47,10 @@ static struct fio_option options[] = {
 			    .oval = FIO_FILESTAT_LSTAT,
 			    .help = "Use lstat(2)",
 			  },
-			  /*
 			  { .ival = "statx",
 			    .oval = FIO_FILESTAT_STATX,
-			    .help = "Use statx(2)",
+			    .help = "Use statx(2) if exists",
 			  },
-			  */
 		},
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_FILESTAT,
@@ -66,6 +66,10 @@ static int stat_file(struct thread_data *td, struct fio_file *f)
 	struct timespec start;
 	int do_lat = !td->o.disable_lat;
 	struct stat statbuf;
+#ifndef WIN32
+	struct statx statxbuf;
+	char *abspath;
+#endif
 	int ret;
 
 	dprint(FD_FILE, "fd stat %s\n", f->file_name);
@@ -88,6 +92,18 @@ static int stat_file(struct thread_data *td, struct fio_file *f)
 		break;
 	case FIO_FILESTAT_LSTAT:
 		ret = lstat(f->file_name, &statbuf);
+		break;
+	case FIO_FILESTAT_STATX:
+#ifndef WIN32
+		abspath = realpath(f->file_name, NULL);
+		if (abspath) {
+			ret = statx(-1, abspath, 0, STATX_ALL, &statxbuf);
+			free(abspath);
+		} else
+			ret = -1;
+#else
+		ret = -1;
+#endif
 		break;
 	default:
 		ret = -1;
