@@ -132,6 +132,9 @@ endif
 ifndef CONFIG_INET_ATON
   SOURCE += oslib/inet_aton.c
 endif
+ifndef CONFIG_HAVE_STATX
+  SOURCE += oslib/statx.c
+endif
 ifdef CONFIG_GFAPI
   SOURCE += engines/glusterfs.c
   SOURCE += engines/glusterfs_sync.c
