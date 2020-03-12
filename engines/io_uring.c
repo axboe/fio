@@ -63,6 +63,8 @@ struct ioring_data {
 	int queued;
 	int cq_ring_off;
 	unsigned iodepth;
+	bool ioprio_class_set;
+	bool ioprio_set;
 
 	struct ioring_mmap mmap[3];
 };
@@ -233,9 +235,9 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 		}
 		if (!td->o.odirect && o->uncached)
 			sqe->rw_flags = RWF_UNCACHED;
-		if (fio_option_is_set(&td->o, ioprio_class))
+		if (ld->ioprio_class_set)
 			sqe->ioprio = td->o.ioprio_class << 13;
-		if (fio_option_is_set(&td->o, ioprio))
+		if (ld->ioprio_set)
 			sqe->ioprio |= td->o.ioprio;
 		sqe->off = io_u->offset;
 	} else if (ddir_sync(io_u->ddir)) {
@@ -685,6 +687,12 @@ static int fio_ioring_init(struct thread_data *td)
 		td_verror(td, EINVAL, "fio_io_uring_init");
 		return 1;
 	}
+
+	if (fio_option_is_set(&td->o, ioprio_class))
+		ld->ioprio_class_set = true;
+	if (fio_option_is_set(&td->o, ioprio))
+		ld->ioprio_set = true;
+
 	return 0;
 }
 
