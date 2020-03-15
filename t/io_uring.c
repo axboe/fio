@@ -63,7 +63,9 @@ struct file {
 struct submitter {
 	pthread_t thread;
 	int ring_fd;
+#ifdef __GLIBC__
 	struct drand48_data rand;
+#endif
 	struct io_sq_ring sq_ring;
 	struct io_uring_sqe *sqes;
 	struct io_cq_ring cq_ring;
@@ -170,7 +172,11 @@ static void init_io(struct submitter *s, unsigned index)
 	}
 	f->pending_ios++;
 
+#ifdef __GLIBC__
 	lrand48_r(&s->rand, &r);
+#else
+	r = lrand48();
+#endif
 	offset = (r % (f->max_blocks - 1)) * BS;
 
 	if (register_files) {
@@ -286,8 +292,12 @@ static void *submitter_fn(void *data)
 
 	printf("submitter=%d\n", gettid());
 
+#ifdef __GLIBC__
 	srand48_r(pthread_self(), &s->rand);
-
+#else
+	srand48(pthread_self());
+#endif
+	
 	prepped = 0;
 	do {
 		int to_wait, to_submit, this_reap, to_prep;
