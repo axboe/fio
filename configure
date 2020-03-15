@@ -892,7 +892,8 @@ cat > $TMPC << EOF
 
 int main(int argc, char **argv)
 {
-  return vasprintf(NULL, "%s", NULL) == 0;
+  va_list ap;
+  return vasprintf(NULL, "%s", ap) == 0;
 }
 EOF
 if compile_prog "" "" "have_vasprintf"; then
