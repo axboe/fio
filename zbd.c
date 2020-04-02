@@ -945,6 +945,13 @@ static void zone_lock(struct thread_data *td, struct fio_zone_info *z)
 	}
 }
 
+/* Anything goes as long as it is not a constant. */
+static uint32_t pick_random_zone_idx(const struct fio_file *f,
+				     const struct io_u *io_u)
+{
+	return io_u->offset * f->zbd_info->num_open_zones / f->real_file_size;
+}
+
 /*
  * Modify the offset of an I/O unit that does not refer to an open zone such
  * that it refers to an open zone. Close an open zone and open a new zone if
@@ -969,9 +976,7 @@ static struct fio_zone_info *zbd_convert_to_open_zone(struct thread_data *td,
 		 * This statement accesses f->zbd_info->open_zones[] on purpose
 		 * without locking.
 		 */
-		zone_idx = f->zbd_info->open_zones[(io_u->offset -
-						    f->file_offset) *
-				f->zbd_info->num_open_zones / f->io_size];
+		zone_idx = f->zbd_info->open_zones[pick_random_zone_idx(f, io_u)];
 	} else {
 		zone_idx = zbd_zone_idx(f, io_u->offset);
 	}
@@ -985,6 +990,8 @@ static struct fio_zone_info *zbd_convert_to_open_zone(struct thread_data *td,
 	 * has been obtained. Hence the loop.
 	 */
 	for (;;) {
+		uint32_t tmp_idx;
+
 		z = &f->zbd_info->zone_info[zone_idx];
 
 		zone_lock(td, z);
@@ -998,9 +1005,35 @@ static struct fio_zone_info *zbd_convert_to_open_zone(struct thread_data *td,
 			       __func__, f->file_name);
 			return NULL;
 		}
-		open_zone_idx = (io_u->offset - f->file_offset) *
-			f->zbd_info->num_open_zones / f->io_size;
+
+		/*
+		 * List of opened zones is per-device, shared across all threads.
+		 * Start with quasi-random candidate zone.
+		 * Ignore zones which don't belong to thread's offset/size area.
+		 */
+		open_zone_idx = pick_random_zone_idx(f, io_u);
 		assert(open_zone_idx < f->zbd_info->num_open_zones);
+		tmp_idx = open_zone_idx;
+		for (i = 0; i < f->zbd_info->num_open_zones; i++) {
+			uint32_t tmpz;
+
+			if (tmp_idx >= f->zbd_info->num_open_zones)
+				tmp_idx = 0;
+			tmpz = f->zbd_info->open_zones[tmp_idx];
+
+			if (is_valid_offset(f, f->zbd_info->zone_info[tmpz].start)) {
+				open_zone_idx = tmp_idx;
+				goto found_candidate_zone;
+			}
+
+			tmp_idx++;
+		}
+
+		dprint(FD_ZBD, "%s(%s): no candidate zone\n",
+			__func__, f->file_name);
+		return NULL;
+
+found_candidate_zone:
 		new_zone_idx = f->zbd_info->open_zones[open_zone_idx];
 		if (new_zone_idx == zone_idx)
 			break;
