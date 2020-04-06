@@ -398,7 +398,7 @@ static int init_zone_info(struct thread_data *td, struct fio_file *f)
 	f->zbd_info = zbd_info;
 	f->zbd_info->zone_size = zone_size;
 	f->zbd_info->zone_size_log2 = is_power_of_2(zone_size) ?
-		ilog2(zone_size) : -1;
+		ilog2(zone_size) : 0;
 	f->zbd_info->nr_zones = nr_zones;
 	pthread_mutexattr_destroy(&attr);
 	return 0;
@@ -515,7 +515,7 @@ static int parse_zone_info(struct thread_data *td, struct fio_file *f)
 	f->zbd_info = zbd_info;
 	f->zbd_info->zone_size = zone_size;
 	f->zbd_info->zone_size_log2 = is_power_of_2(zone_size) ?
-		ilog2(zone_size) : -1;
+		ilog2(zone_size) : 0;
 	f->zbd_info->nr_zones = nr_zones;
 	zbd_info = NULL;
 	ret = 0;
