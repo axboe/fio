@@ -58,6 +58,24 @@ static bool zbd_zone_full(const struct fio_file *f, struct fio_zone_info *z,
 		z->wp + required > z->start + f->zbd_info->zone_size;
 }
 
+static void zone_lock(struct thread_data *td, struct fio_zone_info *z)
+{
+	/*
+	 * Lock the io_u target zone. The zone will be unlocked if io_u offset
+	 * is changed or when io_u completes and zbd_put_io() executed.
+	 * To avoid multiple jobs doing asynchronous I/Os from deadlocking each
+	 * other waiting for zone locks when building an io_u batch, first
+	 * only trylock the zone. If the zone is already locked by another job,
+	 * process the currently queued I/Os so that I/O progress is made and
+	 * zones unlocked.
+	 */
+	if (pthread_mutex_trylock(&z->mutex) != 0) {
+		if (!td_ioengine_flagged(td, FIO_SYNCIO))
+			io_u_quiesce(td);
+		pthread_mutex_lock(&z->mutex);
+	}
+}
+
 static bool is_valid_offset(const struct fio_file *f, uint64_t offset)
 {
 	return (uint64_t)(offset - f->file_offset) < f->io_size;
@@ -716,18 +734,18 @@ static int zbd_reset_zones(struct thread_data *td, struct fio_file *f,
 		zbd_zone_nr(f->zbd_info, zb), zbd_zone_nr(f->zbd_info, ze));
 	assert(f->fd != -1);
 	for (z = zb; z < ze; z++) {
-		pthread_mutex_lock(&z->mutex);
-		if (z->type == BLK_ZONE_TYPE_SEQWRITE_REQ) {
-			reset_wp = all_zones ? z->wp != z->start :
-					(td->o.td_ddir & TD_DDIR_WRITE) &&
-					z->wp % min_bs != 0;
-			if (reset_wp) {
-				dprint(FD_ZBD, "%s: resetting zone %u\n",
-				       f->file_name,
-				       zbd_zone_nr(f->zbd_info, z));
-				if (zbd_reset_zone(td, f, z) < 0)
-					res = 1;
-			}
+		if (z->type != BLK_ZONE_TYPE_SEQWRITE_REQ)
+			continue;
+		zone_lock(td, z);
+		reset_wp = all_zones ? z->wp != z->start :
+				(td->o.td_ddir & TD_DDIR_WRITE) &&
+				z->wp % min_bs != 0;
+		if (reset_wp) {
+			dprint(FD_ZBD, "%s: resetting zone %u\n",
+			       f->file_name,
+			       zbd_zone_nr(f->zbd_info, z));
+			if (zbd_reset_zone(td, f, z) < 0)
+				res = 1;
 		}
 		pthread_mutex_unlock(&z->mutex);
 	}
@@ -925,24 +943,6 @@ static void zbd_close_zone(struct thread_data *td, const struct fio_file *f,
 		sizeof(f->zbd_info->open_zones[0]));
 	f->zbd_info->num_open_zones--;
 	f->zbd_info->zone_info[zone_idx].open = 0;
-}
-
-static void zone_lock(struct thread_data *td, struct fio_zone_info *z)
-{
-	/*
-	 * Lock the io_u target zone. The zone will be unlocked if io_u offset
-	 * is changed or when io_u completes and zbd_put_io() executed.
-	 * To avoid multiple jobs doing asynchronous I/Os from deadlocking each
-	 * other waiting for zone locks when building an io_u batch, first
-	 * only trylock the zone. If the zone is already locked by another job,
-	 * process the currently queued I/Os so that I/O progress is made and
-	 * zones unlocked.
-	 */
-	if (pthread_mutex_trylock(&z->mutex) != 0) {
-		if (!td_ioengine_flagged(td, FIO_SYNCIO))
-			io_u_quiesce(td);
-		pthread_mutex_lock(&z->mutex);
-	}
 }
 
 /* Anything goes as long as it is not a constant. */
