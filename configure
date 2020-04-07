@@ -2862,7 +2862,7 @@ if test "$valgrind_dev" = "yes"; then
   output_sym "CONFIG_VALGRIND_DEV"
 fi
 if test "$linux_blkzoned" = "yes" ; then
-  output_sym "CONFIG_LINUX_BLKZONED"
+  output_sym "CONFIG_HAS_BLKZONED"
 fi
 if test "$zlib" = "no" ; then
   echo "Consider installing zlib-dev (zlib-devel, some fio features depend on it."

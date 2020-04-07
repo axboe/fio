@@ -9,10 +9,8 @@
 #include <stdlib.h>
 #include <dirent.h>
 #include <fcntl.h>
-#include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <linux/blkzoned.h>
 
 #include "file.h"
 #include "fio.h"
@@ -22,6 +20,88 @@
 #include "smalloc.h"
 #include "verify.h"
 #include "zbd.h"
+
+/**
+ * zbd_get_zoned_model - Get a device zoned model
+ * @td: FIO thread data
+ * @f: FIO file for which to get model information
+ */
+int zbd_get_zoned_model(struct thread_data *td, struct fio_file *f,
+			enum zbd_zoned_model *model)
+{
+	int ret;
+
+	ret = blkzoned_get_zoned_model(td, f, model);
+	if (ret < 0) {
+		td_verror(td, errno, "get zoned model failed");
+		log_err("%s: get zoned model failed (%d).\n",
+			f->file_name, errno);
+	}
+
+	return ret;
+}
+
+/**
+ * zbd_report_zones - Get zone information
+ * @td: FIO thread data.
+ * @f: FIO file for which to get zone information
+ * @offset: offset from which to report zones
+ * @zones: Array of struct zbd_zone
+ * @nr_zones: Size of @zones array
+ *
+ * Get zone information into @zones starting from the zone at offset @offset
+ * for the device specified by @f.
+ *
+ * Returns the number of zones reported upon success and a negative error code
+ * upon failure. If the zone report is empty, always assume an error (device
+ * problem) and return -EIO.
+ */
+int zbd_report_zones(struct thread_data *td, struct fio_file *f,
+		     uint64_t offset, struct zbd_zone *zones,
+		     unsigned int nr_zones)
+{
+	int ret;
+
+	ret = blkzoned_report_zones(td, f, offset, zones, nr_zones);
+	if (ret < 0) {
+		td_verror(td, errno, "report zones failed");
+		log_err("%s: report zones from sector %llu failed (%d).\n",
+			f->file_name, (unsigned long long)offset >> 9, errno);
+	} else if (ret == 0) {
+		td_verror(td, errno, "Empty zone report");
+		log_err("%s: report zones from sector %llu is empty.\n",
+			f->file_name, (unsigned long long)offset >> 9);
+		ret = -EIO;
+	}
+
+	return ret;
+}
+
+/**
+ * zbd_reset_wp - reset the write pointer of a range of zones
+ * @td: FIO thread data.
+ * @f: FIO file for which to reset zones
+ * @offset: Starting offset of the first zone to reset
+ * @length: Length of the range of zones to reset
+ *
+ * Reset the write pointer of all zones in the range @offset...@offset+@length.
+ * Returns 0 upon success and a negative error code upon failure.
+ */
+int zbd_reset_wp(struct thread_data *td, struct fio_file *f,
+		 uint64_t offset, uint64_t length)
+{
+	int ret;
+
+	ret = blkzoned_reset_wp(td, f, offset, length);
+	if (ret < 0) {
+		td_verror(td, errno, "resetting wp failed");
+		log_err("%s: resetting wp for %llu sectors at sector %llu failed (%d).\n",
+			f->file_name, (unsigned long long)length >> 9,
+			(unsigned long long)offset >> 9, errno);
+	}
+
+	return ret;
+}
 
 /**
  * zbd_zone_idx - convert an offset into a zone number
@@ -42,6 +122,15 @@ static uint32_t zbd_zone_idx(const struct fio_file *f, uint64_t offset)
 }
 
 /**
+ * zbd_zone_swr - Test whether a zone requires sequential writes
+ * @z: zone info pointer.
+ */
+static inline bool zbd_zone_swr(struct fio_zone_info *z)
+{
+	return z->type == ZBD_ZONE_TYPE_SWR;
+}
+
+/**
  * zbd_zone_full - verify whether a minimum number of bytes remain in a zone
  * @f: file pointer.
  * @z: zone info pointer.
@@ -54,7 +143,7 @@ static bool zbd_zone_full(const struct fio_file *f, struct fio_zone_info *z,
 {
 	assert((required & 511) == 0);
 
-	return z->type == BLK_ZONE_TYPE_SEQWRITE_REQ &&
+	return zbd_zone_swr(z) &&
 		z->wp + required > z->start + f->zbd_info->zone_size;
 }
 
@@ -93,7 +182,7 @@ static bool zbd_using_direct_io(void)
 			continue;
 		for_each_file(td, f, j) {
 			if (f->zbd_info &&
-			    f->zbd_info->model == ZBD_DM_HOST_MANAGED)
+			    f->zbd_info->model == ZBD_HOST_MANAGED)
 				return false;
 		}
 	}
@@ -112,8 +201,7 @@ static bool zbd_is_seq_job(struct fio_file *f)
 	zone_idx_b = zbd_zone_idx(f, f->file_offset);
 	zone_idx_e = zbd_zone_idx(f, f->file_offset + f->io_size - 1);
 	for (zone_idx = zone_idx_b; zone_idx <= zone_idx_e; zone_idx++)
-		if (f->zbd_info->zone_info[zone_idx].type ==
-		    BLK_ZONE_TYPE_SEQWRITE_REQ)
+		if (zbd_zone_swr(&f->zbd_info->zone_info[zone_idx]))
 			return true;
 
 	return false;
@@ -224,119 +312,6 @@ static bool zbd_verify_bs(void)
 	return true;
 }
 
-/*
- * Read zone information into @buf starting from sector @start_sector.
- * @fd is a file descriptor that refers to a block device and @bufsz is the
- * size of @buf.
- *
- * Returns 0 upon success and a negative error code upon failure.
- * If the zone report is empty, always assume an error (device problem) and
- * return -EIO.
- */
-static int read_zone_info(int fd, uint64_t start_sector,
-			  void *buf, unsigned int bufsz)
-{
-	struct blk_zone_report *hdr = buf;
-	int ret;
-
-	if (bufsz < sizeof(*hdr))
-		return -EINVAL;
-
-	memset(hdr, 0, sizeof(*hdr));
-
-	hdr->nr_zones = (bufsz - sizeof(*hdr)) / sizeof(struct blk_zone);
-	hdr->sector = start_sector;
-	ret = ioctl(fd, BLKREPORTZONE, hdr);
-	if (ret)
-		return -errno;
-	if (!hdr->nr_zones)
-		return -EIO;
-	return 0;
-}
-
-/*
- * Read up to 255 characters from the first line of a file. Strip the trailing
- * newline.
- */
-static char *read_file(const char *path)
-{
-	char line[256], *p = line;
-	FILE *f;
-
-	f = fopen(path, "rb");
-	if (!f)
-		return NULL;
-	if (!fgets(line, sizeof(line), f))
-		line[0] = '\0';
-	strsep(&p, "\n");
-	fclose(f);
-
-	return strdup(line);
-}
-
-static enum blk_zoned_model get_zbd_model(const char *file_name)
-{
-	enum blk_zoned_model model = ZBD_DM_NONE;
-	char *zoned_attr_path = NULL;
-	char *model_str = NULL;
-	struct stat statbuf;
-	char *sys_devno_path = NULL;
-	char *part_attr_path = NULL;
-	char *part_str = NULL;
-	char sys_path[PATH_MAX];
-	ssize_t sz;
-	char *delim = NULL;
-
-	if (stat(file_name, &statbuf) < 0)
-		goto out;
-
-	if (asprintf(&sys_devno_path, "/sys/dev/block/%d:%d",
-		     major(statbuf.st_rdev), minor(statbuf.st_rdev)) < 0)
-		goto out;
-
-	sz = readlink(sys_devno_path, sys_path, sizeof(sys_path) - 1);
-	if (sz < 0)
-		goto out;
-	sys_path[sz] = '\0';
-
-	/*
-	 * If the device is a partition device, cut the device name in the
-	 * canonical sysfs path to obtain the sysfs path of the holder device.
-	 *   e.g.:  /sys/devices/.../sda/sda1 -> /sys/devices/.../sda
-	 */
-	if (asprintf(&part_attr_path, "/sys/dev/block/%s/partition",
-		     sys_path) < 0)
-		goto out;
-	part_str = read_file(part_attr_path);
-	if (part_str && *part_str == '1') {
-		delim = strrchr(sys_path, '/');
-		if (!delim)
-			goto out;
-		*delim = '\0';
-	}
-
-	if (asprintf(&zoned_attr_path,
-		     "/sys/dev/block/%s/queue/zoned", sys_path) < 0)
-		goto out;
-
-	model_str = read_file(zoned_attr_path);
-	if (!model_str)
-		goto out;
-	dprint(FD_ZBD, "%s: zbd model string: %s\n", file_name, model_str);
-	if (strcmp(model_str, "host-aware") == 0)
-		model = ZBD_DM_HOST_AWARE;
-	else if (strcmp(model_str, "host-managed") == 0)
-		model = ZBD_DM_HOST_MANAGED;
-
-out:
-	free(model_str);
-	free(zoned_attr_path);
-	free(part_str);
-	free(part_attr_path);
-	free(sys_devno_path);
-	return model;
-}
-
 static int ilog2(uint64_t i)
 {
 	int log = -1;
@@ -389,8 +364,8 @@ static int init_zone_info(struct thread_data *td, struct fio_file *f)
 		pthread_mutex_init(&p->mutex, &attr);
 		p->start = i * zone_size;
 		p->wp = p->start + zone_size;
-		p->type = BLK_ZONE_TYPE_SEQWRITE_REQ;
-		p->cond = BLK_ZONE_COND_EMPTY;
+		p->type = ZBD_ZONE_TYPE_SWR;
+		p->cond = ZBD_ZONE_COND_EMPTY;
 	}
 	/* a sentinel */
 	p->start = nr_zones * zone_size;
@@ -405,51 +380,41 @@ static int init_zone_info(struct thread_data *td, struct fio_file *f)
 }
 
 /*
- * Parse the BLKREPORTZONE output and store it in f->zbd_info. Must be called
- * only for devices that support this ioctl, namely zoned block devices.
+ * Maximum number of zones to report in one operation.
+ */
+#define ZBD_REPORT_MAX_ZONES	8192U
+
+/*
+ * Parse the device zone report and store it in f->zbd_info. Must be called
+ * only for devices that are zoned, namely those with a model != ZBD_NONE.
  */
 static int parse_zone_info(struct thread_data *td, struct fio_file *f)
 {
-	const unsigned int bufsz = sizeof(struct blk_zone_report) +
-		4096 * sizeof(struct blk_zone);
-	uint32_t nr_zones;
-	struct blk_zone_report *hdr;
-	const struct blk_zone *z;
+	int nr_zones, nrz;
+	struct zbd_zone *zones, *z;
 	struct fio_zone_info *p;
-	uint64_t zone_size, start_sector;
+	uint64_t zone_size, offset;
 	struct zoned_block_device_info *zbd_info = NULL;
 	pthread_mutexattr_t attr;
-	void *buf;
-	int fd, i, j, ret = 0;
+	int i, j, ret = 0;
 
 	pthread_mutexattr_init(&attr);
 	pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
 	pthread_mutexattr_setpshared(&attr, true);
 
-	buf = malloc(bufsz);
-	if (!buf)
+	zones = calloc(ZBD_REPORT_MAX_ZONES, sizeof(struct zbd_zone));
+	if (!zones)
 		goto out;
 
-	fd = open(f->file_name, O_RDONLY | O_LARGEFILE);
-	if (fd < 0) {
-		ret = -errno;
-		goto free;
+	nrz = zbd_report_zones(td, f, 0, zones, ZBD_REPORT_MAX_ZONES);
+	if (nrz < 0) {
+		ret = nrz;
+		log_info("fio: report zones (offset 0) failed for %s (%d).\n",
+			 f->file_name, -ret);
+		goto out;
 	}
 
-	ret = read_zone_info(fd, 0, buf, bufsz);
-	if (ret < 0) {
-		log_info("fio: BLKREPORTZONE(%lu) failed for %s (%d).\n",
-			 0UL, f->file_name, -ret);
-		goto close;
-	}
-	hdr = buf;
-	if (hdr->nr_zones < 1) {
-		log_info("fio: %s has invalid zone information.\n",
-			 f->file_name);
-		goto close;
-	}
-	z = (void *)(hdr + 1);
-	zone_size = z->len << 9;
+	zone_size = zones[0].len;
 	nr_zones = (f->real_file_size + zone_size - 1) / zone_size;
 
 	if (td->o.zone_size == 0) {
@@ -459,7 +424,7 @@ static int parse_zone_info(struct thread_data *td, struct fio_file *f)
 			f->file_name, (unsigned long long) td->o.zone_size,
 			(unsigned long long) zone_size);
 		ret = -EINVAL;
-		goto close;
+		goto out;
 	}
 
 	dprint(FD_ZBD, "Device %s has %d zones of size %llu KB\n", f->file_name,
@@ -469,24 +434,24 @@ static int parse_zone_info(struct thread_data *td, struct fio_file *f)
 			   (nr_zones + 1) * sizeof(zbd_info->zone_info[0]));
 	ret = -ENOMEM;
 	if (!zbd_info)
-		goto close;
+		goto out;
 	pthread_mutex_init(&zbd_info->mutex, &attr);
 	zbd_info->refcount = 1;
 	p = &zbd_info->zone_info[0];
-	for (start_sector = 0, j = 0; j < nr_zones;) {
-		z = (void *)(hdr + 1);
-		for (i = 0; i < hdr->nr_zones; i++, j++, z++, p++) {
+	for (offset = 0, j = 0; j < nr_zones;) {
+		z = &zones[0];
+		for (i = 0; i < nrz; i++, j++, z++, p++) {
 			pthread_mutex_init(&p->mutex, &attr);
-			p->start = z->start << 9;
+			p->start = z->start;
 			switch (z->cond) {
-			case BLK_ZONE_COND_NOT_WP:
-			case BLK_ZONE_COND_FULL:
+			case ZBD_ZONE_COND_NOT_WP:
+			case ZBD_ZONE_COND_FULL:
 				p->wp = p->start + zone_size;
 				break;
 			default:
 				assert(z->start <= z->wp);
-				assert(z->wp <= z->start + (zone_size >> 9));
-				p->wp = z->wp << 9;
+				assert(z->wp <= z->start + zone_size);
+				p->wp = z->wp;
 				break;
 			}
 			p->type = z->type;
@@ -495,22 +460,26 @@ static int parse_zone_info(struct thread_data *td, struct fio_file *f)
 				log_info("%s: invalid zone data\n",
 					 f->file_name);
 				ret = -EINVAL;
-				goto close;
+				goto out;
 			}
 		}
 		z--;
-		start_sector = z->start + z->len;
+		offset = z->start + z->len;
 		if (j >= nr_zones)
 			break;
-		ret = read_zone_info(fd, start_sector, buf, bufsz);
-		if (ret < 0) {
-			log_info("fio: BLKREPORTZONE(%llu) failed for %s (%d).\n",
-				 (unsigned long long) start_sector, f->file_name, -ret);
-			goto close;
+		nrz = zbd_report_zones(td, f, offset,
+					    zones, ZBD_REPORT_MAX_ZONES);
+		if (nrz < 0) {
+			ret = nrz;
+			log_info("fio: report zones (offset %llu) failed for %s (%d).\n",
+			 	 (unsigned long long)offset,
+				 f->file_name, -ret);
+			goto out;
 		}
 	}
+
 	/* a sentinel */
-	zbd_info->zone_info[nr_zones].start = start_sector << 9;
+	zbd_info->zone_info[nr_zones].start = offset;
 
 	f->zbd_info = zbd_info;
 	f->zbd_info->zone_size = zone_size;
@@ -520,12 +489,9 @@ static int parse_zone_info(struct thread_data *td, struct fio_file *f)
 	zbd_info = NULL;
 	ret = 0;
 
-close:
-	sfree(zbd_info);
-	close(fd);
-free:
-	free(buf);
 out:
+	sfree(zbd_info);
+	free(zones);
 	pthread_mutexattr_destroy(&attr);
 	return ret;
 }
@@ -537,21 +503,31 @@ out:
  */
 static int zbd_create_zone_info(struct thread_data *td, struct fio_file *f)
 {
-	enum blk_zoned_model zbd_model;
-	int ret = 0;
+	enum zbd_zoned_model zbd_model;
+	int ret;
 
 	assert(td->o.zone_mode == ZONE_MODE_ZBD);
 
-	zbd_model = get_zbd_model(f->file_name);
+	ret = zbd_get_zoned_model(td, f, &zbd_model);
+	if (ret)
+		return ret;
+
 	switch (zbd_model) {
-	case ZBD_DM_HOST_AWARE:
-	case ZBD_DM_HOST_MANAGED:
+	case ZBD_IGNORE:
+		return 0;
+	case ZBD_HOST_AWARE:
+	case ZBD_HOST_MANAGED:
 		ret = parse_zone_info(td, f);
 		break;
-	case ZBD_DM_NONE:
+	case ZBD_NONE:
 		ret = init_zone_info(td, f);
 		break;
+	default:
+		td_verror(td, EINVAL, "Unsupported zoned model");
+		log_err("Unsupported zoned model\n");
+		return -EINVAL;
 	}
+
 	if (ret == 0)
 		f->zbd_info->model = zbd_model;
 	return ret;
@@ -613,8 +589,6 @@ int zbd_init(struct thread_data *td)
 	int i;
 
 	for_each_file(td, f, i) {
-		if (f->filetype != FIO_TYPE_BLOCK)
-			continue;
 		if (zbd_init_zone_info(td, f))
 			return 1;
 	}
@@ -642,31 +616,24 @@ int zbd_init(struct thread_data *td)
  *
  * Returns 0 upon success and a negative error code upon failure.
  */
-static int zbd_reset_range(struct thread_data *td, const struct fio_file *f,
+static int zbd_reset_range(struct thread_data *td, struct fio_file *f,
 			   uint64_t offset, uint64_t length)
 {
-	struct blk_zone_range zr = {
-		.sector         = offset >> 9,
-		.nr_sectors     = length >> 9,
-	};
 	uint32_t zone_idx_b, zone_idx_e;
 	struct fio_zone_info *zb, *ze, *z;
 	int ret = 0;
 
 	assert(f->fd != -1);
 	assert(is_valid_offset(f, offset + length - 1));
+
 	switch (f->zbd_info->model) {
-	case ZBD_DM_HOST_AWARE:
-	case ZBD_DM_HOST_MANAGED:
-		ret = ioctl(f->fd, BLKRESETZONE, &zr);
-		if (ret < 0) {
-			td_verror(td, errno, "resetting wp failed");
-			log_err("%s: resetting wp for %llu sectors at sector %llu failed (%d).\n",
-				f->file_name, zr.nr_sectors, zr.sector, errno);
+	case ZBD_HOST_AWARE:
+	case ZBD_HOST_MANAGED:
+		ret = zbd_reset_wp(td, f, offset, length);
+		if (ret < 0)
 			return ret;
-		}
 		break;
-	case ZBD_DM_NONE:
+	default:
 		break;
 	}
 
@@ -703,7 +670,7 @@ static unsigned int zbd_zone_nr(struct zoned_block_device_info *zbd_info,
  *
  * Returns 0 upon success and a negative error code upon failure.
  */
-static int zbd_reset_zone(struct thread_data *td, const struct fio_file *f,
+static int zbd_reset_zone(struct thread_data *td, struct fio_file *f,
 			  struct fio_zone_info *z)
 {
 	dprint(FD_ZBD, "%s: resetting wp of zone %u.\n", f->file_name,
@@ -734,7 +701,7 @@ static int zbd_reset_zones(struct thread_data *td, struct fio_file *f,
 		zbd_zone_nr(f->zbd_info, zb), zbd_zone_nr(f->zbd_info, ze));
 	assert(f->fd != -1);
 	for (z = zb; z < ze; z++) {
-		if (z->type != BLK_ZONE_TYPE_SEQWRITE_REQ)
+		if (!zbd_zone_swr(z))
 			continue;
 		zone_lock(td, z);
 		reset_wp = all_zones ? z->wp != z->start :
@@ -899,7 +866,7 @@ static bool zbd_open_zone(struct thread_data *td, const struct io_u *io_u,
 	struct fio_zone_info *z = &f->zbd_info->zone_info[zone_idx];
 	bool res = true;
 
-	if (z->cond == BLK_ZONE_COND_OFFLINE)
+	if (z->cond == ZBD_ZONE_COND_OFFLINE)
 		return false;
 
 	/*
@@ -939,7 +906,7 @@ static void zbd_close_zone(struct thread_data *td, const struct fio_file *f,
 	zone_idx = f->zbd_info->open_zones[open_zone_idx];
 	memmove(f->zbd_info->open_zones + open_zone_idx,
 		f->zbd_info->open_zones + open_zone_idx + 1,
-		(FIO_MAX_OPEN_ZBD_ZONES - (open_zone_idx + 1)) *
+		(ZBD_MAX_OPEN_ZONES - (open_zone_idx + 1)) *
 		sizeof(f->zbd_info->open_zones[0]));
 	f->zbd_info->num_open_zones--;
 	f->zbd_info->zone_info[zone_idx].open = 0;
@@ -1148,7 +1115,7 @@ zbd_find_zone(struct thread_data *td, struct io_u *io_u,
 	 * the nearest non-empty zone in case of random I/O.
 	 */
 	for (z1 = zb + 1, z2 = zb - 1; z1 < zl || z2 >= zf; z1++, z2--) {
-		if (z1 < zl && z1->cond != BLK_ZONE_COND_OFFLINE) {
+		if (z1 < zl && z1->cond != ZBD_ZONE_COND_OFFLINE) {
 			pthread_mutex_lock(&z1->mutex);
 			if (z1->start + min_bs <= z1->wp)
 				return z1;
@@ -1157,7 +1124,7 @@ zbd_find_zone(struct thread_data *td, struct io_u *io_u,
 			break;
 		}
 		if (td_random(td) && z2 >= zf &&
-		    z2->cond != BLK_ZONE_COND_OFFLINE) {
+		    z2->cond != ZBD_ZONE_COND_OFFLINE) {
 			pthread_mutex_lock(&z2->mutex);
 			if (z2->start + min_bs <= z2->wp)
 				return z2;
@@ -1193,7 +1160,7 @@ static void zbd_queue_io(struct io_u *io_u, int q, bool success)
 	assert(zone_idx < zbd_info->nr_zones);
 	z = &zbd_info->zone_info[zone_idx];
 
-	if (z->type != BLK_ZONE_TYPE_SEQWRITE_REQ)
+	if (!zbd_zone_swr(z))
 		return;
 
 	if (!success)
@@ -1250,7 +1217,7 @@ static void zbd_put_io(const struct io_u *io_u)
 	assert(zone_idx < zbd_info->nr_zones);
 	z = &zbd_info->zone_info[zone_idx];
 
-	if (z->type != BLK_ZONE_TYPE_SEQWRITE_REQ)
+	if (!zbd_zone_swr(z))
 		return;
 
 	dprint(FD_ZBD,
@@ -1341,7 +1308,7 @@ void setup_zbd_zone_mode(struct thread_data *td, struct io_u *io_u)
  */
 enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 {
-	const struct fio_file *f = io_u->file;
+	struct fio_file *f = io_u->file;
 	uint32_t zone_idx_b;
 	struct fio_zone_info *zb, *zl, *orig_zb;
 	uint32_t orig_len = io_u->buflen;
@@ -1359,14 +1326,14 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 	orig_zb = zb;
 
 	/* Accept the I/O offset for conventional zones. */
-	if (zb->type == BLK_ZONE_TYPE_CONVENTIONAL)
+	if (!zbd_zone_swr(zb))
 		return io_u_accept;
 
 	/*
 	 * Accept the I/O offset for reads if reading beyond the write pointer
 	 * is enabled.
 	 */
-	if (zb->cond != BLK_ZONE_COND_OFFLINE &&
+	if (zb->cond != ZBD_ZONE_COND_OFFLINE &&
 	    io_u->ddir == DDIR_READ && td->o.read_beyond_wp)
 		return io_u_accept;
 
@@ -1385,7 +1352,7 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 		 * I/O of at least min_bs B. If there isn't, find a new zone for
 		 * the I/O.
 		 */
-		range = zb->cond != BLK_ZONE_COND_OFFLINE ?
+		range = zb->cond != ZBD_ZONE_COND_OFFLINE ?
 			zb->wp - zb->start : 0;
 		if (range < min_bs ||
 		    ((!td_random(td)) && (io_u->offset + min_bs > zb->wp))) {
@@ -1510,7 +1477,7 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 
 accept:
 	assert(zb);
-	assert(zb->cond != BLK_ZONE_COND_OFFLINE);
+	assert(zb->cond != ZBD_ZONE_COND_OFFLINE);
 	assert(!io_u->zbd_queue_io);
 	assert(!io_u->zbd_put_io);
 	io_u->zbd_queue_io = zbd_queue_io;

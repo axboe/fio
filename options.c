@@ -13,6 +13,7 @@
 #include "lib/pattern.h"
 #include "options.h"
 #include "optgroup.h"
+#include "zbd.h"
 
 char client_sockaddr_str[INET6_ADDRSTRLEN] = { 0 };
 
@@ -3362,7 +3363,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.lname	= "Maximum number of open zones",
 		.type	= FIO_OPT_INT,
 		.off1	= offsetof(struct thread_options, max_open_zones),
-		.maxval	= FIO_MAX_OPEN_ZBD_ZONES,
+		.maxval	= ZBD_MAX_OPEN_ZONES,
 		.help	= "Limit random writes to SMR drives to the specified"
 			  " number of sequential zones",
 		.def	= "0",

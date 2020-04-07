@@ -50,7 +50,7 @@ SOURCE :=	$(sort $(patsubst $(SRCDIR)/%,%,$(wildcard $(SRCDIR)/crc/*.c)) \
 		gettime-thread.c helpers.c json.c idletime.c td_error.c \
 		profiles/tiobench.c profiles/act.c io_u_queue.c filelock.c \
 		workqueue.c rate-submit.c optgroup.c helper_thread.c \
-		steadystate.c zone-dist.c
+		steadystate.c zone-dist.c zbd.c
 
 ifdef CONFIG_LIBHDFS
   HDFSFLAGS= -I $(JAVA_HOME)/include -I $(JAVA_HOME)/include/linux -I $(FIO_LIBHDFS_INCLUDE)
@@ -160,13 +160,13 @@ endif
 ifdef CONFIG_IME
   SOURCE += engines/ime.c
 endif
-ifdef CONFIG_LINUX_BLKZONED
-  SOURCE += zbd.c
-endif
 
 ifeq ($(CONFIG_TARGET_OS), Linux)
   SOURCE += diskutil.c fifo.c blktrace.c cgroup.c trim.c engines/sg.c \
 		oslib/linux-dev-lookup.c engines/io_uring.c
+ifdef CONFIG_HAS_BLKZONED
+  SOURCE += oslib/linux-blkzoned.c
+endif
   LIBS += -lpthread -ldl
   LDFLAGS += -rdynamic
 endif

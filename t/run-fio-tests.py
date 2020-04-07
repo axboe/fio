@@ -465,7 +465,7 @@ class Requirements(object):
                 print("Unable to open {0} to check requirements".format(config_file))
                 Requirements._zbd = True
             else:
-                Requirements._zbd = "CONFIG_LINUX_BLKZONED" in contents
+                Requirements._zbd = "CONFIG_HAS_BLKZONED" in contents
                 Requirements._libaio = "CONFIG_LIBAIO" in contents
 
             Requirements._root = (os.geteuid() == 0)
