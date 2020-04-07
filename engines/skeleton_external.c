@@ -154,6 +154,46 @@ static int fio_skeleton_close(struct thread_data *td, struct fio_file *f)
 }
 
 /*
+ * Hook for getting the zoned model of a zoned block device for zonemode=zbd.
+ * The zoned model can be one of (see zbd_types.h):
+ * - ZBD_IGNORE: skip regular files
+ * - ZBD_NONE: regular block device (zone emulation will be used)
+ * - ZBD_HOST_AWARE: host aware zoned block device
+ * - ZBD_HOST_MANAGED: host managed zoned block device
+ */
+static int fio_skeleton_get_zoned_model(struct thread_data *td,
+			struct fio_file *f, enum zbd_zoned_model *model)
+{
+	*model = ZBD_NONE;
+	return 0;
+}
+
+/*
+ * Hook called for getting zone information of a ZBD_HOST_AWARE or
+ * ZBD_HOST_MANAGED zoned block device. Up to @nr_zones zone information
+ * structures can be reported using the array zones for zones starting from
+ * @offset. The number of zones reported must be returned or a negative error
+ * code in case of error.
+ */
+static int fio_skeleton_report_zones(struct thread_data *td, struct fio_file *f,
+				     uint64_t offset, struct zbd_zone *zones,
+				     unsigned int nr_zones)
+{
+	return 0;
+}
+
+/*
+ * Hook called for resetting the write pointer position of zones of a
+ * ZBD_HOST_AWARE or ZBD_HOST_MANAGED zoned block device. The write pointer
+ * position of all zones in the range @offset..@offset + @length must be reset.
+ */
+static int fio_skeleton_reset_wp(struct thread_data *td, struct fio_file *f,
+				 uint64_t offset, uint64_t length)
+{
+	return 0;
+}
+
+/*
  * Note that the structure is exported, so that fio can get it via
  * dlsym(..., "ioengine"); for (and only for) external engines.
  */
@@ -169,6 +209,9 @@ struct ioengine_ops ioengine = {
 	.cleanup	= fio_skeleton_cleanup,
 	.open_file	= fio_skeleton_open,
 	.close_file	= fio_skeleton_close,
+	.get_zoned_model = fio_skeleton_get_zoned_model,
+	.report_zones	= fio_skeleton_report_zones,
+	.reset_wp	= fio_skeleton_reset_wp,
 	.options	= options,
 	.option_struct_size	= sizeof(struct fio_skeleton_options),
 };

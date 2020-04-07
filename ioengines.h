@@ -6,8 +6,9 @@
 #include "compiler/compiler.h"
 #include "flist.h"
 #include "io_u.h"
+#include "zbd_types.h"
 
-#define FIO_IOOPS_VERSION	25
+#define FIO_IOOPS_VERSION	26
 
 /*
  * io_ops->queue() return values
@@ -44,6 +45,12 @@ struct ioengine_ops {
 	void (*iomem_free)(struct thread_data *);
 	int (*io_u_init)(struct thread_data *, struct io_u *);
 	void (*io_u_free)(struct thread_data *, struct io_u *);
+	int (*get_zoned_model)(struct thread_data *td,
+			       struct fio_file *f, enum zbd_zoned_model *);
+	int (*report_zones)(struct thread_data *, struct fio_file *,
+			    uint64_t, struct zbd_zone *, unsigned int);
+	int (*reset_wp)(struct thread_data *, struct fio_file *,
+			uint64_t, uint64_t);
 	int option_struct_size;
 	struct fio_option *options;
 };
