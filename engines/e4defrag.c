@@ -72,7 +72,7 @@ static int fio_e4defrag_init(struct thread_data *td)
 	struct stat stub;
 	char donor_name[PATH_MAX];
 
-	if (!strlen(o->donor_name)) {
+	if (!o->donor_name || !strlen(o->donor_name)) {
 		log_err("'donorname' options required\n");
 		return 1;
 	}
