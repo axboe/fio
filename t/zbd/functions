@@ -4,9 +4,18 @@ blkzone=$(type -p blkzone 2>/dev/null)
 sg_inq=$(type -p sg_inq 2>/dev/null)
 zbc_report_zones=$(type -p zbc_report_zones 2>/dev/null)
 zbc_reset_zone=$(type -p zbc_reset_zone 2>/dev/null)
+zbc_info=$(type -p zbc_info 2>/dev/null)
 if [ -z "${blkzone}" ] &&
        { [ -z "${zbc_report_zones}" ] || [ -z "${zbc_reset_zone}" ]; }; then
     echo "Error: neither blkzone nor zbc_report_zones is available"
+    exit 1
+fi
+
+if [ -n "${use_libzbc}" ] &&
+       { [ -z "${zbc_report_zones}" ] || [ -z "${zbc_reset_zone}" ] ||
+         [ -z "${zbc_info}" ]; }; then
+    echo "Error: zbc_report_zones, or zbc_reset_zone or zbc_info is not available"
+    echo "Error: reinstall libzbc tools"
     exit 1
 fi
 
@@ -15,7 +24,7 @@ fi
 first_sequential_zone() {
     local dev=$1
 
-    if [ -n "${blkzone}" ]; then
+    if [ -n "${blkzone}" ] && [ ! -n "${use_libzbc}" ]; then
 	${blkzone} report "$dev" |
 	    sed -n 's/^[[:blank:]]*start:[[:blank:]]\([0-9a-zA-Z]*\),[[:blank:]]len[[:blank:]]\([0-9a-zA-Z]*\),.*type:[[:blank:]]2(.*/\1 \2/p' |
 	    {
@@ -33,7 +42,7 @@ first_sequential_zone() {
 max_open_zones() {
     local dev=$1
 
-    if [ -n "${sg_inq}" ]; then
+    if [ -n "${sg_inq}" ] && [ ! -n "${use_libzbc}" ]; then
 	if ! ${sg_inq} -e --page=0xB6 --len=20 --hex "$dev" 2> /dev/null; then
 	    # Non scsi device such as null_blk can not return max open zones.
 	    # Use default value.
@@ -56,13 +65,36 @@ max_open_zones() {
     fi
 }
 
+is_zbc() {
+	local dev=$1
+
+	[[ -z "$(${zbc_info} "$dev" | grep "is not a zoned block device")" ]]
+}
+
+zbc_logical_block_size() {
+	local dev=$1
+
+	${zbc_info} "$dev" |
+		grep "logical blocks" |
+		sed -n 's/^[[:blank:]]*[0-9]* logical blocks of[[:blank:]]*//p' |
+		sed 's/ B//'
+}
+
+zbc_disk_sectors() {
+        local dev=$1
+
+	zbc_info "$dev" |
+		grep "512-bytes sectors" |
+		sed -e 's/[[:blank:]]*\([0-9]*\)512-bytes sectors.*/\1/'
+}
+
 # Reset the write pointer of one zone on device $1 at offset $2. The offset
 # must be specified in units of 512 byte sectors. Offset -1 means reset all
 # zones.
 reset_zone() {
     local dev=$1 offset=$2 sectors
 
-    if [ -n "${blkzone}" ]; then
+    if [ -n "${blkzone}" ] && [ ! -n "${use_libzbc}" ]; then
 	if [ "$offset" -lt 0 ]; then
 	    sectors=$(<"/sys/class/block/${dev#/dev/}/size")
 	    ${blkzone} reset -o "${offset}" -l "$sectors" "$dev"
