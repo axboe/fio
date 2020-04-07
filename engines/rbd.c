@@ -200,6 +200,14 @@ static int _fio_rbd_connect(struct thread_data *td)
 		log_err("rados_create failed.\n");
 		goto failed_early;
 	}
+	if (o->pool_name == NULL) {
+		log_err("rbd pool name must be provided.\n");
+		goto failed_early;
+	}
+	if (!o->rbd_name) {
+		log_err("rbdname must be provided.\n");
+		goto failed_early;
+	}
 
 	r = rados_conf_read_file(rbd->cluster, NULL);
 	if (r < 0) {

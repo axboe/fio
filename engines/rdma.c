@@ -1050,7 +1050,7 @@ static int fio_rdmaio_setup_connect(struct thread_data *td, const char *host,
 		return err;
 
 	/* resolve route */
-	if (strcmp(o->bindname, "") != 0) {
+	if (o->bindname && strlen(o->bindname)) {
 		addrb.ss_family = AF_INET;
 		err = aton(td, o->bindname, (struct sockaddr_in *)&addrb);
 		if (err)
@@ -1116,7 +1116,7 @@ static int fio_rdmaio_setup_listen(struct thread_data *td, short port)
 	rd->addr.sin_family = AF_INET;
 	rd->addr.sin_port = htons(port);
 
-	if (strcmp(o->bindname, "") == 0)
+	if (!o->bindname || !strlen(o->bindname))
 		rd->addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	else
 		rd->addr.sin_addr.s_addr = htonl(*o->bindname);
