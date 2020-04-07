@@ -1629,6 +1629,12 @@ I/O. Requires \fBfilename\fR option to specify either block or
 character devices. This engine supports trim operations. The
 sg engine includes engine specific options.
 .TP
+.B libzbc
+Synchronous I/O engine for SMR hard-disks using the \fBlibzbc\fR
+library. The target can be either an sg character device or
+a block device file. This engine supports the zonemode=zbd zone
+operations.
+.TP
 .B null
 Doesn't transfer any data, just pretends to. This is mainly used to
 exercise fio itself and for debugging/testing purposes.

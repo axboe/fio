@@ -2398,6 +2398,37 @@ fi
 print_config "Zoned block device support" "$linux_blkzoned"
 
 ##########################################
+# libzbc probe
+if test "$libzbc" != "yes" ; then
+  libzbc="no"
+fi
+cat > $TMPC << EOF
+#include <libzbc/zbc.h>
+int main(int argc, char **argv)
+{
+  struct zbc_device *dev = NULL;
+
+  return zbc_open("foo=bar", O_RDONLY, &dev);
+}
+EOF
+if compile_prog "" "-lzbc" "libzbc"; then
+  libzbcvermaj=$(pkg-config --modversion libzbc | sed 's/\.[0-9]*\.[0-9]*//')
+  if test "$libzbcvermaj" -ge "5" ; then
+    libzbc="yes"
+    LIBS="-lzbc $LIBS"
+  else
+    print_config "libzbc engine" "Unsupported libzbc version (version 5 or above required)"
+    libzbc="no"
+  fi
+else
+  if test "$libzbc" = "yes" ; then
+      feature_not_found "libzbc" "libzbc or libzbc/zbc.h"
+  fi
+  libzbc="no"
+fi
+print_config "libzbc engine" "$libzbc"
+
+##########################################
 # check march=armv8-a+crc+crypto
 if test "$march_armv8_a_crc_crypto" != "yes" ; then
   march_armv8_a_crc_crypto="no"
@@ -2863,6 +2894,9 @@ if test "$valgrind_dev" = "yes"; then
 fi
 if test "$linux_blkzoned" = "yes" ; then
   output_sym "CONFIG_HAS_BLKZONED"
+fi
+if test "$libzbc" = "yes" ; then
+  output_sym "CONFIG_LIBZBC"
 fi
 if test "$zlib" = "no" ; then
   echo "Consider installing zlib-dev (zlib-devel, some fio features depend on it."
