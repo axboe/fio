@@ -1249,8 +1249,7 @@ static int fio_rdmaio_init(struct thread_data *td)
 {
 	struct rdmaio_data *rd = td->io_ops_data;
 	struct rdmaio_options *o = td->eo;
-	unsigned int max_bs;
-	int ret, i;
+	int ret;
 
 	if (td_rw(td)) {
 		log_err("fio: rdma connections must be read OR write\n");
@@ -1318,6 +1317,13 @@ static int fio_rdmaio_init(struct thread_data *td)
 		rd->is_client = 1;
 		ret = fio_rdmaio_setup_connect(td, td->o.filename, o->port);
 	}
+	return ret;
+}
+static int fio_rdmaio_post_init(struct thread_data *td)
+{
+	unsigned int max_bs;
+	int i;
+	struct rdmaio_data *rd = td->io_ops_data;
 
 	max_bs = max(td->o.max_bs[DDIR_READ], td->o.max_bs[DDIR_WRITE]);
 	rd->send_buf.max_bs = htonl(max_bs);
@@ -1351,7 +1357,7 @@ static int fio_rdmaio_init(struct thread_data *td)
 
 	rd->send_buf.nr = htonl(i);
 
-	return ret;
+	return 0;
 }
 
 static void fio_rdmaio_cleanup(struct thread_data *td)
@@ -1388,6 +1394,7 @@ static struct ioengine_ops ioengine_rw = {
 	.version		= FIO_IOOPS_VERSION,
 	.setup			= fio_rdmaio_setup,
 	.init			= fio_rdmaio_init,
+	.post_init		= fio_rdmaio_post_init,
 	.prep			= fio_rdmaio_prep,
 	.queue			= fio_rdmaio_queue,
 	.commit			= fio_rdmaio_commit,
