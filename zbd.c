@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "os/os.h"
 #include "file.h"
 #include "fio.h"
 #include "lib/pow2.h"

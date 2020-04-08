@@ -48,9 +48,8 @@ before_install:
         brew install cunit;
         if [[ "$TRAVIS_OSX_IMAGE" == "xcode11.2" ]]; then
             pip3 install scipy;
-        else
-            pip install scipy;
         fi;
+        pip install scipy;
     fi;
 script:
   - ./configure --extra-cflags="${EXTRA_CFLAGS}" && make
