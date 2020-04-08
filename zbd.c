@@ -7,7 +7,6 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
-#include <dirent.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -1234,6 +1233,13 @@ static void zbd_put_io(const struct io_u *io_u)
 	assert(pthread_mutex_unlock(&z->mutex) == 0);
 	zbd_check_swd(f);
 }
+
+/*
+ * Windows and MacOS do not define this.
+ */
+#ifndef EREMOTEIO
+#define EREMOTEIO	121	/* POSIX value */
+#endif
 
 bool zbd_unaligned_write(int error_code)
 {
