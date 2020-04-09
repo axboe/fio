@@ -5,12 +5,28 @@ hostname=${RDMA_SERVER}
 port=8888
 # Data exchange method
 # verb=[read/write/send/recv]
-verb=write
 bs=1m
 size=100g
 # IO direction:  [read] as the server, [write] as for client
 rw=write
 
-[client-rdma-write]
-numjobs=4
+[client-rdma-read]
+verb=read
+verb=write
 iodepth=16
+
+[client-rdma-write]
+verb=read
+verb=write
+iodepth=16
+
+[client-rdma-send]
+verb=read
+verb=write
+iodepth=16
+
+[client-rdma-recv]
+verb=read
+verb=write
+iodepth=16
+

@@ -1269,6 +1269,7 @@ static int fio_rdmaio_init(struct thread_data *td)
 			"for the rdma engine\n");
 		return 1;
 	}
+	o->port += td->thread_number;
 
 	if (check_set_rlimits(td))
 		return 1;
