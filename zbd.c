@@ -1220,6 +1220,7 @@ static void zbd_put_io(const struct io_u *io_u)
 	struct zoned_block_device_info *zbd_info = f->zbd_info;
 	struct fio_zone_info *z;
 	uint32_t zone_idx;
+	int ret;
 
 	if (!zbd_info)
 		return;
@@ -1235,7 +1236,8 @@ static void zbd_put_io(const struct io_u *io_u)
 	       "%s: terminate I/O (%lld, %llu) for zone %u\n",
 	       f->file_name, io_u->offset, io_u->buflen, zone_idx);
 
-	assert(pthread_mutex_unlock(&z->mutex) == 0);
+	ret = pthread_mutex_unlock(&z->mutex);
+	assert(ret == 0);
 	zbd_check_swd(f);
 }
 
