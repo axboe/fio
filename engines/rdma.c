@@ -231,7 +231,12 @@ static int client_recv(struct thread_data *td, struct ibv_wc *wc)
 
 		assert(is_control_msg(wc));
 		rd->rmt_nr = ntohl(rd->recv_buf.nr);
-
+		if (!td_random(td) && rd->rmt_nr < td->o.iodepth) {
+			log_err("fio: Server's iodepth (%d) must be greater than or "
+				"equal to the client's iodepth (%d)!\n",
+				rd->rmt_nr, td->o.iodepth);
+			return 1;
+		}
 		for (i = 0; i < rd->rmt_nr; i++) {
 			rd->rmt_us[i].buf = be64_to_cpu(rd->recv_buf.rmt_us[i].buf);
 			rd->rmt_us[i].rkey = ntohl(rd->recv_buf.rmt_us[i].rkey);
@@ -677,7 +682,14 @@ again:
 
 	return r;
 }
-
+static int fio_rmt_id(struct thread_data *td, int id)
+{
+	if (td_random(td)) {
+		struct rdmaio_data *rd = td->io_ops_data;
+		return __rand(&rd->rand_state) % rd->rmt_nr;
+	}
+	return id;
+}
 static int fio_rdmaio_send(struct thread_data *td, struct io_u **io_us,
 			   unsigned int nr)
 {
@@ -699,7 +711,7 @@ static int fio_rdmaio_send(struct thread_data *td, struct io_u **io_us,
 		case FIO_RDMA_MEM_WRITE:
 			/* compose work request */
 			r_io_u_d = io_us[i]->engine_data;
-			index = __rand(&rd->rand_state) % rd->rmt_nr;
+			index = fio_rmt_id(td, r_io_u_d->wr_id);
 			r_io_u_d->sq_wr.opcode = IBV_WR_RDMA_WRITE;
 			r_io_u_d->sq_wr.wr.rdma.rkey = rd->rmt_us[index].rkey;
 			r_io_u_d->sq_wr.wr.rdma.remote_addr = \
@@ -709,7 +721,7 @@ static int fio_rdmaio_send(struct thread_data *td, struct io_u **io_us,
 		case FIO_RDMA_MEM_READ:
 			/* compose work request */
 			r_io_u_d = io_us[i]->engine_data;
-			index = __rand(&rd->rand_state) % rd->rmt_nr;
+			index = fio_rmt_id(td, r_io_u_d->wr_id);
 			r_io_u_d->sq_wr.opcode = IBV_WR_RDMA_READ;
 			r_io_u_d->sq_wr.wr.rdma.rkey = rd->rmt_us[index].rkey;
 			r_io_u_d->sq_wr.wr.rdma.remote_addr = \
@@ -1242,11 +1254,6 @@ static int fio_rdmaio_init(struct thread_data *td)
 		log_err("fio: rdma connections must be read OR write\n");
 		return 1;
 	}
-	if (td_random(td)) {
-		log_err("fio: RDMA network IO can't be random\n");
-		return 1;
-	}
-
 	if (compat_options(td))
 		return 1;
 
