@@ -199,6 +199,12 @@ struct rdmaio_data {
 	struct frand_state rand_state;
 };
 
+/* Top message reserved for control messages */
+static bool is_control_msg(struct ibv_wc *wc)
+{
+	return wc->wr_id == FIO_RDMA_MAX_IO_DEPTH;
+}
+
 static int client_recv(struct thread_data *td, struct ibv_wc *wc)
 {
 	struct rdmaio_data *rd = td->io_ops_data;
@@ -223,6 +229,7 @@ static int client_recv(struct thread_data *td, struct ibv_wc *wc)
 		/* struct flist_head *entry; */
 		int i = 0;
 
+		assert(is_control_msg(wc));
 		rd->rmt_nr = ntohl(rd->recv_buf.nr);
 
 		for (i = 0; i < rd->rmt_nr; i++) {
@@ -245,7 +252,7 @@ static int server_recv(struct thread_data *td, struct ibv_wc *wc)
 	struct rdmaio_data *rd = td->io_ops_data;
 	unsigned int max_bs;
 
-	if (wc->wr_id == FIO_RDMA_MAX_IO_DEPTH) {
+	if (is_control_msg(wc)) {
 		rd->rdma_protocol = ntohl(rd->recv_buf.mode);
 
 		/* CHANNEL semantic, do nothing */
@@ -295,7 +302,7 @@ static int cq_event_handler(struct thread_data *td)
 			if (ret)
 				return -1;
 
-			if (wc.wr_id == FIO_RDMA_MAX_IO_DEPTH)
+			if (is_control_msg(&wc))
 				break;
 
 			for (i = 0; i < rd->io_u_flight_nr; i++) {
@@ -330,7 +337,7 @@ static int cq_event_handler(struct thread_data *td)
 		case IBV_WC_SEND:
 		case IBV_WC_RDMA_WRITE:
 		case IBV_WC_RDMA_READ:
-			if (wc.wr_id == FIO_RDMA_MAX_IO_DEPTH)
+			if (is_control_msg(&wc))
 				break;
 
 			for (i = 0; i < rd->io_u_flight_nr; i++) {
