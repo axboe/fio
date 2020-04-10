@@ -265,7 +265,7 @@ static int server_recv(struct thread_data *td, struct ibv_wc *wc)
 	return 0;
 }
 
-static int cq_event_handler(struct thread_data *td, enum ibv_wc_opcode opcode)
+static int cq_event_handler(struct thread_data *td)
 {
 	struct rdmaio_data *rd = td->io_ops_data;
 	struct ibv_wc wc;
@@ -376,7 +376,7 @@ static int cq_event_handler(struct thread_data *td, enum ibv_wc_opcode opcode)
  * Return -1 for error and 'nr events' for a positive number
  * of events
  */
-static int rdma_poll_wait(struct thread_data *td, enum ibv_wc_opcode opcode)
+static int rdma_poll_wait(struct thread_data *td)
 {
 	struct rdmaio_data *rd = td->io_ops_data;
 	struct ibv_cq *ev_cq;
@@ -402,7 +402,7 @@ again:
 		return -1;
 	}
 
-	ret = cq_event_handler(td, opcode);
+	ret = cq_event_handler(td);
 	if (ret == 0)
 		goto again;
 
@@ -633,29 +633,9 @@ static int fio_rdmaio_getevents(struct thread_data *td, unsigned int min,
 				unsigned int max, const struct timespec *t)
 {
 	struct rdmaio_data *rd = td->io_ops_data;
-	enum ibv_wc_opcode comp_opcode;
 	struct ibv_cq *ev_cq;
 	void *ev_ctx;
 	int ret, r = 0;
-	comp_opcode = IBV_WC_RDMA_WRITE;
-
-	switch (rd->rdma_protocol) {
-	case FIO_RDMA_MEM_WRITE:
-		comp_opcode = IBV_WC_RDMA_WRITE;
-		break;
-	case FIO_RDMA_MEM_READ:
-		comp_opcode = IBV_WC_RDMA_READ;
-		break;
-	case FIO_RDMA_CHA_SEND:
-		comp_opcode = IBV_WC_SEND;
-		break;
-	case FIO_RDMA_CHA_RECV:
-		comp_opcode = IBV_WC_RECV;
-		break;
-	default:
-		log_err("fio: unknown rdma protocol - %d\n", rd->rdma_protocol);
-		break;
-	}
 
 	if (rd->cq_event_num > 0) {	/* previous left */
 		rd->cq_event_num--;
@@ -676,7 +656,7 @@ again:
 		return -1;
 	}
 
-	ret = cq_event_handler(td, comp_opcode);
+	ret = cq_event_handler(td);
 	if (ret < 1)
 		goto again;
 
@@ -781,7 +761,7 @@ static int fio_rdmaio_recv(struct thread_data *td, struct io_u **io_us,
 			return 1;
 		}
 
-		rdma_poll_wait(td, IBV_WC_RECV);
+		rdma_poll_wait(td);
 
 		dprint(FD_IO, "fio: recv FINISH message\n");
 		td->done = 1;
@@ -896,11 +876,11 @@ static int fio_rdmaio_connect(struct thread_data *td, struct fio_file *f)
 		return 1;
 	}
 
-	if (rdma_poll_wait(td, IBV_WC_SEND) < 0)
+	if (rdma_poll_wait(td) < 0)
 		return 1;
 
 	/* wait for remote MR info from server side */
-	if (rdma_poll_wait(td, IBV_WC_RECV) < 0)
+	if (rdma_poll_wait(td) < 0)
 		return 1;
 
 	/* In SEND/RECV test, it's a good practice to setup the iodepth of
@@ -940,14 +920,14 @@ static int fio_rdmaio_accept(struct thread_data *td, struct fio_file *f)
 	}
 
 	/* wait for request */
-	ret = rdma_poll_wait(td, IBV_WC_RECV) < 0;
+	ret = rdma_poll_wait(td) < 0;
 
 	if (ibv_post_send(rd->qp, &rd->sq_wr, &bad_wr) != 0) {
 		log_err("fio: ibv_post_send fail: %m\n");
 		return 1;
 	}
 
-	if (rdma_poll_wait(td, IBV_WC_SEND) < 0)
+	if (rdma_poll_wait(td) < 0)
 		return 1;
 
 	return ret;
@@ -981,7 +961,7 @@ static int fio_rdmaio_close_file(struct thread_data *td, struct fio_file *f)
 		}
 
 		dprint(FD_IO, "fio: close information sent success\n");
-		rdma_poll_wait(td, IBV_WC_SEND);
+		rdma_poll_wait(td);
 	}
 
 	if (rd->is_client == 1)
