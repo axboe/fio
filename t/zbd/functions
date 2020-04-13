@@ -97,8 +97,7 @@ reset_zone() {
 
     if [ -n "${blkzone}" ] && [ ! -n "${use_libzbc}" ]; then
 	if [ "$offset" -lt 0 ]; then
-	    sectors=$(<"/sys/class/block/${dev#/dev/}/size")
-	    ${blkzone} reset -o "${offset}" -l "$sectors" "$dev"
+	    ${blkzone} reset "$dev"
 	else
 	    ${blkzone} reset -o "${offset}" -c 1 "$dev"
 	fi
