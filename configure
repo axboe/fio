@@ -44,7 +44,7 @@ print_config() {
 }
 
 # Default CFLAGS
-CFLAGS="-D_GNU_SOURCE -include config-host.h"
+CFLAGS="-D_GNU_SOURCE -include config-host.h $CFLAGS"
 BUILD_CFLAGS=""
 
 # Print a helpful header at the top of config.log

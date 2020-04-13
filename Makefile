@@ -22,16 +22,16 @@ endif
 DEBUGFLAGS = -DFIO_INC_DEBUG
 CPPFLAGS= -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DFIO_INTERNAL $(DEBUGFLAGS)
 OPTFLAGS= -g -ffast-math
-CFLAGS	= -std=gnu99 -Wwrite-strings -Wall -Wdeclaration-after-statement $(OPTFLAGS) $(EXTFLAGS) $(BUILD_CFLAGS) -I. -I$(SRCDIR)
+CFLAGS	:= -std=gnu99 -Wwrite-strings -Wall -Wdeclaration-after-statement $(OPTFLAGS) $(EXTFLAGS) $(BUILD_CFLAGS) -I. -I$(SRCDIR) $(CFLAGS)
 LIBS	+= -lm $(EXTLIBS)
 PROGS	= fio
 SCRIPTS = $(addprefix $(SRCDIR)/,tools/fio_generate_plots tools/plot/fio2gnuplot tools/genfio tools/fiologparser.py tools/hist/fiologparser_hist.py tools/fio_jsonplus_clat2csv)
 
 ifndef CONFIG_FIO_NO_OPT
-  CFLAGS += -O3 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2
+  CFLAGS := -O3 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 $(CFLAGS)
 endif
 ifdef CONFIG_BUILD_NATIVE
-  CFLAGS += -march=native
+  CFLAGS := -march=native $(CFLAGS)
 endif
 
 ifdef CONFIG_GFIO
@@ -55,27 +55,27 @@ SOURCE :=	$(sort $(patsubst $(SRCDIR)/%,%,$(wildcard $(SRCDIR)/crc/*.c)) \
 ifdef CONFIG_LIBHDFS
   HDFSFLAGS= -I $(JAVA_HOME)/include -I $(JAVA_HOME)/include/linux -I $(FIO_LIBHDFS_INCLUDE)
   HDFSLIB= -Wl,-rpath $(JAVA_HOME)/jre/lib/$(FIO_HDFS_CPU)/server -L$(JAVA_HOME)/jre/lib/$(FIO_HDFS_CPU)/server $(FIO_LIBHDFS_LIB)/libhdfs.a -ljvm
-  CFLAGS += $(HDFSFLAGS)
+  CFLAGS := $(HDFSFLAGS) $(CFLAGS)
   SOURCE += engines/libhdfs.c
 endif
 
 ifdef CONFIG_LIBISCSI
-  CFLAGS += $(LIBISCSI_CFLAGS)
+  CFLAGS := $(LIBISCSI_CFLAGS) $(CFLAGS)
   LIBS += $(LIBISCSI_LIBS)
   SOURCE += engines/libiscsi.c
 endif
 
 ifdef CONFIG_LIBNBD
-  CFLAGS += $(LIBNBD_CFLAGS)
+  CFLAGS := $(LIBNBD_CFLAGS) $(CFLAGS)
   LIBS += $(LIBNBD_LIBS)
   SOURCE += engines/nbd.c
 endif
 
 ifdef CONFIG_64BIT
-  CFLAGS += -DBITS_PER_LONG=64
+  CFLAGS := -DBITS_PER_LONG=64 $(CFLAGS)
 endif
 ifdef CONFIG_32BIT
-  CFLAGS += -DBITS_PER_LONG=32
+  CFLAGS := -DBITS_PER_LONG=32 $(CFLAGS)
 endif
 ifdef CONFIG_LIBAIO
   SOURCE += engines/libaio.c
@@ -140,7 +140,7 @@ ifdef CONFIG_GFAPI
   SOURCE += engines/glusterfs_sync.c
   SOURCE += engines/glusterfs_async.c
   ifdef CONFIG_GF_FADVISE
-    CFLAGS += "-DGFAPI_USE_FADVISE"
+    CFLAGS := "-DGFAPI_USE_FADVISE" $(CFLAGS)
   endif
 endif
 ifdef CONFIG_MTD
@@ -208,7 +208,7 @@ ifeq ($(CONFIG_TARGET_OS), AIX)
 endif
 ifeq ($(CONFIG_TARGET_OS), HP-UX)
   LIBS   += -lpthread -ldl -lrt
-  CFLAGS += -D_LARGEFILE64_SOURCE -D_XOPEN_SOURCE_EXTENDED
+  CFLAGS := -D_LARGEFILE64_SOURCE -D_XOPEN_SOURCE_EXTENDED $(CFLAGS)
 endif
 ifeq ($(CONFIG_TARGET_OS), Darwin)
   LIBS	 += -lpthread -ldl
@@ -217,7 +217,7 @@ ifneq (,$(findstring CYGWIN,$(CONFIG_TARGET_OS)))
   SOURCE += os/windows/cpu-affinity.c os/windows/posix.c
   WINDOWS_OBJS = os/windows/cpu-affinity.o os/windows/posix.o lib/hweight.o
   LIBS	 += -lpthread -lpsapi -lws2_32 -lssp
-  CFLAGS += -DPSAPI_VERSION=1 -Ios/windows/posix/include -Wno-format
+  CFLAGS := -DPSAPI_VERSION=1 -Ios/windows/posix/include -Wno-format $(CFLAGS)
 endif
 
 OBJS := $(SOURCE:.c=.o)
@@ -386,7 +386,7 @@ FIO-VERSION-FILE: FORCE
 	@$(SHELL) $(SRCDIR)/FIO-VERSION-GEN
 -include FIO-VERSION-FILE
 
-override CFLAGS += -DFIO_VERSION='"$(FIO_VERSION)"'
+override CFLAGS := -DFIO_VERSION='"$(FIO_VERSION)"' $(CFLAGS)
 
 %.o : %.c
 	@mkdir -p $(dir $@)
