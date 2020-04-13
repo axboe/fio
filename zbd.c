@@ -687,6 +687,22 @@ static int zbd_reset_zone(struct thread_data *td, struct fio_file *f,
 	return zbd_reset_range(td, f, z->start, (z+1)->start - z->start);
 }
 
+/* The caller must hold f->zbd_info->mutex */
+static void zbd_close_zone(struct thread_data *td, const struct fio_file *f,
+			   unsigned int open_zone_idx)
+{
+	uint32_t zone_idx;
+
+	assert(open_zone_idx < f->zbd_info->num_open_zones);
+	zone_idx = f->zbd_info->open_zones[open_zone_idx];
+	memmove(f->zbd_info->open_zones + open_zone_idx,
+		f->zbd_info->open_zones + open_zone_idx + 1,
+		(ZBD_MAX_OPEN_ZONES - (open_zone_idx + 1)) *
+		sizeof(f->zbd_info->open_zones[0]));
+	f->zbd_info->num_open_zones--;
+	f->zbd_info->zone_info[zone_idx].open = 0;
+}
+
 /*
  * Reset a range of zones. Returns 0 upon success and 1 upon failure.
  * @td: fio thread data.
@@ -710,12 +726,26 @@ static int zbd_reset_zones(struct thread_data *td, struct fio_file *f,
 	dprint(FD_ZBD, "%s: examining zones %u .. %u\n", f->file_name,
 		zbd_zone_nr(f->zbd_info, zb), zbd_zone_nr(f->zbd_info, ze));
 	for (z = zb; z < ze; z++) {
+		uint32_t nz = z - f->zbd_info->zone_info;
+
 		if (!zbd_zone_swr(z))
 			continue;
 		zone_lock(td, z);
-		reset_wp = all_zones ? z->wp != z->start :
-				(td->o.td_ddir & TD_DDIR_WRITE) &&
-				z->wp % min_bs != 0;
+		if (all_zones) {
+			unsigned int i;
+
+			pthread_mutex_lock(&f->zbd_info->mutex);
+			for (i = 0; i < f->zbd_info->num_open_zones; i++) {
+				if (f->zbd_info->open_zones[i] == nz)
+					zbd_close_zone(td, f, i);
+			}
+			pthread_mutex_unlock(&f->zbd_info->mutex);
+
+			reset_wp = z->wp != z->start;
+		} else {
+			reset_wp = (td->o.td_ddir & TD_DDIR_WRITE) &&
+					z->wp % min_bs != 0;
+		}
 		if (reset_wp) {
 			dprint(FD_ZBD, "%s: resetting zone %u\n",
 			       f->file_name,
@@ -903,22 +933,6 @@ static bool zbd_open_zone(struct thread_data *td, const struct io_u *io_u,
 out:
 	pthread_mutex_unlock(&f->zbd_info->mutex);
 	return res;
-}
-
-/* The caller must hold f->zbd_info->mutex */
-static void zbd_close_zone(struct thread_data *td, const struct fio_file *f,
-			   unsigned int open_zone_idx)
-{
-	uint32_t zone_idx;
-
-	assert(open_zone_idx < f->zbd_info->num_open_zones);
-	zone_idx = f->zbd_info->open_zones[open_zone_idx];
-	memmove(f->zbd_info->open_zones + open_zone_idx,
-		f->zbd_info->open_zones + open_zone_idx + 1,
-		(ZBD_MAX_OPEN_ZONES - (open_zone_idx + 1)) *
-		sizeof(f->zbd_info->open_zones[0]));
-	f->zbd_info->num_open_zones--;
-	f->zbd_info->zone_info[zone_idx].open = 0;
 }
 
 /* Anything goes as long as it is not a constant. */
