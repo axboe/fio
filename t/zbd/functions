@@ -43,7 +43,8 @@ max_open_zones() {
     local dev=$1
 
     if [ -n "${sg_inq}" ] && [ ! -n "${use_libzbc}" ]; then
-	if ! ${sg_inq} -e --page=0xB6 --len=20 --hex "$dev" 2> /dev/null; then
+	if ! ${sg_inq} -e --page=0xB6 --len=20 --hex "$dev" \
+		 > /dev/null 2>&1; then
 	    # Non scsi device such as null_blk can not return max open zones.
 	    # Use default value.
 	    echo 128
