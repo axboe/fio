@@ -46,7 +46,7 @@
 #include <rdma/rdma_cma.h>
 
 #define FIO_RDMA_MAX_IO_DEPTH    512
-
+#define FIO_RDMA_NAME_MAX 64
 enum rdma_io_mode {
 	FIO_RDMA_UNKNOWN = 0,
 	FIO_RDMA_MEM_WRITE,
@@ -150,6 +150,7 @@ struct rdma_info_blk {
 				 */
 	uint32_t max_bs;        /* maximum block size */
 	struct remote_u rmt_us[FIO_RDMA_MAX_IO_DEPTH];
+	char name[FIO_RDMA_NAME_MAX];
 };
 
 struct rdma_io_u_data {
@@ -189,6 +190,7 @@ struct rdmaio_data {
 
 	struct remote_u *rmt_us;
 	int rmt_nr;
+	char rmt_name[FIO_RDMA_NAME_MAX];
 	struct io_u **io_us_queued;
 	int io_u_queued_nr;
 	struct io_u **io_us_flight;
@@ -215,7 +217,7 @@ static int client_recv(struct thread_data *td, struct ibv_wc *wc)
 		log_err("Received bogus data, size %d\n", wc->byte_len);
 		return 1;
 	}
-
+	memcpy(rd->rmt_name, rd->recv_buf.name, FIO_RDMA_NAME_MAX);
 	max_bs = max(td->o.max_bs[DDIR_READ], td->o.max_bs[DDIR_WRITE]);
 	if (max_bs > ntohl(rd->recv_buf.max_bs)) {
 		log_err("fio: Server's block size (%d) must be greater than or "
@@ -259,6 +261,7 @@ static int server_recv(struct thread_data *td, struct ibv_wc *wc)
 
 	assert(is_control_msg(wc));
 	rd->rdma_protocol = ntohl(rd->recv_buf.mode);
+	memcpy(rd->rmt_name, rd->recv_buf.name, FIO_RDMA_NAME_MAX);
 
 	/* Invert pipe direction */
 	if (rd->rdma_protocol == FIO_RDMA_CHA_SEND)
@@ -292,8 +295,8 @@ static int cq_event_handler(struct thread_data *td)
 		compevnum++;
 
 		if (wc.status) {
-			log_err("fio: cq completion status %d(%s)\n",
-				wc.status, ibv_wc_status_str(wc.status));
+			log_err("fio: [%s/%s] cq completion status %d(%s)\n",
+				td->o.name, rd->rmt_name, wc.status, ibv_wc_status_str(wc.status));
 			return -1;
 		}
 
@@ -894,6 +897,8 @@ static int fio_rdmaio_connect(struct thread_data *td, struct fio_file *f)
 	}
 
 	/* send task request */
+	strncpy(rd->send_buf.name, td->o.name, FIO_RDMA_NAME_MAX - 1);
+	rd->send_buf.name[FIO_RDMA_NAME_MAX - 1] = '\0';
 	rd->send_buf.mode = htonl(rd->rdma_protocol);
 	rd->send_buf.nr = htonl(td->o.iodepth);
 
@@ -937,6 +942,10 @@ static int fio_rdmaio_accept(struct thread_data *td, struct fio_file *f)
 
 	/* wait for request */
 	ret = rdma_poll_wait(td) < 0;
+
+	/* send task ack */
+	strncpy(rd->send_buf.name, td->o.name, FIO_RDMA_NAME_MAX - 1);
+	rd->send_buf.name[FIO_RDMA_NAME_MAX - 1] = '\0';
 
 	if (ibv_post_send(rd->qp, &rd->sq_wr, &bad_wr) != 0) {
 		log_err("fio: ibv_post_send fail: %m\n");
@@ -1271,6 +1280,7 @@ static int fio_rdmaio_init(struct thread_data *td)
 			"for the rdma engine\n");
 		return 1;
 	}
+	o->port += td->thread_number;
 
 	if (check_set_rlimits(td))
 		return 1;
