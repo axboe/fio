@@ -210,6 +210,7 @@ static int client_recv(struct thread_data *td, struct ibv_wc *wc)
 	struct rdmaio_data *rd = td->io_ops_data;
 	unsigned int max_bs;
 
+	assert(is_control_msg(wc));
 	if (wc->byte_len != sizeof(rd->recv_buf)) {
 		log_err("Received bogus data, size %d\n", wc->byte_len);
 		return 1;
@@ -248,7 +249,6 @@ static int client_recv(struct thread_data *td, struct ibv_wc *wc)
 			       rd->rmt_us[i].buf, rd->rmt_us[i].size);
 		}
 	}
-
 	return 0;
 }
 
@@ -257,21 +257,22 @@ static int server_recv(struct thread_data *td, struct ibv_wc *wc)
 	struct rdmaio_data *rd = td->io_ops_data;
 	unsigned int max_bs;
 
-	if (is_control_msg(wc)) {
-		rd->rdma_protocol = ntohl(rd->recv_buf.mode);
+	assert(is_control_msg(wc));
+	rd->rdma_protocol = ntohl(rd->recv_buf.mode);
 
-		/* CHANNEL semantic, do nothing */
-		if (rd->rdma_protocol == FIO_RDMA_CHA_SEND)
-			rd->rdma_protocol = FIO_RDMA_CHA_RECV;
-
-		max_bs = max(td->o.max_bs[DDIR_READ], td->o.max_bs[DDIR_WRITE]);
-		if (max_bs < ntohl(rd->recv_buf.max_bs)) {
-			log_err("fio: Server's block size (%d) must be greater than or "
-				"equal to the client's block size (%d)!\n",
-				ntohl(rd->recv_buf.max_bs), max_bs);
-			return 1;
-		}
-
+	/* Invert pipe direction */
+	if (rd->rdma_protocol == FIO_RDMA_CHA_SEND)
+		rd->rdma_protocol = FIO_RDMA_CHA_RECV;
+	else if (rd->rdma_protocol == FIO_RDMA_CHA_RECV) {
+		rd->rdma_protocol = FIO_RDMA_CHA_SEND;
+	}
+	dprint(FD_IO, "use protocol mode :%d\n", rd->rdma_protocol);
+	max_bs = max(td->o.max_bs[DDIR_READ], td->o.max_bs[DDIR_WRITE]);
+	if (max_bs < ntohl(rd->recv_buf.max_bs)) {
+		log_err("fio: Server's block size (%d) must be greater than or "
+			"equal to the client's block size (%d)!\n",
+			ntohl(rd->recv_buf.max_bs), max_bs);
+		return 1;
 	}
 
 	return 0;
@@ -299,16 +300,15 @@ static int cq_event_handler(struct thread_data *td)
 		switch (wc.opcode) {
 
 		case IBV_WC_RECV:
-			if (rd->is_client == 1)
-				ret = client_recv(td, &wc);
-			else
-				ret = server_recv(td, &wc);
-
-			if (ret)
-				return -1;
-
-			if (is_control_msg(&wc))
+			if (is_control_msg(&wc)) {
+				if (rd->is_client == 1)
+					ret = client_recv(td, &wc);
+				else
+					ret = server_recv(td, &wc);
+				if (ret)
+					return -1;
 				break;
+			}
 
 			for (i = 0; i < rd->io_u_flight_nr; i++) {
 				r_io_u_d = rd->io_us_flight[i]->engine_data;
@@ -832,6 +832,16 @@ static void fio_rdmaio_queued(struct thread_data *td, struct io_u **io_us,
 	}
 }
 
+static bool peer_is_sender(struct thread_data *td) {
+	struct rdmaio_data *rd = td->io_ops_data;
+
+	if (rd->is_client) {
+		return rd->rdma_protocol != FIO_RDMA_CHA_RECV;
+	} else {
+		return rd->rdma_protocol == FIO_RDMA_CHA_SEND;
+	}
+}
+
 static int fio_rdmaio_commit(struct thread_data *td)
 {
 	struct rdmaio_data *rd = td->io_ops_data;
@@ -843,14 +853,11 @@ static int fio_rdmaio_commit(struct thread_data *td)
 
 	io_us = rd->io_us_queued;
 	do {
-		/* RDMA_WRITE or RDMA_READ */
-		if (rd->is_client)
+		if (peer_is_sender(td)) {
 			ret = fio_rdmaio_send(td, io_us, rd->io_u_queued_nr);
-		else if (!rd->is_client)
+		} else {
 			ret = fio_rdmaio_recv(td, io_us, rd->io_u_queued_nr);
-		else
-			ret = 0;	/* must be a SYNC */
-
+		}
 		if (ret > 0) {
 			fio_rdmaio_queued(td, io_us, ret);
 			io_u_mark_submit(td, ret);
@@ -902,16 +909,6 @@ static int fio_rdmaio_connect(struct thread_data *td, struct fio_file *f)
 	if (rdma_poll_wait(td) < 0)
 		return 1;
 
-	/* In SEND/RECV test, it's a good practice to setup the iodepth of
-	 * of the RECV side deeper than that of the SEND side to
-	 * avoid RNR (receiver not ready) error. The
-	 * SEND side may send so many unsolicited message before
-	 * RECV side commits sufficient recv buffers into recv queue.
-	 * This may lead to RNR error. Here, SEND side pauses for a while
-	 * during which RECV side commits sufficient recv buffers.
-	 */
-	usleep(500000);
-
 	return 0;
 }
 
@@ -958,8 +955,20 @@ static int fio_rdmaio_open_file(struct thread_data *td, struct fio_file *f)
 		return fio_rdmaio_accept(td, f);
 	else
 		return fio_rdmaio_connect(td, f);
-}
 
+	/* In SEND/RECV test, it's a good practice to setup the iodepth of
+	 * of the RECV side deeper than that of the SEND side to
+	 * avoid RNR (receiver not ready) error. The
+	 * SEND side may send so many unsolicited message before
+	 * RECV side commits sufficient recv buffers into recv queue.
+	 * This may lead to RNR error. Here, SEND side pauses for a while
+	 * during which RECV side commits sufficient recv buffers.
+	 */
+	if (peer_is_sender(td)) {
+		dprint(FD_IO, "fio: delay sender start\n");
+		usleep(500000);
+	}
+}
 static int fio_rdmaio_close_file(struct thread_data *td, struct fio_file *f)
 {
 	struct rdmaio_data *rd = td->io_ops_data;
