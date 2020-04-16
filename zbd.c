@@ -1332,6 +1332,36 @@ void setup_zbd_zone_mode(struct thread_data *td, struct io_u *io_u)
 }
 
 /**
+ * zbd_adjust_ddir - Adjust an I/O direction for zonedmode=zbd.
+ *
+ * @td: FIO thread data.
+ * @io_u: FIO I/O unit.
+ * @ddir: I/O direction before adjustment.
+ *
+ * Return adjusted I/O direction.
+ */
+enum fio_ddir zbd_adjust_ddir(struct thread_data *td, struct io_u *io_u,
+			      enum fio_ddir ddir)
+{
+	/*
+	 * In case read direction is chosen for the first random I/O, fio with
+	 * zonemode=zbd stops because no data can be read from zoned block
+	 * devices with all empty zones. Overwrite the first I/O direction as
+	 * write to make sure data to read exists.
+	 */
+	if (td->o.zone_mode != ZONE_MODE_ZBD ||
+	    ddir != DDIR_READ ||
+	    !td_rw(td))
+		return ddir;
+
+	if (io_u->file->zbd_info->sectors_with_data ||
+	    td->o.read_beyond_wp)
+		return DDIR_READ;
+
+	return DDIR_WRITE;
+}
+
+/**
  * zbd_adjust_block - adjust the offset and length as necessary for ZBD drives
  * @td: FIO thread data.
  * @io_u: FIO I/O unit.
@@ -1363,16 +1393,6 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 	/* Accept the I/O offset for conventional zones. */
 	if (!zbd_zone_swr(zb))
 		return io_u_accept;
-
-	/*
-	 * In case read direction is chosen for the first random I/O, fio with
-	 * zonemode=zbd stops because no data can be read from zoned block
-	 * devices with all empty zones. Overwrite the first I/O direction as
-	 * write to make sure data to read exists.
-	 */
-	if (td_rw(td) && !f->zbd_info->sectors_with_data
-	    && !td->o.read_beyond_wp)
-		io_u->ddir = DDIR_WRITE;
 
 	/*
 	 * Accept the I/O offset for reads if reading beyond the write pointer
