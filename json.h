@@ -92,9 +92,9 @@ static inline int json_object_add_value_object(struct json_object *obj,
 {
 	struct json_value arg = {
 		.type = JSON_TYPE_OBJECT,
-		.object = val,
 	};
 
+	arg.object = val;
 	return json_object_add_value_type(obj, name, &arg);
 }
 
