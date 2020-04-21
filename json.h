@@ -57,9 +57,9 @@ static inline int json_object_add_value_int(struct json_object *obj,
 {
 	struct json_value arg = {
 		.type = JSON_TYPE_INTEGER,
-		.integer_number = val,
 	};
 
+	arg.integer_number = val;
 	return json_object_add_value_type(obj, name, &arg);
 }
 
@@ -68,9 +68,9 @@ static inline int json_object_add_value_float(struct json_object *obj,
 {
 	struct json_value arg = {
 		.type = JSON_TYPE_FLOAT,
-		.float_number = val,
 	};
 
+	arg.float_number = val;
 	return json_object_add_value_type(obj, name, &arg);
 }
 
@@ -80,9 +80,9 @@ static inline int json_object_add_value_string(struct json_object *obj,
 {
 	struct json_value arg = {
 		.type = JSON_TYPE_STRING,
-		.string = (char *)val,
 	};
 
+	arg.string = (char *)val;
 	return json_object_add_value_type(obj, name, &arg);
 }
 
@@ -104,9 +104,9 @@ static inline int json_object_add_value_array(struct json_object *obj,
 {
 	struct json_value arg = {
 		.type = JSON_TYPE_ARRAY,
-		.array = val,
 	};
 
+	arg.array = val;
 	return json_object_add_value_type(obj, name, &arg);
 }
 
@@ -118,9 +118,9 @@ static inline int json_array_add_value_int(struct json_array *obj,
 {
 	struct json_value arg = {
 		.type = JSON_TYPE_INTEGER,
-		.integer_number = val,
 	};
 
+	arg.integer_number = val;
 	return json_array_add_value_type(obj, &arg);
 }
 
@@ -129,9 +129,9 @@ static inline int json_array_add_value_float(struct json_array *obj,
 {
 	struct json_value arg = {
 		.type = JSON_TYPE_FLOAT,
-		.float_number = val,
 	};
 
+	arg.float_number = val;
 	return json_array_add_value_type(obj, &arg);
 }
 
@@ -140,9 +140,9 @@ static inline int json_array_add_value_string(struct json_array *obj,
 {
 	struct json_value arg = {
 		.type = JSON_TYPE_STRING,
-		.string = (char *)val,
 	};
 
+	arg.string = (char *)val;
 	return json_array_add_value_type(obj, &arg);
 }
 
@@ -151,9 +151,9 @@ static inline int json_array_add_value_object(struct json_array *obj,
 {
 	struct json_value arg = {
 		.type = JSON_TYPE_OBJECT,
-		.object = val,
 	};
 
+	arg.object = val;
 	return json_array_add_value_type(obj, &arg);
 }
 
@@ -162,9 +162,9 @@ static inline int json_array_add_value_array(struct json_array *obj,
 {
 	struct json_value arg = {
 		.type = JSON_TYPE_ARRAY,
-		.array = val,
 	};
 
+	arg.array = val;
 	return json_array_add_value_type(obj, &arg);
 }
 
