@@ -164,12 +164,10 @@ static void *helper_thread_main(void *data)
 	while (!ret && !hd->exit) {
 		uint64_t since_du, since_ss = 0;
 		struct timeval timeout = {
-			.tv_sec  = DISK_UTIL_MSEC / 1000,
-			.tv_usec = (DISK_UTIL_MSEC % 1000) * 1000,
+			.tv_sec  = msec_to_next_event / 1000,
+			.tv_usec = (msec_to_next_event % 1000) * 1000,
 		};
 		fd_set rfds, efds;
-
-		timespec_add_msec(&ts, msec_to_next_event);
 
 		if (read_from_pipe(hd->pipe[0], &action, sizeof(action)) < 0) {
 			FD_ZERO(&rfds);
