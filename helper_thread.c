@@ -131,8 +131,9 @@ void helper_thread_exit(void)
 static void *helper_thread_main(void *data)
 {
 	struct helper_data *hd = data;
-	unsigned int msec_to_next_event, next_log, next_ss = STEADYSTATE_MSEC;
-	struct timespec ts, last_du, last_ss;
+	unsigned int msec_to_next_event, next_log, next_si;
+	unsigned int next_ss = STEADYSTATE_MSEC;
+	struct timespec ts, last_du, last_ss, last_si;
 	char action;
 	int ret = 0;
 
@@ -157,12 +158,13 @@ static void *helper_thread_main(void *data)
 #endif
 	memcpy(&last_du, &ts, sizeof(ts));
 	memcpy(&last_ss, &ts, sizeof(ts));
+	memcpy(&last_si, &ts, sizeof(ts));
 
 	fio_sem_up(hd->startup_sem);
 
 	msec_to_next_event = DISK_UTIL_MSEC;
 	while (!ret && !hd->exit) {
-		uint64_t since_du, since_ss = 0;
+		uint64_t since_du, since_si, since_ss = 0;
 		struct timeval timeout = {
 			.tv_sec  = msec_to_next_event / 1000,
 			.tv_usec = (msec_to_next_event % 1000) * 1000,
@@ -206,6 +208,20 @@ static void *helper_thread_main(void *data)
 
 		if (action == A_DO_STAT)
 			__show_running_run_stats();
+
+		if (status_interval) {
+			since_si = mtime_since(&last_si, &ts);
+			if (since_si >= status_interval || status_interval - since_si < 10) {
+				__show_running_run_stats();
+				timespec_add_msec(&last_si, since_si);
+				if (since_si > status_interval)
+					next_si = status_interval - (since_si - status_interval);
+				else
+					next_si = status_interval;
+			} else
+				next_si = status_interval - since_si;
+			msec_to_next_event = min(next_si, msec_to_next_event);
+		}
 
 		next_log = calc_log_samples();
 		if (!next_log)
