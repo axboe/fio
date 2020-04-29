@@ -128,11 +128,30 @@ void helper_thread_exit(void)
 	pthread_join(helper_data->thread, NULL);
 }
 
+static unsigned int task_helper(struct timespec *last, struct timespec *now, unsigned int period, void do_task())
+{
+	unsigned int next, since;
+
+	since = mtime_since(last, now);
+	if (since >= period || period - since < 10) {
+		do_task();
+		timespec_add_msec(last, since);
+		if (since > period)
+			next = period - (since - period);
+		else
+			next = period;
+	} else
+		next = period - since;
+
+	return next;
+}
+
 static void *helper_thread_main(void *data)
 {
 	struct helper_data *hd = data;
-	unsigned int msec_to_next_event, next_log, next_ss = STEADYSTATE_MSEC;
-	struct timespec ts, last_du, last_ss;
+	unsigned int msec_to_next_event, next_log, next_si = status_interval;
+	unsigned int next_ss = STEADYSTATE_MSEC;
+	struct timespec ts, last_du, last_ss, last_si;
 	char action;
 	int ret = 0;
 
@@ -157,19 +176,18 @@ static void *helper_thread_main(void *data)
 #endif
 	memcpy(&last_du, &ts, sizeof(ts));
 	memcpy(&last_ss, &ts, sizeof(ts));
+	memcpy(&last_si, &ts, sizeof(ts));
 
 	fio_sem_up(hd->startup_sem);
 
 	msec_to_next_event = DISK_UTIL_MSEC;
 	while (!ret && !hd->exit) {
-		uint64_t since_du, since_ss = 0;
+		uint64_t since_du;
 		struct timeval timeout = {
-			.tv_sec  = DISK_UTIL_MSEC / 1000,
-			.tv_usec = (DISK_UTIL_MSEC % 1000) * 1000,
+			.tv_sec  = msec_to_next_event / 1000,
+			.tv_usec = (msec_to_next_event % 1000) * 1000,
 		};
 		fd_set rfds, efds;
-
-		timespec_add_msec(&ts, msec_to_next_event);
 
 		if (read_from_pipe(hd->pipe[0], &action, sizeof(action)) < 0) {
 			FD_ZERO(&rfds);
@@ -209,25 +227,23 @@ static void *helper_thread_main(void *data)
 		if (action == A_DO_STAT)
 			__show_running_run_stats();
 
+		if (status_interval) {
+			next_si = task_helper(&last_si, &ts, status_interval, __show_running_run_stats);
+			msec_to_next_event = min(next_si, msec_to_next_event);
+		}
+
 		next_log = calc_log_samples();
 		if (!next_log)
 			next_log = DISK_UTIL_MSEC;
 
 		if (steadystate_enabled) {
-			since_ss = mtime_since(&last_ss, &ts);
-			if (since_ss >= STEADYSTATE_MSEC || STEADYSTATE_MSEC - since_ss < 10) {
-				steadystate_check();
-				timespec_add_msec(&last_ss, since_ss);
-				if (since_ss > STEADYSTATE_MSEC)
-					next_ss = STEADYSTATE_MSEC - (since_ss - STEADYSTATE_MSEC);
-				else
-					next_ss = STEADYSTATE_MSEC;
-			} else
-				next_ss = STEADYSTATE_MSEC - since_ss;
+			next_ss = task_helper(&last_ss, &ts, STEADYSTATE_MSEC, steadystate_check);
+			msec_to_next_event = min(next_ss, msec_to_next_event);
                 }
 
-		msec_to_next_event = min(min(next_log, msec_to_next_event), next_ss);
-		dprint(FD_HELPERTHREAD, "since_ss: %llu, next_ss: %u, next_log: %u, msec_to_next_event: %u\n", (unsigned long long)since_ss, next_ss, next_log, msec_to_next_event);
+		msec_to_next_event = min(next_log, msec_to_next_event);
+		dprint(FD_HELPERTHREAD, "next_si: %u, next_ss: %u, next_log: %u, msec_to_next_event: %u\n",
+			next_si, next_ss, next_log, msec_to_next_event);
 
 		if (!is_backend)
 			print_thread_status();
