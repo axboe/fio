@@ -93,8 +93,8 @@ run_fio() {
 
     fio=$(dirname "$0")/../../fio
 
-    opts=("--aux-path=/tmp" "--allow_file_create=0" \
-			    "--significant_figures=10" "$@")
+    opts=("--max-jobs=16" "--aux-path=/tmp" "--allow_file_create=0" \
+	  "--significant_figures=10" "$@")
     opts+=(${var_opts[@]})
     { echo; echo "fio ${opts[*]}"; echo; } >>"${logfile}.${test_number}"
 
