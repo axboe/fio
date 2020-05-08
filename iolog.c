@@ -342,6 +342,9 @@ void trim_io_piece(const struct io_u *io_u)
 
 void write_iolog_close(struct thread_data *td)
 {
+	if (!td->iolog_f)
+		return;
+
 	fflush(td->iolog_f);
 	fclose(td->iolog_f);
 	free(td->iolog_buf);
