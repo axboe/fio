@@ -3537,7 +3537,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	{
 		.name	= "rate",
 		.lname	= "I/O rate",
-		.type	= FIO_OPT_INT,
+		.type	= FIO_OPT_ULL,
 		.off1	= offsetof(struct thread_options, rate[DDIR_READ]),
 		.off2	= offsetof(struct thread_options, rate[DDIR_WRITE]),
 		.off3	= offsetof(struct thread_options, rate[DDIR_TRIM]),
@@ -3549,7 +3549,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.name	= "rate_min",
 		.alias	= "ratemin",
 		.lname	= "I/O min rate",
-		.type	= FIO_OPT_INT,
+		.type	= FIO_OPT_ULL,
 		.off1	= offsetof(struct thread_options, ratemin[DDIR_READ]),
 		.off2	= offsetof(struct thread_options, ratemin[DDIR_WRITE]),
 		.off3	= offsetof(struct thread_options, ratemin[DDIR_TRIM]),
