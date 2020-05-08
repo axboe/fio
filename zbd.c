@@ -1346,9 +1346,7 @@ enum fio_ddir zbd_adjust_ddir(struct thread_data *td, struct io_u *io_u,
 	 * devices with all empty zones. Overwrite the first I/O direction as
 	 * write to make sure data to read exists.
 	 */
-	if (td->o.zone_mode != ZONE_MODE_ZBD ||
-	    ddir != DDIR_READ ||
-	    !td_rw(td))
+	if (ddir != DDIR_READ || !td_rw(td))
 		return ddir;
 
 	if (io_u->file->zbd_info->sectors_with_data ||
