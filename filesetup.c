@@ -1268,7 +1268,7 @@ done:
 	td_restore_runstate(td, old_state);
 
 	if (td->o.zone_mode == ZONE_MODE_ZBD) {
-		err = zbd_init(td);
+		err = zbd_setup_files(td);
 		if (err)
 			goto err_out;
 	}
@@ -1469,7 +1469,7 @@ void close_and_free_files(struct thread_data *td)
 			td_io_unlink_file(td, f);
 		}
 
-		zbd_free_zone_info(f);
+		zbd_close_file(f);
 
 		if (use_free)
 			free(f->file_name);

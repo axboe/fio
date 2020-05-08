@@ -546,8 +546,7 @@ void zbd_free_zone_info(struct fio_file *f)
 {
 	uint32_t refcount;
 
-	if (!f->zbd_info)
-		return;
+	assert(f->zbd_info);
 
 	pthread_mutex_lock(&f->zbd_info->mutex);
 	refcount = --f->zbd_info->refcount;
@@ -592,7 +591,7 @@ static int zbd_init_zone_info(struct thread_data *td, struct fio_file *file)
 	return ret;
 }
 
-int zbd_init(struct thread_data *td)
+int zbd_setup_files(struct thread_data *td)
 {
 	struct fio_file *f;
 	int i;
