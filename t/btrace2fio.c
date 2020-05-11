@@ -645,7 +645,8 @@ static void __output_p_ascii(struct btrace_pid *p, unsigned long *ios)
 	printf("\n");
 }
 
-static int __output_p_fio(struct btrace_pid *p, unsigned long *ios)
+static int __output_p_fio(struct btrace_pid *p, unsigned long *ios,
+			  const char *name_postfix)
 {
 	struct btrace_out *o = &p->o;
 	unsigned long total;
@@ -654,15 +655,30 @@ static int __output_p_fio(struct btrace_pid *p, unsigned long *ios)
 	int i, j;
 
 	if ((o->ios[0] + o->ios[1]) && o->ios[2]) {
-		log_err("fio: trace has both read/write and trim\n");
-		return 1;
+		unsigned long ios_bak[DDIR_RWDIR_CNT];
+
+		memcpy(ios_bak, o->ios, DDIR_RWDIR_CNT * sizeof(unsigned long));
+
+		/* create job for read/write */
+		o->ios[2] = 0;
+		__output_p_fio(p, ios, "");
+		o->ios[2] = ios_bak[2];
+
+		/* create job for trim */
+		o->ios[0] = 0;
+		o->ios[1] = 0;
+		__output_p_fio(p, ios, "_trim");
+		o->ios[0] = ios_bak[0];
+		o->ios[1] = ios_bak[1];
+
+		return 0;
 	}
 	if (!p->nr_files) {
 		log_err("fio: no devices found\n");
 		return 1;
 	}
 
-	printf("[pid%u", p->pid);
+	printf("[pid%u%s", p->pid, name_postfix);
 	if (p->nr_merge_pids)
 		for (i = 0; i < p->nr_merge_pids; i++)
 			printf(",pid%u", p->merge_pids[i]);
@@ -783,7 +799,7 @@ static int __output_p(struct btrace_pid *p, unsigned long *ios)
 	if (output_ascii)
 		__output_p_ascii(p, ios);
 	else
-		ret = __output_p_fio(p, ios);
+		ret = __output_p_fio(p, ios, "");
 
 	return ret;
 }
@@ -1037,7 +1053,7 @@ static int trace_needs_swap(const char *trace_file, int *swap)
 	int fd, ret;
 
 	*swap = -1;
-	
+
 	fd = open(trace_file, O_RDONLY);
 	if (fd < 0) {
 		perror("open");
