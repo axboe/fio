@@ -2739,7 +2739,7 @@ static unsigned long add_log_sample(struct thread_data *td,
 
 	__add_stat_to_log(iolog, ddir, elapsed, td->o.log_max != 0, priority_bit);
 
-	iolog->avg_last[ddir] = elapsed - (this_window - iolog->avg_msec);
+	iolog->avg_last[ddir] = elapsed - (elapsed % iolog->avg_msec);
 	return iolog->avg_msec;
 }
 
