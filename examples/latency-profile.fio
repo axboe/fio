@@ -13,7 +13,7 @@ iodepth=128
 # Set max acceptable latency to 500msec
 latency_target=500000
 # profile over a 5s window
-latency_window=5000000
+latency_window=5000
 # 99.9% of IOs must be below the target
 latency_percentile=99.9
 
