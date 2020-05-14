@@ -17,7 +17,7 @@ struct rados_data {
 	struct io_u **aio_events;
 	bool connected;
 	pthread_mutex_t completed_lock;
-	thread_cond_t completed_more_io;
+	pthread_cond_t completed_more_io;
 	struct flist_head completed_operations;
 	uint64_t ops_scheduled;
 	uint64_t ops_completed;
