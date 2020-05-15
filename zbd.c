@@ -262,7 +262,8 @@ static bool zbd_verify_sizes(void)
 
 			zone_idx = zbd_zone_idx(f, f->file_offset);
 			z = &f->zbd_info->zone_info[zone_idx];
-			if (f->file_offset != z->start) {
+			if ((f->file_offset != z->start) &&
+			    (td->o.td_ddir != TD_DDIR_READ)) {
 				new_offset = (z+1)->start;
 				if (new_offset >= f->file_offset + f->io_size) {
 					log_info("%s: io_size must be at least one zone\n",
@@ -278,7 +279,8 @@ static bool zbd_verify_sizes(void)
 			zone_idx = zbd_zone_idx(f, f->file_offset + f->io_size);
 			z = &f->zbd_info->zone_info[zone_idx];
 			new_end = z->start;
-			if (f->file_offset + f->io_size != new_end) {
+			if ((td->o.td_ddir != TD_DDIR_READ) &&
+			    (f->file_offset + f->io_size != new_end)) {
 				if (new_end <= f->file_offset) {
 					log_info("%s: io_size must be at least one zone\n",
 						 f->file_name);
