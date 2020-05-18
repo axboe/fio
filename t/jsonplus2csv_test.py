@@ -44,6 +44,7 @@ def run_fio(fio):
         fio     path to fio executable.
     """
 
+# We need an async ioengine to get submission latencies
     if platform.system() == 'Linux':
         aio = 'libaio'
     elif platform.system() == 'Windows':
@@ -58,7 +59,7 @@ def run_fio(fio):
         "--ioengine=" + aio,
         "--time_based",
         "--runtime=3s",
-        "--size=1G",
+        "--size=1M",
         "--slat_percentiles=1",
         "--clat_percentiles=1",
         "--lat_percentiles=1",
