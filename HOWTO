@@ -2040,7 +2040,8 @@ with the caveat that when used on the command line, they must come after the
     the priority bit. Non-read I/O is likely unaffected by ``cmdprio_percentage``.
     This option cannot be used with the `prio` or `prioclass` options. For this
     option to set the priority bit properly, NCQ priority must be supported and
-    enabled and :option:`direct`\=1 option must be used.
+    enabled and :option:`direct`\=1 option must be used. fio must also be run as
+    the root user.
 
 .. option:: fixedbufs : [io_uring]
 
