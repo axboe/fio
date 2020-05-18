@@ -273,6 +273,20 @@ class FioJobTest(FioExeTest):
         else:
             logging.debug("Test %d: precondition step failed", self.testnum)
 
+    @classmethod
+    def get_file(cls, filename):
+        """Safely read a file."""
+        file_data = ''
+        success = True
+
+        try:
+            with open(filename, "r") as output_file:
+                file_data = output_file.read()
+        except OSError:
+            success = False
+
+        return file_data, success
+
     def check_result(self):
         """Check fio job results."""
 
@@ -289,10 +303,8 @@ class FioJobTest(FioExeTest):
         if 'json' not in self.output_format:
             return
 
-        try:
-            with open(os.path.join(self.test_dir, self.fio_output), "r") as output_file:
-                file_data = output_file.read()
-        except EnvironmentError:
+        file_data, success = self.get_file(os.path.join(self.test_dir, self.fio_output))
+        if not success:
             self.failure_reason = "{0} unable to open output file,".format(self.failure_reason)
             self.passed = False
             return
@@ -457,11 +469,9 @@ class Requirements(object):
         Requirements._linux = platform.system() == "Linux"
 
         if Requirements._linux:
-            try:
-                config_file = os.path.join(fio_root, "config-host.h")
-                with open(config_file, "r") as config:
-                    contents = config.read()
-            except Exception:
+            config_file = os.path.join(fio_root, "config-host.h")
+            contents, success = FioJobTest.get_file(config_file)
+            if not success:
                 print("Unable to open {0} to check requirements".format(config_file))
                 Requirements._zbd = True
             else:
@@ -899,10 +909,10 @@ def main():
         else:
             result = "FAILED: {0}".format(test.failure_reason)
             failed = failed + 1
-            with open(test.stderr_file, "r") as stderr_file:
-                logging.debug("Test %d: stderr:\n%s", config['test_id'], stderr_file.read())
-            with open(test.stdout_file, "r") as stdout_file:
-                logging.debug("Test %d: stdout:\n%s", config['test_id'], stdout_file.read())
+            contents, _ = FioJobTest.get_file(test.stderr_file)
+            logging.debug("Test %d: stderr:\n%s", config['test_id'], contents)
+            contents, _ = FioJobTest.get_file(test.stdout_file)
+            logging.debug("Test %d: stdout:\n%s", config['test_id'], contents)
         print("Test {0} {1}".format(config['test_id'], result))
 
     print("{0} test(s) passed, {1} failed, {2} skipped".format(passed, failed, skipped))
