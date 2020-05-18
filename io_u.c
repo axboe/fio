@@ -1391,6 +1391,7 @@ static bool __lat_target_failed(struct thread_data *td)
 		td->latency_qd_low--;
 
 	td->latency_qd = (td->latency_qd + td->latency_qd_low) / 2;
+	td->latency_stable_count = 0;
 
 	dprint(FD_RATE, "Ramped down: %d %d %d\n", td->latency_qd_low, td->latency_qd, td->latency_qd_high);
 
@@ -1440,6 +1441,21 @@ static void lat_target_success(struct thread_data *td)
 
 	td->latency_qd_low = td->latency_qd;
 
+	if (td->latency_qd + 1 == td->latency_qd_high) {
+		/*
+		 * latency_qd will not incease on lat_target_success(), so
+		 * called stable. If we stick with this queue depth, the
+		 * final latency is likely lower than latency_target. Fix
+		 * this by increasing latency_qd_high slowly. Use a naive
+		 * heuristic here. If we get lat_target_success() 3 times
+		 * in a row, increase latency_qd_high by 1.
+		 */
+		if (++td->latency_stable_count >= 3) {
+			td->latency_qd_high++;
+			td->latency_stable_count = 0;
+		}
+	}
+
 	/*
 	 * If we haven't failed yet, we double up to a failing value instead
 	 * of bisecting from highest possible queue depth. If we have set
@@ -1459,7 +1475,7 @@ static void lat_target_success(struct thread_data *td)
 	 * Same as last one, we are done. Let it run a latency cycle, so
 	 * we get only the results from the targeted depth.
 	 */
-	if (td->latency_qd == qd) {
+	if (!o->latency_run && td->latency_qd == qd) {
 		if (td->latency_end_run) {
 			dprint(FD_RATE, "We are done\n");
 			td->done = 1;
