@@ -956,7 +956,6 @@ static int fixup_options(struct thread_data *td)
 	 */
 	o->max_latency *= 1000ULL;
 	o->latency_target *= 1000ULL;
-	o->latency_window *= 1000ULL;
 
 	return ret;
 }
