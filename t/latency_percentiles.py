@@ -109,6 +109,7 @@ class FioLatTest():
         """Run a test."""
 
         fio_args = [
+            "--max-jobs=16",
             "--name=latency",
             "--randrepeat=0",
             "--norandommap",

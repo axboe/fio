@@ -226,6 +226,7 @@ class FioJobTest(FioExeTest):
         self.json_data = None
         self.fio_output = "{0}.output".format(os.path.basename(self.fio_job))
         self.fio_args = [
+            "--max-jobs=16",
             "--output-format={0}".format(self.output_format),
             "--output={0}".format(self.fio_output),
             self.fio_job,

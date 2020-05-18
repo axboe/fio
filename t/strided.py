@@ -52,6 +52,7 @@ def parse_args():
 def run_fio(fio, test, index):
     filename = "strided"
     fio_args = [
+                "--max-jobs=16",
                 "--name=strided",
                 "--zonemode=strided",
                 "--log_offset=1",

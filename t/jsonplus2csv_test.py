@@ -53,6 +53,7 @@ def run_fio(fio):
         aio = 'posixaio'
 
     fio_args = [
+        "--max-jobs=4",
         "--output=fio-output.json",
         "--output-format=json+",
         "--filename=fio_jsonplus_clat2csv.test",
@@ -88,6 +89,7 @@ def check_output(fio_output, script_path):
     """
 
     if fio_output.returncode != 0:
+        print("ERROR: fio run failed")
         return False
 
     if platform.system() == 'Windows':
