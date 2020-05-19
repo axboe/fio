@@ -85,12 +85,12 @@ void init_rand(struct frand_state *state, bool use64)
 		__init_rand64(&state->state64, 1);
 }
 
-void init_rand_seed(struct frand_state *state, unsigned int seed, bool use64)
+void init_rand_seed(struct frand_state *state, uint64_t seed, bool use64)
 {
 	state->use64 = use64;
 
 	if (!use64)
-		__init_rand32(&state->state32, seed);
+		__init_rand32(&state->state32, (unsigned int) seed);
 	else
 		__init_rand64(&state->state64, seed);
 }
