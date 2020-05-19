@@ -134,8 +134,8 @@ static bool __check_min_rate(struct thread_data *td, struct timespec *now,
 	unsigned long long bytes = 0;
 	unsigned long iops = 0;
 	unsigned long spent;
-	unsigned long rate;
-	unsigned int ratemin = 0;
+	unsigned long long rate;
+	unsigned long long ratemin = 0;
 	unsigned int rate_iops = 0;
 	unsigned int rate_iops_min = 0;
 
@@ -169,7 +169,7 @@ static bool __check_min_rate(struct thread_data *td, struct timespec *now,
 			 * check bandwidth specified rate
 			 */
 			if (bytes < td->rate_bytes[ddir]) {
-				log_err("%s: rate_min=%uB/s not met, only transferred %lluB\n",
+				log_err("%s: rate_min=%lluB/s not met, only transferred %lluB\n",
 					td->o.name, ratemin, bytes);
 				return true;
 			} else {
@@ -180,7 +180,7 @@ static bool __check_min_rate(struct thread_data *td, struct timespec *now,
 
 				if (rate < ratemin ||
 				    bytes < td->rate_bytes[ddir]) {
-					log_err("%s: rate_min=%uB/s not met, got %luB/s\n",
+					log_err("%s: rate_min=%lluB/s not met, got %lluB/s\n",
 						td->o.name, ratemin, rate);
 					return true;
 				}
@@ -201,7 +201,7 @@ static bool __check_min_rate(struct thread_data *td, struct timespec *now,
 
 				if (rate < rate_iops_min ||
 				    iops < td->rate_blocks[ddir]) {
-					log_err("%s: rate_iops_min=%u not met, got %lu IOPS\n",
+					log_err("%s: rate_iops_min=%u not met, got %llu IOPS\n",
 						td->o.name, rate_iops_min, rate);
 					return true;
 				}
