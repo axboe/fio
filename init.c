@@ -993,9 +993,9 @@ void td_fill_verify_state_seed(struct thread_data *td)
 
 static void td_fill_rand_seeds_internal(struct thread_data *td, bool use64)
 {
-	unsigned int read_seed = td->rand_seeds[FIO_RAND_BS_OFF];
-	unsigned int write_seed = td->rand_seeds[FIO_RAND_BS1_OFF];
-	unsigned int trim_seed = td->rand_seeds[FIO_RAND_BS2_OFF];
+	uint64_t read_seed = td->rand_seeds[FIO_RAND_BS_OFF];
+	uint64_t write_seed = td->rand_seeds[FIO_RAND_BS1_OFF];
+	uint64_t trim_seed = td->rand_seeds[FIO_RAND_BS2_OFF];
 	int i;
 
 	/*
