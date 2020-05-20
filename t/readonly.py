@@ -36,6 +36,7 @@ def parse_args():
 
 def run_fio(fio, test, index):
     fio_args = [
+                "--max-jobs=16",
                 "--name=readonly",
                 "--ioengine=null",
                 "--time_based",

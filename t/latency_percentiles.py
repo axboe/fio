@@ -109,6 +109,7 @@ class FioLatTest():
         """Run a test."""
 
         fio_args = [
+            "--max-jobs=16",
             "--name=latency",
             "--randrepeat=0",
             "--norandommap",
@@ -1303,9 +1304,9 @@ def main():
            (args.run_only and test['test_id'] not in args.run_only):
             skipped = skipped + 1
             outcome = 'SKIPPED (User request)'
-        elif platform.system() != 'Linux' and 'cmdprio_percentage' in test:
+        elif (platform.system() != 'Linux' or os.geteuid() != 0) and 'cmdprio_percentage' in test:
             skipped = skipped + 1
-            outcome = 'SKIPPED (Linux required for cmdprio_percentage tests)'
+            outcome = 'SKIPPED (Linux root required for cmdprio_percentage tests)'
         else:
             test_obj = test['test_obj'](artifact_root, test, args.debug)
             status = test_obj.run_fio(fio)

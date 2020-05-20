@@ -44,6 +44,7 @@ def run_fio(fio):
         fio     path to fio executable.
     """
 
+# We need an async ioengine to get submission latencies
     if platform.system() == 'Linux':
         aio = 'libaio'
     elif platform.system() == 'Windows':
@@ -52,13 +53,14 @@ def run_fio(fio):
         aio = 'posixaio'
 
     fio_args = [
+        "--max-jobs=4",
         "--output=fio-output.json",
         "--output-format=json+",
         "--filename=fio_jsonplus_clat2csv.test",
         "--ioengine=" + aio,
         "--time_based",
         "--runtime=3s",
-        "--size=1G",
+        "--size=1M",
         "--slat_percentiles=1",
         "--clat_percentiles=1",
         "--lat_percentiles=1",
@@ -87,6 +89,7 @@ def check_output(fio_output, script_path):
     """
 
     if fio_output.returncode != 0:
+        print("ERROR: fio run failed")
         return False
 
     if platform.system() == 'Windows':

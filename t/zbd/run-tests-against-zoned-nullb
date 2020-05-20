@@ -8,7 +8,7 @@ scriptdir="$(cd "$(dirname "$0")" && pwd)"
 
 for d in /sys/kernel/config/nullb/*; do [ -d "$d" ] && rmdir "$d"; done
 modprobe -r null_blk
-modprobe null_blk nr_devices=0 || return $?
+modprobe null_blk nr_devices=0 || exit $?
 for d in /sys/kernel/config/nullb/*; do
     [ -d "$d" ] && rmdir "$d"
 done
