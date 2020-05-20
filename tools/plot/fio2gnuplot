@@ -93,10 +93,10 @@ set style line 1 lt 1 lw 3 pt 3 linecolor rgb "green"
 		compare_smooth.write("plot %s w l ls 1 ti 'Global average value (%.2f)'" % (global_avg,global_avg));
 		compare_trend.write("plot %s w l ls 1 ti 'Global average value (%.2f)'" % (global_avg,global_avg));
 
-		pos=0
-		# Let's create a temporary file for each selected fio file
-		for file in fio_data_file:
-			tmp_filename = "gnuplot_temp_file.%d" % pos
+	pos=0
+	# Let's create a temporary file for each selected fio file
+	for file in fio_data_file:
+		tmp_filename = "gnuplot_temp_file.%d" % pos
 
 		# Plotting comparing graphs doesn't have a meaning unless if there is at least 2 traces
 		if len(fio_data_file) > 1:
