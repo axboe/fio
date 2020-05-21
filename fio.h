@@ -377,6 +377,7 @@ struct thread_data {
 	unsigned int latency_qd_high;
 	unsigned int latency_qd_low;
 	unsigned int latency_failed;
+	unsigned int latency_stable_count;
 	uint64_t latency_ios;
 	int latency_end_run;
 

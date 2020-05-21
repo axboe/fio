@@ -2552,6 +2552,13 @@ I/O latency
 	defaults to 100.0, meaning that all I/Os must be equal or below to the value
 	set by :option:`latency_target`.
 
+.. option:: latency_run=bool
+
+	Used with :option:`latency_target`. If false (default), fio will find
+	the highest queue depth that meets :option:`latency_target` and exit. If
+	true, fio will continue running and try to meet :option:`latency_target`
+	by adjusting queue depth.
+
 .. option:: max_latency=time
 
 	If set, fio will exit the job with an ETIMEDOUT error if it exceeds this
