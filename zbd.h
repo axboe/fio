@@ -45,6 +45,8 @@ struct fio_zone_info {
 /**
  * zoned_block_device_info - zoned block device characteristics
  * @model: Device model.
+ * @max_open_zones: global limit on the number of simultaneously opened
+ *	sequential write zones.
  * @mutex: Protects the modifiable members in this structure (refcount and
  *		num_open_zones).
  * @zone_size: size of a single zone in units of 512 bytes
@@ -65,6 +67,7 @@ struct fio_zone_info {
  */
 struct zoned_block_device_info {
 	enum zbd_zoned_model	model;
+	uint32_t		max_open_zones;
 	pthread_mutex_t		mutex;
 	uint64_t		zone_size;
 	uint64_t		sectors_with_data;

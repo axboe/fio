@@ -804,7 +804,11 @@ so. Default: false.
 When running a random write test across an entire drive many more zones will be
 open than in a typical application workload. Hence this command line option
 that allows to limit the number of open zones. The number of open zones is
-defined as the number of zones to which write commands are issued.
+defined as the number of zones to which write commands are issued by all
+threads/processes.
+.TP
+.BI job_max_open_zones \fR=\fPint
+Limit on the number of simultaneously opened zones per single thread/process.
 .TP
 .BI zone_reset_threshold \fR=\fPfloat
 A number between zero and one that indicates the ratio of logical blocks with

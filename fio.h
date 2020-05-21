@@ -260,6 +260,7 @@ struct thread_data {
 	struct frand_state prio_state;
 
 	struct zone_split_index **zone_state_index;
+	unsigned int num_open_zones;
 
 	unsigned int verify_batch;
 	unsigned int trim_batch;

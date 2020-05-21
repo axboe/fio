@@ -343,6 +343,7 @@ struct thread_options {
 	/* Parameters that affect zonemode=zbd */
 	unsigned int read_beyond_wp;
 	int max_open_zones;
+	unsigned int job_max_open_zones;
 	fio_fp64_t zrt;
 	fio_fp64_t zrf;
 };
