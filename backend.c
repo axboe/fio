@@ -1006,12 +1006,6 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 		if (td->o.verify != VERIFY_NONE && io_u->ddir == DDIR_READ &&
 		    ((io_u->flags & IO_U_F_VER_LIST) || !td_rw(td))) {
 
-			if (!td->o.verify_pattern_bytes) {
-				io_u->rand_seed = __rand(&td->verify_state);
-				if (sizeof(int) != sizeof(long *))
-					io_u->rand_seed *= __rand(&td->verify_state);
-			}
-
 			if (verify_state_should_stop(td, io_u)) {
 				put_io_u(td, io_u);
 				break;
