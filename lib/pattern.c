@@ -204,8 +204,8 @@ static const char *parse_number(const char *beg, char *out,
  * @out - output buffer where space for format should be reserved
  * @parsed - number of bytes which were already parsed so far
  * @out_len - length of the output buffer
- * @fmt_desc - format descritor array, what we expect to find
- * @fmt_desc_sz - size of the format descritor array
+ * @fmt_desc - format descriptor array, what we expect to find
+ * @fmt_desc_sz - size of the format descriptor array
  * @fmt - format array, the output
  * @fmt_sz - size of format array
  *
