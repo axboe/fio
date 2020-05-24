@@ -1506,12 +1506,8 @@ static void json_add_job_opts(struct json_object *root, const char *name,
 	json_object_add_value_object(root, name, dir_object);
 
 	flist_for_each(entry, opt_list) {
-		const char *pos = "";
-
 		p = flist_entry(entry, struct print_option, list);
-		if (p->value)
-			pos = p->value;
-		json_object_add_value_string(dir_object, p->name, pos);
+		json_object_add_value_string(dir_object, p->name, p->value);
 	}
 }
 

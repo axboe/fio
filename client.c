@@ -1151,24 +1151,17 @@ static void handle_job_opt(struct fio_client *client, struct fio_net_cmd *cmd)
 
 	p = malloc(sizeof(*p));
 	p->name = strdup((char *) pdu->name);
-	if (pdu->value[0] != '\0')
-		p->value = strdup((char *) pdu->value);
-	else
-		p->value = NULL;
 
 	if (pdu->global) {
-		const char *pos = "";
-
-		if (p->value)
-			pos = p->value;
-
-		json_object_add_value_string(job_opt_object, p->name, pos);
+		json_object_add_value_string(job_opt_object, p->name,
+					     (const char *)pdu->value);
 	} else if (client->opt_lists) {
 		struct flist_head *opt_list = &client->opt_lists[pdu->groupid];
 
+		p->value = pdu->value[0] ? strdup((const char *)pdu->value) :
+			NULL;
 		flist_add_tail(&p->list, opt_list);
 	} else {
-		free(p->value);
 		free(p->name);
 		free(p);
 	}
