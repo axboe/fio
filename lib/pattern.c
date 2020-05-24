@@ -204,8 +204,7 @@ static const char *parse_number(const char *beg, char *out,
  * @out - output buffer where space for format should be reserved
  * @parsed - number of bytes which were already parsed so far
  * @out_len - length of the output buffer
- * @fmt_desc - format descritor array, what we expect to find
- * @fmt_desc_sz - size of the format descritor array
+ * @fmt_desc - format descriptor array, what we expect to find
  * @fmt - format array, the output
  * @fmt_sz - size of format array
  *
@@ -223,19 +222,18 @@ static const char *parse_number(const char *beg, char *out,
 static const char *parse_format(const char *in, char *out, unsigned int parsed,
 				unsigned int out_len, unsigned int *filled,
 				const struct pattern_fmt_desc *fmt_desc,
-				unsigned int fmt_desc_sz,
 				struct pattern_fmt *fmt, unsigned int fmt_sz)
 {
 	int i;
 	struct pattern_fmt *f = NULL;
 	unsigned int len = 0;
 
-	if (!out_len || !fmt_desc || !fmt_desc_sz || !fmt || !fmt_sz)
+	if (!out_len || !fmt_desc || !fmt || !fmt_sz)
 		return NULL;
 
 	assert(*in == '%');
 
-	for (i = 0; i < fmt_desc_sz; i++) {
+	for (i = 0; fmt_desc[i].fmt; i++) {
 		const struct pattern_fmt_desc *desc;
 
 		desc = &fmt_desc[i];
@@ -267,7 +265,6 @@ static const char *parse_format(const char *in, char *out, unsigned int parsed,
  * @out - output buffer where parsed result will be put
  * @out_len - lengths of the output buffer
  * @fmt_desc - array of pattern format descriptors [input]
- * @fmt_desc_sz - size of the format descriptor array
  * @fmt - array of pattern formats [output]
  * @fmt_sz - pointer where the size of pattern formats array stored [input],
  *           after successfull parsing this pointer will contain the number
@@ -311,7 +308,6 @@ static const char *parse_format(const char *in, char *out, unsigned int parsed,
 int parse_and_fill_pattern(const char *in, unsigned int in_len,
 			   char *out, unsigned int out_len,
 			   const struct pattern_fmt_desc *fmt_desc,
-			   unsigned int fmt_desc_sz,
 			   struct pattern_fmt *fmt,
 			   unsigned int *fmt_sz_out)
 {
@@ -340,8 +336,7 @@ int parse_and_fill_pattern(const char *in, unsigned int in_len,
 			break;
 		case '%':
 			end = parse_format(beg, out, out - out_beg, out_len,
-					   &filled, fmt_desc, fmt_desc_sz,
-					   fmt, fmt_rem);
+					   &filled, fmt_desc, fmt, fmt_rem);
 			parsed_fmt = 1;
 			break;
 		default:
