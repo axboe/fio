@@ -92,15 +92,12 @@ static int libzbc_open_dev(struct thread_data *td, struct fio_file *f,
 	if (ret) {
 		log_err("%s: zbc_open() failed, err=%d\n",
 			f->file_name, ret);
-		return ret;
+		goto err;
 	}
 
 	ret = libzbc_get_dev_info(ld, f);
-	if (ret) {
-		zbc_close(ld->zdev);
-		free(ld);
-		return ret;
-	}
+	if (ret)
+		goto err_close;
 
 	td->io_ops_data = ld;
 out:
@@ -108,6 +105,12 @@ out:
 		*p_ld = ld;
 
 	return 0;
+
+err_close:
+	zbc_close(ld->zdev);
+err:
+	free(ld);
+	return ret;
 }
 
 static int libzbc_close_dev(struct thread_data *td)
