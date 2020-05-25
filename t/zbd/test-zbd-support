@@ -940,6 +940,9 @@ else
 fi
 rc=0
 
+intr=0
+trap 'intr=1' SIGINT
+
 for test_number in "${tests[@]}"; do
     rm -f "${logfile}.${test_number}"
     echo -n "Running test $(printf "%02d" $test_number) ... "
@@ -955,6 +958,7 @@ for test_number in "${tests[@]}"; do
     fi
     echo -e "$cc_status"
     echo "$status" >> "${logfile}.${test_number}"
+    [ $intr -ne 0 ] && exit 1
 done
 
 echo "$passed tests passed"
