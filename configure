@@ -617,8 +617,25 @@ EOF
     libaio=no
     libaio_uring=no
   fi
+
+  cat > $TMPC <<EOF
+#include <libaio.h>
+#include <stddef.h>
+int main(void)
+{
+  io_prep_preadv2(NULL, 0, NULL, 0, 0, 0);
+  io_prep_pwritev2(NULL, 0, NULL, 0, 0, 0);
+  return 0;
+}
+EOF
+  if compile_prog "" "" "libaio rw flags" ; then
+    libaio_rw_flags=yes
+  else
+    libaio_rw_flags=no
+  fi
 fi
 print_config "Linux AIO support" "$libaio"
+print_config "Linux AIO support rw flags" "$libaio_rw_flags"
 print_config "Linux AIO over io_uring" "$libaio_uring"
 
 ##########################################
@@ -2646,6 +2663,9 @@ if test "$zlib" = "yes" ; then
 fi
 if test "$libaio" = "yes" ; then
   output_sym "CONFIG_LIBAIO"
+  if test "$libaio_rw_flags" = "yes" ; then
+    output_sym "CONFIG_LIBAIO_RW_FLAGS"
+  fi
   if test "$libaio_uring" = "yes" ; then
     output_sym "CONFIG_LIBAIO_URING"
   fi
