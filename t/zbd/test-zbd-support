@@ -929,19 +929,31 @@ logfile=$0.log
 
 passed=0
 failed=0
+if [ -t 1 ]; then
+    red="\e[1;31m"
+    green="\e[1;32m"
+    end="\e[m"
+else
+    red=""
+    green=""
+    end=""
+fi
 rc=0
+
 for test_number in "${tests[@]}"; do
     rm -f "${logfile}.${test_number}"
-    echo -n "Running test $test_number ... "
+    echo -n "Running test $(printf "%02d" $test_number) ... "
     if eval "test$test_number"; then
 	status="PASS"
+	cc_status="${green}${status}${end}"
 	((passed++))
     else
 	status="FAIL"
+	cc_status="${red}${status}${end}"
 	((failed++))
 	rc=1
     fi
-    echo "$status"
+    echo -e "$cc_status"
     echo "$status" >> "${logfile}.${test_number}"
 done
 
