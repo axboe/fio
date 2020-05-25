@@ -47,7 +47,7 @@ static int libzbc_open_dev(struct thread_data *td, struct fio_file *f,
 			   struct libzbc_data **p_ld)
 {
 	struct libzbc_data *ld = td->io_ops_data;
-        int ret, flags = OS_O_DIRECT;
+	int ret, flags = OS_O_DIRECT;
 
 	if (ld) {
 		/* Already open */
@@ -61,7 +61,7 @@ static int libzbc_open_dev(struct thread_data *td, struct fio_file *f,
 		return -EINVAL;
 	}
 
-        if (td_write(td)) {
+	if (td_write(td)) {
 		if (!read_only)
 			flags |= O_RDWR;
 	} else if (td_read(td)) {
@@ -71,17 +71,15 @@ static int libzbc_open_dev(struct thread_data *td, struct fio_file *f,
 			flags |= O_RDONLY;
 	} else if (td_trim(td)) {
 		td_verror(td, EINVAL, "libzbc does not support trim");
-                log_err("%s: libzbc does not support trim\n",
-                        f->file_name);
-                return -EINVAL;
+		log_err("%s: libzbc does not support trim\n", f->file_name);
+		return -EINVAL;
 	}
 
-        if (td->o.oatomic) {
+	if (td->o.oatomic) {
 		td_verror(td, EINVAL, "libzbc does not support O_ATOMIC");
-                log_err("%s: libzbc does not support O_ATOMIC\n",
-                        f->file_name);
-                return -EINVAL;
-        }
+		log_err("%s: libzbc does not support O_ATOMIC\n", f->file_name);
+		return -EINVAL;
+	}
 
 	ld = calloc(1, sizeof(*ld));
 	if (!ld)
