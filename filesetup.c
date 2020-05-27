@@ -1268,7 +1268,12 @@ done:
 	td_restore_runstate(td, old_state);
 
 	if (td->o.zone_mode == ZONE_MODE_ZBD) {
+#if defined(FIO_OS_NETBSD_H) || defined(FIO_OS_OPENBSD_H)
+		log_err("%s: zbd unsupported\n", o->name);
+		err = 1; /* unsupported due to unimplemented pthread function */
+#else
 		err = zbd_setup_files(td);
+#endif
 		if (err)
 			goto err_out;
 	}

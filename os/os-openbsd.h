@@ -35,6 +35,12 @@
 #define fio_swap32(x)	swap32(x)
 #define fio_swap64(x)	swap64(x)
 
+/*
+ * XXX Define NOP pthread_mutexattr_setpshared(3) to unbreak build.
+ * pthread_mutexattr_setpshared(3) won't be implemented any time soon.
+ */
+#define pthread_mutexattr_setpshared(attr, pshared) do{}while(0)
+
 static inline int blockdev_size(struct fio_file *f, unsigned long long *bytes)
 {
 	struct disklabel dl;
