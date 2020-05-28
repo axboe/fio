@@ -39,7 +39,7 @@ int cond_init_pshared(pthread_cond_t *cond)
 	return 0;
 }
 
-int mutex_init_pshared(pthread_mutex_t *mutex)
+int mutex_init_pshared_with_type(pthread_mutex_t *mutex, int type)
 {
 	pthread_mutexattr_t mattr;
 	int ret;
@@ -60,6 +60,14 @@ int mutex_init_pshared(pthread_mutex_t *mutex)
 		return ret;
 	}
 #endif
+	if (type) {
+		ret = pthread_mutexattr_settype(&mattr, type);
+		if (ret) {
+			log_err("pthread_mutexattr_settype: %s\n",
+				strerror(ret));
+			return ret;
+		}
+	}
 	ret = pthread_mutex_init(mutex, &mattr);
 	if (ret) {
 		log_err("pthread_mutex_init: %s\n", strerror(ret));
@@ -67,6 +75,11 @@ int mutex_init_pshared(pthread_mutex_t *mutex)
 	}
 
 	return 0;
+}
+
+int mutex_init_pshared(pthread_mutex_t *mutex)
+{
+	return mutex_init_pshared_with_type(mutex, 0);
 }
 
 int mutex_cond_init_pshared(pthread_mutex_t *mutex, pthread_cond_t *cond)

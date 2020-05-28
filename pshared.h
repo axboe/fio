@@ -3,6 +3,7 @@
 
 #include <pthread.h>
 
+extern int mutex_init_pshared_with_type(pthread_mutex_t *, int);
 extern int mutex_init_pshared(pthread_mutex_t *);
 extern int cond_init_pshared(pthread_cond_t *);
 extern int mutex_cond_init_pshared(pthread_mutex_t *, pthread_cond_t *);
