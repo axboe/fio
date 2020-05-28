@@ -1,5 +1,4 @@
-#!/usr/bin/python
-# Note: this script is python2 and python3 compatible.
+#!/usr/bin/env python3
 #
 # strided.py
 #
