@@ -44,10 +44,10 @@ before_install:
         pkgs=(libaio-dev libcunit1 libcunit1-dev libgoogle-perftools4 libibverbs-dev libiscsi-dev libnuma-dev librbd-dev librdmacm-dev libz-dev);
         if [[ "$BUILD_ARCH" == "x86" ]]; then
             pkgs=("${pkgs[@]/%/:i386}");
-            pkgs+=(gcc-multilib python-scipy);
+            pkgs+=(gcc-multilib python3-scipy);
             EXTRA_CFLAGS="${EXTRA_CFLAGS} -m32";
         else
-            pkgs+=(glusterfs-common python-scipy);
+            pkgs+=(glusterfs-common python3-scipy);
         fi;
         sudo apt-get -qq update;
         sudo apt-get install --no-install-recommends -qq -y "${pkgs[@]}";
@@ -55,10 +55,7 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
         brew update;
         brew install cunit;
-        if [[ "$TRAVIS_OSX_IMAGE" == "xcode11.2" ]]; then
-            pip3 install scipy;
-        fi;
-        pip install scipy;
+        pip3 install scipy;
     fi;
 script:
   - ./configure --extra-cflags="${EXTRA_CFLAGS}" && make
