@@ -5,6 +5,9 @@ os:
 compiler:
   - clang
   - gcc
+arch:
+  - amd64
+  - arm64
 env:
   matrix:
     - BUILD_ARCH="x86"
@@ -17,18 +20,24 @@ matrix:
     - os: osx
       compiler: clang # Workaround travis setting CC=["clang", "gcc"]
       env: BUILD_ARCH="x86_64"
+      arch: amd64
     # Latest xcode image (needs periodic updating)
     - os: osx
       compiler: clang
       osx_image: xcode11.2
       env: BUILD_ARCH="x86_64"
+      arch: amd64
   exclude:
     - os: osx
       compiler: gcc
-  exclude:
     - os: linux
       compiler: clang
+      arch: amd64
       env: BUILD_ARCH="x86" # Only do the gcc x86 build to reduce clutter
+    - os: linux
+      env: BUILD_ARCH="x86"
+      arch: arm64
+
 before_install:
   - EXTRA_CFLAGS="-Werror"
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
@@ -54,4 +63,8 @@ before_install:
 script:
   - ./configure --extra-cflags="${EXTRA_CFLAGS}" && make
   - make test
-  - sudo python3 t/run-fio-tests.py --skip 6 1007 1008 --debug
+  - if [[ "$TRAVIS_CPU_ARCH" == "arm64" ]]; then
+        sudo python3 t/run-fio-tests.py --skip 6 1007 1008 --debug -p 1010:"--skip 15 16 17 18 19 20";
+    else
+        sudo python3 t/run-fio-tests.py --skip 6 1007 1008 --debug;
+    fi;
