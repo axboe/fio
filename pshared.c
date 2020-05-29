@@ -51,7 +51,7 @@ int mutex_init_pshared_with_type(pthread_mutex_t *mutex, int type)
 	}
 
 	/*
-	 * Not all platforms support process shared mutexes (FreeBSD)
+	 * Not all platforms support process shared mutexes (NetBSD/OpenBSD)
 	 */
 #ifdef CONFIG_PSHARED
 	ret = pthread_mutexattr_setpshared(&mattr, PTHREAD_PROCESS_SHARED);
