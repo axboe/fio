@@ -471,8 +471,10 @@ int fio_client_add(struct client_ops *ops, const char *hostname, void **cookie)
 					&client->is_sock, &client->port,
 					&client->addr.sin_addr,
 					&client->addr6.sin6_addr,
-					&client->ipv6))
+					&client->ipv6)) {
+		fio_put_client(client);
 		return -1;
+	}
 
 	client->fd = -1;
 	client->ops = ops;
