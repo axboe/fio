@@ -1365,7 +1365,7 @@ void setup_zbd_zone_mode(struct thread_data *td, struct io_u *io_u)
 }
 
 /**
- * zbd_adjust_ddir - Adjust an I/O direction for zonedmode=zbd.
+ * zbd_adjust_ddir - Adjust an I/O direction for zonemode=zbd.
  *
  * @td: FIO thread data.
  * @io_u: FIO I/O unit.
