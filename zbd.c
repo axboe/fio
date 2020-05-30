@@ -1546,6 +1546,7 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 	case DDIR_READ:
 		if (td->runstate == TD_VERIFYING && td_write(td)) {
 			zb = zbd_replay_write_order(td, io_u, zb);
+			pthread_mutex_unlock(&zb->mutex);
 			goto accept;
 		}
 		/*
