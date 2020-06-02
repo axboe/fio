@@ -78,7 +78,9 @@ struct gui {
 	int handler_running;
 
 	GHashTable *ge_hash;
-} main_ui;
+};
+
+extern struct gui main_ui;
 
 enum {
 	GE_STATE_NEW = 1,

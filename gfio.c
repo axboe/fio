@@ -38,6 +38,8 @@
 #include "gclient.h"
 #include "graph.h"
 
+struct gui main_ui;
+
 static bool gfio_server_running;
 static unsigned int gfio_graph_limit = 100;
 
@@ -223,7 +225,7 @@ static void update_button_states(struct gui *ui, struct gui_entry *ge)
 	switch (ge->state) {
 	default:
 		gfio_report_error(ge, "Bad client state: %u\n", ge->state);
-		/* fall through to new state */
+		/* fall-through */
 	case GE_STATE_NEW:
 		connect_state = 1;
 		edit_state = 1;
