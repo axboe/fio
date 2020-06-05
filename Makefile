@@ -176,6 +176,9 @@ endif
 ifeq ($(CONFIG_TARGET_OS), Android)
   SOURCE += diskutil.c fifo.c blktrace.c cgroup.c trim.c profiles/tiobench.c \
 		oslib/linux-dev-lookup.c
+ifdef CONFIG_HAS_BLKZONED
+  SOURCE += oslib/linux-blkzoned.c
+endif
   LIBS += -ldl -llog
   LDFLAGS += -rdynamic
 endif
