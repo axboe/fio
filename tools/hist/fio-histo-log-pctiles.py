@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # module to parse fio histogram log files, not using pandas
 # runs in python v2 or v3
@@ -24,6 +24,7 @@
 import sys, os, math, copy, time
 from copy import deepcopy
 import argparse
+from functools import reduce
 
 unittest2_imported = True
 try:
@@ -82,7 +83,7 @@ def parse_hist_file(logfn, buckets_per_interval, log_hist_msec):
         except ValueError as e:
             raise FioHistoLogExc('non-integer value %s' % exception_suffix(k+1, logfn))
 
-        neg_ints = list(filter( lambda tk : tk < 0, int_tokens ))
+        neg_ints = list([tk for tk in int_tokens if tk < 0])
         if len(neg_ints) > 0:
             raise FioHistoLogExc('negative integer value %s' % exception_suffix(k+1, logfn))
 

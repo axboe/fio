@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/env python3
 """ Cut the number bins in half in fio histogram output. Example usage:
 
         $ half-bins.py -c 2 output_clat_hist.1.log > smaller_clat_hist.1.log
