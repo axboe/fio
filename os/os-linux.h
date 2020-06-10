@@ -325,6 +325,9 @@ static inline int fio_set_sched_idle(void)
 #ifndef RWF_SYNC
 #define RWF_SYNC	0x00000004
 #endif
+#ifndef RWF_NOWAIT
+#define RWF_NOWAIT	0x00000008
+#endif
 
 #ifndef RWF_UNCACHED
 #define RWF_UNCACHED	0x00000040

@@ -2097,6 +2097,26 @@ with the caveat that when used on the command line, they must come after the
 	When hipri is set this determines the probability of a pvsync2 I/O being high
 	priority. The default is 100%.
 
+.. option:: nowait : [pvsync2] [libaio] [io_uring]
+
+	By default if a request cannot be executed immediately (e.g. resource starvation,
+	waiting on locks) it is queued and the initiating process will be blocked until
+	the required resource becomes free.
+
+	This option sets the RWF_NOWAIT flag (supported from the 4.14 Linux kernel) and
+	the call will return instantly with EAGAIN or a partial result rather than waiting.
+
+	It is useful to also use ignore_error=EAGAIN when using this option.
+
+	Note: glibc 2.27, 2.28 have a bug in syscall wrappers preadv2, pwritev2.
+	They return EOPNOTSUP instead of EAGAIN.
+
+	For cached I/O, using this option usually means a request operates only with
+	cached data. Currently the RWF_NOWAIT flag does not supported for cached write.
+
+	For direct I/O, requests will only succeed if cache invalidation isn't required,
+	file blocks are fully allocated and the disk request could be issued immediately.
+
 .. option:: cpuload=int : [cpuio]
 
 	Attempt to use the specified percentage of CPU cycles. This is a mandatory

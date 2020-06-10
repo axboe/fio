@@ -40,6 +40,7 @@ struct psyncv2_options {
 	unsigned int hipri;
 	unsigned int hipri_percentage;
 	unsigned int uncached;
+	unsigned int nowait;
 };
 
 static struct fio_option options[] = {
@@ -70,6 +71,15 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_INT,
 		.off1	= offsetof(struct psyncv2_options, uncached),
 		.help	= "Use RWF_UNCACHED for buffered read/writes",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
+		.name	= "nowait",
+		.lname	= "RWF_NOWAIT",
+		.type	= FIO_OPT_BOOL,
+		.off1	= offsetof(struct psyncv2_options, nowait),
+		.help	= "Set RWF_NOWAIT for pwritev2/preadv2",
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_INVALID,
 	},
@@ -164,6 +174,8 @@ static enum fio_q_status fio_pvsyncio2_queue(struct thread_data *td,
 		flags |= RWF_HIPRI;
 	if (!td->o.odirect && o->uncached)
 		flags |= RWF_UNCACHED;
+	if (o->nowait)
+		flags |= RWF_NOWAIT;
 
 	iov->iov_base = io_u->xfer_buf;
 	iov->iov_len = io_u->xfer_buflen;

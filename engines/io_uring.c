@@ -80,6 +80,7 @@ struct ioring_options {
 	unsigned int sqpoll_cpu;
 	unsigned int nonvectored;
 	unsigned int uncached;
+	unsigned int nowait;
 };
 
 static const int ddir_to_op[2][2] = {
@@ -186,6 +187,15 @@ static struct fio_option options[] = {
 		.group	= FIO_OPT_G_IOURING,
 	},
 	{
+		.name	= "nowait",
+		.lname	= "RWF_NOWAIT",
+		.type	= FIO_OPT_BOOL,
+		.off1	= offsetof(struct ioring_options, nowait),
+		.help	= "Use RWF_NOWAIT for reads/writes",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_IOURING,
+	},
+	{
 		.name	= NULL,
 	},
 };
@@ -235,6 +245,8 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 		}
 		if (!td->o.odirect && o->uncached)
 			sqe->rw_flags = RWF_UNCACHED;
+		if (o->nowait)
+			sqe->rw_flags |= RWF_NOWAIT;
 		if (ld->ioprio_class_set)
 			sqe->ioprio = td->o.ioprio_class << 13;
 		if (ld->ioprio_set)
