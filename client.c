@@ -1141,37 +1141,27 @@ static void handle_gs(struct fio_client *client, struct fio_net_cmd *cmd)
 static void handle_job_opt(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 	struct cmd_job_option *pdu = (struct cmd_job_option *) cmd->payload;
-	struct print_option *p;
-
-	if (!job_opt_object)
-		return;
 
 	pdu->global = le16_to_cpu(pdu->global);
 	pdu->truncated = le16_to_cpu(pdu->truncated);
 	pdu->groupid = le32_to_cpu(pdu->groupid);
 
-	p = malloc(sizeof(*p));
-	p->name = strdup((char *) pdu->name);
-	if (pdu->value[0] != '\0')
-		p->value = strdup((char *) pdu->value);
-	else
-		p->value = NULL;
-
 	if (pdu->global) {
-		const char *pos = "";
+		if (!job_opt_object)
+			return;
 
-		if (p->value)
-			pos = p->value;
-
-		json_object_add_value_string(job_opt_object, p->name, pos);
+		json_object_add_value_string(job_opt_object,
+					     (const char *)pdu->name,
+					     (const char *)pdu->value);
 	} else if (client->opt_lists) {
 		struct flist_head *opt_list = &client->opt_lists[pdu->groupid];
+		struct print_option *p;
 
+		p = malloc(sizeof(*p));
+		p->name = strdup((const char *)pdu->name);
+		p->value = pdu->value[0] ? strdup((const char *)pdu->value) :
+			NULL;
 		flist_add_tail(&p->list, opt_list);
-	} else {
-		free(p->value);
-		free(p->name);
-		free(p);
 	}
 }
 
