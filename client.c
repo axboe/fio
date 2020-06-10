@@ -390,8 +390,6 @@ struct fio_client *fio_client_add_explicit(struct client_ops *ops,
 
 	client = get_new_client();
 
-	client->hostname = strdup(hostname);
-
 	if (type == Fio_client_socket)
 		client->is_sock = true;
 	else {
@@ -410,6 +408,7 @@ struct fio_client *fio_client_add_explicit(struct client_ops *ops,
 	client->ops = ops;
 	client->refs = 1;
 	client->type = ops->client_type;
+	client->hostname = strdup(hostname);
 
 	__fio_client_add_cmd_option(client, "fio");
 
@@ -471,8 +470,10 @@ int fio_client_add(struct client_ops *ops, const char *hostname, void **cookie)
 					&client->is_sock, &client->port,
 					&client->addr.sin_addr,
 					&client->addr6.sin6_addr,
-					&client->ipv6))
+					&client->ipv6)) {
+		fio_put_client(client);
 		return -1;
+	}
 
 	client->fd = -1;
 	client->ops = ops;
