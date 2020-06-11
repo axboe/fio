@@ -57,6 +57,7 @@ enum rdma_io_mode {
 
 struct rdmaio_options {
 	struct thread_data *td;
+	bool listen;
 	unsigned int port;
 	enum rdma_io_mode verb;
 	char *bindname;
@@ -104,33 +105,14 @@ static struct fio_option options[] = {
 		.group	= FIO_OPT_G_RDMA,
 	},
 	{
-		.name	= "verb",
-		.lname	= "RDMA engine verb",
-		.alias	= "proto",
-		.type	= FIO_OPT_STR,
-		.off1	= offsetof(struct rdmaio_options, verb),
-		.help	= "RDMA engine verb",
-		.def	= "write",
-		.posval = {
-			  { .ival = "write",
-			    .oval = FIO_RDMA_MEM_WRITE,
-			    .help = "Memory Write",
-			  },
-			  { .ival = "read",
-			    .oval = FIO_RDMA_MEM_READ,
-			    .help = "Memory Read",
-			  },
-			  { .ival = "send",
-			    .oval = FIO_RDMA_CHA_SEND,
-			    .help = "Posted Send",
-			  },
-			  { .ival = "recv",
-			    .oval = FIO_RDMA_CHA_RECV,
-			    .help = "Posted Receive",
-			  },
-		},
+		.name     = "listen",
+		.lname    = "rdma engine listen",
+		.help     = "Listen for incoming RDMA-CM connections",
+		.type     = FIO_OPT_BOOL,
+		.off1     = offsetof(struct rdmaio_options, listen),
+		.def	  = "0",
 		.category = FIO_OPT_C_ENGINE,
-		.group	= FIO_OPT_G_RDMA,
+		.group    = FIO_OPT_G_RDMA,
 	},
 	{
 		.name	= NULL,
@@ -896,6 +878,18 @@ static int fio_rdmaio_connect(struct thread_data *td, struct fio_file *f)
 		return 1;
 	}
 
+	if (td->o.odirect) {
+		if (td_read(td))
+			rd->rdma_protocol = FIO_RDMA_MEM_READ;
+		else
+			rd->rdma_protocol = FIO_RDMA_MEM_WRITE;
+	} else {
+		if (td_read(td))
+			rd->rdma_protocol = FIO_RDMA_CHA_RECV;
+		else
+			rd->rdma_protocol = FIO_RDMA_CHA_SEND;
+
+	}
 	/* send task request */
 	strncpy(rd->send_buf.name, td->o.name, FIO_RDMA_NAME_MAX - 1);
 	rd->send_buf.name[FIO_RDMA_NAME_MAX - 1] = '\0';
@@ -960,7 +954,9 @@ static int fio_rdmaio_accept(struct thread_data *td, struct fio_file *f)
 
 static int fio_rdmaio_open_file(struct thread_data *td, struct fio_file *f)
 {
-	if (td_read(td))
+	struct rdmaio_options *o = td->eo;
+
+	if (o->listen)
 		return fio_rdmaio_accept(td, f);
 	else
 		return fio_rdmaio_connect(td, f);
@@ -1299,16 +1295,13 @@ static int fio_rdmaio_init(struct thread_data *td)
 		log_err("fio: rdma_create_id fail: %m\n");
 		return 1;
 	}
-
-	if ((rd->rdma_protocol == FIO_RDMA_MEM_WRITE) ||
-	    (rd->rdma_protocol == FIO_RDMA_MEM_READ)) {
+	if (td->o.odirect) {
 		rd->rmt_us =
 			malloc(FIO_RDMA_MAX_IO_DEPTH * sizeof(struct remote_u));
 		memset(rd->rmt_us, 0,
-			FIO_RDMA_MAX_IO_DEPTH * sizeof(struct remote_u));
+		       FIO_RDMA_MAX_IO_DEPTH * sizeof(struct remote_u));
 		rd->rmt_nr = 0;
 	}
-
 	rd->io_us_queued = malloc(td->o.iodepth * sizeof(struct io_u *));
 	memset(rd->io_us_queued, 0, td->o.iodepth * sizeof(struct io_u *));
 	rd->io_u_queued_nr = 0;
@@ -1321,7 +1314,7 @@ static int fio_rdmaio_init(struct thread_data *td)
 	memset(rd->io_us_completed, 0, td->o.iodepth * sizeof(struct io_u *));
 	rd->io_u_completed_nr = 0;
 
-	if (td_read(td)) {	/* READ as the server */
+	if (o->listen) {	/* READ as the server */
 		rd->is_client = 0;
 		td->flags |= TD_F_NO_PROGRESS;
 		/* server rd->rdma_buf_len will be setup after got request */

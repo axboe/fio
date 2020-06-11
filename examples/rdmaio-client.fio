@@ -3,14 +3,19 @@
 ioengine=rdma
 hostname=${RDMA_SERVER}
 port=8888
-# Data exchange method
-# verb=[read/write/send/recv]
-verb=write
 bs=1m
 size=100g
-# IO direction:  [read] as the server, [write] as for client
-rw=write
 
 [client-rdma-write]
-numjobs=4
+# use IBV_WC_RDMA_WRITE
+rw=write
+direct=1
+numjobs=2
+iodepth=16
+
+[client-rdma-read]
+# use IBV_WC_RDMA_READ
+rw=read
+direct=1
+numjobs=2
 iodepth=16

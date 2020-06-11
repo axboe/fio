@@ -1,11 +1,10 @@
 # Example rdma server job
 [global]
 ioengine=rdma
+listen=1
 port=8888
 bs=1m
 size=100g
-# IO direction:  [read] as the server, [write] as for client
-rw=read
 
 [server]
 numjobs=4

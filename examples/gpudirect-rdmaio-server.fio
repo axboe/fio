@@ -1,12 +1,13 @@
-# Example rdma server job
+# Example gpudirect rdma server job
 [global]
 ioengine=rdma
-port=[port]
-mem=cudamalloc
-gpu_dev_id=0
+listen=1
+port=8888
 bs=1m
 size=100g
+mem=cudamalloc
+gpu_dev_id=0
 
-[receiver]
-rw=read
+[server]
+numjobs=4
 iodepth=16

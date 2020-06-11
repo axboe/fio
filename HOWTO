@@ -1900,8 +1900,15 @@ I/O engine
 		**rdma**
 			The RDMA I/O engine supports both RDMA memory semantics
 			(RDMA_WRITE/RDMA_READ) and channel semantics (Send/Recv) for the
-			InfiniBand, RoCE and iWARP protocols. This engine defines engine
-			specific options.
+			InfiniBand, RoCE and iWARP protocols. This engine defines specific
+			io derection transformation matrix:
+			With :option: `direct` enbled:
+				`DDIR_READ`  :  `IBV_WC_RDMA_READ`
+				`DDIR_WRITE` :  `IBV_WC_RDMA_WRITE`
+			With options.direct disabled:
+				`DDIR_READ`  :  `IBV_WC_RECV`
+				`DDIR_WRITE` :  `IBV_WC_SEND`
+			This engine defines engine specific options.
 
 		**falloc**
 			I/O engine that does regular fallocate to simulate data transfer as
@@ -2169,11 +2176,13 @@ with the caveat that when used on the command line, they must come after the
 	hostname if the job is a TCP listener or UDP reader. For unix sockets, the
 	normal :option:`filename` option should be used and the port is invalid.
 
-.. option:: listen : [netsplice] [net]
+.. option:: listen : [netsplice] [net] [rdma]
 
 	For TCP network connections, tell fio to listen for incoming connections
 	rather than initiating an outgoing connection. The :option:`hostname` must
 	be omitted if this option is used.
+	For RDMA engine, tell fio to listen for incoming RDMA-CM connection,
+	rather than initiating an outgoing connection.
 
 .. option:: pingpong : [netsplice] [net]
 
@@ -2244,13 +2253,6 @@ with the caveat that when used on the command line, they must come after the
 .. option:: chunk_size : [libhdfs]
 
 	The size of the chunk to use for each file.
-
-.. option:: verb=str : [rdma]
-
-	The RDMA verb to use on this side of the RDMA ioengine connection. Valid
-	values are write, read, send and recv. These correspond to the equivalent
-	RDMA verbs (e.g. write = rdma_write etc.). Note that this only needs to be
-	specified on the client side of the connection. See the examples folder.
 
 .. option:: bindname=str : [rdma]
 
