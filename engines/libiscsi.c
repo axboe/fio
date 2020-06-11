@@ -109,7 +109,7 @@ static int fio_iscsi_setup_lun(struct iscsi_info *iscsi_info,
 	if (iscsi_full_connect_sync(iscsi_lun->iscsi,
 				    iscsi_lun->url->portal,
 				    iscsi_lun->url->lun)) {
-		log_err("sicsi: failed to connect to LUN : %s\n",
+		log_err("iscsi: failed to connect to LUN : %s\n",
 			iscsi_get_error(iscsi_lun->iscsi));
 		ret = EINVAL;
 		goto out;
