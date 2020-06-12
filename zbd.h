@@ -49,7 +49,7 @@ struct fio_zone_info {
  *	sequential write zones.
  * @mutex: Protects the modifiable members in this structure (refcount and
  *		num_open_zones).
- * @zone_size: size of a single zone in units of 512 bytes
+ * @zone_size: size of a single zone in bytes.
  * @sectors_with_data: total size of data in all zones in units of 512 bytes
  * @zone_size_log2: log2 of the zone size in bytes if it is a power of 2 or 0
  *		if the zone size is not a power of 2.
