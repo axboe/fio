@@ -3863,7 +3863,8 @@ Fio supports a variety of log file formats, for logging latencies, bandwidth,
 and IOPS. The logs share a common format, which looks like this:
 .RS
 .P
-time (msec), value, data direction, block size (bytes), offset (bytes)
+time (msec), value, data direction, block size (bytes), offset (bytes),
+command priority
 .RE
 .P
 `Time' for the log entry is always in milliseconds. The `value' logged depends
@@ -3896,6 +3897,9 @@ I/O is a TRIM
 The entry's `block size' is always in bytes. The `offset' is the position in bytes
 from the start of the file for that particular I/O. The logging of the offset can be
 toggled with \fBlog_offset\fR.
+.P
+`Command priority` is 0 for normal priority and 1 for high priority. This is controlled
+by the ioengine specific \fBcmdprio_percentage\fR.
 .P
 Fio defaults to logging every individual I/O but when windowed logging is set
 through \fBlog_avg_msec\fR, either the average (by default) or the maximum
