@@ -4,6 +4,7 @@
  * Copyright (C) 2015 Jens Axboe <axboe@kernel.dk>
  *
  */
+#include <assert.h>
 #include "fio.h"
 #include "ioengines.h"
 #include "lib/getrusage.h"
@@ -11,7 +12,7 @@
 
 static void check_overlap(struct io_u *io_u)
 {
-	int i;
+	int i, res;
 	struct thread_data *td;
 
 	/*
@@ -26,7 +27,8 @@ static void check_overlap(struct io_u *io_u)
 	 * IO_U_F_FLIGHT flag is set so that this io_u can be checked by other
 	 * threads as they assess overlap.
 	 */
-	pthread_mutex_lock(&overlap_check);
+	res = pthread_mutex_lock(&overlap_check);
+	assert(res == 0);
 
 retry:
 	for_each_td(td, i) {
@@ -39,8 +41,10 @@ retry:
 		if (!in_flight_overlap(&td->io_u_all, io_u))
 			continue;
 
-		pthread_mutex_unlock(&overlap_check);
-		pthread_mutex_lock(&overlap_check);
+		res = pthread_mutex_unlock(&overlap_check);
+		assert(res == 0);
+		res = pthread_mutex_lock(&overlap_check);
+		assert(res == 0);
 		goto retry;
 	}
 }
