@@ -13,38 +13,36 @@ static void check_overlap(struct io_u *io_u)
 {
 	int i;
 	struct thread_data *td;
-	bool overlap = false;
 
-	do {
-		/*
-		 * Allow only one thread to check for overlap at a
-		 * time to prevent two threads from thinking the coast
-		 * is clear and then submitting IOs that overlap with
-		 * each other
-		 *
-		 * If an overlap is found, release the lock and
-		 * re-acquire it before checking again to give other
-		 * threads a chance to make progress
-		 *
-		 * If an overlap is not found, release the lock when the
-		 * io_u's IO_U_F_FLIGHT flag is set so that this io_u
-		 * can be checked by other threads as they assess overlap
-		 */
+	/*
+	 * Allow only one thread to check for overlap at a time to prevent two
+	 * threads from thinking the coast is clear and then submitting IOs
+	 * that overlap with each other.
+	 *
+	 * If an overlap is found, release the lock and re-acquire it before
+	 * checking again to give other threads a chance to make progress.
+	 *
+	 * If no overlap is found, release the lock when the io_u's
+	 * IO_U_F_FLIGHT flag is set so that this io_u can be checked by other
+	 * threads as they assess overlap.
+	 */
+	pthread_mutex_lock(&overlap_check);
+
+retry:
+	for_each_td(td, i) {
+		if (td->runstate <= TD_SETTING_UP ||
+		    td->runstate >= TD_FINISHING ||
+		    !td->o.serialize_overlap ||
+		    td->o.io_submit_mode != IO_MODE_OFFLOAD)
+			continue;
+
+		if (!in_flight_overlap(&td->io_u_all, io_u))
+			continue;
+
+		pthread_mutex_unlock(&overlap_check);
 		pthread_mutex_lock(&overlap_check);
-		for_each_td(td, i) {
-			if (td->runstate <= TD_SETTING_UP ||
-				td->runstate >= TD_FINISHING ||
-				!td->o.serialize_overlap ||
-				td->o.io_submit_mode != IO_MODE_OFFLOAD)
-				continue;
-
-			overlap = in_flight_overlap(&td->io_u_all, io_u);
-			if (overlap) {
-				pthread_mutex_unlock(&overlap_check);
-				break;
-			}
-		}
-	} while (overlap);
+		goto retry;
+	}
 }
 
 static int io_workqueue_fn(struct submit_worker *sw,
