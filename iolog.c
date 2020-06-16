@@ -619,9 +619,11 @@ static bool init_iolog_read(struct thread_data *td)
 		fd = open_socket(fname);
 		if (fd >= 0)
 			f = fdopen(fd, "r");
-	} else
+	} else if (!strcmp(fname, "-")) {
+                f = stdin;
+        } else {
 		f = fopen(fname, "r");
-
+        }
 	free(fname);
 
 	if (!f) {

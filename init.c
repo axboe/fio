@@ -2063,10 +2063,16 @@ static int __parse_jobs_ini(struct thread_data *td,
 
 		ret = fio_options_parse(td, opts, num_opts);
 		if (!ret) {
-			if (dump_cmdline)
-				dump_opt_list(td);
+                        char *fname = get_name_by_idx(td->o.read_iolog_file, td->subjob_number);
+                        if (!strcmp(fname, file) && !strcmp(fname, "-")) {
+			    log_err("fio: job %s dropped as we can't read both iolog and job file from stdin.\n", name);
+			    put_job(td);
+                        } else {
+                             if (dump_cmdline)
+                                   dump_opt_list(td);
 
-			ret = add_job(td, name, 0, 0, type);
+                             ret = add_job(td, name, 0, 0, type);
+                        }
 		} else {
 			log_err("fio: job %s dropped\n", name);
 			put_job(td);
