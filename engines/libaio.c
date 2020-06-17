@@ -16,6 +16,10 @@
 #include "../optgroup.h"
 #include "../lib/memalign.h"
 
+#ifndef IO_CMD_ZONE_APPEND
+#define IO_CMD_ZONE_APPEND	9
+#endif
+
 /* Should be defined in newest aio_abi.h */
 #ifndef IOCB_FLAG_IOPRIO
 #define IOCB_FLAG_IOPRIO    (1 << 1)
@@ -123,7 +127,13 @@ static int fio_libaio_prep(struct thread_data *td, struct io_u *io_u)
 		if (o->nowait)
 			iocb->aio_rw_flags |= RWF_NOWAIT;
 	} else if (io_u->ddir == DDIR_WRITE) {
-		io_prep_pwrite(iocb, f->fd, io_u->xfer_buf, io_u->xfer_buflen, io_u->offset);
+		if ((td->o.zone_mode == ZONE_MODE_ZBD || td->o.zone_mode == ZONE_MODE_STRIDED) &&
+		     td->o.zone_append) {
+			io_prep_pwrite(iocb, f->fd, io_u->xfer_buf, io_u->xfer_buflen, io_u->zone_slba);
+			iocb->aio_lio_opcode = IO_CMD_ZONE_APPEND;
+		}
+		else
+			io_prep_pwrite(iocb, f->fd, io_u->xfer_buf, io_u->xfer_buflen, io_u->offset);
 		if (o->nowait)
 			iocb->aio_rw_flags |= RWF_NOWAIT;
 	} else if (ddir_sync(io_u->ddir))
@@ -228,6 +238,20 @@ static int fio_libaio_getevents(struct thread_data *td, unsigned int min,
 		} else {
 			r = io_getevents(ld->aio_ctx, actual_min,
 				max, ld->aio_events + events, lt);
+			if (td->o.zone_mode == ZONE_MODE_ZBD
+			    || td->o.zone_mode == ZONE_MODE_STRIDED) {
+				struct io_event *ev;
+				struct io_u *io_u;
+				for (unsigned event = 0; event < r; event++) {
+					ev = ld->aio_events + event;
+					io_u = container_of(ev->obj, struct io_u, iocb);
+					if (td->o.zone_append
+					    && td->o.do_verify && td->o.verify
+					    && (io_u->ddir== DDIR_WRITE)) {
+						io_u->ipo->offset = io_u->zone_slba + ev->res2;
+					}
+				}
+			}
 		}
 		if (r > 0)
 			events += r;
