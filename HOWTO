@@ -1010,6 +1010,14 @@ Target file/device
 	:option:`zonesize` bytes of data have been transferred. This parameter
 	must be zero for :option:`zonemode` =zbd.
 
+.. option:: zone_append=bool
+
+	This parameter applies to :option:`zonemode` =zbd only.
+
+	For :option:`rw` =write, or :option: `rw` =randwrite the request
+	points to start LBA of the zone. On successful completion the device
+	returns the offset where data has been placed.
+
 .. option:: read_beyond_wp=bool
 
 	This parameter applies to :option:`zonemode` =zbd only.

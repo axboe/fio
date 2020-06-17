@@ -94,19 +94,25 @@ struct io_u {
 	};
 
 	/*
+	 * ZBD Zone Append Support
+	 */
+	unsigned long long zone_slba;
+
+	/*
 	 * ZBD mode zbd_queue_io callback: called after engine->queue operation
 	 * to advance a zone write pointer and eventually unlock the I/O zone.
 	 * @q indicates the I/O queue status (busy, queued or completed).
 	 * @success == true means that the I/O operation has been queued or
 	 * completed successfully.
 	 */
-	void (*zbd_queue_io)(struct io_u *, int q, bool success);
+	void (*zbd_queue_io)(struct thread_data *, struct io_u *, int q,
+			     bool success);
 
 	/*
 	 * ZBD mode zbd_put_io callback: called in after completion of an I/O
 	 * or commit of an async I/O to unlock the I/O target zone.
 	 */
-	void (*zbd_put_io)(const struct io_u *);
+	void (*zbd_put_io)(struct thread_data *, const struct io_u *);
 
 	/*
 	 * Callback for io completion

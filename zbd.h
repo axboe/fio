@@ -23,8 +23,10 @@ enum io_u_action {
  * struct fio_zone_info - information about a single ZBD zone
  * @start: zone start location (bytes)
  * @wp: zone write pointer location (bytes)
+ * @pending_ios: Number of IO's pending in this zone
  * @verify_block: number of blocks that have been verified for this zone
  * @mutex: protects the modifiable members in this structure
+ * @reset_cond: zone reset check condition. only relevant for zone_append.
  * @type: zone type (BLK_ZONE_TYPE_*)
  * @cond: zone state (BLK_ZONE_COND_*)
  * @open: whether or not this zone is currently open. Only relevant if
@@ -33,8 +35,10 @@ enum io_u_action {
  */
 struct fio_zone_info {
 	pthread_mutex_t		mutex;
+	pthread_cond_t		reset_cond;
 	uint64_t		start;
 	uint64_t		wp;
+	uint32_t		pending_ios;
 	uint32_t		verify_block;
 	enum zbd_zone_type	type:2;
 	enum zbd_zone_cond	cond:4;
@@ -96,18 +100,19 @@ static inline void zbd_close_file(struct fio_file *f)
 		zbd_free_zone_info(f);
 }
 
-static inline void zbd_queue_io_u(struct io_u *io_u, enum fio_q_status status)
+static inline void zbd_queue_io_u(struct thread_data *td, struct io_u *io_u,
+				  enum fio_q_status status)
 {
 	if (io_u->zbd_queue_io) {
-		io_u->zbd_queue_io(io_u, status, io_u->error == 0);
+		io_u->zbd_queue_io(td, io_u, status, io_u->error == 0);
 		io_u->zbd_queue_io = NULL;
 	}
 }
 
-static inline void zbd_put_io_u(struct io_u *io_u)
+static inline void zbd_put_io_u(struct thread_data *td, struct io_u *io_u)
 {
 	if (io_u->zbd_put_io) {
-		io_u->zbd_put_io(io_u);
+		io_u->zbd_put_io(td, io_u);
 		io_u->zbd_queue_io = NULL;
 		io_u->zbd_put_io = NULL;
 	}

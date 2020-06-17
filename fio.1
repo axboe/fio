@@ -782,6 +782,12 @@ sequential workloads and ignored for random workloads. For read workloads,
 see also \fBread_beyond_wp\fR.
 
 .TP
+.BI zone_append
+For \fBrw\fR=write and \fBrw\fR=randwrite requests if zone_append is enabled,
+the request points at the start LBA of the zone. On successful completion
+the device will return the offset where the data has been placed.
+
+.TP
 .BI read_beyond_wp \fR=\fPbool
 This parameter applies to \fBzonemode=zbd\fR only.
 

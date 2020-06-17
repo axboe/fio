@@ -195,6 +195,7 @@ struct thread_options {
 	unsigned long long zone_size;
 	unsigned long long zone_skip;
 	enum fio_zone_mode zone_mode;
+	unsigned int zone_append;
 	unsigned long long lockmem;
 	enum fio_memtype mem_type;
 	unsigned int mem_align;
@@ -631,6 +632,7 @@ struct thread_options_pack {
 	uint32_t allow_mounted_write;
 
 	uint32_t zone_mode;
+	uint32_t zone_append;
 } __attribute__((packed));
 
 extern void convert_thread_options_to_cpu(struct thread_options *o, struct thread_options_pack *top);
