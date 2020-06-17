@@ -228,12 +228,31 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 
 	if (io_u->ddir == DDIR_READ || io_u->ddir == DDIR_WRITE) {
 		if (o->fixedbufs) {
-			sqe->opcode = fixed_ddir_to_op[io_u->ddir];
+			if (io_u->ddir == DDIR_READ)
+				sqe->opcode = fixed_ddir_to_op[io_u->ddir];
+			else {
+				if ((td->o.zone_mode == ZONE_MODE_ZBD
+				    || td->o.zone_mode == ZONE_MODE_STRIDED)
+				    && td->o.zone_append)
+					sqe->opcode = IORING_OP_ZONE_APPEND_FIXED;
+				else
+					sqe->opcode = fixed_ddir_to_op[io_u->ddir];
+			}
 			sqe->addr = (unsigned long) io_u->xfer_buf;
 			sqe->len = io_u->xfer_buflen;
 			sqe->buf_index = io_u->index;
 		} else {
-			sqe->opcode = ddir_to_op[io_u->ddir][!!o->nonvectored];
+			if (io_u->ddir == DDIR_READ)
+				sqe->opcode = ddir_to_op[io_u->ddir][!!o->nonvectored];
+			else {
+				if ((td->o.zone_mode == ZONE_MODE_ZBD
+				    || td->o.zone_mode == ZONE_MODE_STRIDED)
+				    && td->o.zone_append)
+					sqe->opcode = (!!o->nonvectored) ? IORING_OP_ZONE_APPEND :
+						      IORING_OP_ZONE_APPENDV;
+				else
+					sqe->opcode = ddir_to_op[io_u->ddir][!!o->nonvectored];
+			}
 			if (o->nonvectored) {
 				sqe->addr = (unsigned long)
 						ld->iovecs[io_u->index].iov_base;
@@ -251,7 +270,12 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 			sqe->ioprio = td->o.ioprio_class << 13;
 		if (ld->ioprio_set)
 			sqe->ioprio |= td->o.ioprio;
-		sqe->off = io_u->offset;
+		if ((td->o.zone_mode == ZONE_MODE_ZBD
+		     || td->o.zone_mode == ZONE_MODE_STRIDED)
+		     && td->o.zone_append && io_u->ddir == DDIR_WRITE)
+			sqe->off = io_u->zone_slba;
+		else
+			sqe->off = io_u->offset;
 	} else if (ddir_sync(io_u->ddir)) {
 		if (io_u->ddir == DDIR_SYNC_FILE_RANGE) {
 			sqe->off = f->first_write;
@@ -326,6 +350,22 @@ static int fio_ioring_getevents(struct thread_data *td, unsigned int min,
 	ld->cq_ring_off = *ring->head;
 	do {
 		r = fio_ioring_cqring_reap(td, events, max);
+		if (td->o.zone_mode == ZONE_MODE_ZBD
+		    || td->o.zone_mode == ZONE_MODE_STRIDED) {
+			struct io_uring_cqe *cqe;
+			struct io_u *io_u;
+			unsigned index;
+			for (unsigned event = 0; event < r; event++) {
+				index = (event + ld->cq_ring_off) & ld->cq_ring_mask;
+
+				cqe = &ld->cq_ring.cqes[index];
+				io_u = (struct io_u *) (uintptr_t) cqe->user_data;
+
+				if (td->o.zone_append && td->o.do_verify
+				    && td->o.verify && (io_u->ddir== DDIR_WRITE))
+					io_u->ipo->offset = io_u->zone_slba + cqe->res2;
+			}
+		}
 		if (r) {
 			events += r;
 			if (actual_min != 0)
