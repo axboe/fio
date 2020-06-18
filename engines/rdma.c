@@ -59,6 +59,7 @@ struct rdmaio_options {
 	struct thread_data *td;
 	bool listen;
 	unsigned int port;
+	unsigned int addr_family;
 	enum rdma_io_mode verb;
 	char *bindname;
 };
@@ -115,6 +116,28 @@ static struct fio_option options[] = {
 		.group    = FIO_OPT_G_RDMA,
 	},
 	{
+		.name	= "address_family",
+		.lname	= "rdma engine adress family type",
+		.type	= FIO_OPT_STR,
+		.off1	= offsetof(struct rdmaio_options, addr_family),
+		.help	= "Network protocol to use",
+		.def	= "ipv4",
+		.posval = {
+			  { .ival = "ipv4",
+			    .oval = AF_INET,
+			    .help = "IPv4 adress",
+			  },
+#ifdef CONFIG_IPV6
+			  { .ival = "ipv6",
+			    .oval = AF_INET6,
+			    .help = "TPv6 address",
+			  },
+#endif
+		},
+		.category = FIO_OPT_C_ENGINE,
+		.group    = FIO_OPT_G_RDMA,
+	},
+	{
 		.name	= NULL,
 	},
 };
@@ -146,7 +169,8 @@ struct rdmaio_data {
 	int is_client;
 	enum rdma_io_mode rdma_protocol;
 	char host[64];
-	struct sockaddr_in addr;
+	int addr_family;
+	struct sockaddr_storage sin;
 
 	struct ibv_recv_wr rq_wr;
 	struct ibv_sge recv_sgl;
@@ -1029,19 +1053,37 @@ static int fio_rdmaio_close_file(struct thread_data *td, struct fio_file *f)
 	return 0;
 }
 
-static int aton(struct thread_data *td, const char *host,
-		     struct sockaddr_in *addr)
+static int fill_sockaddr(struct thread_data *td, const char *host,
+			 struct sockaddr_storage *sin, int af, unsigned short port)
 {
-	if (inet_aton(host, &addr->sin_addr) != 1) {
-		struct hostent *hent;
+	int ret;
 
-		hent = gethostbyname(host);
+	memset(sin, 0, sizeof(*sin));
+	if (af == AF_INET) {
+		struct sockaddr_in *sin4 = (struct sockaddr_in *)sin;
+		sin4->sin_family = AF_INET;
+		sin4->sin_port  = htons(port);
+		ret = inet_pton(AF_INET, host, &sin4->sin_addr);
+	}  else {
+		struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)sin;
+		sin6->sin6_family = AF_INET6;
+		sin6->sin6_port  = htons(port);
+		ret = inet_pton(AF_INET6, host, &sin6->sin6_addr);
+	}
+	if (ret != 1) {
+		struct hostent *hent;
+		hent = gethostbyname2(host, af);
 		if (!hent) {
-			td_verror(td, errno, "gethostbyname");
+			td_verror(td, errno, "gethostbyname2");
 			return 1;
 		}
-
-		memcpy(&addr->sin_addr, hent->h_addr, 4);
+		if (af == AF_INET) {
+			struct sockaddr_in *sin4 = (struct sockaddr_in *)sin;
+			memcpy(&sin4->sin_addr, hent->h_addr, 4);
+		} else {
+			struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)sin;
+			memcpy(&sin6->sin6_addr, hent->h_addr, hent->h_length);
+		}
 	}
 	return 0;
 }
@@ -1051,29 +1093,27 @@ static int fio_rdmaio_setup_connect(struct thread_data *td, const char *host,
 {
 	struct rdmaio_data *rd = td->io_ops_data;
 	struct rdmaio_options *o = td->eo;
-	struct sockaddr_storage addrb;
 	struct ibv_recv_wr *bad_wr;
 	int err;
 
-	rd->addr.sin_family = AF_INET;
-	rd->addr.sin_port = htons(port);
-
-	err = aton(td, host, &rd->addr);
+	err = fill_sockaddr(td, host, &rd->sin, rd->addr_family, port);
 	if (err)
 		return err;
 
 	/* resolve route */
 	if (o->bindname && strlen(o->bindname)) {
-		addrb.ss_family = AF_INET;
-		err = aton(td, o->bindname, (struct sockaddr_in *)&addrb);
+		struct sockaddr_storage addrb;
+		err = fill_sockaddr(td, o->bindname, &addrb, rd->addr_family, 0);
 		if (err)
 			return err;
+
 		err = rdma_resolve_addr(rd->cm_id, (struct sockaddr *)&addrb,
-					(struct sockaddr *)&rd->addr, 2000);
+					(struct sockaddr *)&rd->sin, 2000);
 
 	} else {
 		err = rdma_resolve_addr(rd->cm_id, NULL,
-					(struct sockaddr *)&rd->addr, 2000);
+					(struct sockaddr *)&rd->sin, 2000);
+		td_verror(td, err, "rdma_resolve_addr");
 	}
 
 	if (err != 0) {
@@ -1125,17 +1165,30 @@ static int fio_rdmaio_setup_listen(struct thread_data *td, short port)
 	int state = td->runstate;
 
 	td_set_runstate(td, TD_SETTING_UP);
+	memset(&rd->sin, 0, sizeof(rd->sin));
 
-	rd->addr.sin_family = AF_INET;
-	rd->addr.sin_port = htons(port);
+	if (!o->bindname || !strlen(o->bindname)) {
+		if (rd->addr_family == AF_INET) {
+			struct sockaddr_in *sin4 = (struct sockaddr_in *)&rd->sin;
+			sin4->sin_family = AF_INET;
+			sin4->sin_addr.s_addr = htonl(INADDR_ANY);
+			sin4->sin_port = htons(port);
+		} else {
+			struct sockaddr_in6 *sin6 = (struct sockaddr_in6*)&rd->sin;
+			sin6->sin6_family = AF_INET6;
+			sin6->sin6_addr = in6addr_any;
+			sin6->sin6_port = htons(port);
+		}
+	} else {
+		int err;
 
-	if (!o->bindname || !strlen(o->bindname))
-		rd->addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	else
-		rd->addr.sin_addr.s_addr = htonl(*o->bindname);
+		err = fill_sockaddr(td, o->bindname, &rd->sin, rd->addr_family, port);
+			if (err)
+				return err;
 
+	}
 	/* rdma_listen */
-	if (rdma_bind_addr(rd->cm_id, (struct sockaddr *)&rd->addr) != 0) {
+	if (rdma_bind_addr(rd->cm_id, (struct sockaddr *)&rd->sin) != 0) {
 		log_err("fio: rdma_bind_addr fail: %m\n");
 		return 1;
 	}
