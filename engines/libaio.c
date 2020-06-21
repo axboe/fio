@@ -195,8 +195,8 @@ static int user_io_getevents(io_context_t aio_ctx, unsigned int max,
 		} else {
 			/* There is another completion to reap */
 			events[i] = ring->events[head];
-			read_barrier();
-			ring->head = (head + 1) % ring->nr;
+			atomic_store_release(&ring->head,
+					     (head + 1) % ring->nr);
 			i++;
 		}
 	}
