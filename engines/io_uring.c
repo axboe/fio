@@ -301,15 +301,13 @@ static int fio_ioring_cqring_reap(struct thread_data *td, unsigned int events,
 
 	head = *ring->head;
 	do {
-		read_barrier();
-		if (head == *ring->tail)
+		if (head == atomic_load_acquire(ring->tail))
 			break;
 		reaped++;
 		head++;
 	} while (reaped + events < max);
 
-	*ring->head = head;
-	write_barrier();
+	atomic_store_release(ring->head, head);
 	return reaped;
 }
 
@@ -384,15 +382,13 @@ static enum fio_q_status fio_ioring_queue(struct thread_data *td,
 
 	tail = *ring->tail;
 	next_tail = tail + 1;
-	read_barrier();
-	if (next_tail == *ring->head)
+	if (next_tail == atomic_load_acquire(ring->head))
 		return FIO_Q_BUSY;
 
 	if (o->cmdprio_percentage)
 		fio_ioring_prio_prep(td, io_u);
 	ring->array[tail & ld->sq_ring_mask] = io_u->index;
-	*ring->tail = next_tail;
-	write_barrier();
+	atomic_store_release(ring->tail, next_tail);
 
 	ld->queued++;
 	return FIO_Q_QUEUED;
