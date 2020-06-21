@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 FILE *f_err;
-struct timespec *fio_ts = NULL;
+void *fio_ts;
 unsigned long fio_debug = 0;
 
 void __dprint(int type, const char *str, ...)
