@@ -420,14 +420,14 @@ class FioJobTest_t0009(FioJobTest):
             self.passed = False
 
 
-class FioJobTest_t0011(FioJobTest):
+class FioJobTest_iops_rate(FioJobTest):
     """Test consists of fio test job t0009
     Confirm that job0 iops == 1000
     and that job1_iops / job0_iops ~ 8
     With two runs of fio-3.16 I observed a ratio of 8.3"""
 
     def check_result(self):
-        super(FioJobTest_t0011, self).check_result()
+        super(FioJobTest_iops_rate, self).check_result()
 
         if not self.passed:
             return
@@ -667,13 +667,25 @@ TEST_LIST = [
     },
     {
         'test_id':          11,
-        'test_class':       FioJobTest_t0011,
+        'test_class':       FioJobTest_iops_rate,
         'job':              't0011-5d2788d5.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
         'pre_success':      None,
         'output_format':    'json',
         'requirements':     [],
+    },
+    {
+        'test_id':          12,
+        'test_class':       FioJobTest_iops_rate,
+        'job':              't0012.fio',
+        'success':          SUCCESS_DEFAULT,
+        'pre_job':          None,
+        'pre_success':      None,
+        'output_format':    'json',
+        'requirements':     [],
+        'requirements':     [Requirements.not_macos],
+        # mac os does not support CPU affinity
     },
     {
         'test_id':          1000,
