@@ -2548,7 +2548,7 @@ fi
 print_config "__kernel_rwf_t" "$__kernel_rwf_t"
 
 ##########################################
-# check if gcc has -Wimplicit-fallthrough
+# check if gcc has -Wimplicit-fallthrough=2
 fallthrough="no"
 cat > $TMPC << EOF
 int main(int argc, char **argv)
@@ -2556,10 +2556,10 @@ int main(int argc, char **argv)
   return 0;
 }
 EOF
-if compile_prog "-Wimplicit-fallthrough" "" "-Wimplicit-fallthrough"; then
+if compile_prog "-Wimplicit-fallthrough=2" "" "-Wimplicit-fallthrough=2"; then
   fallthrough="yes"
 fi
-print_config "-Wimplicit-fallthrough" "$fallthrough"
+print_config "-Wimplicit-fallthrough=2" "$fallthrough"
 
 ##########################################
 # check for MADV_HUGEPAGE support
