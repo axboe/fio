@@ -1934,8 +1934,8 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 		if (io_u->error)
 			unlog_io_piece(td, io_u);
 		else {
-			io_u->ipo->flags &= ~IP_F_IN_FLIGHT;
-			write_barrier();
+			atomic_store_release(&io_u->ipo->flags,
+					io_u->ipo->flags & ~IP_F_IN_FLIGHT);
 		}
 	}
 

@@ -2,9 +2,10 @@
 #include <time.h>
 
 #include "fio.h"
+#include "lib/seqlock.h"
 #include "smalloc.h"
 
-struct timespec *fio_ts = NULL;
+struct fio_ts *fio_ts;
 int fio_gtod_offload = 0;
 static pthread_t gtod_thread;
 static os_cpu_mask_t fio_gtod_cpumask;
@@ -19,15 +20,17 @@ void fio_gtod_init(void)
 
 static void fio_gtod_update(void)
 {
-	if (fio_ts) {
-		struct timeval __tv;
+	struct timeval __tv;
 
-		gettimeofday(&__tv, NULL);
-		fio_ts->tv_sec = __tv.tv_sec;
-		write_barrier();
-		fio_ts->tv_nsec = __tv.tv_usec * 1000;
-		write_barrier();
-	}
+	if (!fio_ts)
+		return;
+
+	gettimeofday(&__tv, NULL);
+
+	write_seqlock_begin(&fio_ts->seqlock);
+	fio_ts->ts.tv_sec = __tv.tv_sec;
+	fio_ts->ts.tv_nsec = __tv.tv_usec * 1000;
+	write_seqlock_end(&fio_ts->seqlock);
 }
 
 struct gtod_cpu_data {

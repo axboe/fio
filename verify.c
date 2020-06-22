@@ -8,6 +8,7 @@
 #include <pthread.h>
 #include <libgen.h>
 
+#include "arch/arch.h"
 #include "fio.h"
 #include "verify.h"
 #include "trim.h"
@@ -1309,8 +1310,7 @@ int get_next_verify(struct thread_data *td, struct io_u *io_u)
 		/*
 		 * Ensure that the associated IO has completed
 		 */
-		read_barrier();
-		if (ipo->flags & IP_F_IN_FLIGHT)
+		if (atomic_load_acquire(&ipo->flags) & IP_F_IN_FLIGHT)
 			goto nothing;
 
 		rb_erase(n, &td->io_hist_tree);
@@ -1322,8 +1322,7 @@ int get_next_verify(struct thread_data *td, struct io_u *io_u)
 		/*
 		 * Ensure that the associated IO has completed
 		 */
-		read_barrier();
-		if (ipo->flags & IP_F_IN_FLIGHT)
+		if (atomic_load_acquire(&ipo->flags) & IP_F_IN_FLIGHT)
 			goto nothing;
 
 		flist_del(&ipo->list);

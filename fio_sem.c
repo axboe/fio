@@ -169,7 +169,6 @@ void fio_sem_up(struct fio_sem *sem)
 	assert(sem->magic == FIO_SEM_MAGIC);
 
 	pthread_mutex_lock(&sem->lock);
-	read_barrier();
 	if (!sem->value && sem->waiters)
 		do_wake = 1;
 	sem->value++;

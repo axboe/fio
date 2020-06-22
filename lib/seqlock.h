@@ -18,13 +18,12 @@ static inline unsigned int read_seqlock_begin(struct seqlock *s)
 	unsigned int seq;
 
 	do {
-		seq = s->sequence;
+		seq = atomic_load_acquire(&s->sequence);
 		if (!(seq & 1))
 			break;
 		nop;
 	} while (1);
 
-	read_barrier();
 	return seq;
 }
 
@@ -36,14 +35,12 @@ static inline bool read_seqlock_retry(struct seqlock *s, unsigned int seq)
 
 static inline void write_seqlock_begin(struct seqlock *s)
 {
-	s->sequence++;
-	write_barrier();
+	s->sequence = atomic_load_acquire(&s->sequence) + 1;
 }
 
 static inline void write_seqlock_end(struct seqlock *s)
 {
-	write_barrier();
-	s->sequence++;
+	atomic_store_release(&s->sequence, s->sequence + 1);
 }
 
 #endif

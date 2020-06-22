@@ -1,6 +1,8 @@
 #ifndef ARCH_H
 #define ARCH_H
 
+#include <stdatomic.h>
+
 #include "../lib/types.h"
 
 enum {
@@ -33,6 +35,13 @@ enum {
 extern unsigned long arch_flags;
 
 #define ARCH_CPU_CLOCK_WRAPS
+
+#define atomic_load_acquire(p)					\
+	atomic_load_explicit((_Atomic typeof(*(p)) *)(p),	\
+			     memory_order_acquire)
+#define atomic_store_release(p, v)				\
+	atomic_store_explicit((_Atomic typeof(*(p)) *)(p), (v),	\
+			      memory_order_release)
 
 /* IWYU pragma: begin_exports */
 #if defined(__i386__)
