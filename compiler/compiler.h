@@ -3,15 +3,15 @@
 
 /* IWYU pragma: begin_exports */
 #if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 9) || __clang_major__ >= 6
-#include "compiler-gcc4.h"
 #else
 #error Compiler too old, need at least gcc 4.9
 #endif
 /* IWYU pragma: end_exports */
 
-#ifndef __must_check
-#define __must_check
-#endif
+#define __must_check		__attribute__((warn_unused_result))
+
+#define __compiletime_warning(message)	__attribute__((warning(message)))
+#define __compiletime_error(message)	__attribute__((error(message)))
 
 /*
  * Mark unused variables passed to ops functions as unused, to silence gcc
