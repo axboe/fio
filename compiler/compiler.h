@@ -2,7 +2,7 @@
 #define FIO_COMPILER_H
 
 /* IWYU pragma: begin_exports */
-#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 9)
+#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 9) || __clang_major__ >= 6
 #include "compiler-gcc4.h"
 #else
 #error Compiler too old, need at least gcc 4.9
