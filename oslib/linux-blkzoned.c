@@ -143,7 +143,7 @@ int blkzoned_report_zones(struct thread_data *td, struct fio_file *f,
 	}
 
 	nr_zones = hdr->nr_zones;
-	blkz = &hdr->zones[0];
+	blkz = (void *) hdr + sizeof(*hdr);
 	z = &zones[0];
 	for (i = 0; i < nr_zones; i++, z++, blkz++) {
 		z->start = blkz->start << 9;
