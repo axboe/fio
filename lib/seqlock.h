@@ -5,7 +5,7 @@
 #include "../arch/arch.h"
 
 struct seqlock {
-	volatile int sequence;
+	volatile unsigned int sequence;
 };
 
 static inline void seqlock_init(struct seqlock *s)
