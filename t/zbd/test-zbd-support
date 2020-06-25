@@ -801,6 +801,54 @@ test48() {
 	    >> "${logfile}.${test_number}" 2>&1 || return $?
 }
 
+# Zone append to sequential zones, libaio, 1 job, queue depth 1
+test49() {
+    local i size
+
+    size=$((4 * zone_size))
+    run_fio_on_seq --ioengine=libaio --iodepth=1 --rw=write --zone_append=1 \
+                   --bs="$(max $((zone_size / 64)) "$logical_block_size")"\
+                   --do_verify=1 --verify=md5                           \
+                   >>"${logfile}.${test_number}" 2>&1 || return $?
+    check_written $size || return $?
+    check_read $size || return $?
+}
+
+# Random zone append to sequential zones, libaio, 8 jobs, queue depth 64 per job
+test50() {
+    local size
+
+    size=$((4 * zone_size))
+    run_fio_on_seq --ioengine=libaio --iodepth=64 --rw=randwrite --bs=4K \
+                   --group_reporting=1 --numjobs=8 --zone_append=1 \
+                   >> "${logfile}.${test_number}" 2>&1 || return $?
+    check_written $((size * 8)) || return $?
+}
+
+# Zone append to sequential zones, io_uring, 1 job, queue depth 1
+test51() {
+    local i size
+
+    size=$((4 * zone_size))
+    run_fio_on_seq --ioengine=io_uring --iodepth=1 --rw=write --zone_append=1 \
+                   --bs="$(max $((zone_size / 64)) "$logical_block_size")"\
+                   --do_verify=1 --verify=md5                           \
+                   >>"${logfile}.${test_number}" 2>&1 || return $?
+    check_written $size || return $?
+    check_read $size || return $?
+}
+
+# Random zone append to sequential zones, io_uring, 8 jobs, queue depth 64 per job
+test52() {
+    local size
+
+    size=$((4 * zone_size))
+    run_fio_on_seq --ioengine=io_uring --iodepth=64 --rw=randwrite --bs=4K \
+                   --group_reporting=1 --numjobs=8 --zone_append=1 \
+                   >> "${logfile}.${test_number}" 2>&1 || return $?
+    check_written $((size * 8)) || return $?
+}
+
 tests=()
 dynamic_analyzer=()
 reset_all_zones=
