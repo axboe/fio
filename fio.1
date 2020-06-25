@@ -782,6 +782,13 @@ sequential workloads and ignored for random workloads. For read workloads,
 see also \fBread_beyond_wp\fR.
 
 .TP
+.BI zone_append
+For \fBzonemode\fR =zbd and for \fBrw\fR=write or \fBrw\fR=randwrite, if
+zone_append is enabled, the io_u points to the starting offset of a zone. On
+successful completion the multiple of sectors relative to the zone's starting
+offset is returned.
+
+.TP
 .BI read_beyond_wp \fR=\fPbool
 This parameter applies to \fBzonemode=zbd\fR only.
 

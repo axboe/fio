@@ -1010,6 +1010,13 @@ Target file/device
 	:option:`zonesize` bytes of data have been transferred. This parameter
 	must be zero for :option:`zonemode` =zbd.
 
+.. option:: zone_append=bool
+
+	For :option:`zonemode` =zbd and for :option:`rw` =write or :option:
+	`rw` =randwrite, if zone_append is enabled, the the io_u points to the
+	starting offset of a zone. On successful completion the multiple of
+	sectors relative to the zone's starting offset is returned.
+
 .. option:: read_beyond_wp=bool
 
 	This parameter applies to :option:`zonemode` =zbd only.

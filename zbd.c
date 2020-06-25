@@ -455,6 +455,7 @@ static int parse_zone_info(struct thread_data *td, struct fio_file *f)
 		for (i = 0; i < nrz; i++, j++, z++, p++) {
 			mutex_init_pshared_with_type(&p->mutex,
 						     PTHREAD_MUTEX_RECURSIVE);
+			cond_init_pshared(&p->reset_cond);
 			p->start = z->start;
 			switch (z->cond) {
 			case ZBD_ZONE_COND_NOT_WP:
@@ -469,6 +470,7 @@ static int parse_zone_info(struct thread_data *td, struct fio_file *f)
 			}
 			p->type = z->type;
 			p->cond = z->cond;
+			p->pending_ios = 0;
 			if (j > 0 && p->start != p[-1].start + zone_size) {
 				log_info("%s: invalid zone data\n",
 					 f->file_name);
@@ -1196,20 +1198,24 @@ zbd_find_zone(struct thread_data *td, struct io_u *io_u,
 
 /**
  * zbd_queue_io - update the write pointer of a sequential zone
+ * @td: fio thread data.
  * @io_u: I/O unit
  * @success: Whether or not the I/O unit has been queued successfully
  * @q: queueing status (busy, completed or queued).
  *
  * For write and trim operations, update the write pointer of the I/O unit
  * target zone.
+ * For zone append operation, release the zone mutex
  */
-static void zbd_queue_io(struct io_u *io_u, int q, bool success)
+static void zbd_queue_io(struct thread_data *td, struct io_u *io_u, int q,
+			 bool success)
 {
 	const struct fio_file *f = io_u->file;
 	struct zoned_block_device_info *zbd_info = f->zbd_info;
 	struct fio_zone_info *z;
 	uint32_t zone_idx;
 	uint64_t zone_end;
+	int ret;
 
 	if (!zbd_info)
 		return;
@@ -1241,6 +1247,8 @@ static void zbd_queue_io(struct io_u *io_u, int q, bool success)
 			zbd_info->sectors_with_data += zone_end - z->wp;
 		pthread_mutex_unlock(&zbd_info->mutex);
 		z->wp = zone_end;
+		if (td->o.zone_append)
+			z->pending_ios++;
 		break;
 	case DDIR_TRIM:
 		assert(z->wp == z->start);
@@ -1250,18 +1258,22 @@ static void zbd_queue_io(struct io_u *io_u, int q, bool success)
 	}
 
 unlock:
-	if (!success || q != FIO_Q_QUEUED) {
+	if (!success || q != FIO_Q_QUEUED || td->o.zone_append) {
 		/* BUSY or COMPLETED: unlock the zone */
-		pthread_mutex_unlock(&z->mutex);
-		io_u->zbd_put_io = NULL;
+		ret = pthread_mutex_unlock(&z->mutex);
+		assert(ret == 0);
+		if (!success || q != FIO_Q_QUEUED)
+			io_u->zbd_put_io = NULL;
 	}
 }
 
 /**
  * zbd_put_io - Unlock an I/O unit target zone lock
+ * For zone append operation we don't hold zone lock
+ * @td: fio thread data.
  * @io_u: I/O unit
  */
-static void zbd_put_io(const struct io_u *io_u)
+static void zbd_put_io(struct thread_data *td, const struct io_u *io_u)
 {
 	const struct fio_file *f = io_u->file;
 	struct zoned_block_device_info *zbd_info = f->zbd_info;
@@ -1282,6 +1294,19 @@ static void zbd_put_io(const struct io_u *io_u)
 	dprint(FD_ZBD,
 	       "%s: terminate I/O (%lld, %llu) for zone %u\n",
 	       f->file_name, io_u->offset, io_u->buflen, zone_idx);
+
+	if (td->o.zone_append) {
+		pthread_mutex_lock(&z->mutex);
+		if (z->pending_ios > 0) {
+			z->pending_ios--;
+			/*
+			 * Other threads may be waiting for pending I/O's to
+			 * complete for this zone. Notify them.
+			 */
+			if (!z->pending_ios)
+				pthread_cond_broadcast(&z->reset_cond);
+		}
+	}
 
 	ret = pthread_mutex_unlock(&z->mutex);
 	assert(ret == 0);
@@ -1524,16 +1549,69 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 			 * asynchronously and since we will submit the zone
 			 * reset synchronously, wait until previously submitted
 			 * write requests have completed before issuing a
-			 * zone reset.
+			 * zone reset. For append request release the zone lock
+			 * as other threads will acquire it at the time of
+			 * zbd_put_io.
 			 */
+reset:
+			if (td->o.zone_append)
+				pthread_mutex_unlock(&zb->mutex);
 			io_u_quiesce(td);
+			if (td->o.zone_append)
+				pthread_mutex_lock(&zb->mutex);
+
 			zb->reset_zone = 0;
+			if (td->o.zone_append) {
+				/*
+				 * While processing the current thread queued
+				 * requests the other thread may have already
+				 * done zone reset so need to check zone full
+				 * condition again.
+				 */
+				if (!zbd_zone_full(f, zb, min_bs))
+					goto proceed;
+				/*
+				 * Wait for the pending requests to be completed
+				 * else we are ok to reset this zone.
+				 */
+				if (zb->pending_ios) {
+					pthread_cond_wait(&zb->reset_cond, &zb->mutex);
+					goto proceed;
+				}
+			}
+
 			if (zbd_reset_zone(td, f, zb) < 0)
 				goto eof;
+
+			/* Notify other threads waiting for zone mutex */
+			if (td->o.zone_append)
+				pthread_cond_broadcast(&zb->reset_cond);
 		}
+proceed:
+		/*
+		 * Check for zone full condition again. For zone append request
+		 * the zone may already be reset, written and full while we
+		 * were waiting for our turn.
+		 */
+		if (zbd_zone_full(f, zb, min_bs)) {
+			goto reset;
+		}
+
 		/* Make writes occur at the write pointer */
 		assert(!zbd_zone_full(f, zb, min_bs));
 		io_u->offset = zb->wp;
+
+		/*
+		 * Support zone append for both regular and zoned block
+		 * device.
+		 */
+		if (td->o.zone_append) {
+			if (f->zbd_info->model == ZBD_NONE)
+				io_u->zone_start_offset = zb->wp;
+			else
+				io_u->zone_start_offset = zb->start;
+		}
+
 		if (!is_valid_offset(f, io_u->offset)) {
 			dprint(FD_ZBD, "Dropped request with offset %llu\n",
 			       io_u->offset);
