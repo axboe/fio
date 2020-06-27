@@ -220,13 +220,13 @@ static fio_pmemblk_file_t pmb_open(const char *pathspec, int flags)
 		pmb->pmb_nblocks = pmemblk_nblock(pmb->pmb_pool);
 
 		fio_pmemblk_cache_insert(pmb);
+	} else {
+		free(path);
 	}
 
 	pmb->pmb_refcnt += 1;
 
 	pthread_mutex_unlock(&CacheLock);
-
-	free(path);
 
 	return pmb;
 
