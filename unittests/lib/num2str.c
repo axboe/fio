@@ -19,8 +19,8 @@ static const struct testcase testcases[] = {
 	{ UINT64_MAX, 99, 1, 0, N2S_NONE, "18446744073709551615" },
 	{ 18446744073709551, 2, 1, 0, N2S_NONE, "18P" },
 	{ 18446744073709551, 4, 1, 0, N2S_NONE, "18.4P" },
-	{ UINT64_MAX, 2, 1, 0, N2S_NONE, "18" },
-	{ UINT64_MAX, 4, 1, 0, N2S_NONE, "18.4" },
+	{ UINT64_MAX, 2, 1, 0, N2S_NONE, "18E" },
+	{ UINT64_MAX, 4, 1, 0, N2S_NONE, "18.4E" },
 };
 
 static void test_num2str(void)
