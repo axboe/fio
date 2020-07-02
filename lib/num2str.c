@@ -80,14 +80,14 @@ char *num2str(uint64_t num, int maxlen, int base, int pow2, enum n2s_unit units)
 		post_index++;
 	}
 
+	if (post_index >= ARRAY_SIZE(sistr))
+		post_index = 0;
+
 	/*
 	 * If no modulo, then we're done.
 	 */
 	if (modulo == -1U) {
 done:
-		if (post_index >= ARRAY_SIZE(sistr))
-			post_index = 0;
-
 		if (asprintf(&buf, "%llu%s%s", (unsigned long long) num,
 			     unitprefix[post_index], unitstr[units]) < 0)
 			buf = NULL;
