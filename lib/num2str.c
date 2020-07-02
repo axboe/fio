@@ -34,7 +34,7 @@ char *num2str(uint64_t num, int maxlen, int base, int pow2, enum n2s_unit units)
 	const unsigned int thousand = pow2 ? 1024 : 1000;
 	unsigned int modulo;
 	int post_index, carry = 0;
-	char tmp[32], fmt[32];
+	char tmp[32];
 	char *buf;
 
 	compiletime_assert(sizeof(sistr) == sizeof(iecstr), "unit prefix arrays must be identical sizes");
@@ -109,8 +109,8 @@ done:
 	 */
 	assert(maxlen - strlen(tmp) - 1 > 0);
 	assert(modulo < thousand);
-	sprintf(fmt, "%%.%df", (int)(maxlen - strlen(tmp) - 1));
-	sprintf(tmp, fmt, (double)modulo / (double)thousand);
+	sprintf(tmp, "%.*f", (int)(maxlen - strlen(tmp) - 1),
+		(double)modulo / (double)thousand);
 
 	if (asprintf(&buf, "%llu.%s%s%s", (unsigned long long) num, &tmp[2],
 		     unitprefix[post_index], unitstr[units]) < 0)
