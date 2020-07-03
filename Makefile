@@ -60,15 +60,17 @@ ifdef CONFIG_LIBHDFS
 endif
 
 ifdef CONFIG_LIBISCSI
-  CFLAGS := $(LIBISCSI_CFLAGS) $(CFLAGS)
-  LIBS += $(LIBISCSI_LIBS)
-  SOURCE += engines/libiscsi.c
+  iscsi_SRCS = engines/libiscsi.c
+  iscsi_LIBS = $(LIBISCSI_LIBS)
+  iscsi_CFLAGS = $(LIBISCSI_LIBS)
+  ENGINES += iscsi
 endif
 
 ifdef CONFIG_LIBNBD
-  CFLAGS := $(LIBNBD_CFLAGS) $(CFLAGS)
-  LIBS += $(LIBNBD_LIBS)
-  SOURCE += engines/nbd.c
+  nbd_SRCS = engines/nbd.c
+  nbd_LIBS = $(LIBNBD_LIBS)
+  nbd_CFLAGS = $(LIBNBD_CFLAGS)
+  ENGINES += nbd
 endif
 
 ifdef CONFIG_64BIT
@@ -78,16 +80,19 @@ ifdef CONFIG_32BIT
   CFLAGS := -DBITS_PER_LONG=32 $(CFLAGS)
 endif
 ifdef CONFIG_LIBAIO
-  SOURCE += engines/libaio.c
+  aio_SRCS = engines/libaio.c
+  aio_LIBS = -laio
   ifdef CONFIG_LIBAIO_URING
-    LIBS += -luring
+    aio_LIBS = -luring
   else
-    LIBS += -laio
+    aio_LIBS = -laio
   endif
+  ENGINES += aio
 endif
 ifdef CONFIG_RDMA
-  SOURCE += engines/rdma.c
-  LIBS += -libverbs -lrdmacm
+  rdma_SRCS = engines/rdma.c
+  rdma_LIBS = -libverbs -lrdmacm
+  ENGINES += rdma
 endif
 ifdef CONFIG_POSIXAIO
   SOURCE += engines/posixaio.c
@@ -102,7 +107,8 @@ ifdef CONFIG_LINUX_SPLICE
   SOURCE += engines/splice.c
 endif
 ifdef CONFIG_GUASI
-  SOURCE += engines/guasi.c
+  guasi_SRCS = engines/guasi.c
+  ENGINES += guasi
 endif
 ifdef CONFIG_SOLARISAIO
   SOURCE += engines/solarisaio.c
@@ -111,16 +117,19 @@ ifdef CONFIG_WINDOWSAIO
   SOURCE += engines/windowsaio.c
 endif
 ifdef CONFIG_RADOS
-  SOURCE += engines/rados.c
-  LIBS += -lrados
+  rados_SRCS = engines/rados.c
+  rados_LIBS = -lrados
+  ENGINES += rados
 endif
 ifdef CONFIG_RBD
-  SOURCE += engines/rbd.c
-  LIBS += -lrbd -lrados
+  rbd_SRCS = engines/rbd.c
+  rbd_LIBS = -lrbd -lrados
+  ENGINES += rbd
 endif
 ifdef CONFIG_HTTP
-  SOURCE += engines/http.c
-  LIBS += -lcurl -lssl -lcrypto
+  http_SRCS = engines/http.c
+  http_LIBS = -lcurl -lssl -lcrypto
+  ENGINES += http
 endif
 SOURCE += oslib/asprintf.c
 ifndef CONFIG_STRSEP
@@ -159,23 +168,27 @@ ifdef CONFIG_MTD
   SOURCE += oslib/libmtd_legacy.c
 endif
 ifdef CONFIG_PMEMBLK
-  SOURCE += engines/pmemblk.c
-  LIBS += -lpmemblk
+  pmemblk_SRCS = engines/pmemblk.c
+  pmemblk_LIBS = -lpmemblk
+  ENGINES += pmemblk
 endif
 ifdef CONFIG_LINUX_DEVDAX
-  SOURCE += engines/dev-dax.c
-  LIBS += -lpmem
+  devdax_SRCS = engines/dev-dax.c
+  devdax_LIBS = -lpmem
+  ENGINES += dev-dax
 endif
 ifdef CONFIG_LIBPMEM
-  SOURCE += engines/libpmem.c
-  LIBS += -lpmem
+  pmem_SRCS = engines/libpmem.c
+  pmem_LIBS = -lpmem
+  ENGINES += pmem
 endif
 ifdef CONFIG_IME
   SOURCE += engines/ime.c
 endif
 ifdef CONFIG_LIBZBC
-  SOURCE += engines/libzbc.c
-  LIBS += -lzbc
+  zbc_SRCS = engines/libzbc.c
+  zbc_LIBS = -lzbc
+  ENGINES += zbc
 endif
 
 ifeq ($(CONFIG_TARGET_OS), Linux)
@@ -236,6 +249,26 @@ ifneq (,$(findstring CYGWIN,$(CONFIG_TARGET_OS)))
   LIBS	 += -lpthread -lpsapi -lws2_32 -lssp
   CFLAGS := -DPSAPI_VERSION=1 -Ios/windows/posix/include -Wno-format $(CFLAGS)
 endif
+
+ifdef CONFIG_DYNAMIC_ENGINES
+ DYNAMIC_ENGS := $(ENGINES)
+define engine_template =
+$(1)_OBJS := $$($(1)_SRCS:.c=.o)
+$$($(1)_OBJS): CFLAGS := -fPIC $$($(1)_CFLAGS) $(CFLAGS)
+engines/lib$(1).so: $$($(1)_OBJS)
+	$$(QUIET_LINK)$(CC) -shared -rdynamic -fPIC -Wl,-soname,lib$(1).so.1 $$($(1)_LIBS) -o $$@ $$<
+ENGS_OBJS += engines/lib$(1).so
+all install: $(ENGS_OBJS)
+endef
+else # !CONFIG_DYNAMIC_ENGINES
+define engine_template =
+SOURCE += $$($(1)_SRCS)
+LIBS += $$($(1)_LIBS)
+CFLAGS := $$($(1)_CFLAGS) $(CFLAGS)
+endef
+endif
+
+$(foreach eng,$(ENGINES),$(eval $(call engine_template,$(eng))))
 
 OBJS := $(SOURCE:.c=.o)
 
@@ -388,6 +421,7 @@ else
 endif
 prefix = $(INSTALL_PREFIX)
 bindir = $(prefix)/bin
+libdir = $(prefix)/lib/fio
 
 ifeq ($(CONFIG_TARGET_OS), Darwin)
 mandir = /usr/share/man
@@ -536,7 +570,7 @@ unittests/unittest: $(UT_OBJS) $(UT_TARGET_OBJS)
 endif
 
 clean: FORCE
-	@rm -f .depend $(FIO_OBJS) $(GFIO_OBJS) $(OBJS) $(T_OBJS) $(UT_OBJS) $(PROGS) $(T_PROGS) $(T_TEST_PROGS) core.* core gfio unittests/unittest FIO-VERSION-FILE *.[do] lib/*.d oslib/*.[do] crc/*.d engines/*.[do] profiles/*.[do] t/*.[do] unittests/*.[do] unittests/*/*.[do] config-host.mak config-host.h y.tab.[ch] lex.yy.c exp/*.[do] lexer.h
+	@rm -f .depend $(FIO_OBJS) $(GFIO_OBJS) $(OBJS) $(T_OBJS) $(UT_OBJS) $(PROGS) $(T_PROGS) $(T_TEST_PROGS) core.* core gfio unittests/unittest FIO-VERSION-FILE *.[do] lib/*.d oslib/*.[do] crc/*.d engines/*.[do] engines/*.so profiles/*.[do] t/*.[do] unittests/*.[do] unittests/*/*.[do] config-host.mak config-host.h y.tab.[ch] lex.yy.c exp/*.[do] lexer.h
 	@rm -f t/fio-btrace2fio t/io_uring t/read-to-pipe-async
 	@rm -rf  doc/output
 
@@ -576,6 +610,10 @@ fulltest:
 install: $(PROGS) $(SCRIPTS) tools/plot/fio2gnuplot.1 FORCE
 	$(INSTALL) -m 755 -d $(DESTDIR)$(bindir)
 	$(INSTALL) $(PROGS) $(SCRIPTS) $(DESTDIR)$(bindir)
+ifdef CONFIG_DYNAMIC_ENGINES
+	$(INSTALL) -m 755 -d $(DESTDIR)$(libdir)
+	$(INSTALL) -m 755 $(SRCDIR)/engines/*.so $(DESTDIR)$(libdir)
+endif
 	$(INSTALL) -m 755 -d $(DESTDIR)$(mandir)/man1
 	$(INSTALL) -m 644 $(SRCDIR)/fio.1 $(DESTDIR)$(mandir)/man1
 	$(INSTALL) -m 644 $(SRCDIR)/tools/fio_generate_plots.1 $(DESTDIR)$(mandir)/man1

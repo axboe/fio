@@ -242,7 +242,7 @@ static int fio_guasi_init(struct thread_data *td)
 	return 0;
 }
 
-static struct ioengine_ops ioengine = {
+FIO_STATIC struct ioengine_ops ioengine = {
 	.name		= "guasi",
 	.version	= FIO_IOOPS_VERSION,
 	.init		= fio_guasi_init,

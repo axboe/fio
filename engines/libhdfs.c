@@ -393,7 +393,7 @@ static void fio_hdfsio_io_u_free(struct thread_data *td, struct io_u *io_u)
 	}
 }
 
-static struct ioengine_ops ioengine_hdfs = {
+FIO_STATIC struct ioengine_ops ioengine = {
 	.name = "libhdfs",
 	.version = FIO_IOOPS_VERSION,
 	.flags = FIO_SYNCIO | FIO_DISKLESSIO | FIO_NODISKUTIL,
@@ -412,10 +412,10 @@ static struct ioengine_ops ioengine_hdfs = {
 
 static void fio_init fio_hdfsio_register(void)
 {
-	register_ioengine(&ioengine_hdfs);
+	register_ioengine(&ioengine);
 }
 
 static void fio_exit fio_hdfsio_unregister(void)
 {
-	unregister_ioengine(&ioengine_hdfs);
+	unregister_ioengine(&ioengine);
 }

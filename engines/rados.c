@@ -444,7 +444,7 @@ static int fio_rados_io_u_init(struct thread_data *td, struct io_u *io_u)
 }
 
 /* ioengine_ops for get_ioengine() */
-static struct ioengine_ops ioengine = {
+FIO_STATIC struct ioengine_ops ioengine = {
 	.name = "rados",
 	.version		= FIO_IOOPS_VERSION,
 	.flags			= FIO_DISKLESSIO,

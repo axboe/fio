@@ -328,7 +328,7 @@ static int nbd_invalidate(struct thread_data *td, struct fio_file *f)
 	return 0;
 }
 
-static struct ioengine_ops ioengine = {
+FIO_STATIC struct ioengine_ops ioengine = {
 	.name			= "nbd",
 	.version		= FIO_IOOPS_VERSION,
 	.options		= options,

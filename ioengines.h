@@ -10,6 +10,12 @@
 
 #define FIO_IOOPS_VERSION	26
 
+#ifndef CONFIG_DYNAMIC_ENGINES
+#define FIO_STATIC	static
+#else
+#define FIO_STATIC
+#endif
+
 /*
  * io_ops->queue() return values
  */

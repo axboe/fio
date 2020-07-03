@@ -151,6 +151,7 @@ march_set="no"
 libiscsi="no"
 libnbd="no"
 libaio_uring="no"
+dynamic_engines="no"
 prefix=/usr/local
 
 # parse options
@@ -215,6 +216,8 @@ for opt do
   ;;
   --enable-libaio-uring) libaio_uring="yes"
   ;;
+  --dynamic-libengines) dynamic_engines="yes"
+  ;;
   --help)
     show_help="yes"
     ;;
@@ -254,6 +257,7 @@ if test "$show_help" = "yes" ; then
   echo "--enable-libnbd         Enable libnbd (NBD engine) support"
   echo "--disable-tcmalloc	Disable tcmalloc support"
   echo "--enable-libaio-uring   Enable libaio emulated over io_uring"
+  echo "--dynamic-libengines	Lib-based ioengines as dynamic libraries"
   exit $exit_val
 fi
 
@@ -2954,6 +2958,10 @@ if test "$libnbd" = "yes" ; then
   echo "LIBNBD_CFLAGS=$libnbd_cflags" >> $config_host_mak
   echo "LIBNBD_LIBS=$libnbd_libs" >> $config_host_mak
 fi
+if test "$dynamic_engines" = "yes" ; then
+	output_sym "CONFIG_DYNAMIC_ENGINES"
+fi
+print_config "Lib-based ioengines dynamic" "$dynamic_engines"
 cat > $TMPC << EOF
 int main(int argc, char **argv)
 {

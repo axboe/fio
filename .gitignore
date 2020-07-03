@@ -1,5 +1,6 @@
 *.d
 *.o
+*.so
 *.exe
 /.depend
 /FIO-VERSION-FILE

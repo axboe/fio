@@ -75,6 +75,19 @@ static struct ioengine_ops *find_ioengine(const char *name)
 	return NULL;
 }
 
+#ifdef CONFIG_DYNAMIC_ENGINES
+static void *dlopen_external(struct thread_data *td, const char *engine)
+{
+	char engine_path[PATH_MAX];
+
+	sprintf(engine_path, "%s/lib%s.so", FIO_EXT_ENG_DIR, engine);
+
+	return dlopen(engine_path, RTLD_LAZY);
+}
+#else
+#define dlopen_external(td, engine) (NULL)
+#endif
+
 static struct ioengine_ops *dlopen_ioengine(struct thread_data *td,
 					    const char *engine_lib)
 {
@@ -86,8 +99,11 @@ static struct ioengine_ops *dlopen_ioengine(struct thread_data *td,
 	dlerror();
 	dlhandle = dlopen(engine_lib, RTLD_LAZY);
 	if (!dlhandle) {
-		td_vmsg(td, -1, dlerror(), "dlopen");
-		return NULL;
+		dlhandle = dlopen_external(td, engine_lib);
+		if (!dlhandle) {
+			td_vmsg(td, -1, dlerror(), "dlopen");
+			return NULL;
+		}
 	}
 
 	/*

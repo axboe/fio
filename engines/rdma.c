@@ -226,7 +226,8 @@ static int client_recv(struct thread_data *td, struct ibv_wc *wc)
 		rd->rmt_nr = ntohl(rd->recv_buf.nr);
 
 		for (i = 0; i < rd->rmt_nr; i++) {
-			rd->rmt_us[i].buf = be64_to_cpu(rd->recv_buf.rmt_us[i].buf);
+			rd->rmt_us[i].buf = __be64_to_cpu(
+						rd->recv_buf.rmt_us[i].buf);
 			rd->rmt_us[i].rkey = ntohl(rd->recv_buf.rmt_us[i].rkey);
 			rd->rmt_us[i].size = ntohl(rd->recv_buf.rmt_us[i].size);
 
@@ -1389,7 +1390,7 @@ static int fio_rdmaio_setup(struct thread_data *td)
 	return 0;
 }
 
-static struct ioengine_ops ioengine_rw = {
+FIO_STATIC struct ioengine_ops ioengine = {
 	.name			= "rdma",
 	.version		= FIO_IOOPS_VERSION,
 	.setup			= fio_rdmaio_setup,
@@ -1410,10 +1411,10 @@ static struct ioengine_ops ioengine_rw = {
 
 static void fio_init fio_rdmaio_register(void)
 {
-	register_ioengine(&ioengine_rw);
+	register_ioengine(&ioengine);
 }
 
 static void fio_exit fio_rdmaio_unregister(void)
 {
-	unregister_ioengine(&ioengine_rw);
+	unregister_ioengine(&ioengine);
 }

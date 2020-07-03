@@ -328,7 +328,7 @@ fio_devdax_get_file_size(struct thread_data *td, struct fio_file *f)
 	return 0;
 }
 
-static struct ioengine_ops ioengine = {
+FIO_STATIC struct ioengine_ops ioengine = {
 	.name		= "dev-dax",
 	.version	= FIO_IOOPS_VERSION,
 	.init		= fio_devdax_init,

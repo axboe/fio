@@ -558,7 +558,7 @@ static int fio_libpmem_close_file(struct thread_data *td, struct fio_file *f)
 	return generic_close_file(td, f);
 }
 
-static struct ioengine_ops ioengine = {
+FIO_STATIC struct ioengine_ops ioengine = {
 	.name		= "libpmem",
 	.version	= FIO_IOOPS_VERSION,
 	.init		= fio_libpmem_init,
