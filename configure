@@ -2959,7 +2959,7 @@ if test "$libnbd" = "yes" ; then
   echo "LIBNBD_LIBS=$libnbd_libs" >> $config_host_mak
 fi
 if test "$dynamic_engines" = "yes" ; then
-	output_sym "CONFIG_DYNAMIC_ENGINES"
+  output_sym "CONFIG_DYNAMIC_ENGINES"
 fi
 print_config "Lib-based ioengines dynamic" "$dynamic_engines"
 cat > $TMPC << EOF
