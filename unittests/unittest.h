@@ -15,6 +15,7 @@ CU_ErrorCode fio_unittest_add_suite(const char*, CU_InitializeFunc,
 	CU_CleanupFunc, struct fio_unittest_entry*);
 
 CU_ErrorCode fio_unittest_lib_memalign(void);
+CU_ErrorCode fio_unittest_lib_num2str(void);
 CU_ErrorCode fio_unittest_lib_strntol(void);
 CU_ErrorCode fio_unittest_oslib_strlcat(void);
 CU_ErrorCode fio_unittest_oslib_strndup(void);

@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "../compiler/compiler.h"
+#include "../oslib/asprintf.h"
 #include "num2str.h"
 
 #define ARRAY_SIZE(x)    (sizeof((x)) / (sizeof((x)[0])))
@@ -19,8 +20,8 @@
  */
 char *num2str(uint64_t num, int maxlen, int base, int pow2, enum n2s_unit units)
 {
-	const char *sistr[] = { "", "k", "M", "G", "T", "P" };
-	const char *iecstr[] = { "", "Ki", "Mi", "Gi", "Ti", "Pi" };
+	const char *sistr[] = { "", "k", "M", "G", "T", "P", "E" };
+	const char *iecstr[] = { "", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei" };
 	const char **unitprefix;
 	static const char *const unitstr[] = {
 		[N2S_NONE]	= "",
@@ -33,15 +34,11 @@ char *num2str(uint64_t num, int maxlen, int base, int pow2, enum n2s_unit units)
 	const unsigned int thousand = pow2 ? 1024 : 1000;
 	unsigned int modulo;
 	int post_index, carry = 0;
-	char tmp[32], fmt[32];
+	char tmp[32];
 	char *buf;
 
 	compiletime_assert(sizeof(sistr) == sizeof(iecstr), "unit prefix arrays must be identical sizes");
 	assert(units < ARRAY_SIZE(unitstr));
-
-	buf = malloc(128);
-	if (!buf)
-		return NULL;
 
 	if (pow2)
 		unitprefix = iecstr;
@@ -83,16 +80,17 @@ char *num2str(uint64_t num, int maxlen, int base, int pow2, enum n2s_unit units)
 		post_index++;
 	}
 
+	if (post_index >= ARRAY_SIZE(sistr))
+		post_index = 0;
+
 	/*
 	 * If no modulo, then we're done.
 	 */
 	if (modulo == -1U) {
 done:
-		if (post_index >= ARRAY_SIZE(sistr))
-			post_index = 0;
-
-		sprintf(buf, "%llu%s%s", (unsigned long long) num,
-			unitprefix[post_index], unitstr[units]);
+		if (asprintf(&buf, "%llu%s%s", (unsigned long long) num,
+			     unitprefix[post_index], unitstr[units]) < 0)
+			buf = NULL;
 		return buf;
 	}
 
@@ -111,10 +109,11 @@ done:
 	 */
 	assert(maxlen - strlen(tmp) - 1 > 0);
 	assert(modulo < thousand);
-	sprintf(fmt, "%%.%df", (int)(maxlen - strlen(tmp) - 1));
-	sprintf(tmp, fmt, (double)modulo / (double)thousand);
+	sprintf(tmp, "%.*f", (int)(maxlen - strlen(tmp) - 1),
+		(double)modulo / (double)thousand);
 
-	sprintf(buf, "%llu.%s%s%s", (unsigned long long) num, &tmp[2],
-			unitprefix[post_index], unitstr[units]);
+	if (asprintf(&buf, "%llu.%s%s%s", (unsigned long long) num, &tmp[2],
+		     unitprefix[post_index], unitstr[units]) < 0)
+		buf = NULL;
 	return buf;
 }
