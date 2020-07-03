@@ -79,9 +79,15 @@ ifdef CONFIG_32BIT
 endif
 ifdef CONFIG_LIBAIO
   SOURCE += engines/libaio.c
+  ifdef CONFIG_LIBAIO_URING
+    LIBS += -luring
+  else
+    LIBS += -laio
+  endif
 endif
 ifdef CONFIG_RDMA
   SOURCE += engines/rdma.c
+  LIBS += -libverbs -lrdmacm
 endif
 ifdef CONFIG_POSIXAIO
   SOURCE += engines/posixaio.c
@@ -106,12 +112,15 @@ ifdef CONFIG_WINDOWSAIO
 endif
 ifdef CONFIG_RADOS
   SOURCE += engines/rados.c
+  LIBS += -lrados
 endif
 ifdef CONFIG_RBD
   SOURCE += engines/rbd.c
+  LIBS += -lrbd -lrados
 endif
 ifdef CONFIG_HTTP
   SOURCE += engines/http.c
+  LIBS += -lcurl -lssl -lcrypto
 endif
 SOURCE += oslib/asprintf.c
 ifndef CONFIG_STRSEP
@@ -139,6 +148,7 @@ ifdef CONFIG_GFAPI
   SOURCE += engines/glusterfs.c
   SOURCE += engines/glusterfs_sync.c
   SOURCE += engines/glusterfs_async.c
+  LIBS += -lgfapi -lglusterfs
   ifdef CONFIG_GF_FADVISE
     CFLAGS := "-DGFAPI_USE_FADVISE" $(CFLAGS)
   endif
@@ -150,18 +160,22 @@ ifdef CONFIG_MTD
 endif
 ifdef CONFIG_PMEMBLK
   SOURCE += engines/pmemblk.c
+  LIBS += -lpmemblk
 endif
 ifdef CONFIG_LINUX_DEVDAX
   SOURCE += engines/dev-dax.c
+  LIBS += -lpmem
 endif
 ifdef CONFIG_LIBPMEM
   SOURCE += engines/libpmem.c
+  LIBS += -lpmem
 endif
 ifdef CONFIG_IME
   SOURCE += engines/ime.c
 endif
 ifdef CONFIG_LIBZBC
   SOURCE += engines/libzbc.c
+  LIBS += -lzbc
 endif
 
 ifeq ($(CONFIG_TARGET_OS), Linux)

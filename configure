@@ -605,11 +605,9 @@ int main(void)
 EOF
   if test "$libaio_uring" = "yes" && compile_prog "" "-luring" "libaio io_uring" ; then
     libaio=yes
-    LIBS="-luring $LIBS"
   elif compile_prog "" "-laio" "libaio" ; then
     libaio=yes
     libaio_uring=no
-    LIBS="-laio $LIBS"
   else
     if test "$libaio" = "yes" ; then
       feature_not_found "linux AIO" "libaio-dev or libaio-devel"
@@ -859,7 +857,6 @@ int main(int argc, char **argv)
 EOF
 if test "$disable_rdma" != "yes" && compile_prog "" "-libverbs" "libverbs" ; then
     libverbs="yes"
-    LIBS="-libverbs $LIBS"
 fi
 print_config "libverbs" "$libverbs"
 
@@ -879,7 +876,6 @@ int main(int argc, char **argv)
 EOF
 if test "$disable_rdma" != "yes" && compile_prog "" "-lrdmacm" "rdma"; then
     rdmacm="yes"
-    LIBS="-lrdmacm $LIBS"
 fi
 print_config "rdmacm" "$rdmacm"
 
@@ -1770,10 +1766,8 @@ if test "$disable_http" != "yes"; then
   if compile_prog "" "$HTTP_LIBS" "curl-new-ssl"; then
     output_sym "CONFIG_HAVE_OPAQUE_HMAC_CTX"
     http="yes"
-    LIBS="$HTTP_LIBS $LIBS"
   elif mv $TMPC2 $TMPC && compile_prog "" "$HTTP_LIBS" "curl-old-ssl"; then
     http="yes"
-    LIBS="$HTTP_LIBS $LIBS"
   fi
 fi
 print_config "http engine" "$http"
@@ -1802,7 +1796,6 @@ int main(int argc, char **argv)
 }
 EOF
 if test "$disable_rados" != "yes"  && compile_prog "" "-lrados" "rados"; then
-  LIBS="-lrados $LIBS"
   rados="yes"
 fi
 print_config "Rados engine" "$rados"
@@ -1833,7 +1826,6 @@ int main(int argc, char **argv)
 }
 EOF
 if test "$disable_rbd" != "yes"  && compile_prog "" "-lrbd -lrados" "rbd"; then
-  LIBS="-lrbd -lrados $LIBS"
   rbd="yes"
 fi
 print_config "Rados Block Device engine" "$rbd"
@@ -1924,7 +1916,6 @@ int main(int argc, char **argv)
 }
 EOF
 if test "$disable_gfapi" != "yes"  && compile_prog "" "-lgfapi -lglusterfs" "gfapi"; then
-  LIBS="-lgfapi -lglusterfs $LIBS"
   gfapi="yes"
 fi
 print_config "Gluster API engine" "$gfapi"
@@ -2086,7 +2077,6 @@ int main(int argc, char **argv)
 EOF
 if compile_prog "" "-lpmem" "libpmem"; then
   libpmem="yes"
-  LIBS="-lpmem $LIBS"
 fi
 print_config "libpmem" "$libpmem"
 
@@ -2108,7 +2098,6 @@ int main(int argc, char **argv)
 EOF
   if compile_prog "" "-lpmemblk" "libpmemblk"; then
     libpmemblk="yes"
-    LIBS="-lpmemblk $LIBS"
   fi
 fi
 print_config "libpmemblk" "$libpmemblk"
@@ -2432,7 +2421,6 @@ if compile_prog "" "-lzbc" "libzbc"; then
   libzbcvermaj=$(pkg-config --modversion libzbc | sed 's/\.[0-9]*\.[0-9]*//')
   if test "$libzbcvermaj" -ge "5" ; then
     libzbc="yes"
-    LIBS="-lzbc $LIBS"
   else
     print_config "libzbc engine" "Unsupported libzbc version (version 5 or above required)"
     libzbc="no"
