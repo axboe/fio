@@ -1099,6 +1099,9 @@ int ioengine_load(struct thread_data *td)
 		 */
 		dlhandle = td->io_ops_dlhandle;
 		ops = load_ioengine(td);
+		if (!ops)
+			goto fail;
+
 		if (ops == td->io_ops && dlhandle == td->io_ops_dlhandle) {
 			if (dlhandle)
 				dlclose(dlhandle);
@@ -1113,10 +1116,8 @@ int ioengine_load(struct thread_data *td)
 	}
 
 	td->io_ops = load_ioengine(td);
-	if (!td->io_ops) {
-		log_err("fio: failed to load engine\n");
-		return 1;
-	}
+	if (!td->io_ops)
+		goto fail;
 
 	if (td->io_ops->option_struct_size && td->io_ops->options) {
 		/*
@@ -1155,6 +1156,11 @@ int ioengine_load(struct thread_data *td)
 
 	td_set_ioengine_flags(td);
 	return 0;
+
+fail:
+	log_err("fio: failed to load engine\n");
+	return 1;
+
 }
 
 static void init_flags(struct thread_data *td)
