@@ -85,15 +85,14 @@ static bool all_sw_idle(struct workqueue *wq)
  */
 void workqueue_flush(struct workqueue *wq)
 {
+	pthread_mutex_lock(&wq->flush_lock);
 	wq->wake_idle = 1;
 
-	while (!all_sw_idle(wq)) {
-		pthread_mutex_lock(&wq->flush_lock);
+	while (!all_sw_idle(wq))
 		pthread_cond_wait(&wq->flush_cond, &wq->flush_lock);
-		pthread_mutex_unlock(&wq->flush_lock);
-	}
 
 	wq->wake_idle = 0;
+	pthread_mutex_unlock(&wq->flush_lock);
 }
 
 /*
@@ -159,12 +158,10 @@ static void *worker_thread(void *data)
 	if (sw->flags & SW_F_ERROR)
 		goto done;
 
+	pthread_mutex_lock(&sw->lock);
 	while (1) {
-		pthread_mutex_lock(&sw->lock);
-
 		if (flist_empty(&sw->work_list)) {
 			if (sw->flags & SW_F_EXIT) {
-				pthread_mutex_unlock(&sw->lock);
 				break;
 			}
 
@@ -182,7 +179,6 @@ static void *worker_thread(void *data)
 				goto handle_work;
 
 			if (sw->flags & SW_F_EXIT) {
-				pthread_mutex_unlock(&sw->lock);
 				break;
 			} else if (!(sw->flags & SW_F_IDLE)) {
 				sw->flags |= SW_F_IDLE;
@@ -200,7 +196,9 @@ handle_work:
 		handle_list(sw, &local_list);
 		if (wq->ops.update_acct_fn)
 			wq->ops.update_acct_fn(sw);
+		pthread_mutex_lock(&sw->lock);
 	}
+	pthread_mutex_unlock(&sw->lock);
 
 done:
 	sk_out_drop();
@@ -336,11 +334,11 @@ int workqueue_init(struct thread_data *td, struct workqueue *wq,
 	 * Wait for them all to be started and initialized
 	 */
 	error = 0;
+	pthread_mutex_lock(&wq->flush_lock);
 	do {
 		struct submit_worker *sw;
 
 		running = 0;
-		pthread_mutex_lock(&wq->flush_lock);
 		for (i = 0; i < wq->max_workers; i++) {
 			sw = &wq->workers[i];
 			pthread_mutex_lock(&sw->lock);
@@ -351,14 +349,12 @@ int workqueue_init(struct thread_data *td, struct workqueue *wq,
 			pthread_mutex_unlock(&sw->lock);
 		}
 
-		if (error || running == wq->max_workers) {
-			pthread_mutex_unlock(&wq->flush_lock);
+		if (error || running == wq->max_workers)
 			break;
-		}
 
 		pthread_cond_wait(&wq->flush_cond, &wq->flush_lock);
-		pthread_mutex_unlock(&wq->flush_lock);
 	} while (1);
+	pthread_mutex_unlock(&wq->flush_lock);
 
 	if (!error)
 		return 0;
