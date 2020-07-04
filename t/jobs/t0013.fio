@@ -1,0 +1,14 @@
+# Trigger the fio code that serializes overlapping I/O. The job size is very
+# small to make overlapping I/O more likely.
+
+[test]
+ioengine=null
+thread=1
+size=4K
+blocksize=4K
+io_submit_mode=offload
+iodepth=1
+serialize_overlap=1
+numjobs=8
+loops=1000000
+runtime=10

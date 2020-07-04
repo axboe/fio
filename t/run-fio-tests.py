@@ -438,13 +438,20 @@ class FioJobTest_iops_rate(FioJobTest):
         logging.debug("Test %d: iops1: %f", self.testnum, iops1)
         logging.debug("Test %d: ratio: %f", self.testnum, ratio)
 
-        if iops1 < 995 or iops1 > 1005:
+        if iops1 < 950 or iops1 > 1050:
             self.failure_reason = "{0} iops value mismatch,".format(self.failure_reason)
             self.passed = False
 
         if ratio < 7 or ratio > 9:
             self.failure_reason = "{0} iops ratio mismatch,".format(self.failure_reason)
             self.passed = False
+
+
+class FioJobTest_t0013(FioJobTest):
+    """Runs fio test job t0013"""
+
+    def check_result(self):
+        super(FioJobTest_t0013, self).check_result()
 
 
 class Requirements(object):
@@ -686,6 +693,16 @@ TEST_LIST = [
         'requirements':     [],
         'requirements':     [Requirements.not_macos],
         # mac os does not support CPU affinity
+    },
+    {
+        'test_id':          13,
+        'test_class':       FioJobTest_t0013,
+        'job':              't0013.fio',
+        'success':          SUCCESS_DEFAULT,
+        'pre_job':          None,
+        'pre_success':      None,
+        'output_format':    'json',
+        'requirements':     [],
     },
     {
         'test_id':          1000,
