@@ -883,7 +883,7 @@ int poll(struct pollfd fds[], nfds_t nfds, int timeout)
 	FD_ZERO(&exceptfds);
 
 	for (i = 0; i < nfds; i++) {
-		if (fds[i].fd < 0) {
+		if (fds[i].fd == INVALID_SOCKET) {
 			fds[i].revents = 0;
 			continue;
 		}
@@ -900,7 +900,7 @@ int poll(struct pollfd fds[], nfds_t nfds, int timeout)
 
 	if (rc != SOCKET_ERROR) {
 		for (i = 0; i < nfds; i++) {
-			if (fds[i].fd < 0)
+			if (fds[i].fd == INVALID_SOCKET)
 				continue;
 
 			if ((fds[i].events & POLLIN) && FD_ISSET(fds[i].fd, &readfds))
