@@ -170,26 +170,32 @@ static void *worker_thread(void *data)
 				workqueue_pre_sleep(sw);
 				pthread_mutex_lock(&sw->lock);
 			}
-
-			/*
-			 * We dropped and reaquired the lock, check
-			 * state again.
-			 */
-			if (!flist_empty(&sw->work_list))
-				goto handle_work;
-
+		}
+		/*
+		 * We may have dropped and reaquired the lock, check state
+		 * again.
+		 */
+		if (flist_empty(&sw->work_list)) {
 			if (sw->flags & SW_F_EXIT) {
 				break;
-			} else if (!(sw->flags & SW_F_IDLE)) {
+			}
+			if (!(sw->flags & SW_F_IDLE)) {
 				sw->flags |= SW_F_IDLE;
 				wq->next_free_worker = sw->index;
+				pthread_mutex_unlock(&sw->lock);
+				pthread_mutex_lock(&wq->flush_lock);
 				if (wq->wake_idle)
 					pthread_cond_signal(&wq->flush_cond);
+				pthread_mutex_unlock(&wq->flush_lock);
+				pthread_mutex_lock(&sw->lock);
 			}
-
+		}
+		if (flist_empty(&sw->work_list)) {
+			if (sw->flags & SW_F_EXIT) {
+				break;
+			}
 			pthread_cond_wait(&sw->cond, &sw->lock);
 		} else {
-handle_work:
 			flist_splice_init(&sw->work_list, &local_list);
 		}
 		pthread_mutex_unlock(&sw->lock);
