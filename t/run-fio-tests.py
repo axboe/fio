@@ -438,7 +438,7 @@ class FioJobTest_iops_rate(FioJobTest):
         logging.debug("Test %d: iops1: %f", self.testnum, iops1)
         logging.debug("Test %d: ratio: %f", self.testnum, ratio)
 
-        if iops1 < 995 or iops1 > 1005:
+        if iops1 < 950 or iops1 > 1050:
             self.failure_reason = "{0} iops value mismatch,".format(self.failure_reason)
             self.passed = False
 
