@@ -46,7 +46,6 @@ struct io_cq_ring {
 #define DEPTH			128
 #define BATCH_SUBMIT		32
 #define BATCH_COMPLETE		32
-
 #define BS			4096
 
 #define MAX_FDS			16
@@ -86,6 +85,7 @@ static volatile int finish;
 static int depth = DEPTH;
 static int batch_submit = BATCH_SUBMIT;
 static int batch_complete = BATCH_COMPLETE;
+static int bs = BS;
 static int polled = 1;		/* use IO polling */
 static int fixedbufs = 1;	/* use fixed user buffers */
 static int register_files = 1;	/* use fixed files */
@@ -170,7 +170,7 @@ static void init_io(struct submitter *s, unsigned index)
 	f->pending_ios++;
 
 	r = lrand48();
-	offset = (r % (f->max_blocks - 1)) * BS;
+	offset = (r % (f->max_blocks - 1)) * bs;
 
 	if (register_files) {
 		sqe->flags = IOSQE_FIXED_FILE;
@@ -182,7 +182,7 @@ static void init_io(struct submitter *s, unsigned index)
 	if (fixedbufs) {
 		sqe->opcode = IORING_OP_READ_FIXED;
 		sqe->addr = (unsigned long) s->iovecs[index].iov_base;
-		sqe->len = BS;
+		sqe->len = bs;
 		sqe->buf_index = index;
 	} else {
 		sqe->opcode = IORING_OP_READV;
@@ -233,10 +233,10 @@ static int get_file_size(struct file *f)
 		if (ioctl(f->real_fd, BLKGETSIZE64, &bytes) != 0)
 			return -1;
 
-		f->max_blocks = bytes / BS;
+		f->max_blocks = bytes / bs;
 		return 0;
 	} else if (S_ISREG(st.st_mode)) {
-		f->max_blocks = st.st_size / BS;
+		f->max_blocks = st.st_size / bs;
 		return 0;
 	}
 
@@ -260,7 +260,7 @@ static int reap_events(struct submitter *s)
 		if (!do_nop) {
 			f = (struct file *) (uintptr_t) cqe->user_data;
 			f->pending_ios--;
-			if (cqe->res != BS) {
+			if (cqe->res != bs) {
 				printf("io: unexpected ret=%d\n", cqe->res);
 				if (polled && cqe->res == -EOPNOTSUPP)
 					printf("Your filesystem/driver/kernel doesn't support polled IO\n");
@@ -483,8 +483,10 @@ static void usage(char *argv)
 	printf("%s [options] -- [filenames]\n"
 		" -d <int> : IO Depth, default %d\n"
 		" -s <int> : Batch submit, default %d\n"
-		" -c <int> : Batch complete, default %d\n",
-		argv, DEPTH, BATCH_SUBMIT, BATCH_COMPLETE);
+		" -c <int> : Batch complete, default %d\n"
+		" -b <int> : Block size, default %d\n"
+		" -p <bool> : Polled IO, default %d\n",
+		argv, DEPTH, BATCH_SUBMIT, BATCH_COMPLETE, BS, polled);
 	exit(0);
 }
 
@@ -501,7 +503,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	while ((opt = getopt(argc, argv, "d:s:c:h?")) != -1) {
+	while ((opt = getopt(argc, argv, "d:s:c:b:p:h?")) != -1) {
 		switch (opt) {
 		case 'd':
 			depth = atoi(optarg);
@@ -511,6 +513,12 @@ int main(int argc, char *argv[])
 			break;
 		case 'c':
 			batch_complete = atoi(optarg);
+			break;
+		case 'b':
+			bs = atoi(optarg);
+			break;
+		case 'p':
+			polled = !!atoi(optarg);
 			break;
 		case 'h':
 		case '?':
@@ -575,12 +583,12 @@ int main(int argc, char *argv[])
 	for (i = 0; i < depth; i++) {
 		void *buf;
 
-		if (posix_memalign(&buf, BS, BS)) {
+		if (posix_memalign(&buf, bs, bs)) {
 			printf("failed alloc\n");
 			return 1;
 		}
 		s->iovecs[i].iov_base = buf;
-		s->iovecs[i].iov_len = BS;
+		s->iovecs[i].iov_len = bs;
 	}
 
 	err = setup_ring(s);
