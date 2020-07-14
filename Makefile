@@ -173,8 +173,8 @@ ifdef CONFIG_PMEMBLK
   ENGINES += pmemblk
 endif
 ifdef CONFIG_LINUX_DEVDAX
-  devdax_SRCS = engines/dev-dax.c
-  devdax_LIBS = -lpmem
+  dev-dax_SRCS = engines/dev-dax.c
+  dev-dax_LIBS = -lpmem
   ENGINES += dev-dax
 endif
 ifdef CONFIG_LIBPMEM
