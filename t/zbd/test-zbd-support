@@ -109,6 +109,20 @@ run_one_fio_job() {
 	    --thread=1 --direct=1
 }
 
+write_and_run_one_fio_job() {
+    local r
+    local write_offset="${1}"
+    local write_size="${2}"
+
+    shift 2
+    r=$(((RANDOM << 16) | RANDOM))
+    run_fio --filename="$dev" --randseed="$r"  --name="write_job" --rw=write \
+	    "$(ioengine "psync")" --bs="${logical_block_size}" \
+	    --zonemode=zbd --zonesize="${zone_size}" --thread=1 --direct=1 \
+	    --offset="${write_offset}" --size="${write_size}" \
+	    --name="$dev" --wait_for="write_job" "$@" --thread=1 --direct=1
+}
+
 # Run fio on the first four sequential zones of the disk.
 run_fio_on_seq() {
     local opts=()
