@@ -170,13 +170,7 @@ test3() {
 	opts+=("--zonesize=${zone_size}")
     fi
     run_fio "${opts[@]}" >> "${logfile}.${test_number}" 2>&1 || return $?
-    grep -q 'READ:' "${logfile}.${test_number}"
-    rc=$?
-    if [ -n "$is_zbd" ]; then
-	[ $rc != 0 ]
-    else
-	[ $rc = 0 ]
-    fi
+    ! grep -q 'READ:' "${logfile}.${test_number}"
 }
 
 # Run fio with --read_beyond_wp=1 against an empty zone.
