@@ -369,15 +369,25 @@ test15() {
     check_read $((size / 2))
 }
 
-# Random read on a mix of empty and full zones. Must be run after test15.
+# Random read on a mix of empty and full zones.
 test16() {
     local off size
+    local i w_off w_size
 
+    for ((i=0;i<4;i++)); do
+	[ -n "$is_zbd" ] &&
+	    reset_zone "$dev" $((first_sequential_zone_sector +
+				 i*sectors_per_zone))
+    done
+    w_off=$(((first_sequential_zone_sector + 2 * sectors_per_zone) * 512))
+    w_size=$((2 * zone_size))
     off=$((first_sequential_zone_sector * 512))
     size=$((4 * zone_size))
-    run_one_fio_job "$(ioengine "libaio")" --iodepth=64 --rw=randread --bs=16K \
+    write_and_run_one_fio_job "${w_off}" "${w_size}" \
+		    "$(ioengine "libaio")" --iodepth=64 --rw=randread --bs=16K \
 		    --zonemode=zbd --zonesize="${zone_size}" --offset=$off \
 		    --size=$size >>"${logfile}.${test_number}" 2>&1 || return $?
+    check_written $w_size || return $?
     check_read $size || return $?
 }
 
