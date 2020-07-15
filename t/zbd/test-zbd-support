@@ -215,14 +215,18 @@ test5() {
     check_read $size || return $?
 }
 
-# Sequential read from sequential zones. Must be run after test5.
+# Sequential read from sequential zones.
 test6() {
     local size
 
     size=$((4 * zone_size))
-    run_fio_on_seq "$(ioengine "psync")" --iodepth=1 --rw=read	\
-		   --bs="$(max $((zone_size / 64)) "$logical_block_size")"\
-		   >>"${logfile}.${test_number}" 2>&1 || return $?
+    write_and_run_one_fio_job \
+	    $((first_sequential_zone_sector * 512)) "${size}" \
+	    --offset=$((first_sequential_zone_sector * 512)) \
+	    --size="${size}" --zonemode=zbd --zonesize="${zone_size}" \
+	    "$(ioengine "psync")" --iodepth=1 --rw=read \
+	    --bs="$(max $((zone_size / 64)) "$logical_block_size")" \
+	    >>"${logfile}.${test_number}" 2>&1 || return $?
     check_read $size || return $?
 }
 
