@@ -397,15 +397,9 @@ test17() {
 
     off=$(((disk_size / zone_size - 1) * zone_size))
     size=$((disk_size - off))
-    # Overwrite the last zone to avoid that reading from that zone fails.
     if [ -n "$is_zbd" ]; then
 	reset_zone "$dev" $((off / 512)) || return $?
     fi
-    run_one_fio_job "$(ioengine "psync")" --rw=write --offset="$off"	\
-		    --zonemode=zbd --zonesize="${zone_size}"		\
-		    --bs="$zone_size" --size="$zone_size"		\
-		    >>"${logfile}.${test_number}" 2>&1 || return $?
-    check_written "$zone_size" || return $?
     run_one_fio_job "$(ioengine "libaio")" --iodepth=8 --rw=randrw --bs=4K \
 		    --zonemode=zbd --zonesize="${zone_size}"		\
 		    --offset=$off --loops=2 --norandommap=1\
