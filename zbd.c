@@ -381,7 +381,7 @@ static int init_zone_info(struct thread_data *td, struct fio_file *f)
 		mutex_init_pshared_with_type(&p->mutex,
 					     PTHREAD_MUTEX_RECURSIVE);
 		p->start = i * zone_size;
-		p->wp = p->start + zone_size;
+		p->wp = p->start;
 		p->type = ZBD_ZONE_TYPE_SWR;
 		p->cond = ZBD_ZONE_COND_EMPTY;
 	}
