@@ -349,30 +349,24 @@ test14() {
 # Sequential read on a mix of empty and full zones.
 test15() {
     local i off size
+    local w_off w_size
 
     for ((i=0;i<4;i++)); do
 	[ -n "$is_zbd" ] &&
 	    reset_zone "$dev" $((first_sequential_zone_sector +
 				 i*sectors_per_zone))
     done
-    off=$(((first_sequential_zone_sector + 2 * sectors_per_zone) * 512))
-    size=$((2 * zone_size))
-    run_one_fio_job "$(ioengine "psync")" --rw=write --bs=$((zone_size / 16))\
-		    --zonemode=zbd --zonesize="${zone_size}" --offset=$off \
-		    --size=$size >>"${logfile}.${test_number}" 2>&1 ||
-	return $?
-    check_written $size || return $?
+    w_off=$(((first_sequential_zone_sector + 2 * sectors_per_zone) * 512))
+    w_size=$((2 * zone_size))
     off=$((first_sequential_zone_sector * 512))
     size=$((4 * zone_size))
-    run_one_fio_job "$(ioengine "psync")" --rw=read --bs=$((zone_size / 16)) \
+    write_and_run_one_fio_job "${w_off}" "${w_size}" \
+		    "$(ioengine "psync")" --rw=read --bs=$((zone_size / 16)) \
 		    --zonemode=zbd --zonesize="${zone_size}" --offset=$off \
 		    --size=$((size)) >>"${logfile}.${test_number}" 2>&1 ||
 	return $?
-    if [ -n "$is_zbd" ]; then
-	check_read $((size / 2))
-    else
-	check_read $size
-    fi
+    check_written $((w_size)) || return $?
+    check_read $((size / 2))
 }
 
 # Random read on a mix of empty and full zones. Must be run after test15.
