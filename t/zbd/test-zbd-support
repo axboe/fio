@@ -773,10 +773,8 @@ test46() {
 test47() {
     local bs
 
-    [ -z "$is_zbd" ] && return 0
     bs=$((logical_block_size))
-    run_one_fio_job "$(ioengine "psync")" --rw=write --bs=$bs \
-		    --zonemode=zbd --zoneskip=1		 \
+    run_fio_on_seq "$(ioengine "psync")" --rw=write --bs=$bs --zoneskip=1 \
 		    >> "${logfile}.${test_number}" 2>&1 && return 1
     grep -q 'zoneskip 1 is not a multiple of the device zone size' "${logfile}.${test_number}"
 }
