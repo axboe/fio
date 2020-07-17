@@ -193,6 +193,7 @@ struct thread_options {
 	unsigned int loops;
 	unsigned long long zone_range;
 	unsigned long long zone_size;
+	unsigned long long zone_capacity;
 	unsigned long long zone_skip;
 	enum fio_zone_mode zone_mode;
 	unsigned long long lockmem;
@@ -487,6 +488,7 @@ struct thread_options_pack {
 	uint32_t loops;
 	uint64_t zone_range;
 	uint64_t zone_size;
+	uint64_t zone_capacity;
 	uint64_t zone_skip;
 	uint64_t lockmem;
 	uint32_t mem_type;

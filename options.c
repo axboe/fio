@@ -3328,6 +3328,17 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_ZONE,
 	},
 	{
+		.name	= "zonecapacity",
+		.lname	= "Zone capacity",
+		.type	= FIO_OPT_STR_VAL,
+		.off1	= offsetof(struct thread_options, zone_capacity),
+		.help	= "Capacity per zone",
+		.def	= "0",
+		.interval = 1024 * 1024,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_ZONE,
+	},
+	{
 		.name	= "zonerange",
 		.lname	= "Zone range",
 		.type	= FIO_OPT_STR_VAL,

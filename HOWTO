@@ -970,14 +970,15 @@ Target file/device
 	Accepted values are:
 
 		**none**
-				The :option:`zonerange`, :option:`zonesize` and
-				:option:`zoneskip` parameters are ignored.
+				The :option:`zonerange`, :option:`zonesize`,
+				:option `zonecapacity` and option:`zoneskip`
+				parameters are ignored.
 		**strided**
 				I/O happens in a single zone until
 				:option:`zonesize` bytes have been transferred.
 				After that number of bytes has been
 				transferred processing of the next zone
-				starts.
+				starts. :option `zonecapacity` is ignored.
 		**zbd**
 				Zoned block device mode. I/O happens
 				sequentially in each zone, even if random I/O
@@ -1003,6 +1004,17 @@ Target file/device
 
 	For :option:`zonemode` =zbd, this is the size of a single zone. The
 	:option:`zonerange` parameter is ignored in this mode.
+
+
+.. option:: zonecapacity=int
+
+	For :option:`zonemode` =zbd, this defines the capacity of a single zone,
+	which is the accessible area starting from the zone start address.
+	This parameter only applies when using :option:`zonemode` =zbd in
+	combination with regular block devices. If not specified it defaults to
+	the zone size. If the target device is a zoned block device, the zone
+	capacity is obtained from the device information and this option is
+	ignored.
 
 .. option:: zoneskip=int
 

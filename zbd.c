@@ -371,6 +371,7 @@ static int init_zone_info(struct thread_data *td, struct fio_file *f)
 	uint32_t nr_zones;
 	struct fio_zone_info *p;
 	uint64_t zone_size = td->o.zone_size;
+	uint64_t zone_capacity = td->o.zone_capacity;
 	struct zoned_block_device_info *zbd_info = NULL;
 	int i;
 
@@ -383,6 +384,16 @@ static int init_zone_info(struct thread_data *td, struct fio_file *f)
 	if (zone_size < 512) {
 		log_err("%s: zone size must be at least 512 bytes for --zonemode=zbd\n\n",
 			f->file_name);
+		return 1;
+	}
+
+	if (zone_capacity == 0)
+		zone_capacity = zone_size;
+
+	if (zone_capacity > zone_size) {
+		log_err("%s: job parameter zonecapacity %llu is larger than zone size %llu\n",
+			f->file_name, (unsigned long long) td->o.zone_capacity,
+			(unsigned long long) td->o.zone_size);
 		return 1;
 	}
 
@@ -402,7 +413,7 @@ static int init_zone_info(struct thread_data *td, struct fio_file *f)
 		p->wp = p->start;
 		p->type = ZBD_ZONE_TYPE_SWR;
 		p->cond = ZBD_ZONE_COND_EMPTY;
-		p->capacity = zone_size;
+		p->capacity = zone_capacity;
 	}
 	/* a sentinel */
 	p->start = nr_zones * zone_size;
