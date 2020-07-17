@@ -15,6 +15,7 @@ iodepth=1
 iodepth_batch=1
 thread=1
 numjobs=1
+runtime=300
 
 #
 # In case of 'scramble_buffers=1', the source buffer
@@ -27,13 +28,17 @@ numjobs=1
 scramble_buffers=0
 
 #
-# direct=0:
-#   Using pmem_memcpy_nodrain() for write operation
+# depends on direct option, flags are set for pmem_memcpy() call:
+# direct=1 - PMEM_F_MEM_NONTEMPORAL,
+# direct=0 - PMEM_F_MEM_TEMPORAL.
 #
-# direct=1:
-#   Using pmem_memcpy_persist() for write operation
+direct=1
+
 #
-direct=0
+# sync=1 means that pmem_drain() is executed for each write operation.
+#
+sync=1
+
 
 #
 # Setting for fio process's CPU Node and Memory Node
@@ -47,7 +52,7 @@ numa_mem_policy=bind:0
 cpus_allowed_policy=split
 
 #
-# The pmemblk engine does IO to files in a DAX-mounted filesystem.
+# The libpmem engine does IO to files in a DAX-mounted filesystem.
 # The filesystem should be created on an NVDIMM (e.g /dev/pmem0)
 # and then mounted with the '-o dax' option.  Note that the engine
 # accesses the underlying NVDIMM directly, bypassing the kernel block
