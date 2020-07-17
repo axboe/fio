@@ -863,6 +863,9 @@ if [[ -b "$realdev" ]]; then
 	case "$(<"/sys/class/block/$basename/queue/zoned")" in
 	host-managed|host-aware)
 		is_zbd=true
+		if ! check_blkzone "${dev}"; then
+			exit 1
+		fi
 		if ! result=($(first_sequential_zone "$dev")); then
 			echo "Failed to determine first sequential zone"
 			exit 1

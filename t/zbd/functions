@@ -19,6 +19,51 @@ if [ -n "${use_libzbc}" ] &&
     exit 1
 fi
 
+blkzone_reports_capacity() {
+	local dev="${1}"
+
+	[[ -n "${blkzone}" ]] &&
+		"${blkzone}" report -c 1 -o 0 "${dev}" | grep -q 'cap '
+}
+
+# Whether or not $1 (/dev/...) is a NVME ZNS device.
+is_nvme_zns() {
+	local s
+
+	s=/sys/block/$(basename "${1}")/device/subsystem
+
+	if [[ ! -h "${s}" || $(realpath "${s}") != /sys/class/nvme ]]; then
+		return 1
+	fi
+
+	[[ $(</sys/block/$(basename "${1}")/queue/zoned) == host-managed ]]
+}
+
+# Whether or not $1 (/dev/...) is a null_blk device with zone capacity smaller
+# than zone size.
+is_nullb_with_zone_cap() {
+	local f
+
+	f=/sys/kernel/config/nullb/$(basename "${1}")
+	[[ -r "${f}/zone_capacity" &&
+		   $(<"${f}/zone_capacity") -lt $(<"${f}/zone_size") ]]
+}
+
+# Check if blkzone is available and suitable for the test target device. If not
+# available, print error message and return 1. Otherwise return 0.
+check_blkzone() {
+	local dev="${1}"
+
+	# If the device supports zone capacity, mandate zone capacity report by
+	# blkzone.
+	if (is_nvme_zns "${dev}" || is_nullb_with_zone_cap "${dev}") &&
+				! blkzone_reports_capacity "${dev}"; then
+		echo "Error: blkzone does not report zone capacity"
+		echo "Error: install latest util-linux with blkzone"
+		return 1
+	fi
+}
+
 # Reports the starting sector and length of the first sequential zone of device
 # $1.
 first_sequential_zone() {
