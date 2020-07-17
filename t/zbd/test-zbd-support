@@ -839,6 +839,26 @@ test48() {
 	    >> "${logfile}.${test_number}" 2>&1 || return $?
 }
 
+# Check if fio handles --zonecapacity on a normal block device correctly
+test49() {
+
+    if [ -n "$is_zbd" ]; then
+	echo "$dev is not a regular block device" \
+	     >>"${logfile}.${test_number}"
+	return 0
+    fi
+
+    size=$((2 * zone_size))
+    capacity=$((zone_size * 3 / 4))
+
+    run_one_fio_job "$(ioengine "psync")" --rw=write \
+		    --zonemode=zbd --zonesize="${zone_size}" \
+		    --zonecapacity=${capacity} \
+		    --verify=md5  --size=${size} >>"${logfile}.${test_number}" 2>&1 ||
+	return $?
+    check_read $((capacity * 2)) || return $?
+}
+
 tests=()
 dynamic_analyzer=()
 reset_all_zones=
