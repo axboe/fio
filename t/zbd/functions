@@ -84,6 +84,43 @@ first_sequential_zone() {
     fi
 }
 
+# Reports the summed zone capacity of $1 number of zones starting from offset $2
+# on device $3.
+total_zone_capacity() {
+	local nr_zones=$1
+	local sector=$(($2 / 512))
+	local dev=$3
+	local capacity=0 num
+	local grep_str
+
+	if [ -z "$is_zbd" ]; then
+		# For regular block devices, handle zone size as zone capacity.
+		echo $((zone_size * nr_zones))
+		return
+	fi
+
+	if [ -n "${blkzone}" ] && [ ! -n "${use_libzbc}" ]; then
+		if blkzone_reports_capacity "${dev}"; then
+			grep_str='cap \K[0-9a-zA-Z]*'
+		else
+			# If zone capacity is not reported, refer zone length.
+			grep_str='len \K[0-9a-zA-Z]*'
+		fi
+		while read num; do
+			capacity=$((capacity + num))
+		done < <(${blkzone} report -c "$nr_zones" -o "$sector" "$dev" |
+				grep -Po "${grep_str}")
+	else
+		# ZBC devices do not have zone capacity. Use zone size.
+		while read num; do
+			capacity=$((capacity + num))
+		done < <(${zbc_report_zones} -nz "$nr_zones" -start "$sector" \
+				"$dev" | grep -Po 'sector [0-9]*, \K[0-9]*')
+	fi
+
+	echo $((capacity * 512))
+}
+
 max_open_zones() {
     local dev=$1
 
