@@ -113,6 +113,16 @@ out:
 	return 0;
 }
 
+static uint64_t zone_capacity(struct blk_zone_report *hdr,
+			      struct blk_zone *blkz)
+{
+#ifdef CONFIG_HAVE_REP_CAPACITY
+	if (hdr->flags & BLK_ZONE_REP_CAPACITY)
+		return blkz->capacity << 9;
+#endif
+	return blkz->len << 9;
+}
+
 int blkzoned_report_zones(struct thread_data *td, struct fio_file *f,
 			  uint64_t offset, struct zbd_zone *zones,
 			  unsigned int nr_zones)
@@ -149,6 +159,7 @@ int blkzoned_report_zones(struct thread_data *td, struct fio_file *f,
 		z->start = blkz->start << 9;
 		z->wp = blkz->wp << 9;
 		z->len = blkz->len << 9;
+		z->capacity = zone_capacity(hdr, blkz);
 
 		switch (blkz->type) {
 		case BLK_ZONE_TYPE_CONVENTIONAL:

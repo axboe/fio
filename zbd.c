@@ -141,6 +141,24 @@ static inline bool zbd_zone_swr(struct fio_zone_info *z)
 }
 
 /**
+ * zbd_zone_end - Return zone end location
+ * @z: zone info pointer.
+ */
+static inline uint64_t zbd_zone_end(const struct fio_zone_info *z)
+{
+	return (z+1)->start;
+}
+
+/**
+ * zbd_zone_capacity_end - Return zone capacity limit end location
+ * @z: zone info pointer.
+ */
+static inline uint64_t zbd_zone_capacity_end(const struct fio_zone_info *z)
+{
+	return z->start + z->capacity;
+}
+
+/**
  * zbd_zone_full - verify whether a minimum number of bytes remain in a zone
  * @f: file pointer.
  * @z: zone info pointer.
@@ -154,7 +172,7 @@ static bool zbd_zone_full(const struct fio_file *f, struct fio_zone_info *z,
 	assert((required & 511) == 0);
 
 	return zbd_zone_swr(z) &&
-		z->wp + required > z->start + f->zbd_info->zone_size;
+		z->wp + required > zbd_zone_capacity_end(z);
 }
 
 static void zone_lock(struct thread_data *td, struct fio_file *f, struct fio_zone_info *z)
@@ -271,7 +289,7 @@ static bool zbd_verify_sizes(void)
 			z = &f->zbd_info->zone_info[zone_idx];
 			if ((f->file_offset != z->start) &&
 			    (td->o.td_ddir != TD_DDIR_READ)) {
-				new_offset = (z+1)->start;
+				new_offset = zbd_zone_end(z);
 				if (new_offset >= f->file_offset + f->io_size) {
 					log_info("%s: io_size must be at least one zone\n",
 						 f->file_name);
@@ -384,6 +402,7 @@ static int init_zone_info(struct thread_data *td, struct fio_file *f)
 		p->wp = p->start;
 		p->type = ZBD_ZONE_TYPE_SWR;
 		p->cond = ZBD_ZONE_COND_EMPTY;
+		p->capacity = zone_size;
 	}
 	/* a sentinel */
 	p->start = nr_zones * zone_size;
@@ -456,10 +475,11 @@ static int parse_zone_info(struct thread_data *td, struct fio_file *f)
 			mutex_init_pshared_with_type(&p->mutex,
 						     PTHREAD_MUTEX_RECURSIVE);
 			p->start = z->start;
+			p->capacity = z->capacity;
 			switch (z->cond) {
 			case ZBD_ZONE_COND_NOT_WP:
 			case ZBD_ZONE_COND_FULL:
-				p->wp = p->start + zone_size;
+				p->wp = p->start + p->capacity;
 				break;
 			default:
 				assert(z->start <= z->wp);
@@ -707,7 +727,7 @@ static int zbd_reset_zone(struct thread_data *td, struct fio_file *f,
 	dprint(FD_ZBD, "%s: resetting wp of zone %u.\n", f->file_name,
 		zbd_zone_nr(f->zbd_info, z));
 
-	return zbd_reset_range(td, f, z->start, (z+1)->start - z->start);
+	return zbd_reset_range(td, f, z->start, zbd_zone_end(z) - z->start);
 }
 
 /* The caller must hold f->zbd_info->mutex */
@@ -1068,7 +1088,7 @@ found_candidate_zone:
 	/* Both z->mutex and f->zbd_info->mutex are held. */
 
 examine_zone:
-	if (z->wp + min_bs <= (z+1)->start) {
+	if (z->wp + min_bs <= zbd_zone_capacity_end(z)) {
 		pthread_mutex_unlock(&f->zbd_info->mutex);
 		goto out;
 	}
@@ -1112,7 +1132,7 @@ examine_zone:
 		z = &f->zbd_info->zone_info[zone_idx];
 
 		zone_lock(td, f, z);
-		if (z->wp + min_bs <= (z+1)->start)
+		if (z->wp + min_bs <= zbd_zone_capacity_end(z))
 			goto out;
 		pthread_mutex_lock(&f->zbd_info->mutex);
 	}
@@ -1143,9 +1163,9 @@ static struct fio_zone_info *zbd_replay_write_order(struct thread_data *td,
 		assert(z);
 	}
 
-	if (z->verify_block * min_bs >= f->zbd_info->zone_size)
+	if (z->verify_block * min_bs >= z->capacity)
 		log_err("%s: %d * %d >= %llu\n", f->file_name, z->verify_block,
-			min_bs, (unsigned long long) f->zbd_info->zone_size);
+			min_bs, (unsigned long long)z->capacity);
 	io_u->offset = z->start + z->verify_block++ * min_bs;
 	return z;
 }
@@ -1231,7 +1251,7 @@ static void zbd_queue_io(struct io_u *io_u, int q, bool success)
 	switch (io_u->ddir) {
 	case DDIR_WRITE:
 		zone_end = min((uint64_t)(io_u->offset + io_u->buflen),
-			       (z + 1)->start);
+			       zbd_zone_capacity_end(z));
 		pthread_mutex_lock(&zbd_info->mutex);
 		/*
 		 * z->wp > zone_end means that one or more I/O errors
@@ -1327,6 +1347,26 @@ void setup_zbd_zone_mode(struct thread_data *td, struct io_u *io_u)
 	assert(td->o.zone_mode == ZONE_MODE_ZBD);
 	assert(td->o.zone_size);
 
+	zone_idx = zbd_zone_idx(f, f->last_pos[ddir]);
+	z = &f->zbd_info->zone_info[zone_idx];
+
+	/*
+	 * When the zone capacity is smaller than the zone size and the I/O is
+	 * sequential write, skip to zone end if the latest position is at the
+	 * zone capacity limit.
+	 */
+	if (z->capacity < f->zbd_info->zone_size && !td_random(td) &&
+	    ddir == DDIR_WRITE &&
+	    f->last_pos[ddir] >= zbd_zone_capacity_end(z)) {
+		dprint(FD_ZBD,
+		       "%s: Jump from zone capacity limit to zone end:"
+		       " (%lu -> %lu) for zone %u (%ld)\n",
+		       f->file_name, f->last_pos[ddir], zbd_zone_end(z),
+		       zbd_zone_nr(f->zbd_info, z), z->capacity);
+		td->io_skip_bytes += zbd_zone_end(z) - f->last_pos[ddir];
+		f->last_pos[ddir] = zbd_zone_end(z);
+	}
+
 	/*
 	 * zone_skip is valid only for sequential workloads.
 	 */
@@ -1340,11 +1380,8 @@ void setup_zbd_zone_mode(struct thread_data *td, struct io_u *io_u)
 	 * - For reads with td->o.read_beyond_wp == false, the last position
 	 *   reached the zone write pointer.
 	 */
-	zone_idx = zbd_zone_idx(f, f->last_pos[ddir]);
-	z = &f->zbd_info->zone_info[zone_idx];
-
 	if (td->zone_bytes >= td->o.zone_size ||
-	    f->last_pos[ddir] >= (z+1)->start ||
+	    f->last_pos[ddir] >= zbd_zone_end(z) ||
 	    (ddir == DDIR_READ &&
 	     (!td->o.read_beyond_wp) && f->last_pos[ddir] >= z->wp)) {
 		/*
@@ -1530,6 +1567,13 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 			zb->reset_zone = 0;
 			if (zbd_reset_zone(td, f, zb) < 0)
 				goto eof;
+
+			if (zb->capacity < min_bs) {
+				log_err("zone capacity %llu smaller than minimum block size %d\n",
+					(unsigned long long)zb->capacity,
+					min_bs);
+				goto eof;
+			}
 		}
 		/* Make writes occur at the write pointer */
 		assert(!zbd_zone_full(f, zb, min_bs));
@@ -1545,7 +1589,7 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 		 * small.
 		 */
 		new_len = min((unsigned long long)io_u->buflen,
-			      (zb + 1)->start - io_u->offset);
+			      zbd_zone_capacity_end(zb) - io_u->offset);
 		new_len = new_len / min_bs * min_bs;
 		if (new_len == io_u->buflen)
 			goto accept;
@@ -1556,7 +1600,7 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 			goto accept;
 		}
 		log_err("Zone remainder %lld smaller than minimum block size %d\n",
-			((zb + 1)->start - io_u->offset),
+			(zbd_zone_capacity_end(zb) - io_u->offset),
 			min_bs);
 		goto eof;
 	case DDIR_TRIM:

@@ -50,6 +50,7 @@ struct zbd_zone {
 	uint64_t		start;
 	uint64_t		wp;
 	uint64_t		len;
+	uint64_t		capacity;
 	enum zbd_zone_type	type;
 	enum zbd_zone_cond	cond;
 };

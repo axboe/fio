@@ -2390,6 +2390,7 @@ if compile_prog "" "" "valgrind_dev"; then
 fi
 print_config "Valgrind headers" "$valgrind_dev"
 
+if test "$targetos" = "Linux" ; then
 ##########################################
 # <linux/blkzoned.h> probe
 if test "$linux_blkzoned" != "yes" ; then
@@ -2406,6 +2407,24 @@ if compile_prog "" "" "linux_blkzoned"; then
   linux_blkzoned="yes"
 fi
 print_config "Zoned block device support" "$linux_blkzoned"
+
+##########################################
+# Check BLK_ZONE_REP_CAPACITY
+cat > $TMPC << EOF
+#include <linux/blkzoned.h>
+int main(void)
+{
+  return BLK_ZONE_REP_CAPACITY;
+}
+EOF
+if compile_prog "" "" "blkzoned report capacity"; then
+  output_sym "CONFIG_HAVE_REP_CAPACITY"
+  rep_capacity="yes"
+else
+  rep_capacity="no"
+fi
+print_config "Zoned block device capacity" "$rep_capacity"
+fi
 
 ##########################################
 # libzbc probe

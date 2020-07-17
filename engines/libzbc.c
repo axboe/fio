@@ -235,6 +235,11 @@ static int libzbc_report_zones(struct thread_data *td, struct fio_file *f,
 		zbdz->start = zones[i].zbz_start << 9;
 		zbdz->len = zones[i].zbz_length << 9;
 		zbdz->wp = zones[i].zbz_write_pointer << 9;
+		/*
+		 * ZBC/ZAC do not define zone capacity, so use the zone size as
+		 * the zone capacity.
+		 */
+		zbdz->capacity = zbdz->len;
 
 		switch (zones[i].zbz_type) {
 		case ZBC_ZT_CONVENTIONAL:
