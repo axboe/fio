@@ -552,7 +552,7 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 			bw_str = "kB";
 
 		if (rs->agg[ddir]) {
-			p_of_agg = mean * 100 / (double) (rs->agg[ddir] / 1024);
+			p_of_agg = mean * 100 / (double) (rs->agg[ddir] / 1024.0);
 			if (p_of_agg > 100.0)
 				p_of_agg = 100.0;
 		}
