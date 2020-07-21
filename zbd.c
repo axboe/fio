@@ -1371,9 +1371,11 @@ void setup_zbd_zone_mode(struct thread_data *td, struct io_u *io_u)
 	    f->last_pos[ddir] >= zbd_zone_capacity_end(z)) {
 		dprint(FD_ZBD,
 		       "%s: Jump from zone capacity limit to zone end:"
-		       " (%lu -> %lu) for zone %u (%ld)\n",
-		       f->file_name, f->last_pos[ddir], zbd_zone_end(z),
-		       zbd_zone_nr(f->zbd_info, z), z->capacity);
+		       " (%llu -> %llu) for zone %u (%llu)\n",
+		       f->file_name, (unsigned long long) f->last_pos[ddir],
+		       (unsigned long long) zbd_zone_end(z),
+		       zbd_zone_nr(f->zbd_info, z),
+		       (unsigned long long) z->capacity);
 		td->io_skip_bytes += zbd_zone_end(z) - f->last_pos[ddir];
 		f->last_pos[ddir] = zbd_zone_end(z);
 	}
