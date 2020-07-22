@@ -856,6 +856,7 @@ test49() {
 		    --zonecapacity=${capacity} \
 		    --verify=md5  --size=${size} >>"${logfile}.${test_number}" 2>&1 ||
 	return $?
+    check_written $((capacity * 2)) || return $?
     check_read $((capacity * 2)) || return $?
 }
 
