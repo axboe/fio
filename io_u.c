@@ -680,21 +680,21 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 	if (td->o.io_submit_mode == IO_MODE_INLINE)
 		io_u_quiesce(td);
 
-	if (td->o.timeout && ((usec + now) > td->o.timeout))
+	if (td->o.timeout && ((usec + now) > td->o.timeout)) {
+		/*
+		 * check if the usec is capable of taking negative values.
+		 * However it is unlikely, but still a possibility.
+		 * If this is not taken care, usec_sleep() can take a 
+		 * huge nap which is capable of not exiting the process indefinitely
+		 * although the process/thread may be sleeping.
+		 */
+		if (now > td->o.timeout) {
+			ddir = DDIR_INVAL;
+			return ddir;
+		}
 		usec = td->o.timeout - now;
-	
-	/*
-	 * Check if the usec is taking negative values.
-	 * However it is unlikely, But still a possibility.
-	 * If this is not taken care, usec_sleep() can take a 
-	 * huge nap which is capable of not exiting the process indefinitely
-	 * although the process/thread may be sleeping.
-	 */
-	if (usec == (1 << (sizeof(usec) - usec))) {
-		ddir = DDIR_INVAL;
-		return ddir;
 	}
-
+	
 	usec_sleep(td, usec);
 
 	now = utime_since_now(&td->epoch);
@@ -915,9 +915,7 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 		goto out;
 
 	set_rw_ddir(td, io_u);
-	/*
-	 * check if we have received Invalid Direction
-	 */
+
 	if (io_u->ddir == DDIR_INVAL) {
 		dprint(FD_IO, "Invalid Direction received ddir = %d", io_u->ddir);
 		return 1;
