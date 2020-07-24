@@ -680,7 +680,22 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 	if (td->o.io_submit_mode == IO_MODE_INLINE)
 		io_u_quiesce(td);
 
+	if (td->o.timeout && ((usec + now) > td->o.timeout)) {
+		/*
+		 * check if the usec is capable of taking negative values
+		 */
+		if (now > td->o.timeout) {
+			ddir = DDIR_INVAL;
+			return ddir;
+		}
+		usec = td->o.timeout - now;
+	}
 	usec_sleep(td, usec);
+
+	now = utime_since_now(&td->epoch);
+	if ((td->o.timeout && (now > td->o.timeout)) || td->terminate)
+		ddir = DDIR_INVAL;
+
 	return ddir;
 }
 
@@ -896,6 +911,10 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 
 	set_rw_ddir(td, io_u);
 
+	if (io_u->ddir == DDIR_INVAL) {
+		dprint(FD_IO, "invalid direction received ddir = %d", io_u->ddir);
+		return 1;
+	}
 	/*
 	 * fsync() or fdatasync() or trim etc, we are done
 	 */
