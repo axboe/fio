@@ -682,16 +682,8 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 
 	if (td->o.timeout && ((usec + now) > td->o.timeout)) {
 		/*
-<<<<<<< HEAD
 		 * check if the usec is capable of taking negative values
 		 * however it is unlikely, but still a possibility.
-=======
-		 * check if the usec is capable of taking negative values.
-		 * However it is unlikely, but still a possibility.
-		 * If this is not taken care, usec_sleep() can take a 
-		 * huge nap which is capable of not exiting the process indefinitely
-		 * although the process/thread may be sleeping.
->>>>>>> 9a38bb3ae208d211afc8578bc3dbff934cdcbfb3
 		 */
 		if (now > td->o.timeout) {
 			ddir = DDIR_INVAL;
@@ -699,7 +691,6 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 		}
 		usec = td->o.timeout - now;
 	}
-	
 	usec_sleep(td, usec);
 
 	now = utime_since_now(&td->epoch);
