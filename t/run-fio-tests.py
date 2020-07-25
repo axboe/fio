@@ -447,13 +447,6 @@ class FioJobTest_iops_rate(FioJobTest):
             self.passed = False
 
 
-class FioJobTest_t0013(FioJobTest):
-    """Runs fio test job t0013"""
-
-    def check_result(self):
-        super(FioJobTest_t0013, self).check_result()
-
-
 class Requirements(object):
     """Requirements consists of multiple run environment characteristics.
     These are to determine if a particular test can be run"""
@@ -693,13 +686,13 @@ TEST_LIST = [
         'pre_job':          None,
         'pre_success':      None,
         'output_format':    'json',
-        'requirements':     [],
         'requirements':     [Requirements.not_macos],
         # mac os does not support CPU affinity
+        # which is required for gtod offloading
     },
     {
         'test_id':          13,
-        'test_class':       FioJobTest_t0013,
+        'test_class':       FioJobTest,
         'job':              't0013.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
@@ -849,9 +842,9 @@ def main():
                 print("Invalid --pass-through argument '%s'" % arg)
                 print("Syntax for --pass-through is TESTNUMBER:ARGUMENT")
                 return
-            split = arg.split(":",1)
+            split = arg.split(":", 1)
             pass_through[int(split[0])] = split[1]
-        logging.debug("Pass-through arguments: %s" % pass_through)
+        logging.debug("Pass-through arguments: %s", pass_through)
 
     if args.fio_root:
         fio_root = args.fio_root
