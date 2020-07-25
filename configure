@@ -496,6 +496,20 @@ else
 fi
 
 ##########################################
+# check compiler version
+
+cat > $TMPC <<EOF
+#include "$(pwd)/compiler/compiler.h"
+int main(void)
+{
+  return 0;
+}
+EOF
+if ! compile_prog "" "" "compiler check"; then
+  fatal "Your compiler is too old, needs GCC 4.9 or higher"
+fi
+
+##########################################
 # check endianness
 if test "$bigendian" != "yes" ; then
   bigendian="no"
