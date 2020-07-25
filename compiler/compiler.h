@@ -1,13 +1,6 @@
 #ifndef FIO_COMPILER_H
 #define FIO_COMPILER_H
 
-/* IWYU pragma: begin_exports */
-#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 9) || __clang_major__ >= 6
-#else
-#error Compiler too old, need at least gcc 4.9
-#endif
-/* IWYU pragma: end_exports */
-
 #define __must_check		__attribute__((warn_unused_result))
 
 #define __compiletime_warning(message)	__attribute__((warning(message)))
