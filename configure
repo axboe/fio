@@ -144,6 +144,7 @@ libhdfs="no"
 pmemblk="no"
 devdax="no"
 pmem="no"
+cuda="no"
 disable_lex=""
 disable_pmem="no"
 disable_native="no"
@@ -202,7 +203,7 @@ for opt do
   ;;
   --disable-pmem) disable_pmem="yes"
   ;;
-  --enable-cuda) enable_cuda="yes"
+  --enable-cuda) cuda="yes"
   ;;
   --disable-native) disable_native="yes"
   ;;
@@ -626,8 +627,13 @@ int main(void)
   return 0;
 }
 EOF
-  if test "$libaio_uring" = "yes" && compile_prog "" "-luring" "libaio io_uring" ; then
-    libaio=yes
+  if test "$libaio_uring" = "yes"; then
+    if compile_prog "" "-luring" "libaio io_uring" ; then
+      libaio=yes
+      LIBS="-luring $LIBS"
+    else
+      feature_not_found "libaio io_uring" ""
+    fi
   elif compile_prog "" "-laio" "libaio" ; then
     libaio=yes
     libaio_uring=no
@@ -2052,7 +2058,7 @@ if test "$libhdfs" = "yes" ; then
     hdfs_conf_error=1
   fi
   if test "$hdfs_conf_error" = "1" ; then
-    exit 1
+    feature_not_found "libhdfs" ""
   fi
   FIO_HDFS_CPU=$cpu
   if test "$FIO_HDFS_CPU" = "x86_64" ; then
@@ -2170,15 +2176,16 @@ fi
 print_config "DDN's Infinite Memory Engine" "$libime"
 
 ##########################################
-# Check if we have required environment variables configured for libiscsi
-if test "$libiscsi" = "yes" ; then
-  if $(pkg-config --atleast-version=1.9.0 libiscsi); then
+# Check if we have libiscsi
+if test "$libiscsi" != "no" ; then
+  minimum_libiscsi=1.9.0
+  if $(pkg-config --atleast-version=$minimum_libiscsi libiscsi); then
     libiscsi="yes"
     libiscsi_cflags=$(pkg-config --cflags libiscsi)
     libiscsi_libs=$(pkg-config --libs libiscsi)
   else
     if test "$libiscsi" = "yes" ; then
-      echo "libiscsi" "Install libiscsi >= 1.9.0"
+      feature_not_found "libiscsi" "libiscsi >= $minimum_libiscsi"
     fi
     libiscsi="no"
   fi
@@ -2186,16 +2193,16 @@ fi
 print_config "iscsi engine" "$libiscsi"
 
 ##########################################
-# Check if we have libnbd (for NBD support).
-minimum_libnbd=0.9.8
-if test "$libnbd" = "yes" ; then
+# Check if we have libnbd (for NBD support)
+if test "$libnbd" != "no" ; then
+  minimum_libnbd=0.9.8
   if $(pkg-config --atleast-version=$minimum_libnbd libnbd); then
     libnbd="yes"
     libnbd_cflags=$(pkg-config --cflags libnbd)
     libnbd_libs=$(pkg-config --libs libnbd)
   else
     if test "$libnbd" = "yes" ; then
-      echo "libnbd" "Install libnbd >= $minimum_libnbd"
+      feature_not_found "libnbd" "libnbd >= $minimum_libnbd"
     fi
     libnbd="no"
   fi
@@ -2506,9 +2513,7 @@ print_config "march_armv8_a_crc_crypto" "$march_armv8_a_crc_crypto"
 
 ##########################################
 # cuda probe
-if test "$cuda" != "yes" ; then
-  cuda="no"
-fi
+if test "$cuda" != "no" ; then
 cat > $TMPC << EOF
 #include <cuda.h>
 int main(int argc, char **argv)
@@ -2516,9 +2521,15 @@ int main(int argc, char **argv)
   return cuInit(0);
 }
 EOF
-if test "$enable_cuda" = "yes" && compile_prog "" "-lcuda" "cuda"; then
-  cuda="yes"
-  LIBS="-lcuda $LIBS"
+  if compile_prog "" "-lcuda" "cuda"; then
+    cuda="yes"
+    LIBS="-lcuda $LIBS"
+  else
+    if test "$cuda" = "yes" ; then
+      feature_not_found "cuda" ""
+    fi
+    cuda="no"
+  fi
 fi
 print_config "cuda" "$cuda"
 
