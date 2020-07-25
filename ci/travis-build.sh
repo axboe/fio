@@ -1,6 +1,7 @@
 #!/bin/bash
 
 EXTRA_CFLAGS="-Werror"
+PYTHONUNBUFFERED=TRUE
 
 if [[ "$BUILD_ARCH" == "x86" ]]; then
     EXTRA_CFLAGS="${EXTRA_CFLAGS} -m32"
