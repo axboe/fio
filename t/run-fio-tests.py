@@ -904,6 +904,7 @@ def main():
                 fio_pre_job=fio_pre_job,
                 fio_pre_success=fio_pre_success,
                 output_format=output_format)
+            desc = config['job']
         elif issubclass(config['test_class'], FioExeTest):
             exe_path = os.path.join(fio_root, config['exe'])
             if config['parameters']:
@@ -917,6 +918,7 @@ def main():
                 parameters += pass_through[config['test_id']].split()
             test = config['test_class'](exe_path, parameters,
                                         config['success'])
+            desc = config['exe']
         else:
             print("Test {0} FAILED: unable to process test config".format(config['test_id']))
             failed = failed + 1
@@ -931,7 +933,7 @@ def main():
                 if not reqs_met:
                     break
             if not reqs_met:
-                print("Test {0} SKIPPED ({1})".format(config['test_id'], reason))
+                print("Test {0} SKIPPED ({1}) {2}".format(config['test_id'], reason, desc))
                 skipped = skipped + 1
                 continue
 
@@ -948,7 +950,7 @@ def main():
             logging.debug("Test %d: stderr:\n%s", config['test_id'], contents)
             contents, _ = FioJobTest.get_file(test.stdout_file)
             logging.debug("Test %d: stdout:\n%s", config['test_id'], contents)
-        print("Test {0} {1}".format(config['test_id'], result))
+        print("Test {0} {1} {2}".format(config['test_id'], result, desc))
 
     print("{0} test(s) passed, {1} failed, {2} skipped".format(passed, failed, skipped))
 
