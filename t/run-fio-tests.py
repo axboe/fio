@@ -485,11 +485,14 @@ class Requirements(object):
 
             Requirements._root = (os.geteuid() == 0)
             if Requirements._zbd and Requirements._root:
-                subprocess.run(["modprobe", "null_blk"],
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE)
-                if os.path.exists("/sys/module/null_blk/parameters/zoned"):
-                    Requirements._zoned_nullb = True
+                try:
+                    subprocess.run(["modprobe", "null_blk"],
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE)
+                    if os.path.exists("/sys/module/null_blk/parameters/zoned"):
+                        Requirements._zoned_nullb = True
+                except Exception:
+                    pass
 
         if platform.system() == "Windows":
             utest_exe = "unittest.exe"
