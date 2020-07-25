@@ -447,13 +447,6 @@ class FioJobTest_iops_rate(FioJobTest):
             self.passed = False
 
 
-class FioJobTest_t0013(FioJobTest):
-    """Runs fio test job t0013"""
-
-    def check_result(self):
-        super(FioJobTest_t0013, self).check_result()
-
-
 class Requirements(object):
     """Requirements consists of multiple run environment characteristics.
     These are to determine if a particular test can be run"""
@@ -485,11 +478,14 @@ class Requirements(object):
 
             Requirements._root = (os.geteuid() == 0)
             if Requirements._zbd and Requirements._root:
-                subprocess.run(["modprobe", "null_blk"],
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE)
-                if os.path.exists("/sys/module/null_blk/parameters/zoned"):
-                    Requirements._zoned_nullb = True
+                try:
+                    subprocess.run(["modprobe", "null_blk"],
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE)
+                    if os.path.exists("/sys/module/null_blk/parameters/zoned"):
+                        Requirements._zoned_nullb = True
+                except Exception:
+                    pass
 
         if platform.system() == "Windows":
             utest_exe = "unittest.exe"
@@ -690,13 +686,13 @@ TEST_LIST = [
         'pre_job':          None,
         'pre_success':      None,
         'output_format':    'json',
-        'requirements':     [],
         'requirements':     [Requirements.not_macos],
         # mac os does not support CPU affinity
+        # which is required for gtod offloading
     },
     {
         'test_id':          13,
-        'test_class':       FioJobTest_t0013,
+        'test_class':       FioJobTest,
         'job':              't0013.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
@@ -846,9 +842,9 @@ def main():
                 print("Invalid --pass-through argument '%s'" % arg)
                 print("Syntax for --pass-through is TESTNUMBER:ARGUMENT")
                 return
-            split = arg.split(":",1)
+            split = arg.split(":", 1)
             pass_through[int(split[0])] = split[1]
-        logging.debug("Pass-through arguments: %s" % pass_through)
+        logging.debug("Pass-through arguments: %s", pass_through)
 
     if args.fio_root:
         fio_root = args.fio_root
@@ -908,6 +904,7 @@ def main():
                 fio_pre_job=fio_pre_job,
                 fio_pre_success=fio_pre_success,
                 output_format=output_format)
+            desc = config['job']
         elif issubclass(config['test_class'], FioExeTest):
             exe_path = os.path.join(fio_root, config['exe'])
             if config['parameters']:
@@ -921,6 +918,7 @@ def main():
                 parameters += pass_through[config['test_id']].split()
             test = config['test_class'](exe_path, parameters,
                                         config['success'])
+            desc = config['exe']
         else:
             print("Test {0} FAILED: unable to process test config".format(config['test_id']))
             failed = failed + 1
@@ -935,7 +933,7 @@ def main():
                 if not reqs_met:
                     break
             if not reqs_met:
-                print("Test {0} SKIPPED ({1})".format(config['test_id'], reason))
+                print("Test {0} SKIPPED ({1}) {2}".format(config['test_id'], reason, desc))
                 skipped = skipped + 1
                 continue
 
@@ -952,7 +950,7 @@ def main():
             logging.debug("Test %d: stderr:\n%s", config['test_id'], contents)
             contents, _ = FioJobTest.get_file(test.stdout_file)
             logging.debug("Test %d: stdout:\n%s", config['test_id'], contents)
-        print("Test {0} {1}".format(config['test_id'], result))
+        print("Test {0} {1} {2}".format(config['test_id'], result, desc))
 
     print("{0} test(s) passed, {1} failed, {2} skipped".format(passed, failed, skipped))
 
