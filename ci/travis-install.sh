@@ -1,5 +1,6 @@
 #!/bin/bash
 
+CI_TARGET_ARCH="${BUILD_ARCH:-$TRAVIS_CPU_ARCH}"
 case "$TRAVIS_OS_NAME" in
     "linux")
 	# Architecture-dependent packages.
@@ -16,14 +17,17 @@ case "$TRAVIS_OS_NAME" in
 	    librdmacm-dev
 	    libz-dev
 	)
-	if [[ "$BUILD_ARCH" == "x86" ]]; then
-	    pkgs=("${pkgs[@]/%/:i386}")
-	    pkgs+=(gcc-multilib)
-	else
-	    pkgs+=(
-	        glusterfs-common
-	        nvidia-cuda-dev
-	    )
+	case "$CI_TARGET_ARCH" in
+	    "x86")
+		pkgs=("${pkgs[@]/%/:i386}")
+		pkgs+=(gcc-multilib)
+		;;
+	    "amd64")
+		pkgs+=(nvidia-cuda-dev)
+		;;
+	esac
+	if [[ $CI_TARGET_ARCH != "x86" ]]; then
+		pkgs+=(glusterfs-common)
 	fi
 	# Architecture-independent packages and packages for which we don't
 	# care about the architecture.
