@@ -20,7 +20,10 @@ case "$TRAVIS_OS_NAME" in
 	    pkgs=("${pkgs[@]/%/:i386}")
 	    pkgs+=(gcc-multilib)
 	else
-	    pkgs+=(glusterfs-common)
+	    pkgs+=(
+	        glusterfs-common
+	        nvidia-cuda-dev
+	    )
 	fi
 	# Architecture-independent packages and packages for which we don't
 	# care about the architecture.
