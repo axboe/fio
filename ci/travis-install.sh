@@ -7,7 +7,6 @@ case "$TRAVIS_OS_NAME" in
 	# Architecture-dependent packages.
 	pkgs=(
 	    libaio-dev
-	    libcunit1
 	    libcunit1-dev
 	    libfl-dev
 	    libgoogle-perftools-dev
