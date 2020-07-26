@@ -274,7 +274,7 @@ static int alloc_mem_cudamalloc(struct thread_data *td, size_t total_mem)
 static void free_mem_cudamalloc(struct thread_data *td)
 {
 #ifdef CONFIG_CUDA
-	if (td->dev_mem_ptr != NULL)
+	if (td->dev_mem_ptr)
 		cuMemFree(td->dev_mem_ptr);
 
 	if (cuCtxDestroy(td->cu_ctx) != CUDA_SUCCESS)
