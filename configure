@@ -1325,7 +1325,7 @@ int main(int argc, char **argv)
   return 0;
 }
 EOF
-if compile_prog "" "" "guasi"; then
+if compile_prog "" "-lguasi" "guasi"; then
   guasi="yes"
 fi
 print_config "GUASI" "$guasi"
