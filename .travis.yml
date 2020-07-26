@@ -9,36 +9,28 @@ arch:
   - amd64
   - arm64
 env:
-  matrix:
-    - BUILD_ARCH="x86"
-    - BUILD_ARCH="x86_64"
   global:
     - MAKEFLAGS="-j 2"
 matrix:
   include:
+    - os: linux
+      compiler: gcc
+      arch: amd64
+      env: BUILD_ARCH="x86" # Only do the gcc x86 build to reduce clutter
     # Default xcode image
     - os: osx
       compiler: clang # Workaround travis setting CC=["clang", "gcc"]
-      env: BUILD_ARCH="x86_64"
       arch: amd64
     # Latest xcode image (needs periodic updating)
     - os: osx
       compiler: clang
       osx_image: xcode11.2
-      env: BUILD_ARCH="x86_64"
       arch: amd64
   exclude:
     - os: osx
       compiler: gcc
-    - os: linux
-      compiler: clang
-      arch: amd64
-      env: BUILD_ARCH="x86" # Only do the gcc x86 build to reduce clutter
-    - os: linux
-      env: BUILD_ARCH="x86"
-      arch: arm64
 
-before_install:
+install:
   - ci/travis-install.sh
 
 script:

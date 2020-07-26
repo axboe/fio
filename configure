@@ -3006,11 +3006,16 @@ int main(int argc, char **argv)
   return 0;
 }
 EOF
-if test "$disable_tcmalloc" != "yes"  && compile_prog "" "-ltcmalloc" "tcmalloc"; then
-  LIBS="-ltcmalloc $LIBS"
-  tcmalloc="yes"
-else
-  tcmalloc="no"
+if test "$disable_tcmalloc" != "yes"; then
+  if compile_prog "" "-ltcmalloc" "tcmalloc"; then
+    tcmalloc="yes"
+    LIBS="-ltcmalloc $LIBS"
+  elif compile_prog "" "-l:libtcmalloc_minimal.so.4" "tcmalloc_minimal4"; then
+    tcmalloc="yes"
+    LIBS="-l:libtcmalloc_minimal.so.4 $LIBS"
+  else
+    tcmalloc="no"
+  fi
 fi
 print_config "TCMalloc support" "$tcmalloc"
 

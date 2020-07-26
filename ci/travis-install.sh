@@ -1,5 +1,7 @@
 #!/bin/bash
+set -e
 
+CI_TARGET_ARCH="${BUILD_ARCH:-$TRAVIS_CPU_ARCH}"
 case "$TRAVIS_OS_NAME" in
     "linux")
 	# Architecture-dependent packages.
@@ -7,7 +9,8 @@ case "$TRAVIS_OS_NAME" in
 	    libaio-dev
 	    libcunit1
 	    libcunit1-dev
-	    libgoogle-perftools4
+	    libfl-dev
+	    libgoogle-perftools-dev
 	    libibverbs-dev
 	    libiscsi-dev
 	    libnuma-dev
@@ -15,15 +18,23 @@ case "$TRAVIS_OS_NAME" in
 	    librdmacm-dev
 	    libz-dev
 	)
-	if [[ "$BUILD_ARCH" == "x86" ]]; then
-	    pkgs=("${pkgs[@]/%/:i386}")
-	    pkgs+=(gcc-multilib)
-	else
-	    pkgs+=(glusterfs-common)
+	case "$CI_TARGET_ARCH" in
+	    "x86")
+		pkgs=("${pkgs[@]/%/:i386}")
+		pkgs+=(gcc-multilib)
+		;;
+	    "amd64")
+		pkgs+=(nvidia-cuda-dev)
+		;;
+	esac
+	if [[ $CI_TARGET_ARCH != "x86" ]]; then
+		pkgs+=(glusterfs-common)
 	fi
 	# Architecture-independent packages and packages for which we don't
 	# care about the architecture.
 	pkgs+=(
+	    bison
+	    flex
 	    python3
 	    python3-scipy
 	    python3-six
@@ -34,8 +45,7 @@ case "$TRAVIS_OS_NAME" in
     "osx")
 	brew update >/dev/null 2>&1
 	brew install cunit
-	pip3 install scipy
-	pip3 install six
+	pip3 install scipy six
 	;;
 esac
 

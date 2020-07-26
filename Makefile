@@ -62,7 +62,7 @@ endif
 ifdef CONFIG_LIBISCSI
   iscsi_SRCS = engines/libiscsi.c
   iscsi_LIBS = $(LIBISCSI_LIBS)
-  iscsi_CFLAGS = $(LIBISCSI_LIBS)
+  iscsi_CFLAGS = $(LIBISCSI_CFLAGS)
   ENGINES += iscsi
 endif
 
