@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 CI_TARGET_ARCH="${BUILD_ARCH:-$TRAVIS_CPU_ARCH}"
 case "$TRAVIS_OS_NAME" in
