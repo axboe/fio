@@ -20,7 +20,10 @@ case "$TRAVIS_OS_NAME" in
 	case "$CI_TARGET_ARCH" in
 	    "x86")
 		pkgs=("${pkgs[@]/%/:i386}")
-		pkgs+=(gcc-multilib)
+		pkgs+=(
+		    gcc-multilib
+		    pkg-config:i386
+	        )
 		;;
 	    "amd64")
 		pkgs+=(nvidia-cuda-dev)
