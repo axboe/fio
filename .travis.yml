@@ -30,7 +30,7 @@ matrix:
     - os: osx
       compiler: gcc
 
-before_install:
+install:
   - ci/travis-install.sh
 
 script:
