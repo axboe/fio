@@ -17,6 +17,7 @@
 #include "../optgroup.h"
 #include "../lib/memalign.h"
 #include "../lib/fls.h"
+#include "../lib/roundup.h"
 
 #ifdef ARCH_HAVE_IOURING
 
@@ -652,11 +653,6 @@ static int fio_ioring_post_init(struct thread_data *td)
 	}
 
 	return 0;
-}
-
-static unsigned roundup_pow2(unsigned depth)
-{
-	return 1UL << __fls(depth - 1);
 }
 
 static int fio_ioring_init(struct thread_data *td)
