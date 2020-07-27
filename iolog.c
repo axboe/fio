@@ -19,6 +19,7 @@
 #include "smalloc.h"
 #include "blktrace.h"
 #include "pshared.h"
+#include "lib/roundup.h"
 
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -748,10 +749,13 @@ void setup_log(struct io_log **log, struct log_params *p,
 	}
 
 	if (l->td && l->td->o.io_submit_mode != IO_MODE_OFFLOAD) {
+		unsigned int def_samples = DEF_LOG_ENTRIES;
 		struct io_logs *__p;
 
 		__p = calloc(1, sizeof(*l->pending));
-		__p->max_samples = DEF_LOG_ENTRIES;
+		if (l->td->o.iodepth > DEF_LOG_ENTRIES)
+			def_samples = roundup_pow2(l->td->o.iodepth);
+		__p->max_samples = def_samples;
 		__p->log = calloc(__p->max_samples, log_entry_sz(l));
 		l->pending = __p;
 	}
