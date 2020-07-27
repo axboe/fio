@@ -8,7 +8,7 @@
 bs=4k
 ioengine=null
 size=100g
-runtime=3
+runtime=10
 flow_id=1
 gtod_cpu=1
 
