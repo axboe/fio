@@ -97,8 +97,11 @@ static int io_workqueue_fn(struct submit_worker *sw,
 			td->cur_depth -= ret;
 	}
 
-	if (error || td->error)
+	if (error || td->error) {
+		pthread_mutex_lock(&td->io_u_lock);
 		pthread_cond_signal(&td->parent->free_cond);
+		pthread_mutex_unlock(&td->io_u_lock);
+	}
 
 	return 0;
 }
