@@ -133,6 +133,23 @@ output_sym() {
   echo "#define $1" >> $config_host_h
 }
 
+check_min_lib_version() {
+  local feature=$3
+
+  if ${cross_prefix}pkg-config --atleast-version=$2 $1 > /dev/null 2>&1; then
+    return 0
+  fi
+  : ${feature:=${1}}
+  if ${cross_prefix}pkg-config --version > /dev/null 2>&1; then
+    if test ${!feature} = "yes" ; then
+      feature_not_found "$feature" "$1 >= $2"
+    fi
+  else
+    print_config "$1" "missing pkg-config, can't check $feature version"
+  fi
+  return 1
+}
+
 targetos=""
 cpu=""
 
@@ -1521,18 +1538,17 @@ if test "$?" != "0" ; then
   echo "configure: gtk and gthread not found"
   exit 1
 fi
-if ! ${cross_prefix}pkg-config --atleast-version 2.18.0 gtk+-2.0; then
-  echo "GTK found, but need version 2.18 or higher"
-  gfio="no"
-else
+gfio="yes"
+if check_min_lib_version gtk+-2.0 2.18.0 "gfio"; then
   if compile_prog "$GTK_CFLAGS" "$GTK_LIBS" "gfio" ; then
-    gfio="yes"
     GFIO_LIBS="$LIBS $GTK_LIBS"
     CFLAGS="$CFLAGS $GTK_CFLAGS"
   else
     echo "Please install gtk and gdk libraries"
     gfio="no"
   fi
+else
+  gfio="no"
 fi
 LDFLAGS=$ORG_LDFLAGS
 fi
@@ -2182,15 +2198,11 @@ print_config "DDN's Infinite Memory Engine" "$libime"
 ##########################################
 # Check if we have libiscsi
 if test "$libiscsi" != "no" ; then
-  minimum_libiscsi=1.9.0
-  if $(pkg-config --atleast-version=$minimum_libiscsi libiscsi); then
+  if check_min_lib_version libiscsi 1.9.0; then
     libiscsi="yes"
     libiscsi_cflags=$(pkg-config --cflags libiscsi)
     libiscsi_libs=$(pkg-config --libs libiscsi)
   else
-    if test "$libiscsi" = "yes" ; then
-      feature_not_found "libiscsi" "libiscsi >= $minimum_libiscsi"
-    fi
     libiscsi="no"
   fi
 fi
@@ -2199,15 +2211,11 @@ print_config "iscsi engine" "$libiscsi"
 ##########################################
 # Check if we have libnbd (for NBD support)
 if test "$libnbd" != "no" ; then
-  minimum_libnbd=0.9.8
-  if $(pkg-config --atleast-version=$minimum_libnbd libnbd); then
+  if check_min_lib_version libnbd 0.9.8; then
     libnbd="yes"
     libnbd_cflags=$(pkg-config --cflags libnbd)
     libnbd_libs=$(pkg-config --libs libnbd)
   else
-    if test "$libnbd" = "yes" ; then
-      feature_not_found "libnbd" "libnbd >= $minimum_libnbd"
-    fi
     libnbd="no"
   fi
 fi
@@ -2469,11 +2477,8 @@ int main(int argc, char **argv)
 EOF
 if test "$libzbc" != "no" ; then
   if compile_prog "" "-lzbc" "libzbc"; then
-    minimum_libzbc=5
-    if $(pkg-config --atleast-version=$minimum_libzbc libzbc); then
-      libzbc="yes"
-    else
-      print_config "libzbc engine" "libzbc version $minimum_libzbc or above required"
+    libzbc="yes"
+    if ! check_min_lib_version libzbc 5; then
       libzbc="no"
     fi
   else
