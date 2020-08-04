@@ -152,6 +152,7 @@ march_set="no"
 libiscsi="no"
 libnbd="no"
 libaio_uring="no"
+libzbc=""
 dynamic_engines="no"
 prefix=/usr/local
 
@@ -213,6 +214,8 @@ for opt do
   ;;
   --enable-libnbd) libnbd="yes"
   ;;
+  --disable-libzbc) libzbc="no"
+  ;;
   --disable-tcmalloc) disable_tcmalloc="yes"
   ;;
   --enable-libaio-uring) libaio_uring="yes"
@@ -256,6 +259,7 @@ if test "$show_help" = "yes" ; then
   echo "--with-ime=             Install path for DDN's Infinite Memory Engine"
   echo "--enable-libiscsi       Enable iscsi support"
   echo "--enable-libnbd         Enable libnbd (NBD engine) support"
+  echo "--disable-libzbc        Disable libzbc even if found"
   echo "--disable-tcmalloc	Disable tcmalloc support"
   echo "--enable-libaio-uring   Enable libaio emulated over io_uring"
   echo "--dynamic-libengines	Lib-based ioengines as dynamic libraries"
@@ -2454,9 +2458,6 @@ fi
 
 ##########################################
 # libzbc probe
-if test "$libzbc" != "yes" ; then
-  libzbc="no"
-fi
 cat > $TMPC << EOF
 #include <libzbc/zbc.h>
 int main(int argc, char **argv)
@@ -2466,19 +2467,21 @@ int main(int argc, char **argv)
   return zbc_open("foo=bar", O_RDONLY, &dev);
 }
 EOF
-if compile_prog "" "-lzbc" "libzbc"; then
-  libzbcvermaj=$(pkg-config --modversion libzbc | sed 's/\.[0-9]*\.[0-9]*//')
-  if test "$libzbcvermaj" -ge "5" ; then
-    libzbc="yes"
+if test "$libzbc" != "no" ; then
+  if compile_prog "" "-lzbc" "libzbc"; then
+    minimum_libzbc=5
+    if $(pkg-config --atleast-version=$minimum_libzbc libzbc); then
+      libzbc="yes"
+    else
+      print_config "libzbc engine" "libzbc version $minimum_libzbc or above required"
+      libzbc="no"
+    fi
   else
-    print_config "libzbc engine" "Unsupported libzbc version (version 5 or above required)"
+    if test "$libzbc" = "yes" ; then
+      feature_not_found "libzbc" "libzbc or libzbc/zbc.h"
+    fi
     libzbc="no"
   fi
-else
-  if test "$libzbc" = "yes" ; then
-      feature_not_found "libzbc" "libzbc or libzbc/zbc.h"
-  fi
-  libzbc="no"
 fi
 print_config "libzbc engine" "$libzbc"
 
