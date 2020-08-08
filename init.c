@@ -2068,6 +2068,18 @@ static int __parse_jobs_ini(struct thread_data *td,
 		}
 
 		ret = fio_options_parse(td, opts, num_opts);
+
+		if (!ret) {
+			if (!strcmp(file, "-") && td->o.read_iolog_file != NULL) {
+				char *fname = get_name_by_idx(td->o.read_iolog_file,
+							      td->subjob_number);
+				if (!strcmp(fname, "-")) {
+					log_err("fio: we can't read both iolog "
+						"and job file from stdin.\n");
+					ret = 1;
+				}
+			}
+		}
 		if (!ret) {
 			if (dump_cmdline)
 				dump_opt_list(td);

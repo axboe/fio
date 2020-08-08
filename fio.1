@@ -2336,7 +2336,9 @@ replay, the file needs to be turned into a blkparse binary data file first
 You can specify a number of files by separating the names with a ':' character.
 See the \fBfilename\fR option for information on how to escape ':'
 characters within the file names. These files will be sequentially assigned to
-job clones created by \fBnumjobs\fR.
+job clones created by \fBnumjobs\fR. '-' is a reserved name, meaning read from
+stdin, notably if \fBfilename\fR is set to '-' which means stdin as well,
+then this flag can't be set to '-'.
 .TP
 .BI read_iolog_chunked \fR=\fPbool
 Determines how iolog is read. If false (default) entire \fBread_iolog\fR will

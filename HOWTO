@@ -2625,6 +2625,9 @@ I/O replay
 	character. See the :option:`filename` option for information on how to
 	escape ':' characters within the file names. These files will
 	be sequentially assigned to job clones created by :option:`numjobs`.
+	'-' is a reserved name, meaning read from stdin, notably if
+	:option:`filename` is set to '-' which means stdin as well, then
+	this flag can't be set to '-'.
 
 .. option:: read_iolog_chunked=bool
 
