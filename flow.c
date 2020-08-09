@@ -7,7 +7,8 @@ struct fio_flow {
 	unsigned int refs;
 	struct flist_head list;
 	unsigned int id;
-	long long int flow_counter;
+    volatile unsigned long long flow_counter;
+    unsigned int total_weight;
 };
 
 static struct flist_head *flow_list;
@@ -16,28 +17,31 @@ static struct fio_sem *flow_lock;
 int flow_threshold_exceeded(struct thread_data *td)
 {
 	struct fio_flow *flow = td->flow;
-	long long flow_counter;
+    double flow_counter_ratio, flow_weight_ratio;
 
 	if (!flow)
 		return 0;
 
-	if (td->o.flow > 0)
-		flow_counter = flow->flow_counter;
-	else
-		flow_counter = -flow->flow_counter;
+    flow_counter_ratio = (double)td->flow_counter / flow->flow_counter;
+    flow_weight_ratio = (double)td->o.flow / flow->total_weight;
 
-	if (flow_counter > td->o.flow_watermark) {
-		if (td->o.flow_sleep) {
-			io_u_quiesce(td);
-			usleep(td->o.flow_sleep);
-		}
+    /* each thread/process executing a fio job will stall based on the expected user ratio
+     * for a given flow_id group.
+     * the idea is to keep 2 counters, flow and job-specific counter
+     * to test if the ratio between them is proportional to other jobs in the same flow_id */
+    if (flow_counter_ratio > flow_weight_ratio) {
+        if (td->o.flow_sleep) {
+            io_u_quiesce(td);
+            usleep(td->o.flow_sleep);
+        }
+    
+        return 1;
+    }
 
-		return 1;
-	}
+    // increment flow(shared counter, therefore atomically) and job-specific counter
+	__sync_fetch_and_add(&flow->flow_counter, 1);
+    ++td->flow_counter;
 
-	/* No synchronization needed because it doesn't
-	 * matter if the flow count is slightly inaccurate */
-	flow->flow_counter += td->o.flow;
 	return 0;
 }
 
@@ -67,8 +71,9 @@ static struct fio_flow *flow_get(unsigned int id)
 		}
 		flow->refs = 0;
 		INIT_FLIST_HEAD(&flow->list);
-		flow->id = id;
-		flow->flow_counter = 0;
+        flow->id = id;
+        flow->flow_counter = 1;
+        flow->total_weight = 0;
 
 		flist_add_tail(&flow->list, flow_list);
 	}
@@ -95,8 +100,11 @@ static void flow_put(struct fio_flow *flow)
 
 void flow_init_job(struct thread_data *td)
 {
-	if (td->o.flow)
+	if (td->o.flow) {
 		td->flow = flow_get(td->o.flow_id);
+        td->flow_counter = 0;
+        __sync_fetch_and_add(&td->flow->total_weight, td->o.flow);
+    }
 }
 
 void flow_exit_job(struct thread_data *td)

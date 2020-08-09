@@ -1,6 +1,6 @@
-# Expected results: no parse warnings, runs and with roughly 1/8 iops between
-#			the two jobs.
-# Buggy result: parse warning on flow value overflow, no 1/8 division between
+# Expected results: no parse warnings, runs and with roughly 1:2:3 iops between
+#			the three jobs.
+# Buggy result: parse warning on flow value overflow, no 1:2:3 division between
 #			jobs.
 #
 
@@ -8,13 +8,17 @@
 bs=4k
 ioengine=null
 size=100g
-runtime=10
+runtime=20
 flow_id=1
 gtod_cpu=1
+flow_sleep=100
 
 [flow1]
-flow=-8
+flow=1
 rate_iops=1000
 
 [flow2]
-flow=1
+flow=2
+
+[flow3]
+flow=3

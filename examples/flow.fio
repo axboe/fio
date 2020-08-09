@@ -11,13 +11,12 @@ iodepth=256
 size=100g
 bs=8k
 filename=/tmp/testfile
-flow_watermark=100
 flow_sleep=1000
 
 [job2]
 numjobs=1
 rw=write
-flow=-8
+flow=8
 
 [job1]
 numjobs=1
