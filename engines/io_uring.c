@@ -234,13 +234,21 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 			sqe->len = io_u->xfer_buflen;
 			sqe->buf_index = io_u->index;
 		} else {
+			struct iovec *iov = &ld->iovecs[io_u->index];
+
+			/*
+			 * Update based on actual io_u, requeue could have
+			 * adjusted these
+			 */
+			iov->iov_base = io_u->xfer_buf;
+			iov->iov_len = io_u->xfer_buflen;
+
 			sqe->opcode = ddir_to_op[io_u->ddir][!!o->nonvectored];
 			if (o->nonvectored) {
-				sqe->addr = (unsigned long)
-						ld->iovecs[io_u->index].iov_base;
-				sqe->len = ld->iovecs[io_u->index].iov_len;
+				sqe->addr = (unsigned long) iov->iov_base;
+				sqe->len = iov->iov_len;
 			} else {
-				sqe->addr = (unsigned long) &ld->iovecs[io_u->index];
+				sqe->addr = (unsigned long) iov;
 				sqe->len = 1;
 			}
 		}
