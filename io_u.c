@@ -1977,6 +1977,21 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 		unsigned long long bytes = io_u->buflen - io_u->resid;
 		int ret;
 
+		/*
+		 * Make sure we notice short IO from here, and requeue them
+		 * appropriately!
+		 */
+		if (io_u->resid) {
+			io_u->xfer_buflen = io_u->resid;
+			io_u->xfer_buf += bytes;
+			io_u->offset += bytes;
+			td->ts.short_io_u[io_u->ddir]++;
+			if (io_u->offset < io_u->file->real_file_size) {
+				requeue_io_u(td, io_u_ptr);
+				return;
+			}
+		}
+
 		td->io_blocks[ddir]++;
 		td->io_bytes[ddir] += bytes;
 
