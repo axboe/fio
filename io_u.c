@@ -966,6 +966,7 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 
 out:
 	dprint_io_u(io_u, "fill");
+	io_u->verify_offset = io_u->offset;
 	td->zone_bytes += io_u->buflen;
 	return 0;
 }
