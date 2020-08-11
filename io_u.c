@@ -507,6 +507,7 @@ static int get_next_offset(struct thread_data *td, struct io_u *io_u,
 		return 1;
 	}
 
+	io_u->verify_offset = io_u->offset;
 	return 0;
 }
 
