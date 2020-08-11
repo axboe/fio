@@ -302,7 +302,7 @@ static void __dump_verify_buffers(struct verify_header *hdr, struct vcont *vc)
 	 */
 	hdr_offset = vc->hdr_num * hdr->len;
 
-	dump_buf(io_u->buf + hdr_offset, hdr->len, io_u->offset + hdr_offset,
+	dump_buf(io_u->buf + hdr_offset, hdr->len, io_u->verify_offset + hdr_offset,
 			"received", vc->io_u->file);
 
 	/*
@@ -317,7 +317,7 @@ static void __dump_verify_buffers(struct verify_header *hdr, struct vcont *vc)
 
 	fill_pattern_headers(td, &dummy, hdr->rand_seed, 1);
 
-	dump_buf(buf + hdr_offset, hdr->len, io_u->offset + hdr_offset,
+	dump_buf(buf + hdr_offset, hdr->len, io_u->verify_offset + hdr_offset,
 			"expected", vc->io_u->file);
 	free(buf);
 }
@@ -339,12 +339,12 @@ static void log_verify_failure(struct verify_header *hdr, struct vcont *vc)
 {
 	unsigned long long offset;
 
-	offset = vc->io_u->offset;
+	offset = vc->io_u->verify_offset;
 	offset += vc->hdr_num * hdr->len;
 	log_err("%.8s: verify failed at file %s offset %llu, length %u"
-			" (requested block: offset=%llu, length=%llu)\n",
+			" (requested block: offset=%llu, length=%llu, flags=%x)\n",
 			vc->name, vc->io_u->file->file_name, offset, hdr->len,
-			vc->io_u->offset, vc->io_u->buflen);
+			vc->io_u->verify_offset, vc->io_u->buflen, vc->io_u->flags);
 
 	if (vc->good_crc && vc->bad_crc) {
 		log_err("       Expected CRC: ");
@@ -801,7 +801,7 @@ static int verify_trimmed_io_u(struct thread_data *td, struct io_u *io_u)
 
 	log_err("trim: verify failed at file %s offset %llu, length %llu"
 		", block offset %lu\n",
-			io_u->file->file_name, io_u->offset, io_u->buflen,
+			io_u->file->file_name, io_u->verify_offset, io_u->buflen,
 			(unsigned long) offset);
 	return EILSEQ;
 }
@@ -829,10 +829,10 @@ static int verify_header(struct io_u *io_u, struct thread_data *td,
 			hdr->rand_seed, io_u->rand_seed);
 		goto err;
 	}
-	if (hdr->offset != io_u->offset + hdr_num * td->o.verify_interval) {
+	if (hdr->offset != io_u->verify_offset + hdr_num * td->o.verify_interval) {
 		log_err("verify: bad header offset %"PRIu64
 			", wanted %llu",
-			hdr->offset, io_u->offset);
+			hdr->offset, io_u->verify_offset);
 		goto err;
 	}
 
@@ -864,11 +864,11 @@ err:
 	log_err(" at file %s offset %llu, length %u"
 		" (requested block: offset=%llu, length=%llu)\n",
 		io_u->file->file_name,
-		io_u->offset + hdr_num * hdr_len, hdr_len,
-		io_u->offset, io_u->buflen);
+		io_u->verify_offset + hdr_num * hdr_len, hdr_len,
+		io_u->verify_offset, io_u->buflen);
 
 	if (td->o.verify_dump)
-		dump_buf(p, hdr_len, io_u->offset + hdr_num * hdr_len,
+		dump_buf(p, hdr_len, io_u->verify_offset + hdr_num * hdr_len,
 				"hdr_fail", io_u->file);
 
 	return EILSEQ;
@@ -1156,7 +1156,7 @@ static void __fill_hdr(struct thread_data *td, struct io_u *io_u,
 	hdr->verify_type = td->o.verify;
 	hdr->len = header_len;
 	hdr->rand_seed = rand_seed;
-	hdr->offset = io_u->offset + header_num * td->o.verify_interval;
+	hdr->offset = io_u->verify_offset + header_num * td->o.verify_interval;
 	hdr->time_sec = io_u->start_time.tv_sec;
 	hdr->time_nsec = io_u->start_time.tv_nsec;
 	hdr->thread = td->thread_number;
@@ -1334,6 +1334,7 @@ int get_next_verify(struct thread_data *td, struct io_u *io_u)
 		td->io_hist_len--;
 
 		io_u->offset = ipo->offset;
+		io_u->verify_offset = ipo->offset;
 		io_u->buflen = ipo->len;
 		io_u->numberio = ipo->numberio;
 		io_u->file = ipo->file;
@@ -1866,7 +1867,7 @@ int verify_state_should_stop(struct thread_data *td, struct io_u *io_u)
 	for (i = 0; i < s->no_comps; i++) {
 		if (s->comps[i].fileno != f->fileno)
 			continue;
-		if (io_u->offset == s->comps[i].offset)
+		if (io_u->verify_offset == s->comps[i].offset)
 			return 0;
 	}
 

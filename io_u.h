@@ -53,7 +53,8 @@ struct io_u {
 	 * Allocated/set buffer and length
 	 */
 	unsigned long long buflen;
-	unsigned long long offset;
+	unsigned long long offset;	/* is really ->xfer_offset... */
+	unsigned long long verify_offset;	/* is really ->offset */
 	void *buf;
 
 	/*

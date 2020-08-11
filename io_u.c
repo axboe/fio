@@ -464,6 +464,7 @@ static int get_next_block(struct thread_data *td, struct io_u *io_u,
 			log_err("fio: bug in offset generation: offset=%llu, b=%llu\n", (unsigned long long) offset, (unsigned long long) b);
 			ret = 1;
 		}
+		io_u->verify_offset = io_u->offset;
 	}
 
 	return ret;

@@ -174,6 +174,7 @@ int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 		io_u->ddir = ipo->ddir;
 		if (ipo->ddir != DDIR_WAIT) {
 			io_u->offset = ipo->offset;
+			io_u->verify_offset = ipo->offset;
 			io_u->buflen = ipo->len;
 			io_u->file = td->files[ipo->fileno];
 			get_file(io_u->file);
