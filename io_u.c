@@ -1977,7 +1977,7 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 	td->last_ddir = ddir;
 
 	if (!io_u->error && ddir_rw(ddir)) {
-		unsigned long long bytes = io_u->buflen - io_u->resid;
+		unsigned long long bytes = io_u->xfer_buflen - io_u->resid;
 		int ret;
 
 		/*
