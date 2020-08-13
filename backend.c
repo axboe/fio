@@ -223,12 +223,10 @@ static bool check_min_rate(struct thread_data *td, struct timespec *now)
 {
 	bool ret = false;
 
-	if (td->bytes_done[DDIR_READ])
-		ret |= __check_min_rate(td, now, DDIR_READ);
-	if (td->bytes_done[DDIR_WRITE])
-		ret |= __check_min_rate(td, now, DDIR_WRITE);
-	if (td->bytes_done[DDIR_TRIM])
-		ret |= __check_min_rate(td, now, DDIR_TRIM);
+	for_each_rw_ddir(ddir) {
+		if (td->bytes_done[ddir])
+			ret |= __check_min_rate(td, now, ddir);
+	}
 
 	return ret;
 }
@@ -1876,9 +1874,9 @@ static void *thread_main(void *data)
 
 	update_rusage_stat(td);
 	td->ts.total_run_time = mtime_since_now(&td->epoch);
-	td->ts.io_bytes[DDIR_READ] = td->io_bytes[DDIR_READ];
-	td->ts.io_bytes[DDIR_WRITE] = td->io_bytes[DDIR_WRITE];
-	td->ts.io_bytes[DDIR_TRIM] = td->io_bytes[DDIR_TRIM];
+	for_each_rw_ddir(ddir) {
+		td->ts.io_bytes[ddir] = td->io_bytes[ddir];
+	}
 
 	if (td->o.verify_state_save && !(td->flags & TD_F_VSTATE_SAVED) &&
 	    (td->o.verify != VERIFY_NONE && td_write(td)))

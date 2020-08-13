@@ -16,6 +16,8 @@ enum fio_ddir {
 	DDIR_RWDIR_SYNC_CNT = 4,
 };
 
+#define for_each_rw_ddir(ddir)	for (enum fio_ddir ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++)
+
 static inline const char *io_ddir_name(enum fio_ddir ddir)
 {
 	static const char *name[] = { "read", "write", "trim", "sync",

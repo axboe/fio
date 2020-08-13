@@ -564,13 +564,11 @@ static int setup_rate(struct thread_data *td)
 {
 	int ret = 0;
 
-	if (td->o.rate[DDIR_READ] || td->o.rate_iops[DDIR_READ])
-		ret = __setup_rate(td, DDIR_READ);
-	if (td->o.rate[DDIR_WRITE] || td->o.rate_iops[DDIR_WRITE])
-		ret |= __setup_rate(td, DDIR_WRITE);
-	if (td->o.rate[DDIR_TRIM] || td->o.rate_iops[DDIR_TRIM])
-		ret |= __setup_rate(td, DDIR_TRIM);
-
+	for_each_rw_ddir(ddir) {
+		if (td->o.rate[ddir] || td->o.rate_iops[ddir]) {
+			ret |= __setup_rate(td, ddir);
+		}
+	}
 	return ret;
 }
 
@@ -662,31 +660,25 @@ static int fixup_options(struct thread_data *td)
 	if (td_read(td))
 		o->overwrite = 1;
 
-	if (!o->min_bs[DDIR_READ])
-		o->min_bs[DDIR_READ] = o->bs[DDIR_READ];
-	if (!o->max_bs[DDIR_READ])
-		o->max_bs[DDIR_READ] = o->bs[DDIR_READ];
-	if (!o->min_bs[DDIR_WRITE])
-		o->min_bs[DDIR_WRITE] = o->bs[DDIR_WRITE];
-	if (!o->max_bs[DDIR_WRITE])
-		o->max_bs[DDIR_WRITE] = o->bs[DDIR_WRITE];
-	if (!o->min_bs[DDIR_TRIM])
-		o->min_bs[DDIR_TRIM] = o->bs[DDIR_TRIM];
-	if (!o->max_bs[DDIR_TRIM])
-		o->max_bs[DDIR_TRIM] = o->bs[DDIR_TRIM];
+	for_each_rw_ddir(ddir) {
+		if (!o->min_bs[ddir])
+			o->min_bs[ddir] = o->bs[ddir];
+		if (!o->max_bs[ddir])
+			o->max_bs[ddir] = o->bs[ddir];
+	}
 
-	o->rw_min_bs = min(o->min_bs[DDIR_READ], o->min_bs[DDIR_WRITE]);
-	o->rw_min_bs = min(o->min_bs[DDIR_TRIM], o->rw_min_bs);
+	o->rw_min_bs = -1;
+	for_each_rw_ddir(ddir) {
+		o->rw_min_bs = min(o->rw_min_bs, o->min_bs[ddir]);
+	}
 
 	/*
 	 * For random IO, allow blockalign offset other than min_bs.
 	 */
-	if (!o->ba[DDIR_READ] || !td_random(td))
-		o->ba[DDIR_READ] = o->min_bs[DDIR_READ];
-	if (!o->ba[DDIR_WRITE] || !td_random(td))
-		o->ba[DDIR_WRITE] = o->min_bs[DDIR_WRITE];
-	if (!o->ba[DDIR_TRIM] || !td_random(td))
-		o->ba[DDIR_TRIM] = o->min_bs[DDIR_TRIM];
+	for_each_rw_ddir(ddir) {
+		if (!o->ba[ddir] || !td_random(td))
+			o->ba[ddir] = o->min_bs[ddir];
+	}
 
 	if ((o->ba[DDIR_READ] != o->min_bs[DDIR_READ] ||
 	    o->ba[DDIR_WRITE] != o->min_bs[DDIR_WRITE] ||
@@ -765,14 +757,12 @@ static int fixup_options(struct thread_data *td)
 		log_err("fio: rate and rate_iops are mutually exclusive\n");
 		ret |= 1;
 	}
-	if ((o->rate[DDIR_READ] && (o->rate[DDIR_READ] < o->ratemin[DDIR_READ])) ||
-	    (o->rate[DDIR_WRITE] && (o->rate[DDIR_WRITE] < o->ratemin[DDIR_WRITE])) ||
-	    (o->rate[DDIR_TRIM] && (o->rate[DDIR_TRIM] < o->ratemin[DDIR_TRIM])) ||
-	    (o->rate_iops[DDIR_READ] && (o->rate_iops[DDIR_READ] < o->rate_iops_min[DDIR_READ])) ||
-	    (o->rate_iops[DDIR_WRITE] && (o->rate_iops[DDIR_WRITE] < o->rate_iops_min[DDIR_WRITE])) ||
-	    (o->rate_iops[DDIR_TRIM] && (o->rate_iops[DDIR_TRIM] < o->rate_iops_min[DDIR_TRIM]))) {
-		log_err("fio: minimum rate exceeds rate\n");
-		ret |= 1;
+	for_each_rw_ddir(ddir) {
+		if ((o->rate[ddir] && (o->rate[ddir] < o->ratemin[ddir])) ||
+		    (o->rate_iops[ddir] && (o->rate_iops[ddir] < o->rate_iops_min[ddir]))) {
+			log_err("fio: minimum rate exceeds rate, ddir %d\n", +ddir);
+			ret |= 1;
+		}
 	}
 
 	if (!o->timeout && o->time_based) {

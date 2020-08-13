@@ -383,8 +383,8 @@ bool calc_thread_status(struct jobs_eta *je, int force)
 	struct thread_data *td;
 	int i, unified_rw_rep;
 	uint64_t rate_time, disp_time, bw_avg_time, *eta_secs;
-	unsigned long long io_bytes[DDIR_RWDIR_CNT];
-	unsigned long long io_iops[DDIR_RWDIR_CNT];
+	unsigned long long io_bytes[DDIR_RWDIR_CNT] = {};
+	unsigned long long io_iops[DDIR_RWDIR_CNT] = {};
 	struct timespec now;
 
 	static unsigned long long rate_io_bytes[DDIR_RWDIR_CNT];
@@ -413,8 +413,6 @@ bool calc_thread_status(struct jobs_eta *je, int force)
 
 	je->elapsed_sec = (mtime_since_genesis() + 999) / 1000;
 
-	io_bytes[DDIR_READ] = io_bytes[DDIR_WRITE] = io_bytes[DDIR_TRIM] = 0;
-	io_iops[DDIR_READ] = io_iops[DDIR_WRITE] = io_iops[DDIR_TRIM] = 0;
 	bw_avg_time = ULONG_MAX;
 	unified_rw_rep = 0;
 	for_each_td(td, i) {
@@ -509,9 +507,9 @@ bool calc_thread_status(struct jobs_eta *je, int force)
 		calc_rate(unified_rw_rep, rate_time, io_bytes, rate_io_bytes,
 				je->rate);
 		memcpy(&rate_prev_time, &now, sizeof(now));
-		add_agg_sample(sample_val(je->rate[DDIR_READ]), DDIR_READ, 0, 0);
-		add_agg_sample(sample_val(je->rate[DDIR_WRITE]), DDIR_WRITE, 0, 0);
-		add_agg_sample(sample_val(je->rate[DDIR_TRIM]), DDIR_TRIM, 0, 0);
+		for_each_rw_ddir(ddir) {
+			add_agg_sample(sample_val(je->rate[ddir]), ddir, 0, 0);
+		}
 	}
 
 	disp_time = mtime_since(&disp_prev_time, &now);

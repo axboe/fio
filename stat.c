@@ -1078,12 +1078,10 @@ static void show_thread_status_normal(struct thread_stat *ts,
 	if (strlen(ts->description))
 		log_buf(out, "  Description  : [%s]\n", ts->description);
 
-	if (ts->io_bytes[DDIR_READ])
-		show_ddir_status(rs, ts, DDIR_READ, out);
-	if (ts->io_bytes[DDIR_WRITE])
-		show_ddir_status(rs, ts, DDIR_WRITE, out);
-	if (ts->io_bytes[DDIR_TRIM])
-		show_ddir_status(rs, ts, DDIR_TRIM, out);
+	for_each_rw_ddir(ddir) {
+		if (ts->io_bytes[ddir])
+			show_ddir_status(rs, ts, ddir, out);
+	}
 
 	show_latencies(ts, out);
 
@@ -2315,9 +2313,9 @@ void __show_running_run_stats(void)
 
 	for_each_td(td, i) {
 		td->update_rusage = 1;
-		td->ts.io_bytes[DDIR_READ] = td->io_bytes[DDIR_READ];
-		td->ts.io_bytes[DDIR_WRITE] = td->io_bytes[DDIR_WRITE];
-		td->ts.io_bytes[DDIR_TRIM] = td->io_bytes[DDIR_TRIM];
+		for_each_rw_ddir(ddir) {
+			td->ts.io_bytes[ddir] = td->io_bytes[ddir];
+		}
 		td->ts.total_run_time = mtime_since(&td->epoch, &ts);
 
 		rt[i] = mtime_since(&td->start, &ts);
