@@ -15,7 +15,7 @@ group_reporting=1
 exitall=1
 
 [slow1]
-rw=r
+rw=read
 numjobs=1
 ioengine=sync
 new_group=1
@@ -33,7 +33,7 @@ rate=300,300,300
 
 [slow2]
 stonewall=1
-rw=w
+rw=write
 numjobs=1
 ioengine=sync
 new_group=1
