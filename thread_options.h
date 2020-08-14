@@ -202,8 +202,8 @@ struct thread_options {
 
 	unsigned long long max_latency;
 
-	unsigned short exit_what;
-	unsigned short stonewall;
+	unsigned int exit_what;
+	unsigned int stonewall;
 	unsigned int new_group;
 	unsigned int numjobs;
 	os_cpu_mask_t cpumask;
@@ -494,8 +494,8 @@ struct thread_options_pack {
 	uint32_t mem_type;
 	uint32_t mem_align;
 
-	uint16_t exit_what;
-	uint16_t stonewall;
+	uint32_t exit_what;
+	uint32_t stonewall;
 	uint32_t new_group;
 	uint32_t numjobs;
 	/*
@@ -546,7 +546,6 @@ struct thread_options_pack {
 	uint32_t lat_percentiles;
 	uint32_t slat_percentiles;
 	uint32_t percentile_precision;
-	uint32_t pad3;
 	fio_fp64_t percentile_list[FIO_IO_U_LIST_MAX_LEN];
 
 	uint8_t read_iolog_file[FIO_TOP_STR_MAX];

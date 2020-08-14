@@ -1,7 +1,7 @@
 # We want to run fast1 as long as slow1 is running, but also have a cumulative
 # report of fast1 (group_reporting=1/new_group=1).  exitall=1 would not cause
 # fast1 to stop after slow1 is done. Setting exit_what=stonewall will cause
-# alls jobs up until the next stonewall=1 setting to be stopped, when job slow1
+# alls jobs up until the next stonewall setting to be stopped, when job slow1
 # finishes.
 # In this example skipping forward to slow2/fast2. slow2 has exit_what=all set,
 # which means all jobs will be cancelled when slow2 finishes. In particular,
@@ -32,7 +32,7 @@ iodepth=32
 rate=300,300,300
 
 [slow2]
-stonewall=1
+stonewall
 rw=write
 numjobs=1
 ioengine=sync

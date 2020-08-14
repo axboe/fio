@@ -2569,7 +2569,8 @@ been exceeded before retrying operations.
 Wait for preceding jobs in the job file to exit, before starting this
 one. Can be used to insert serialization points in the job file. A stone
 wall also implies starting a new reporting group, see
-\fBgroup_reporting\fR.
+\fBgroup_reporting\fR. Optionally you can use `stonewall=0` to disable or
+`stonewall=1` to enable it.
 .TP
 .BI exitall
 By default, fio will continue running all other jobs when one job finishes.
@@ -2577,15 +2578,27 @@ Sometimes this is not the desired action. Setting \fBexitall\fR will instead
 make fio terminate all jobs in the same group, as soon as one job of that
 group finishes.
 .TP
-.BI exit_what
+.BI exit_what \fR=\fPstr
 By default, fio will continue running all other jobs when one job finishes.
-Sometimes this is not the desired action. Setting \fBexit_all\fR will instead
+Sometimes this is not the desired action. Setting \fBexitall\fR will instead
 make fio terminate all jobs in the same group. The option \fBexit_what\fR
-allows to control which jobs get terminated when \fBexitall\fR is enabled. The
-default is \fBgroup\fR and does not change the behaviour of \fBexitall\fR. The
-setting \fBall\fR terminates all jobs. The setting \fBstonewall\fR terminates
-all currently running jobs across all groups and continues execution with the
-next stonewalled group.
+allows you to control which jobs get terminated when \fBexitall\fR is enabled.
+The default value is \fBgroup\fR.
+The allowed values are:
+.RS
+.RS
+.TP
+.B all
+terminates all jobs.
+.TP
+.B group
+is the default and does not change the behaviour of \fBexitall\fR.
+.TP
+.B stonewall
+terminates all currently running jobs across all groups and continues
+execution with the next stonewalled group.
+.RE
+.RE
 .TP
 .BI exec_prerun \fR=\fPstr
 Before running this job, issue the command specified through
