@@ -134,18 +134,18 @@ output_sym() {
 }
 
 check_min_lib_version() {
-  local feature=$3
+  _feature=$3
 
-  if ${cross_prefix}pkg-config --atleast-version=$2 $1 > /dev/null 2>&1; then
+  if "${cross_prefix}"pkg-config --atleast-version="$2" "$1" > /dev/null 2>&1; then
     return 0
   fi
-  : ${feature:=${1}}
-  if ${cross_prefix}pkg-config --version > /dev/null 2>&1; then
-    if test ${!feature} = "yes" ; then
-      feature_not_found "$feature" "$1 >= $2"
+  : "${_feature:=${1}}"
+  if "${cross_prefix}"pkg-config --version > /dev/null 2>&1; then
+    if eval "echo \$$_feature" = "yes" ; then
+      feature_not_found "$_feature" "$1 >= $2"
     fi
   else
-    print_config "$1" "missing pkg-config, can't check $feature version"
+    print_config "$1" "missing pkg-config, can't check $_feature version"
   fi
   return 1
 }
