@@ -1838,6 +1838,7 @@ static int __parse_jobs_ini(struct thread_data *td,
 		int nested, char *name, char ***popts, int *aopts, int *nopts)
 {
 	bool global = false;
+	bool stdin_occupied = false;
 	char *string;
 	FILE *f;
 	char *p;
@@ -1854,9 +1855,10 @@ static int __parse_jobs_ini(struct thread_data *td,
 	if (is_buf)
 		f = NULL;
 	else {
-		if (!strcmp(file, "-"))
+		if (!strcmp(file, "-")) {
 			f = stdin;
-		else
+			stdin_occupied = true;
+		} else
 			f = fopen(file, "r");
 
 		if (!f) {
@@ -2059,15 +2061,17 @@ static int __parse_jobs_ini(struct thread_data *td,
 
 		ret = fio_options_parse(td, opts, num_opts);
 
-		if (!ret) {
-			if (!strcmp(file, "-") && td->o.read_iolog_file != NULL) {
-				char *fname = get_name_by_idx(td->o.read_iolog_file,
-							      td->subjob_number);
-				if (!strcmp(fname, "-")) {
-					log_err("fio: we can't read both iolog "
-						"and job file from stdin.\n");
+		if (!ret && td->o.read_iolog_file != NULL) {
+			char *fname = get_name_by_idx(td->o.read_iolog_file,
+						      td->subjob_number);
+			if (!strcmp(fname, "-")) {
+				if (stdin_occupied) {
+					log_err("fio: only one user (read_iolog_file/job "
+						"file) of stdin is permitted at once but "
+						"more than one was found.\n");
 					ret = 1;
 				}
+				stdin_occupied = true;
 			}
 		}
 		if (!ret) {
