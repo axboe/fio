@@ -179,7 +179,7 @@ static bool __fio_lock_file(const char *fname, int trylock)
 	fio_sem_up(&fld->lock);
 
 	if (!ff) {
-		assert(!trylock);
+		assert(trylock);
 		return true;
 	}
 
