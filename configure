@@ -939,7 +939,8 @@ cat > $TMPC << EOF
 
 int main(int argc, char **argv)
 {
-  return asprintf(NULL, "%s", "str") == 0;
+  char *buf;
+  return asprintf(&buf, "%s", "str") == 0;
 }
 EOF
 if compile_prog "" "" "have_asprintf"; then
@@ -956,7 +957,8 @@ cat > $TMPC << EOF
 int main(int argc, char **argv)
 {
   va_list ap;
-  return vasprintf(NULL, "%s", ap) == 0;
+  char *buf;
+  return vasprintf(&buf, "%s", ap) == 0;
 }
 EOF
 if compile_prog "" "" "have_vasprintf"; then
