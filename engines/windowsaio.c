@@ -106,12 +106,10 @@ static int fio_windowsaio_init(struct thread_data *td)
 			ctx->iocp = hFile;
 			ctx->wd = wd;
 			wd->iothread = CreateThread(NULL, 0, IoCompletionRoutine, ctx, 0, &threadid);
-
-			if (wd->iothread != NULL &&
-			    fio_option_is_set(&td->o, cpumask))
-				fio_setaffinity(threadid, td->o.cpumask);
-			else
+			if (!wd->iothread)
 				log_err("windowsaio: failed to create io completion thread\n");
+			else if (fio_option_is_set(&td->o, cpumask))
+				fio_setaffinity(threadid, td->o.cpumask);
 		}
 
 		if (rc || wd->iothread == NULL)
