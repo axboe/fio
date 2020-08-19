@@ -938,8 +938,9 @@ static int fio_netio_udp_recv_open(struct thread_data *td, struct fio_file *f)
 
 	if (ntohl(msg.magic) != FIO_LINK_OPEN_CLOSE_MAGIC ||
 	    ntohl(msg.cmd) != FIO_LINK_OPEN) {
-		log_err("fio: bad udp open magic %x/%x\n", ntohl(msg.magic),
-								ntohl(msg.cmd));
+		log_err("fio: bad udp open magic %x/%x\n",
+			(unsigned int) ntohl(msg.magic),
+			(unsigned int) ntohl(msg.cmd));
 		return -1;
 	}
 
