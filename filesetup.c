@@ -1445,6 +1445,19 @@ void close_files(struct thread_data *td)
 	}
 }
 
+void fio_file_free(struct fio_file *f)
+{
+	if (fio_file_axmap(f))
+		axmap_free(f->io_axmap);
+	if (!fio_file_smalloc(f)) {
+		free(f->file_name);
+		free(f);
+	} else {
+		sfree(f->file_name);
+		sfree(f);
+	}
+}
+
 void close_and_free_files(struct thread_data *td)
 {
 	struct fio_file *f;
@@ -1469,20 +1482,7 @@ void close_and_free_files(struct thread_data *td)
 		}
 
 		zbd_close_file(f);
-
-		if (!fio_file_smalloc(f))
-			free(f->file_name);
-		else
-			sfree(f->file_name);
-		f->file_name = NULL;
-		if (fio_file_axmap(f)) {
-			axmap_free(f->io_axmap);
-			f->io_axmap = NULL;
-		}
-		if (!fio_file_smalloc(f))
-			free(f);
-		else
-			sfree(f);
+		fio_file_free(f);
 	}
 
 	td->o.filename = NULL;

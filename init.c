@@ -1735,19 +1735,8 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		if (file_alloced) {
 			if (td_new->files) {
 				struct fio_file *f;
-				for_each_file(td_new, f, i) {
-					bool use_smalloc = fio_file_smalloc(f);
-					if (f->file_name) {
-						if (use_smalloc)
-							sfree(f->file_name);
-						else
-							free(f->file_name);
-					}
-					if (use_smalloc)
-						sfree(f);
-					else
-						free(f);
-				}
+				for_each_file(td_new, f, i)
+					fio_file_free(f);
 				free(td_new->files);
 				td_new->files = NULL;
 			}

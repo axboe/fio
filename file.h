@@ -231,5 +231,6 @@ extern void fio_file_reset(struct thread_data *, struct fio_file *);
 extern bool fio_files_done(struct thread_data *);
 extern bool exists_and_not_regfile(const char *);
 extern int fio_set_directio(struct thread_data *, struct fio_file *);
+extern void fio_file_free(struct fio_file *);
 
 #endif
