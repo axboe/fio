@@ -14,7 +14,7 @@ int fio_setaffinity(int pid, os_cpu_mask_t cpumask)
 		bSuccess = SetThreadAffinityMask(h, cpumask);
 		if (!bSuccess)
 			log_err("fio_setaffinity failed: failed to set thread affinity (pid %d, mask %.16llx)\n",
-				pid, cpumask);
+				pid, (long long unsigned) cpumask);
 
 		CloseHandle(h);
 	} else {
@@ -261,10 +261,8 @@ int fio_setaffinity(int pid, os_cpu_mask_t cpumask)
 	if (SetThreadGroupAffinity(handle, &new_group_affinity, NULL) != 0)
 		ret = 0;
 	else {
-		log_err("fio_setaffinity: failed to set thread affinity "
-			 "(pid %d, group %d, mask %" PRIx64 ", "
-			 "GetLastError=%d)\n", pid, group, group_mask,
-			 GetLastError());
+		log_err("fio_setaffinity: failed to set thread affinity (pid %d, group %d, mask %" PRIx64 ", GetLastError=%lu)\n",
+			pid, group, group_mask, GetLastError());
 		goto err;
 	}
 
@@ -323,7 +321,7 @@ int fio_getaffinity(int pid, os_cpu_mask_t *mask)
 		goto err;
 	}
 	if (!GetProcessGroupAffinity(handle, &group_count, current_groups)) {
-		log_err("%s: failed to get single group affinity for pid %d (%d)\n",
+		log_err("%s: failed to get single group affinity for pid %d (%lu)\n",
 			__func__, pid, GetLastError());
 		goto err;
 	}
