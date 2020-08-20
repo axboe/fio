@@ -484,7 +484,7 @@ lexer.h: lex.yy.c
 exp/test-expression-parser.o: exp/test-expression-parser.c
 	$(QUIET_CC)$(CC) -o $@ $(CFLAGS) $(CPPFLAGS) -c $<
 exp/test-expression-parser: exp/test-expression-parser.o
-	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) $< y.tab.o lex.yy.o -o $@ $(LIBS)
+	$(QUIET_LINK)$(CC) $(LDFLAGS) $< y.tab.o lex.yy.o -o $@ $(LIBS)
 
 parse.o: lex.yy.o y.tab.o
 endif
@@ -520,55 +520,55 @@ printing.o: printing.c printing.h
 
 t/io_uring.o: os/linux/io_uring.h
 t/io_uring: $(T_IOU_RING_OBJS)
-	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_IOU_RING_OBJS) $(LIBS)
+	$(QUIET_LINK)$(CC) $(LDFLAGS) -o $@ $(T_IOU_RING_OBJS) $(LIBS)
 
 t/read-to-pipe-async: $(T_PIPE_ASYNC_OBJS)
-	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_PIPE_ASYNC_OBJS) $(LIBS)
+	$(QUIET_LINK)$(CC) $(LDFLAGS) -o $@ $(T_PIPE_ASYNC_OBJS) $(LIBS)
 
 t/memlock: $(T_MEMLOCK_OBJS)
-	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_MEMLOCK_OBJS) $(LIBS)
+	$(QUIET_LINK)$(CC) $(LDFLAGS) -o $@ $(T_MEMLOCK_OBJS) $(LIBS)
 
 t/stest: $(T_SMALLOC_OBJS)
-	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_SMALLOC_OBJS) $(LIBS)
+	$(QUIET_LINK)$(CC) $(LDFLAGS) -o $@ $(T_SMALLOC_OBJS) $(LIBS)
 
 t/ieee754: $(T_IEEE_OBJS)
-	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_IEEE_OBJS) $(LIBS)
+	$(QUIET_LINK)$(CC) $(LDFLAGS) -o $@ $(T_IEEE_OBJS) $(LIBS)
 
 fio: $(FIO_OBJS)
-	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(FIO_OBJS) $(LIBS) $(HDFSLIB)
+	$(QUIET_LINK)$(CC) $(LDFLAGS) -o $@ $(FIO_OBJS) $(LIBS) $(HDFSLIB)
 
 gfio: $(GFIO_OBJS)
 	$(QUIET_LINK)$(CC) $(filter-out -static, $(LDFLAGS)) -o gfio $(GFIO_OBJS) $(LIBS) $(GFIO_LIBS) $(GTK_LDFLAGS) $(HDFSLIB)
 
 t/fio-genzipf: $(T_ZIPF_OBJS)
-	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_ZIPF_OBJS) $(LIBS)
+	$(QUIET_LINK)$(CC) $(LDFLAGS) -o $@ $(T_ZIPF_OBJS) $(LIBS)
 
 t/axmap: $(T_AXMAP_OBJS)
-	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_AXMAP_OBJS) $(LIBS)
+	$(QUIET_LINK)$(CC) $(LDFLAGS) -o $@ $(T_AXMAP_OBJS) $(LIBS)
 
 t/lfsr-test: $(T_LFSR_TEST_OBJS)
-	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_LFSR_TEST_OBJS) $(LIBS)
+	$(QUIET_LINK)$(CC) $(LDFLAGS) -o $@ $(T_LFSR_TEST_OBJS) $(LIBS)
 
 t/gen-rand: $(T_GEN_RAND_OBJS)
-	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_GEN_RAND_OBJS) $(LIBS)
+	$(QUIET_LINK)$(CC) $(LDFLAGS) -o $@ $(T_GEN_RAND_OBJS) $(LIBS)
 
 ifeq ($(CONFIG_TARGET_OS), Linux)
 t/fio-btrace2fio: $(T_BTRACE_FIO_OBJS)
-	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_BTRACE_FIO_OBJS) $(LIBS)
+	$(QUIET_LINK)$(CC) $(LDFLAGS) -o $@ $(T_BTRACE_FIO_OBJS) $(LIBS)
 endif
 
 t/fio-dedupe: $(T_DEDUPE_OBJS)
-	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_DEDUPE_OBJS) $(LIBS)
+	$(QUIET_LINK)$(CC) $(LDFLAGS) -o $@ $(T_DEDUPE_OBJS) $(LIBS)
 
 t/fio-verify-state: $(T_VS_OBJS)
-	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_VS_OBJS) $(LIBS)
+	$(QUIET_LINK)$(CC) $(LDFLAGS) -o $@ $(T_VS_OBJS) $(LIBS)
 
 t/time-test: $(T_TT_OBJS)
-	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(T_TT_OBJS) $(LIBS)
+	$(QUIET_LINK)$(CC) $(LDFLAGS) -o $@ $(T_TT_OBJS) $(LIBS)
 
 ifdef CONFIG_HAVE_CUNIT
 unittests/unittest: $(UT_OBJS) $(UT_TARGET_OBJS)
-	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(UT_OBJS) $(UT_TARGET_OBJS) -lcunit $(LIBS)
+	$(QUIET_LINK)$(CC) $(LDFLAGS) -o $@ $(UT_OBJS) $(UT_TARGET_OBJS) -lcunit $(LIBS)
 endif
 
 clean: FORCE

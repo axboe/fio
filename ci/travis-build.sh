@@ -11,6 +11,7 @@ case "$TRAVIS_OS_NAME" in
         case "$CI_TARGET_ARCH" in
             "x86")
                 EXTRA_CFLAGS="${EXTRA_CFLAGS} -m32"
+                export LDFLAGS="-m32"
                 ;;
             "amd64")
                 CONFIGURE_FLAGS+=(--enable-cuda)
