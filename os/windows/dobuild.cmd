@@ -34,7 +34,13 @@ if defined SIGN_FIO (
   signtool sign /as /n "%SIGNING_CN%" /tr http://timestamp.digicert.com /td sha256 /fd sha256 ..\..\t\*.exe
 )
 
-"%WIX%bin\candle" -nologo -arch %FIO_ARCH% -dFioVersionNumbers="%FIO_VERSION_NUMBERS%" install.wxs
+if exist ..\..\fio.pdb (
+  set FIO_PDB=true
+) else (
+  set FIO_PDB=false
+)
+
+"%WIX%bin\candle" -nologo -arch %FIO_ARCH% -dFioVersionNumbers="%FIO_VERSION_NUMBERS%" -dFioPDB="%FIO_PDB%" install.wxs
 @if ERRORLEVEL 1 goto end
 "%WIX%bin\candle" -nologo -arch %FIO_ARCH% examples.wxs
 @if ERRORLEVEL 1 goto end

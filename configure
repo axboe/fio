@@ -193,6 +193,8 @@ for opt do
   ;;
   --target-win-ver=*) target_win_ver="$optarg"
   ;;
+  --enable-pdb) pdb="yes"
+  ;;
   --build-static) build_static="yes"
   ;;
   --enable-gfio) gfio_check="yes"
@@ -256,6 +258,7 @@ if test "$show_help" = "yes" ; then
   echo "--extra-cflags=         Specify extra CFLAGS to pass to compiler"
   echo "--build-32bit-win       Enable 32-bit build on Windows"
   echo "--target-win-ver=       Minimum version of Windows to target (XP or 7)"
+  echo "--enable-pdb            Enable Windows PDB symbols generation (needs clang/lld)"
   echo "--build-static          Build a static fio"
   echo "--esx                   Configure build options for esx"
   echo "--enable-gfio           Enable building of gtk gfio"
@@ -2702,6 +2705,27 @@ if compile_prog "" "" "statx_syscall"; then
 fi
 print_config "statx(2)/syscall" "$statx_syscall"
 
+##########################################
+# check for Windows PDB generation support
+if test "pdb" != "no" ; then
+  cat > $TMPC <<EOF
+int main(void)
+{
+  return 0;
+}
+EOF
+  if compile_prog "-g -gcodeview" "-fuse-ld=lld -Wl,-pdb,$TMPO" "pdb"; then
+    pdb=yes
+  else
+    if test "$pdb" = "yes"; then
+      feature_not_found "PDB" "clang and lld"
+    fi
+    pdb=no
+  fi
+else
+  pdb=no
+fi
+print_config "Windows PDB generation" "$pdb"
 #############################################################################
 
 if test "$wordsize" = "64" ; then
@@ -3024,6 +3048,10 @@ fi
 if test "$dynamic_engines" = "yes" ; then
   output_sym "CONFIG_DYNAMIC_ENGINES"
 fi
+if test "$pdb" = yes; then
+  output_sym "CONFIG_PDB"
+fi
+
 print_config "Lib-based ioengines dynamic" "$dynamic_engines"
 cat > $TMPC << EOF
 int main(int argc, char **argv)

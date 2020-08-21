@@ -34,6 +34,12 @@ ifdef CONFIG_BUILD_NATIVE
   CFLAGS := -march=native $(CFLAGS)
 endif
 
+ifdef CONFIG_PDB
+  LINK_PDBFILE ?= -Wl,-pdb,$(dir $@)/$(basename $(@F)).pdb
+  CFLAGS := -gcodeview $(CFLAGS)
+  LDFLAGS += -fuse-ld=lld $(LINK_PDBFILE)
+endif
+
 ifdef CONFIG_GFIO
   PROGS += gfio
 endif

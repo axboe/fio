@@ -27,6 +27,11 @@
 							<File Source="..\..\fio.exe"/>
 							<Environment Action="set" Part="last" Id="PATH" Name="PATH" Value="[INSTALLDIR]fio\" System="yes"/>
 						</Component>
+						<?if $(var.FioPDB) = true?>
+						<Component>
+							<File Id="fio.pdb" Name="fio.pdb" Source="..\..\fio.pdb"/>
+						</Component>
+						<?endif?>
 						<Component>
 							<File Id="README" Name="README.txt" Source="..\..\README"/>
 						</Component>
@@ -76,6 +81,9 @@
 
 	<Feature Id="AlwaysInstall" Absent="disallow" ConfigurableDirectory="INSTALLDIR" Display="hidden" Level="1" Title="Flexible I/O Tester">
 		<ComponentRef Id="fio.exe"/>
+		<?if $(var.FioPDB) = true?>
+		<ComponentRef Id="fio.pdb"/>
+		<?endif?>
 		<ComponentRef Id="HOWTO"/>
 		<ComponentRef Id="README"/>
 		<ComponentRef Id="REPORTING_BUGS"/>
