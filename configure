@@ -2117,10 +2117,11 @@ if test "$libpmem" != "yes" ; then
 fi
 cat > $TMPC << EOF
 #include <libpmem.h>
+#include <stdlib.h>
 int main(int argc, char **argv)
 {
   int rc;
-  rc = pmem_is_pmem(0, 0);
+  rc = pmem_is_pmem(NULL, NULL);
   return 0;
 }
 EOF
@@ -2128,6 +2129,27 @@ if compile_prog "" "-lpmem" "libpmem"; then
   libpmem="yes"
 fi
 print_config "libpmem" "$libpmem"
+
+##########################################
+# Check whether libpmem's version >= 1.5
+if test "$libpmem1_5" != "yes" ; then
+  libpmem1_5="no"
+fi
+if test "$libpmem" = "yes"; then
+  cat > $TMPC << EOF
+#include <libpmem.h>
+#include <stdlib.h>
+int main(int argc, char **argv)
+{
+  pmem_memcpy(NULL, NULL, NULL, NULL);
+  return 0;
+}
+EOF
+  if compile_prog "" "-lpmem" "libpmem1_5"; then
+    libpmem1_5="yes"
+  fi
+fi
+print_config "libpmem1_5" "$libpmem1_5"
 
 ##########################################
 # Check whether we have libpmemblk
@@ -2151,10 +2173,12 @@ EOF
 fi
 print_config "libpmemblk" "$libpmemblk"
 
-# Choose the ioengines
+# Choose libpmem-based ioengines
 if test "$libpmem" = "yes" && test "$disable_pmem" = "no"; then
-  pmem="yes"
   devdax="yes"
+  if test "$libpmem1_5" = "yes"; then
+    pmem="yes"
+  fi
   if test "$libpmemblk" = "yes"; then
     pmemblk="yes"
   fi
