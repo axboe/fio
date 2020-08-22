@@ -394,6 +394,8 @@ CYGWIN*)
   fi
   if test "$target_win_ver" = "XP"; then
     output_sym "CONFIG_WINDOWS_XP"
+    # Technically the below is targeting 2003
+    CFLAGS="$CFLAGS -D_WIN32_WINNT=0x0502"
   elif test "$target_win_ver" = "7"; then
     output_sym "CONFIG_WINDOWS_7"
     CFLAGS="$CFLAGS -D_WIN32_WINNT=0x0601"
