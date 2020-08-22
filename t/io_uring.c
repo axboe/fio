@@ -94,6 +94,8 @@ static int sq_thread_poll = 0;	/* use kernel submission/poller thread */
 static int sq_thread_cpu = -1;	/* pin above thread to this CPU */
 static int do_nop = 0;		/* no-op SQ ring commands */
 
+static int read_op = IORING_OP_READV;
+
 static int io_uring_register_buffers(struct submitter *s)
 {
 	if (do_nop)
@@ -123,6 +125,29 @@ static int io_uring_register_files(struct submitter *s)
 static int io_uring_setup(unsigned entries, struct io_uring_params *p)
 {
 	return syscall(__NR_io_uring_setup, entries, p);
+}
+
+static void io_uring_probe(int fd)
+{
+	struct io_uring_probe *p;
+	int ret;
+
+	p = malloc(sizeof(*p) + 256 * sizeof(struct io_uring_probe_op));
+	if (!p)
+		return;
+
+	memset(p, 0, sizeof(*p) + 256 * sizeof(struct io_uring_probe_op));
+	ret = syscall(__NR_io_uring_register, fd, IORING_REGISTER_PROBE, p, 256);
+	if (ret < 0)
+		goto out;
+
+	if (IORING_OP_READ > p->ops_len)
+		goto out;
+
+	if ((p->ops[IORING_OP_READ].flags & IO_URING_OP_SUPPORTED))
+		read_op = IORING_OP_READ;
+out:
+	free(p);
 }
 
 static int io_uring_enter(struct submitter *s, unsigned int to_submit,
@@ -184,10 +209,15 @@ static void init_io(struct submitter *s, unsigned index)
 		sqe->addr = (unsigned long) s->iovecs[index].iov_base;
 		sqe->len = bs;
 		sqe->buf_index = index;
-	} else {
+	} else if (read_op == IORING_OP_READV) {
 		sqe->opcode = IORING_OP_READV;
 		sqe->addr = (unsigned long) &s->iovecs[index];
 		sqe->len = 1;
+		sqe->buf_index = 0;
+	} else {
+		sqe->opcode = IORING_OP_READ;
+		sqe->addr = (unsigned long) s->iovecs[index].iov_base;
+		sqe->len = bs;
 		sqe->buf_index = 0;
 	}
 	sqe->ioprio = 0;
@@ -413,6 +443,8 @@ static int setup_ring(struct submitter *s)
 		return 1;
 	}
 	s->ring_fd = fd;
+
+	io_uring_probe(fd);
 
 	if (fixedbufs) {
 		ret = io_uring_register_buffers(s);
