@@ -94,7 +94,7 @@ static int sq_thread_poll = 0;	/* use kernel submission/poller thread */
 static int sq_thread_cpu = -1;	/* pin above thread to this CPU */
 static int do_nop = 0;		/* no-op SQ ring commands */
 
-static int read_op = IORING_OP_READV;
+static int vectored = 1;
 
 static int io_uring_register_buffers(struct submitter *s)
 {
@@ -145,7 +145,7 @@ static void io_uring_probe(int fd)
 		goto out;
 
 	if ((p->ops[IORING_OP_READ].flags & IO_URING_OP_SUPPORTED))
-		read_op = IORING_OP_READ;
+		vectored = 0;
 out:
 	free(p);
 }
@@ -209,15 +209,15 @@ static void init_io(struct submitter *s, unsigned index)
 		sqe->addr = (unsigned long) s->iovecs[index].iov_base;
 		sqe->len = bs;
 		sqe->buf_index = index;
-	} else if (read_op == IORING_OP_READV) {
-		sqe->opcode = IORING_OP_READV;
-		sqe->addr = (unsigned long) &s->iovecs[index];
-		sqe->len = 1;
-		sqe->buf_index = 0;
-	} else {
+	} else if (!vectored) {
 		sqe->opcode = IORING_OP_READ;
 		sqe->addr = (unsigned long) s->iovecs[index].iov_base;
 		sqe->len = bs;
+		sqe->buf_index = 0;
+	} else {
+		sqe->opcode = IORING_OP_READV;
+		sqe->addr = (unsigned long) &s->iovecs[index];
+		sqe->len = 1;
 		sqe->buf_index = 0;
 	}
 	sqe->ioprio = 0;
