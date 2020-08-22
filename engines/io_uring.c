@@ -174,6 +174,7 @@ static struct fio_option options[] = {
 		.lname	= "Non-vectored",
 		.type	= FIO_OPT_INT,
 		.off1	= offsetof(struct ioring_options, nonvectored),
+		.def	= "-1",
 		.help	= "Use non-vectored read/write commands",
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_IOURING,
@@ -547,6 +548,40 @@ static int fio_ioring_mmap(struct ioring_data *ld, struct io_uring_params *p)
 	return 0;
 }
 
+static void fio_ioring_probe(struct thread_data *td)
+{
+	struct ioring_data *ld = td->io_ops_data;
+	struct ioring_options *o = td->eo;
+	struct io_uring_probe *p;
+	int ret;
+
+	/* already set by user, don't touch */
+	if (o->nonvectored != -1)
+		return;
+
+	/* default to off, as that's always safe */
+	o->nonvectored = 0;
+
+	p = malloc(sizeof(*p) + 256 * sizeof(struct io_uring_probe_op));
+	if (!p)
+		return;
+
+	memset(p, 0, sizeof(*p) + 256 * sizeof(struct io_uring_probe_op));
+	ret = syscall(__NR_io_uring_register, ld->ring_fd,
+			IORING_REGISTER_PROBE, p, 256);
+	if (ret < 0)
+		goto out;
+
+	if (IORING_OP_WRITE > p->ops_len)
+		goto out;
+
+	if ((p->ops[IORING_OP_READ].flags & IO_URING_OP_SUPPORTED) &&
+	    (p->ops[IORING_OP_WRITE].flags & IO_URING_OP_SUPPORTED))
+		o->nonvectored = 1;
+out:
+	free(p);
+}
+
 static int fio_ioring_queue_init(struct thread_data *td)
 {
 	struct ioring_data *ld = td->io_ops_data;
@@ -572,6 +607,8 @@ static int fio_ioring_queue_init(struct thread_data *td)
 		return ret;
 
 	ld->ring_fd = ret;
+
+	fio_ioring_probe(td);
 
 	if (o->fixedbufs) {
 		ret = syscall(__NR_io_uring_register, ld->ring_fd,
