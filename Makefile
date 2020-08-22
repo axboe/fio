@@ -22,21 +22,21 @@ endif
 DEBUGFLAGS = -DFIO_INC_DEBUG
 CPPFLAGS= -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DFIO_INTERNAL $(DEBUGFLAGS)
 OPTFLAGS= -g -ffast-math
-CFLAGS	:= -std=gnu99 -Wwrite-strings -Wall -Wdeclaration-after-statement $(OPTFLAGS) $(EXTFLAGS) $(BUILD_CFLAGS) -I. -I$(SRCDIR) $(CFLAGS)
+FIO_CFLAGS= -std=gnu99 -Wwrite-strings -Wall -Wdeclaration-after-statement $(OPTFLAGS) $(EXTFLAGS) $(BUILD_CFLAGS) -I. -I$(SRCDIR)
 LIBS	+= -lm $(EXTLIBS)
 PROGS	= fio
 SCRIPTS = $(addprefix $(SRCDIR)/,tools/fio_generate_plots tools/plot/fio2gnuplot tools/genfio tools/fiologparser.py tools/hist/fiologparser_hist.py tools/hist/fio-histo-log-pctiles.py tools/fio_jsonplus_clat2csv)
 
 ifndef CONFIG_FIO_NO_OPT
-  CFLAGS := -O3 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 $(CFLAGS)
+  FIO_CFLAGS += -O3 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2
 endif
 ifdef CONFIG_BUILD_NATIVE
-  CFLAGS := -march=native $(CFLAGS)
+  FIO_CFLAGS += -march=native
 endif
 
 ifdef CONFIG_PDB
   LINK_PDBFILE ?= -Wl,-pdb,$(dir $@)/$(basename $(@F)).pdb
-  CFLAGS := -gcodeview $(CFLAGS)
+  FIO_CFLAGS += -gcodeview
   LDFLAGS += -fuse-ld=lld $(LINK_PDBFILE)
 endif
 
@@ -61,7 +61,7 @@ SOURCE :=	$(sort $(patsubst $(SRCDIR)/%,%,$(wildcard $(SRCDIR)/crc/*.c)) \
 ifdef CONFIG_LIBHDFS
   HDFSFLAGS= -I $(JAVA_HOME)/include -I $(JAVA_HOME)/include/linux -I $(FIO_LIBHDFS_INCLUDE)
   HDFSLIB= -Wl,-rpath $(JAVA_HOME)/jre/lib/$(FIO_HDFS_CPU)/server -L$(JAVA_HOME)/jre/lib/$(FIO_HDFS_CPU)/server $(FIO_LIBHDFS_LIB)/libhdfs.a -ljvm
-  CFLAGS := $(HDFSFLAGS) $(CFLAGS)
+  FIO_CFLAGS += $(HDFSFLAGS)
   SOURCE += engines/libhdfs.c
 endif
 
@@ -80,10 +80,9 @@ ifdef CONFIG_LIBNBD
 endif
 
 ifdef CONFIG_64BIT
-  CFLAGS := -DBITS_PER_LONG=64 $(CFLAGS)
-endif
-ifdef CONFIG_32BIT
-  CFLAGS := -DBITS_PER_LONG=32 $(CFLAGS)
+  CPPFLAGS += -DBITS_PER_LONG=64
+else ifdef CONFIG_32BIT
+  CPPFLAGS += -DBITS_PER_LONG=32
 endif
 ifdef CONFIG_LIBAIO
   aio_SRCS = engines/libaio.c
@@ -161,7 +160,7 @@ ifdef CONFIG_GFAPI
   SOURCE += engines/glusterfs_async.c
   LIBS += -lgfapi -lglusterfs
   ifdef CONFIG_GF_FADVISE
-    CFLAGS := "-DGFAPI_USE_FADVISE" $(CFLAGS)
+    FIO_CFLAGS += "-DGFAPI_USE_FADVISE"
   endif
 endif
 ifdef CONFIG_MTD
@@ -240,7 +239,7 @@ ifeq ($(CONFIG_TARGET_OS), AIX)
 endif
 ifeq ($(CONFIG_TARGET_OS), HP-UX)
   LIBS   += -lpthread -ldl -lrt
-  CFLAGS := -D_LARGEFILE64_SOURCE -D_XOPEN_SOURCE_EXTENDED $(CFLAGS)
+  FIO_CFLAGS += -D_LARGEFILE64_SOURCE -D_XOPEN_SOURCE_EXTENDED
 endif
 ifeq ($(CONFIG_TARGET_OS), Darwin)
   LIBS	 += -lpthread -ldl
@@ -249,24 +248,21 @@ ifneq (,$(findstring CYGWIN,$(CONFIG_TARGET_OS)))
   SOURCE += os/windows/cpu-affinity.c os/windows/posix.c
   WINDOWS_OBJS = os/windows/cpu-affinity.o os/windows/posix.o lib/hweight.o
   LIBS	 += -lpthread -lpsapi -lws2_32 -lssp
-  CFLAGS := -DPSAPI_VERSION=1 -Ios/windows/posix/include -Wno-format $(CFLAGS)
+  FIO_CFLAGS += -DPSAPI_VERSION=1 -Ios/windows/posix/include -Wno-format
 endif
 
 ifdef CONFIG_DYNAMIC_ENGINES
  DYNAMIC_ENGS := $(ENGINES)
 define engine_template =
 $(1)_OBJS := $$($(1)_SRCS:.c=.o)
-$$($(1)_OBJS): CFLAGS := -fPIC $$($(1)_CFLAGS) $(CFLAGS)
-engines/lib$(1).so: $$($(1)_OBJS)
-	$$(QUIET_LINK)$(CC) -shared -rdynamic -fPIC -Wl,-soname,lib$(1).so.1 $$($(1)_LIBS) -o $$@ $$<
+$$($(1)_OBJS): FIO_CFLAGS += -fPIC $$($(1)_CFLAGS)
 ENGS_OBJS += engines/lib$(1).so
-all install: $(ENGS_OBJS)
 endef
 else # !CONFIG_DYNAMIC_ENGINES
 define engine_template =
 SOURCE += $$($(1)_SRCS)
 LIBS += $$($(1)_LIBS)
-CFLAGS := $$($(1)_CFLAGS) $(CFLAGS)
+CFLAGS += $$($(1)_CFLAGS)
 endef
 endif
 
@@ -433,7 +429,7 @@ mandir = $(prefix)/man
 sharedir = $(prefix)/share/fio
 endif
 
-all: $(PROGS) $(T_TEST_PROGS) $(UT_PROGS) $(SCRIPTS) FORCE
+all: $(PROGS) $(T_TEST_PROGS) $(UT_PROGS) $(SCRIPTS) $(ENGS_OBJS) FORCE
 
 .PHONY: all install clean test
 .PHONY: FORCE cscope
@@ -442,7 +438,7 @@ FIO-VERSION-FILE: FORCE
 	@$(SHELL) $(SRCDIR)/FIO-VERSION-GEN
 -include FIO-VERSION-FILE
 
-override CFLAGS := -DFIO_VERSION='"$(FIO_VERSION)"' $(CFLAGS)
+override CFLAGS := -DFIO_VERSION='"$(FIO_VERSION)"' $(FIO_CFLAGS) $(CFLAGS)
 
 %.o : %.c
 	@mkdir -p $(dir $@)
@@ -571,6 +567,11 @@ unittests/unittest: $(UT_OBJS) $(UT_TARGET_OBJS)
 	$(QUIET_LINK)$(CC) $(LDFLAGS) -o $@ $(UT_OBJS) $(UT_TARGET_OBJS) -lcunit $(LIBS)
 endif
 
+ifdef CONFIG_DYNAMIC_ENGINES
+engines/lib$(1).so: $$($(1)_OBJS)
+	$$(QUIET_LINK)$(CC) -shared -rdynamic -fPIC -Wl,-soname,lib$(1).so.1 $$($(1)_LIBS) -o $$@ $$<
+endif
+
 clean: FORCE
 	@rm -f .depend $(FIO_OBJS) $(GFIO_OBJS) $(OBJS) $(T_OBJS) $(UT_OBJS) $(PROGS) $(T_PROGS) $(T_TEST_PROGS) core.* core gfio unittests/unittest FIO-VERSION-FILE *.[do] lib/*.d oslib/*.[do] crc/*.d engines/*.[do] engines/*.so profiles/*.[do] t/*.[do] unittests/*.[do] unittests/*/*.[do] config-host.mak config-host.h y.tab.[ch] lex.yy.c exp/*.[do] lexer.h
 	@rm -f t/fio-btrace2fio t/io_uring t/read-to-pipe-async
@@ -609,7 +610,7 @@ fulltest:
 		sudo t/zbd/run-tests-against-zoned-nullb;	 	\
 	fi
 
-install: $(PROGS) $(SCRIPTS) tools/plot/fio2gnuplot.1 FORCE
+install: $(PROGS) $(SCRIPTS) $(ENGS_OBJS) tools/plot/fio2gnuplot.1 FORCE
 	$(INSTALL) -m 755 -d $(DESTDIR)$(bindir)
 	$(INSTALL) $(PROGS) $(SCRIPTS) $(DESTDIR)$(bindir)
 ifdef CONFIG_DYNAMIC_ENGINES
