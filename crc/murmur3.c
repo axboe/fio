@@ -1,4 +1,5 @@
 #include "murmur3.h"
+#include "../compiler/compiler.h"
 
 static inline uint32_t rotl32(uint32_t x, int8_t r)
 {
@@ -29,10 +30,10 @@ static uint32_t murmur3_tail(const uint8_t *data, const int nblocks,
 	switch (len & 3) {
 	case 3:
 		k1 ^= tail[2] << 16;
-		/* fall through */
+		fallthrough;
 	case 2:
 		k1 ^= tail[1] << 8;
-		/* fall through */
+		fallthrough;
 	case 1:
 		k1 ^= tail[0];
 		k1 *= c1;

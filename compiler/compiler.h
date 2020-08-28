@@ -66,4 +66,14 @@
 #define FIELD_SIZE(s, f) (sizeof(((__typeof__(s))0)->f))
 #endif
 
+#ifndef __has_attribute
+#define __GCC4_has_attribute___fallthrough__	0
+#endif
+
+#if __has_attribute(__fallthrough__)
+#define fallthrough	 __attribute__((__fallthrough__))
+#else
+#define fallthrough	do {} while (0)  /* fallthrough */
+#endif
+
 #endif

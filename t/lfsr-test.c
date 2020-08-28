@@ -6,6 +6,7 @@
 #include "../lib/lfsr.h"
 #include "../gettime.h"
 #include "../fio_time.h"
+#include "../compiler/compiler.h"
 
 static void usage(void)
 {
@@ -40,11 +41,11 @@ int main(int argc, char *argv[])
 	switch (argc) {
 		case 5: if (strncmp(argv[4], "verify", 7) == 0)
 				verify = 1;
-			/* fall through */
+			fallthrough;
 		case 4: spin = atoi(argv[3]);
-			/* fall through */
+			fallthrough;
 		case 3: seed = atol(argv[2]);
-			/* fall through */
+			fallthrough;
 		case 2: numbers = strtol(argv[1], NULL, 16);
 				break;
 		default: usage();
