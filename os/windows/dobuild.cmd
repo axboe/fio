@@ -26,9 +26,21 @@ if not defined FIO_ARCH (
   goto end
 )
 
+if defined SIGN_FIO (
+  signtool sign /n "%SIGNING_CN%" /t http://timestamp.digicert.com ..\..\fio.exe
+  signtool sign /as /n "%SIGNING_CN%" /tr http://timestamp.digicert.com /td sha256 /fd sha256 ..\..\fio.exe
+
+  signtool sign /n "%SIGNING_CN%" /t http://timestamp.digicert.com ..\..\t\*.exe
+  signtool sign /as /n "%SIGNING_CN%" /tr http://timestamp.digicert.com /td sha256 /fd sha256 ..\..\t\*.exe
+)
+
 "%WIX%bin\candle" -nologo -arch %FIO_ARCH% -dFioVersionNumbers="%FIO_VERSION_NUMBERS%" install.wxs
 @if ERRORLEVEL 1 goto end
 "%WIX%bin\candle" -nologo -arch %FIO_ARCH% examples.wxs
 @if ERRORLEVEL 1 goto end
 "%WIX%bin\light" -nologo -sice:ICE61 install.wixobj examples.wixobj -ext WixUIExtension -out %FIO_VERSION%-%FIO_ARCH%.msi
 :end
+
+if defined SIGN_FIO (
+  signtool sign /n "%SIGNING_CN%" /tr http://timestamp.digicert.com /td sha256 /fd sha256 %FIO_VERSION%-%FIO_ARCH%.msi
+)
