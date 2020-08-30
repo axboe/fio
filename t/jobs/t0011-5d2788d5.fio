@@ -11,8 +11,8 @@ runtime=10
 flow_id=1
 
 [flow1]
-flow=-8
+flow=1
 rate_iops=1000
 
 [flow2]
-flow=1
+flow=8

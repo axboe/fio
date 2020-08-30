@@ -420,6 +420,118 @@ class FioJobTest_t0009(FioJobTest):
             self.passed = False
 
 
+class FioJobTest_t0012(FioJobTest):
+    """Test consists of fio test job t0012
+    Confirm ratios of job iops are 1:5:10
+    job1,job2,job3 respectively"""
+
+    def check_result(self):
+        super(FioJobTest_t0012, self).check_result()
+
+        if not self.passed:
+            return
+
+        iops_files = []
+        for i in range(1,4):
+            file_data, success = self.get_file(os.path.join(self.test_dir, "{0}_iops.{1}.log".format(os.path.basename(self.fio_job), i)))
+
+            if not success:
+                self.failure_reason = "{0} unable to open output file,".format(self.failure_reason)
+                self.passed = False
+                return
+
+            iops_files.append(file_data.splitlines())
+
+        # there are 9 samples for job1 and job2, 4 samples for job3
+        iops1 = 0.0
+        iops2 = 0.0
+        iops3 = 0.0
+        for i in range(9):
+            iops1 = iops1 + float(iops_files[0][i].split(',')[1])
+            iops2 = iops2 + float(iops_files[1][i].split(',')[1])
+            iops3 = iops3 + float(iops_files[2][i].split(',')[1])
+
+            ratio1 = iops3/iops2
+            ratio2 = iops3/iops1
+            logging.debug(
+                "sample {0}: job1 iops={1} job2 iops={2} job3 iops={3} job3/job2={4:.3f} job3/job1={5:.3f}".format(
+                    i, iops1, iops2, iops3, ratio1, ratio2
+                )
+            )
+
+        # test job1 and job2 succeeded to recalibrate
+        if ratio1 < 1 or ratio1 > 3 or ratio2 < 7 or ratio2 > 13:
+            self.failure_reason = "{0} iops ratio mismatch iops1={1} iops2={2} iops3={3} expected r1~2 r2~10 got r1={4:.3f} r2={5:.3f},".format(
+                self.failure_reason, iops1, iops2, iops3, ratio1, ratio2
+            )
+            self.passed = False
+            return
+
+
+class FioJobTest_t0014(FioJobTest):
+    """Test consists of fio test job t0014
+	Confirm that job1_iops / job2_iops ~ 1:2 for entire duration
+	and that job1_iops / job3_iops ~ 1:3 for first half of duration.
+
+    The test is about making sure the flow feature can
+    re-calibrate the activity dynamically"""
+
+    def check_result(self):
+        super(FioJobTest_t0014, self).check_result()
+
+        if not self.passed:
+            return
+
+        iops_files = []
+        for i in range(1,4):
+            file_data, success = self.get_file(os.path.join(self.test_dir, "{0}_iops.{1}.log".format(os.path.basename(self.fio_job), i)))
+
+            if not success:
+                self.failure_reason = "{0} unable to open output file,".format(self.failure_reason)
+                self.passed = False
+                return
+
+            iops_files.append(file_data.splitlines())
+
+        # there are 9 samples for job1 and job2, 4 samples for job3
+        iops1 = 0.0
+        iops2 = 0.0
+        iops3 = 0.0
+        for i in range(9):
+            if i < 4:
+                iops3 = iops3 + float(iops_files[2][i].split(',')[1])
+            elif i == 4:
+                ratio1 = iops1 / iops2
+                ratio2 = iops1 / iops3
+
+
+                if ratio1 < 0.43 or ratio1 > 0.57 or ratio2 < 0.21 or ratio2 > 0.45:
+                    self.failure_reason = "{0} iops ratio mismatch iops1={1} iops2={2} iops3={3}\
+                                                expected r1~0.5 r2~0.33 got r1={4:.3f} r2={5:.3f},".format(
+                        self.failure_reason, iops1, iops2, iops3, ratio1, ratio2
+                    )
+                    self.passed = False
+
+            iops1 = iops1 + float(iops_files[0][i].split(',')[1])
+            iops2 = iops2 + float(iops_files[1][i].split(',')[1])
+
+            ratio1 = iops1/iops2
+            ratio2 = iops1/iops3
+            logging.debug(
+                "sample {0}: job1 iops={1} job2 iops={2} job3 iops={3} job1/job2={4:.3f} job1/job3={5:.3f}".format(
+                    i, iops1, iops2, iops3, ratio1, ratio2
+                )
+            )
+
+        # test job1 and job2 succeeded to recalibrate
+        if ratio1 < 0.43 or ratio1 > 0.57:
+            self.failure_reason = "{0} iops ratio mismatch iops1={1} iops2={2} expected ratio~0.5 got ratio={3:.3f},".format(
+                self.failure_reason, iops1, iops2, ratio1
+            )
+            self.passed = False
+            return
+
+
 class FioJobTest_iops_rate(FioJobTest):
     """Test consists of fio test job t0009
     Confirm that job0 iops == 1000
@@ -442,7 +554,7 @@ class FioJobTest_iops_rate(FioJobTest):
             self.failure_reason = "{0} iops value mismatch,".format(self.failure_reason)
             self.passed = False
 
-        if ratio < 7 or ratio > 9:
+        if ratio < 6 or ratio > 10:
             self.failure_reason = "{0} iops ratio mismatch,".format(self.failure_reason)
             self.passed = False
 
@@ -680,20 +792,28 @@ TEST_LIST = [
     },
     {
         'test_id':          12,
-        'test_class':       FioJobTest_iops_rate,
+        'test_class':       FioJobTest_t0012,
         'job':              't0012.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
         'pre_success':      None,
         'output_format':    'json',
-        'requirements':     [Requirements.not_macos],
-        # mac os does not support CPU affinity
-        # which is required for gtod offloading
+        'requirements':     [],
     },
     {
         'test_id':          13,
         'test_class':       FioJobTest,
         'job':              't0013.fio',
+        'success':          SUCCESS_DEFAULT,
+        'pre_job':          None,
+        'pre_success':      None,
+        'output_format':    'json',
+        'requirements':     [],
+    },
+    {
+        'test_id':          14,
+        'test_class':       FioJobTest_t0014,
+        'job':              't0014.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
         'pre_success':      None,

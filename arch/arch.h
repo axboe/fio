@@ -36,6 +36,13 @@ extern unsigned long arch_flags;
 
 #define ARCH_CPU_CLOCK_WRAPS
 
+#define atomic_add(p, v)					\
+	atomic_fetch_add((_Atomic typeof(*(p)) *)(p), v)
+#define atomic_sub(p, v)					\
+	atomic_fetch_sub((_Atomic typeof(*(p)) *)(p), v)
+#define atomic_load_relaxed(p)					\
+	atomic_load_explicit((_Atomic typeof(*(p)) *)(p),	\
+			     memory_order_relaxed)
 #define atomic_load_acquire(p)					\
 	atomic_load_explicit((_Atomic typeof(*(p)) *)(p),	\
 			     memory_order_acquire)

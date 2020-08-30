@@ -440,6 +440,7 @@ struct thread_data {
 	int first_error;
 
 	struct fio_flow *flow;
+	unsigned long long flow_counter;
 
 	/*
 	 * Can be overloaded by profiles

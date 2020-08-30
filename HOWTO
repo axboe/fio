@@ -2861,15 +2861,10 @@ Threads, processes and job synchronization
 	``flow=8`` and another job has ``flow=-1``, then there will be a roughly 1:8
 	ratio in how much one runs vs the other.
 
-.. option:: flow_watermark=int
-
-	The maximum value that the absolute value of the flow counter is allowed to
-	reach before the job must wait for a lower value of the counter.
-
 .. option:: flow_sleep=int
 
-	The period of time, in microseconds, to wait after the flow watermark has
-	been exceeded before retrying operations.
+	The period of time, in microseconds, to wait after the flow counter
+	has exceeded its proportion before retrying operations.
 
 .. option:: stonewall, wait_for_previous
 
