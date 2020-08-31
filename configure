@@ -2241,19 +2241,14 @@ lex="no"
 arith="no"
 if test "$disable_lex" = "no" || test -z "$disable_lex" ; then
 if test "$targetos" != "SunOS" ; then
-LEX=$(which lex 2> /dev/null)
-if test -x "$LEX" ; then
+if has lex; then
   lex="yes"
 fi
-YACC=$(which bison 2> /dev/null)
-if test -x "$YACC" ; then
+if has bison; then
   yacc="yes"
   yacc_is_bison="yes"
-else
-  YACC=$(which yacc 2> /dev/null)
-  if test -x "$YACC" ; then
-    yacc="yes"
-  fi
+elif has yacc; then
+  yacc="yes"
 fi
 if test "$yacc" = "yes" && test "$lex" = "yes" ; then
   arith="yes"
@@ -2269,7 +2264,9 @@ int main(int argc, char **argv)
   return 0;
 }
 EOF
-if compile_prog "" "-ll" "lex"; then
+if compile_prog "" "-lfl" "flex"; then
+  LIBS="-lfl $LIBS"
+elif compile_prog "" "-ll" "lex"; then
   LIBS="-ll $LIBS"
 else
   arith="no"
@@ -2283,8 +2280,7 @@ if test "$arith" = "yes" ; then
 if test "$force_no_lex_o" = "yes" ; then
   lex_use_o="no"
 else
-$LEX -o lex.yy.c exp/expression-parser.l 2> /dev/null
-if test "$?" = "0" ; then
+if lex -o lex.yy.c exp/expression-parser.l 2> /dev/null; then
   lex_use_o="yes"
 else
   lex_use_o="no"
@@ -2959,9 +2955,9 @@ fi
 if test "$arith" = "yes" ; then
   output_sym "CONFIG_ARITHMETIC"
   if test "$yacc_is_bison" = "yes" ; then
-    echo "YACC=$YACC -y" >> $config_host_mak
+    echo "YACC=bison -y" >> $config_host_mak
   else
-    echo "YACC=$YACC" >> $config_host_mak
+    echo "YACC=yacc" >> $config_host_mak
   fi
   if test "$lex_use_o" = "yes" ; then
     echo "CONFIG_LEX_USE_O=y" >> $config_host_mak
