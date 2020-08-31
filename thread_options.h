@@ -311,11 +311,6 @@ struct thread_options {
 	unsigned int uid;
 	unsigned int gid;
 
-	int flow_id;
-	int flow;
-	int flow_watermark;
-	unsigned int flow_sleep;
-
 	unsigned int offset_increment_percent;
 	unsigned long long offset_increment;
 	unsigned long long number_ios;
@@ -326,6 +321,13 @@ struct thread_options {
 	unsigned long long latency_window;
 	fio_fp64_t latency_percentile;
 	uint32_t latency_run;
+
+	/*
+	 * flow support
+	 */
+	int flow_id;
+	unsigned int flow;
+	unsigned int flow_sleep;
 
 	unsigned int sig_figs;
 
@@ -602,11 +604,6 @@ struct thread_options_pack {
 	uint32_t uid;
 	uint32_t gid;
 
-	int32_t flow_id;
-	int32_t flow;
-	int32_t flow_watermark;
-	uint32_t flow_sleep;
-
 	uint32_t offset_increment_percent;
 	uint64_t offset_increment;
 	uint64_t number_ios;
@@ -616,6 +613,13 @@ struct thread_options_pack {
 	uint64_t max_latency;
 	fio_fp64_t latency_percentile;
 	uint32_t latency_run;
+
+	/*
+	 * flow support
+	 */
+	int32_t flow_id;
+	uint32_t flow;
+	uint32_t flow_sleep;
 
 	uint32_t sig_figs;
 

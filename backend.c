@@ -2042,6 +2042,7 @@ reaped:
 
 		done_secs += mtime_since_now(&td->epoch) / 1000;
 		profile_td_exit(td);
+		flow_exit_job(td);
 	}
 
 	if (*nr_running == cputhreads && !pending && realthreads)
