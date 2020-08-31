@@ -281,7 +281,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->uid = le32_to_cpu(top->uid);
 	o->gid = le32_to_cpu(top->gid);
 	o->flow_id = __le32_to_cpu(top->flow_id);
-	o->flow = __le32_to_cpu(top->flow);
+	o->flow = le32_to_cpu(top->flow);
 	o->flow_sleep = le32_to_cpu(top->flow_sleep);
 	o->sync_file_range = le32_to_cpu(top->sync_file_range);
 	o->latency_target = le64_to_cpu(top->latency_target);
@@ -480,7 +480,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->uid = cpu_to_le32(o->uid);
 	top->gid = cpu_to_le32(o->gid);
 	top->flow_id = __cpu_to_le32(o->flow_id);
-	top->flow = __cpu_to_le32(o->flow);
+	top->flow = cpu_to_le32(o->flow);
 	top->flow_sleep = cpu_to_le32(o->flow_sleep);
 	top->sync_file_range = cpu_to_le32(o->sync_file_range);
 	top->latency_target = __cpu_to_le64(o->latency_target);

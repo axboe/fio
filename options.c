@@ -4696,7 +4696,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	{
 		.name	= "flow",
 		.lname	= "I/O flow weight",
-		.type	= FIO_OPT_ULL,
+		.type	= FIO_OPT_INT,
 		.off1	= offsetof(struct thread_options, flow),
 		.help	= "Weight for flow control of this job",
 		.parent	= "flow_id",
