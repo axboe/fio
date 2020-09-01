@@ -628,6 +628,11 @@ static int zbd_init_zone_info(struct thread_data *td, struct fio_file *file)
 	return ret;
 }
 
+static bool zbd_open_zone(struct thread_data *td, const struct fio_file *f,
+			  uint32_t zone_idx);
+static int zbd_reset_zone(struct thread_data *td, struct fio_file *f,
+			  struct fio_zone_info *z);
+
 int zbd_setup_files(struct thread_data *td)
 {
 	struct fio_file *f;
@@ -651,6 +656,8 @@ int zbd_setup_files(struct thread_data *td)
 
 	for_each_file(td, f, i) {
 		struct zoned_block_device_info *zbd = f->zbd_info;
+		struct fio_zone_info *z;
+		int zi;
 
 		if (!zbd)
 			continue;
@@ -665,6 +672,23 @@ int zbd_setup_files(struct thread_data *td)
 		if (zbd->max_open_zones > ZBD_MAX_OPEN_ZONES) {
 			log_err("'max_open_zones' value is limited by %u\n", ZBD_MAX_OPEN_ZONES);
 			return 1;
+		}
+
+		for (zi = f->min_zone; zi < f->max_zone; zi++) {
+			z = &zbd->zone_info[zi];
+			if (z->cond != ZBD_ZONE_COND_IMP_OPEN &&
+			    z->cond != ZBD_ZONE_COND_EXP_OPEN)
+				continue;
+			if (zbd_open_zone(td, f, zi))
+				continue;
+			/*
+			 * If the number of open zones exceeds specified limits,
+			 * reset all extra open zones.
+			 */
+			if (zbd_reset_zone(td, f, z) < 0) {
+				log_err("Failed to reest zone %d\n", zi);
+				return 1;
+			}
 		}
 	}
 
@@ -937,11 +961,10 @@ static bool is_zone_open(const struct thread_data *td, const struct fio_file *f,
  * was not yet open and opening a new zone would cause the zone limit to be
  * exceeded.
  */
-static bool zbd_open_zone(struct thread_data *td, const struct io_u *io_u,
+static bool zbd_open_zone(struct thread_data *td, const struct fio_file *f,
 			  uint32_t zone_idx)
 {
 	const uint32_t min_bs = td->o.min_bs[DDIR_WRITE];
-	const struct fio_file *f = io_u->file;
 	struct fio_zone_info *z = &f->zbd_info->zone_info[zone_idx];
 	bool res = true;
 
@@ -1129,7 +1152,7 @@ open_other_zone:
 		zone_lock(td, f, z);
 		if (z->open)
 			continue;
-		if (zbd_open_zone(td, io_u, zone_idx))
+		if (zbd_open_zone(td, f, zone_idx))
 			goto out;
 	}
 
@@ -1172,7 +1195,7 @@ static struct fio_zone_info *zbd_replay_write_order(struct thread_data *td,
 	const struct fio_file *f = io_u->file;
 	const uint32_t min_bs = td->o.min_bs[DDIR_WRITE];
 
-	if (!zbd_open_zone(td, io_u, z - f->zbd_info->zone_info)) {
+	if (!zbd_open_zone(td, f, z - f->zbd_info->zone_info)) {
 		pthread_mutex_unlock(&z->mutex);
 		z = zbd_convert_to_open_zone(td, io_u);
 		assert(z);
@@ -1581,7 +1604,7 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 	case DDIR_WRITE:
 		if (io_u->buflen > f->zbd_info->zone_size)
 			goto eof;
-		if (!zbd_open_zone(td, io_u, zone_idx_b)) {
+		if (!zbd_open_zone(td, f, zone_idx_b)) {
 			pthread_mutex_unlock(&zb->mutex);
 			zb = zbd_convert_to_open_zone(td, io_u);
 			if (!zb)
