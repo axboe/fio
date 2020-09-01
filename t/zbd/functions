@@ -185,7 +185,7 @@ reset_zone() {
 	fi
     else
 	if [ "$offset" -lt 0 ]; then
-	    ${zbc_reset_zone} -all "$dev" "${offset}" >/dev/null
+	    ${zbc_reset_zone} -all "$dev" >/dev/null
 	else
 	    ${zbc_reset_zone} -sector "$dev" "${offset}" >/dev/null
 	fi
