@@ -98,18 +98,19 @@ static inline void zbd_close_file(struct fio_file *f)
 		zbd_free_zone_info(f);
 }
 
-static inline void zbd_queue_io_u(struct io_u *io_u, enum fio_q_status status)
+static inline void zbd_queue_io_u(struct thread_data *td, struct io_u *io_u,
+				  enum fio_q_status status)
 {
 	if (io_u->zbd_queue_io) {
-		io_u->zbd_queue_io(io_u, status, io_u->error == 0);
+		io_u->zbd_queue_io(td, io_u, status, io_u->error == 0);
 		io_u->zbd_queue_io = NULL;
 	}
 }
 
-static inline void zbd_put_io_u(struct io_u *io_u)
+static inline void zbd_put_io_u(struct thread_data *td, struct io_u *io_u)
 {
 	if (io_u->zbd_put_io) {
-		io_u->zbd_put_io(io_u);
+		io_u->zbd_put_io(td, io_u);
 		io_u->zbd_queue_io = NULL;
 		io_u->zbd_put_io = NULL;
 	}
