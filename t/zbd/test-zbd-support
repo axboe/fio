@@ -5,7 +5,15 @@
 # This file is released under the GPL.
 
 usage() {
-    echo "Usage: $(basename "$0") [-d] [-e] [-l] [-r] [-v] [-t <test>] [-z] <SMR drive device node>"
+	echo "Usage: $(basename "$0") [OPTIONS] <test target device file>"
+	echo "Options:"
+	echo -e "\t-d Run fio with valgrind using DRD tool"
+	echo -e "\t-e Run fio with valgrind using helgrind tool"
+	echo -e "\t-v Run fio with valgrind --read-var-info option"
+	echo -e "\t-l Test with libzbc ioengine"
+	echo -e "\t-r Reset all zones before test start"
+	echo -e "\t-t <test #> Run only a single test case with specified number"
+	echo -e "\t-z Run fio with debug=zbd option"
 }
 
 max() {
