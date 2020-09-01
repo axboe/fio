@@ -222,9 +222,21 @@ int blkzoned_reset_wp(struct thread_data *td, struct fio_file *f,
 		.sector         = offset >> 9,
 		.nr_sectors     = length >> 9,
 	};
+	int fd, ret = 0;
 
-	if (ioctl(f->fd, BLKRESETZONE, &zr) < 0)
-		return -errno;
+	/* If the file is not yet opened, open it for this function. */
+	fd = f->fd;
+	if (fd < 0) {
+		fd = open(f->file_name, O_RDWR | O_LARGEFILE);
+		if (fd < 0)
+			return -errno;
+	}
 
-	return 0;
+	if (ioctl(fd, BLKRESETZONE, &zr) < 0)
+		ret = -errno;
+
+	if (f->fd < 0)
+		close(fd);
+
+	return ret;
 }
