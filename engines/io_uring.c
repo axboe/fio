@@ -446,9 +446,10 @@ static int fio_ioring_commit(struct thread_data *td)
 	 */
 	if (o->sqpoll_thread) {
 		struct io_sq_ring *ring = &ld->sq_ring;
+		unsigned flags;
 
-		read_barrier();
-		if (*ring->flags & IORING_SQ_NEED_WAKEUP)
+		flags = atomic_load_acquire(ring->flags);
+		if (flags & IORING_SQ_NEED_WAKEUP)
 			io_uring_enter(ld, ld->queued, 0,
 					IORING_ENTER_SQ_WAKEUP);
 		ld->queued = 0;
