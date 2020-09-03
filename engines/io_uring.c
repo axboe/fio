@@ -218,9 +218,6 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 
 	sqe = &ld->sqes[io_u->index];
 
-	/* zero out fields not used in this submission */
-	memset(sqe, 0, sizeof(*sqe));
-
 	if (o->registerfiles) {
 		sqe->fd = f->engine_pos;
 		sqe->flags = IOSQE_FIXED_FILE;
@@ -262,13 +259,18 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 		if (ld->ioprio_set)
 			sqe->ioprio |= td->o.ioprio;
 		sqe->off = io_u->offset;
+		sqe->rw_flags = 0;
 	} else if (ddir_sync(io_u->ddir)) {
+		sqe->ioprio = 0;
 		if (io_u->ddir == DDIR_SYNC_FILE_RANGE) {
 			sqe->off = f->first_write;
 			sqe->len = f->last_write - f->first_write;
 			sqe->sync_range_flags = td->o.sync_file_range;
 			sqe->opcode = IORING_OP_SYNC_FILE_RANGE;
 		} else {
+			sqe->off = 0;
+			sqe->addr = 0;
+			sqe->len = 0;
 			if (io_u->ddir == DDIR_DATASYNC)
 				sqe->fsync_flags |= IORING_FSYNC_DATASYNC;
 			sqe->opcode = IORING_OP_FSYNC;
@@ -679,6 +681,13 @@ static int fio_ioring_post_init(struct thread_data *td)
 	if (err) {
 		td_verror(td, errno, "io_queue_init");
 		return 1;
+	}
+
+	for (i = 0; i < td->o.iodepth; i++) {
+		struct io_uring_sqe *sqe;
+
+		sqe = &ld->sqes[i];
+		memset(sqe, 0, sizeof(*sqe));
 	}
 
 	if (o->registerfiles) {
