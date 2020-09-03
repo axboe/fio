@@ -83,6 +83,7 @@ struct thread_options {
 	unsigned long long size;
 	unsigned long long io_size;
 	unsigned int size_percent;
+	unsigned int io_size_percent;
 	unsigned int fill_device;
 	unsigned int file_append;
 	unsigned long long file_size_low;
@@ -381,6 +382,7 @@ struct thread_options_pack {
 	uint64_t size;
 	uint64_t io_size;
 	uint32_t size_percent;
+	uint32_t io_size_percent;
 	uint32_t fill_device;
 	uint32_t file_append;
 	uint32_t unique_filename;
@@ -459,6 +461,8 @@ struct thread_options_pack {
 
 	struct zone_split zone_split[DDIR_RWDIR_CNT][ZONESPLIT_MAX];
 	uint32_t zone_split_nr[DDIR_RWDIR_CNT];
+
+	uint8_t pad1[4];
 
 	fio_fp64_t zipf_theta;
 	fio_fp64_t pareto_h;
