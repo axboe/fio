@@ -535,7 +535,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	while ((opt = getopt(argc, argv, "d:s:c:b:p:h?")) != -1) {
+	while ((opt = getopt(argc, argv, "d:s:c:b:p:B:F:h?")) != -1) {
 		switch (opt) {
 		case 'd':
 			depth = atoi(optarg);
@@ -551,6 +551,12 @@ int main(int argc, char *argv[])
 			break;
 		case 'p':
 			polled = !!atoi(optarg);
+			break;
+		case 'B':
+			fixedbufs = !!atoi(optarg);
+			break;
+		case 'F':
+			register_files = !!atoi(optarg);
 			break;
 		case 'h':
 		case '?':
@@ -628,7 +634,7 @@ int main(int argc, char *argv[])
 		printf("ring setup failed: %s, %d\n", strerror(errno), err);
 		return 1;
 	}
-	printf("polled=%d, fixedbufs=%d, buffered=%d", polled, fixedbufs, buffered);
+	printf("polled=%d, fixedbufs=%d, register_files=%d, buffered=%d", polled, fixedbufs, register_files, buffered);
 	printf(" QD=%d, sq_ring=%d, cq_ring=%d\n", depth, *s->sq_ring.ring_entries, *s->cq_ring.ring_entries);
 
 	pthread_create(&s->thread, NULL, submitter_fn, s);
