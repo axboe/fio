@@ -524,23 +524,33 @@ uint64_t mtime_since_now(const struct timespec *s)
 	return mtime_since(s, &t);
 }
 
-uint64_t mtime_since(const struct timespec *s, const struct timespec *e)
+/*
+ * Returns *e - *s in milliseconds as a signed integer. Note: rounding is
+ * asymmetric. If the difference yields +1 ns then 0 is returned. If the
+ * difference yields -1 ns then -1 is returned.
+ */
+int64_t rel_time_since(const struct timespec *s, const struct timespec *e)
 {
-	int64_t sec, usec;
+	int64_t sec, nsec;
 
 	sec = e->tv_sec - s->tv_sec;
-	usec = (e->tv_nsec - s->tv_nsec) / 1000;
-	if (sec > 0 && usec < 0) {
+	nsec = e->tv_nsec - s->tv_nsec;
+	if (nsec < 0) {
 		sec--;
-		usec += 1000000;
+		nsec += 1000ULL * 1000 * 1000;
 	}
+	assert(0 <= nsec && nsec < 1000ULL * 1000 * 1000);
 
-	if (sec < 0 || (sec == 0 && usec < 0))
-		return 0;
+	return sec * 1000 + nsec / (1000 * 1000);
+}
 
-	sec *= 1000;
-	usec /= 1000;
-	return sec + usec;
+/*
+ * Returns *e - *s in milliseconds as an unsigned integer. Returns 0 if
+ * *e < *s.
+ */
+uint64_t mtime_since(const struct timespec *s, const struct timespec *e)
+{
+	return max(rel_time_since(s, e), (int64_t)0);
 }
 
 uint64_t time_since_now(const struct timespec *s)

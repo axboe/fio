@@ -13,6 +13,8 @@ extern uint64_t ntime_since(const struct timespec *, const struct timespec *);
 extern uint64_t ntime_since_now(const struct timespec *);
 extern uint64_t utime_since(const struct timespec *, const struct timespec *);
 extern uint64_t utime_since_now(const struct timespec *);
+extern int64_t rel_time_since(const struct timespec *,
+			      const struct timespec *);
 extern uint64_t mtime_since(const struct timespec *, const struct timespec *);
 extern uint64_t mtime_since_now(const struct timespec *);
 extern uint64_t mtime_since_tv(const struct timeval *, const struct timeval *);
