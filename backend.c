@@ -1458,16 +1458,17 @@ static bool keep_running(struct thread_data *td)
 	return false;
 }
 
-static int exec_string(struct thread_options *o, const char *string, const char *mode)
+static int exec_string(struct thread_options *o, const char *string,
+		       const char *mode)
 {
-	size_t newlen = strlen(string) + strlen(o->name) + strlen(mode) + 13 + 1;
 	int ret;
 	char *str;
 
-	str = malloc(newlen);
-	sprintf(str, "%s > %s.%s.txt 2>&1", string, o->name, mode);
+	if (asprintf(&str, "%s > %s.%s.txt 2>&1", string, o->name, mode) < 0)
+		return -1;
 
-	log_info("%s : Saving output of %s in %s.%s.txt\n",o->name, mode, o->name, mode);
+	log_info("%s : Saving output of %s in %s.%s.txt\n", o->name, mode,
+		 o->name, mode);
 	ret = system(str);
 	if (ret == -1)
 		log_err("fio: exec of cmd <%s> failed\n", str);
