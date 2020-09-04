@@ -1731,7 +1731,7 @@ static void *thread_main(void *data)
 	if (!init_random_map(td))
 		goto err;
 
-	if (o->exec_prerun && exec_string(o, o->exec_prerun, (const char *)"prerun"))
+	if (o->exec_prerun && exec_string(o, o->exec_prerun, "prerun"))
 		goto err;
 
 	if (o->pre_read && !pre_read_files(td))
@@ -1890,7 +1890,7 @@ static void *thread_main(void *data)
 	rate_submit_exit(td);
 
 	if (o->exec_postrun)
-		exec_string(o, o->exec_postrun, (const char *)"postrun");
+		exec_string(o, o->exec_postrun, "postrun");
 
 	if (exitall_on_terminate || (o->exitall_error && td->error))
 		fio_terminate_threads(td->groupid, td->o.exit_what);
