@@ -1462,9 +1462,31 @@ starting I/O if the platform and file type support it. Defaults to true.
 This will be ignored if \fBpre_read\fR is also specified for the
 same job.
 .TP
-.BI sync \fR=\fPbool
-Use synchronous I/O for buffered writes. For the majority of I/O engines,
-this means using O_SYNC. Default: false.
+.BI sync \fR=\fPstr
+Whether, and what type, of synchronous I/O to use for writes.  The allowed
+values are:
+.RS
+.RS
+.TP
+.B none
+Do not use synchronous IO, the default.
+.TP
+.B 0
+Same as \fBnone\fR.
+.TP
+.B sync
+Use synchronous file IO. For the majority of I/O engines,
+this means using O_SYNC.
+.TP
+.B 1
+Same as \fBsync\fR.
+.TP
+.B dsync
+Use synchronous data IO. For the majority of I/O engines,
+this means using O_DSYNC.
+.PD
+.RE
+.RE
 .TP
 .BI iomem \fR=\fPstr "\fR,\fP mem" \fR=\fPstr
 Fio can use various types of memory as the I/O unit buffer. The allowed
