@@ -108,6 +108,7 @@ ifdef CONFIG_LINUX_SPLICE
 endif
 ifdef CONFIG_GUASI
   guasi_SRCS = engines/guasi.c
+  guasi_LIBS = -lguasi
   ENGINES += guasi
 endif
 ifdef CONFIG_SOLARISAIO
