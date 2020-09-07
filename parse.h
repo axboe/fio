@@ -133,6 +133,11 @@ static inline int parse_is_percent(unsigned long long val)
 	return val <= -1ULL && val >= (-1ULL - 100ULL);
 }
 
+static inline int parse_is_percent_uncapped(unsigned long long val)
+{
+	return (long long)val <= -1;
+}
+
 struct print_option {
 	struct flist_head list;
 	char *name;

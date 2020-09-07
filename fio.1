@@ -1561,7 +1561,8 @@ if \fBsize\fR is set to 20GiB and \fBio_size\fR is set to 5GiB, fio
 will perform I/O within the first 20GiB but exit when 5GiB have been
 done. The opposite is also possible \-\- if \fBsize\fR is set to 20GiB,
 and \fBio_size\fR is set to 40GiB, then fio will do 40GiB of I/O within
-the 0..20GiB region.
+the 0..20GiB region. Value can be set as percentage: \fBio_size\fR=N%.
+In this case \fBio_size\fR multiplies \fBsize\fR= value.
 .TP
 .BI filesize \fR=\fPirange(int)
 Individual file sizes. May be a range, in which case fio will select sizes

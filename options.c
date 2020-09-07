@@ -1481,9 +1481,13 @@ static int str_io_size_cb(void *data, unsigned long long *__val)
 	struct thread_data *td = cb_data_to_td(data);
 	unsigned long long v = *__val;
 
-	if (parse_is_percent(v)) {
+	if (parse_is_percent_uncapped(v)) {
 		td->o.io_size = 0;
 		td->o.io_size_percent = -1ULL - v;
+		if (td->o.io_size_percent > 100) {
+			log_err("fio: io_size values greater than 100%% aren't supported\n");
+			return 1;
+		}
 		dprint(FD_PARSE, "SET io_size_percent %d\n",
 					td->o.io_size_percent);
 	} else
