@@ -11,9 +11,6 @@
 #ifdef CONFIG_LIBAIO
 #include <libaio.h>
 #endif
-#ifdef CONFIG_GUASI
-#include <guasi.h>
-#endif
 
 enum {
 	IO_U_F_FREE		= 1 << 0,
@@ -124,9 +121,6 @@ struct io_u {
 #endif
 #ifdef FIO_HAVE_SGIO
 		struct sg_io_hdr hdr;
-#endif
-#ifdef CONFIG_GUASI
-		guasi_req_t greq;
 #endif
 #ifdef CONFIG_SOLARISAIO
 		aio_result_t resultp;

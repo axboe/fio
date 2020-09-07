@@ -1872,11 +1872,6 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			  { .ival = "cpuio",
 			    .help = "CPU cycle burner engine",
 			  },
-#ifdef CONFIG_GUASI
-			  { .ival = "guasi",
-			    .help = "GUASI IO engine",
-			  },
-#endif
 #ifdef CONFIG_RDMA
 			  { .ival = "rdma",
 			    .help = "RDMA IO engine",

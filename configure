@@ -1312,25 +1312,6 @@ fi
 print_config "Linux splice(2)" "$linux_splice"
 
 ##########################################
-# GUASI probe
-if test "$guasi" != "yes" ; then
-  guasi="no"
-fi
-cat > $TMPC << EOF
-#include <guasi.h>
-#include <guasi_syscalls.h>
-int main(int argc, char **argv)
-{
-  guasi_t ctx = guasi_create(0, 0, 0);
-  return 0;
-}
-EOF
-if compile_prog "" "-lguasi" "guasi"; then
-  guasi="yes"
-fi
-print_config "GUASI" "$guasi"
-
-##########################################
 # libnuma probe
 if test "$libnuma" != "yes" ; then
   libnuma="no"
@@ -2846,9 +2827,6 @@ if test "$ext4_me" = "yes" ; then
 fi
 if test "$linux_splice" = "yes" ; then
   output_sym "CONFIG_LINUX_SPLICE"
-fi
-if test "$guasi" = "yes" ; then
-  output_sym "CONFIG_GUASI"
 fi
 if test "$libnuma_v2" = "yes" ; then
   output_sym "CONFIG_LIBNUMA"
