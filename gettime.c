@@ -239,19 +239,13 @@ static unsigned long get_cycles_per_msec(void)
 {
 	struct timespec s, e;
 	uint64_t c_s, c_e;
-	enum fio_cs old_cs = fio_clock_source;
 	uint64_t elapsed;
 
-#ifdef CONFIG_CLOCK_GETTIME
-	fio_clock_source = CS_CGETTIME;
-#else
-	fio_clock_source = CS_GTOD;
-#endif
-	__fio_gettime(&s);
+	fio_get_mono_time(&s);
 
 	c_s = get_cpu_clock();
 	do {
-		__fio_gettime(&e);
+		fio_get_mono_time(&e);
 		c_e = get_cpu_clock();
 
 		elapsed = ntime_since(&s, &e);
@@ -259,7 +253,6 @@ static unsigned long get_cycles_per_msec(void)
 			break;
 	} while (1);
 
-	fio_clock_source = old_cs;
 	return (c_e - c_s) * 1000000 / elapsed;
 }
 
