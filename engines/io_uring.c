@@ -66,6 +66,7 @@ struct ioring_data {
 	unsigned iodepth;
 	bool ioprio_class_set;
 	bool ioprio_set;
+	int prepped;
 
 	struct ioring_mmap mmap[3];
 };
@@ -82,6 +83,7 @@ struct ioring_options {
 	unsigned int nonvectored;
 	unsigned int uncached;
 	unsigned int nowait;
+	unsigned int force_async;
 };
 
 static const int ddir_to_op[2][2] = {
@@ -198,6 +200,15 @@ static struct fio_option options[] = {
 		.group	= FIO_OPT_G_IOURING,
 	},
 	{
+		.name	= "force_async",
+		.lname	= "Force async",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct ioring_options, force_async),
+		.help	= "Set IOSQE_ASYNC every N requests",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_IOURING,
+	},
+	{
 		.name	= NULL,
 	},
 };
@@ -275,6 +286,11 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 				sqe->fsync_flags |= IORING_FSYNC_DATASYNC;
 			sqe->opcode = IORING_OP_FSYNC;
 		}
+	}
+
+	if (o->force_async && ++ld->prepped == o->force_async) {
+		ld->prepped = 0;
+		sqe->flags |= IOSQE_ASYNC;
 	}
 
 	sqe->user_data = (unsigned long) io_u;
