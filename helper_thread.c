@@ -1,4 +1,5 @@
 #include <signal.h>
+#include <unistd.h>
 #ifdef CONFIG_VALGRIND_DEV
 #include <valgrind/drd.h>
 #else
@@ -10,6 +11,8 @@
 #include "helper_thread.h"
 #include "steadystate.h"
 #include "pshared.h"
+
+static int sleep_accuracy_ms;
 
 enum action {
 	A_EXIT		= 1,
@@ -24,6 +27,13 @@ static struct helper_data {
 	pthread_t thread;
 	struct fio_sem *startup_sem;
 } *helper_data;
+
+struct interval_timer {
+	const char	*name;
+	struct timespec	expires;
+	uint32_t	interval_ms;
+	int		(*func)(void);
+};
 
 void helper_thread_destroy(void)
 {
@@ -140,6 +150,23 @@ void helper_thread_exit(void)
 	pthread_join(helper_data->thread, NULL);
 }
 
+/* Resets timers and returns the time in milliseconds until the next event. */
+static int reset_timers(struct interval_timer timer[], int num_timers,
+			struct timespec *now)
+{
+	uint32_t msec_to_next_event = INT_MAX;
+	int i;
+
+	for (i = 0; i < num_timers; ++i) {
+		timer[i].expires = *now;
+		timespec_add_msec(&timer[i].expires, timer[i].interval_ms);
+		msec_to_next_event = min_not_zero(msec_to_next_event,
+						  timer[i].interval_ms);
+	}
+
+	return msec_to_next_event;
+}
+
 /*
  * Waits for an action from fd during at least timeout_ms. `fd` must be in
  * non-blocking mode.
@@ -172,31 +199,78 @@ static uint8_t wait_for_action(int fd, unsigned int timeout_ms)
 	return action;
 }
 
-static unsigned int task_helper(struct timespec *last, struct timespec *now, unsigned int period, void do_task())
+/*
+ * Verify whether or not timer @it has expired. If timer @it has expired, call
+ * @it->func(). @now is the current time. @msec_to_next_event is an
+ * input/output parameter that represents the time until the next event.
+ */
+static int eval_timer(struct interval_timer *it, const struct timespec *now,
+		      unsigned int *msec_to_next_event)
 {
-	unsigned int next, since;
+	int64_t delta_ms;
+	bool expired;
 
-	since = mtime_since(last, now);
-	if (since >= period || period - since < 10) {
-		do_task();
-		timespec_add_msec(last, since);
-		if (since > period)
-			next = period - (since - period);
-		else
-			next = period;
-	} else
-		next = period - since;
+	/* interval == 0 means that the timer is disabled. */
+	if (it->interval_ms == 0)
+		return 0;
 
-	return next;
+	delta_ms = rel_time_since(now, &it->expires);
+	expired = delta_ms <= sleep_accuracy_ms;
+	if (expired) {
+		timespec_add_msec(&it->expires, it->interval_ms);
+		delta_ms = rel_time_since(now, &it->expires);
+		if (delta_ms < it->interval_ms - sleep_accuracy_ms ||
+		    delta_ms > it->interval_ms + sleep_accuracy_ms) {
+			dprint(FD_HELPERTHREAD,
+			       "%s: delta = %" PRIi64 " <> %u. Clock jump?\n",
+			       it->name, delta_ms, it->interval_ms);
+			delta_ms = it->interval_ms;
+			it->expires = *now;
+			timespec_add_msec(&it->expires, it->interval_ms);
+		}
+	}
+	*msec_to_next_event = min((unsigned int)delta_ms, *msec_to_next_event);
+	return expired ? it->func() : 0;
 }
 
 static void *helper_thread_main(void *data)
 {
 	struct helper_data *hd = data;
-	unsigned int msec_to_next_event, next_log, next_si = status_interval;
-	unsigned int next_ss = STEADYSTATE_MSEC;
-	struct timespec ts, last_du, last_ss, last_si;
-	int ret = 0;
+	unsigned int msec_to_next_event, next_log;
+	struct interval_timer timer[] = {
+		{
+			.name = "disk_util",
+			.interval_ms = DISK_UTIL_MSEC,
+			.func = update_io_ticks,
+		},
+		{
+			.name = "status_interval",
+			.interval_ms = status_interval,
+			.func = __show_running_run_stats,
+		},
+		{
+			.name = "steadystate",
+			.interval_ms = steadystate_enabled ? STEADYSTATE_MSEC :
+				0,
+			.func = steadystate_check,
+		}
+	};
+	struct timespec ts;
+	int clk_tck, ret = 0;
+
+#ifdef _SC_CLK_TCK
+	clk_tck = sysconf(_SC_CLK_TCK);
+#else
+	/*
+	 * The timer frequence is variable on Windows. Instead of trying to
+	 * query it, use 64 Hz, the clock frequency lower bound. See also
+	 * https://carpediemsystems.co.uk/2019/07/18/windows-system-timer-granularity/.
+	 */
+	clk_tck = 64;
+#endif
+	dprint(FD_HELPERTHREAD, "clk_tck = %d\n", clk_tck);
+	assert(clk_tck > 0);
+	sleep_accuracy_ms = (1000 + clk_tck - 1) / clk_tck;
 
 	sk_out_assign(hd->sk_out);
 
@@ -204,16 +278,13 @@ static void *helper_thread_main(void *data)
 	block_signals();
 
 	fio_get_mono_time(&ts);
-	memcpy(&last_du, &ts, sizeof(ts));
-	memcpy(&last_ss, &ts, sizeof(ts));
-	memcpy(&last_si, &ts, sizeof(ts));
+	msec_to_next_event = reset_timers(timer, ARRAY_SIZE(timer), &ts);
 
 	fio_sem_up(hd->startup_sem);
 
-	msec_to_next_event = DISK_UTIL_MSEC;
 	while (!ret && !hd->exit) {
-		uint64_t since_du;
 		uint8_t action;
+		int i;
 
 		action = wait_for_action(hd->pipe[0], msec_to_next_event);
 		if (action == A_EXIT)
@@ -221,41 +292,26 @@ static void *helper_thread_main(void *data)
 
 		fio_get_mono_time(&ts);
 
-		if (action == A_RESET) {
-			last_du = ts;
-			last_ss = ts;
-		}
+		msec_to_next_event = INT_MAX;
 
-		since_du = mtime_since(&last_du, &ts);
-		if (since_du >= DISK_UTIL_MSEC || DISK_UTIL_MSEC - since_du < 10) {
-			ret = update_io_ticks();
-			timespec_add_msec(&last_du, DISK_UTIL_MSEC);
-			msec_to_next_event = DISK_UTIL_MSEC;
-			if (since_du >= DISK_UTIL_MSEC)
-				msec_to_next_event -= (since_du - DISK_UTIL_MSEC);
-		} else
-			msec_to_next_event = DISK_UTIL_MSEC - since_du;
+		if (action == A_RESET)
+			msec_to_next_event = reset_timers(timer,
+						ARRAY_SIZE(timer), &ts);
+
+		for (i = 0; i < ARRAY_SIZE(timer); ++i)
+			ret = eval_timer(&timer[i], &ts, &msec_to_next_event);
 
 		if (action == A_DO_STAT)
 			__show_running_run_stats();
-
-		if (status_interval) {
-			next_si = task_helper(&last_si, &ts, status_interval, __show_running_run_stats);
-			msec_to_next_event = min(next_si, msec_to_next_event);
-		}
 
 		next_log = calc_log_samples();
 		if (!next_log)
 			next_log = DISK_UTIL_MSEC;
 
-		if (steadystate_enabled) {
-			next_ss = task_helper(&last_ss, &ts, STEADYSTATE_MSEC, steadystate_check);
-			msec_to_next_event = min(next_ss, msec_to_next_event);
-                }
-
 		msec_to_next_event = min(next_log, msec_to_next_event);
-		dprint(FD_HELPERTHREAD, "next_si: %u, next_ss: %u, next_log: %u, msec_to_next_event: %u\n",
-			next_si, next_ss, next_log, msec_to_next_event);
+		dprint(FD_HELPERTHREAD,
+		       "next_log: %u, msec_to_next_event: %u\n",
+		       next_log, msec_to_next_event);
 
 		if (!is_backend)
 			print_thread_status();
