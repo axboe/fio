@@ -2543,7 +2543,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 		case 'i':
 			did_arg = true;
 			if (!cur_client) {
-				fio_show_ioengine_help(optarg);
+				exit_val = fio_show_ioengine_help(optarg);
 				do_exit++;
 			}
 			break;
