@@ -140,6 +140,38 @@ void helper_thread_exit(void)
 	pthread_join(helper_data->thread, NULL);
 }
 
+/*
+ * Waits for an action from fd during at least timeout_ms. `fd` must be in
+ * non-blocking mode.
+ */
+static uint8_t wait_for_action(int fd, unsigned int timeout_ms)
+{
+	struct timeval timeout = {
+		.tv_sec  = timeout_ms / 1000,
+		.tv_usec = (timeout_ms % 1000) * 1000,
+	};
+	fd_set rfds, efds;
+	uint8_t action = 0;
+	int res;
+
+	res = read_from_pipe(fd, &action, sizeof(action));
+	if (res > 0 || timeout_ms == 0)
+		return action;
+	FD_ZERO(&rfds);
+	FD_SET(fd, &rfds);
+	FD_ZERO(&efds);
+	FD_SET(fd, &efds);
+	res = select(fd + 1, &rfds, NULL, &efds, &timeout);
+	if (res < 0) {
+		log_err("fio: select() call in helper thread failed: %s",
+			strerror(errno));
+		return A_EXIT;
+	}
+	if (FD_ISSET(fd, &rfds))
+		read_from_pipe(fd, &action, sizeof(action));
+	return action;
+}
+
 static unsigned int task_helper(struct timespec *last, struct timespec *now, unsigned int period, void do_task())
 {
 	unsigned int next, since;
@@ -164,7 +196,6 @@ static void *helper_thread_main(void *data)
 	unsigned int msec_to_next_event, next_log, next_si = status_interval;
 	unsigned int next_ss = STEADYSTATE_MSEC;
 	struct timespec ts, last_du, last_ss, last_si;
-	char action;
 	int ret = 0;
 
 	sk_out_assign(hd->sk_out);
@@ -182,26 +213,11 @@ static void *helper_thread_main(void *data)
 	msec_to_next_event = DISK_UTIL_MSEC;
 	while (!ret && !hd->exit) {
 		uint64_t since_du;
-		struct timeval timeout = {
-			.tv_sec  = msec_to_next_event / 1000,
-			.tv_usec = (msec_to_next_event % 1000) * 1000,
-		};
-		fd_set rfds, efds;
+		uint8_t action;
 
-		if (read_from_pipe(hd->pipe[0], &action, sizeof(action)) < 0) {
-			FD_ZERO(&rfds);
-			FD_SET(hd->pipe[0], &rfds);
-			FD_ZERO(&efds);
-			FD_SET(hd->pipe[0], &efds);
-			if (select(1, &rfds, NULL, &efds, &timeout) < 0) {
-				log_err("fio: select() call in helper thread failed: %s",
-					strerror(errno));
-				ret = 1;
-			}
-			if (read_from_pipe(hd->pipe[0], &action, sizeof(action)) <
-			    0)
-				action = 0;
-		}
+		action = wait_for_action(hd->pipe[0], msec_to_next_event);
+		if (action == A_EXIT)
+			break;
 
 		fio_get_mono_time(&ts);
 
