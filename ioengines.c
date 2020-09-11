@@ -44,7 +44,8 @@ static bool check_engine_ops(struct thread_data *td, struct ioengine_ops *ops)
 	/*
 	 * async engines aren't reliable with offload
 	 */
-	if (td->o.io_submit_mode == IO_MODE_OFFLOAD) {
+	if ((td->o.io_submit_mode == IO_MODE_OFFLOAD) &&
+	    !(ops->flags & FIO_FAKEIO)) {
 		log_err("%s: can't be used with offloaded submit. Use a sync "
 			"engine\n", ops->name);
 		return true;
