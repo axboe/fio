@@ -2215,7 +2215,7 @@ has a bit of extra overhead, especially for lower queue depth I/O where it
 can increase latencies. The benefit is that fio can manage submission rates
 independently of the device completion rates. This avoids skewed latency
 reporting if I/O gets backed up on the device side (the coordinated omission
-problem).
+problem). Note that this option cannot reliably be used with async IO engines.
 .SS "I/O rate"
 .TP
 .BI thinktime \fR=\fPtime

@@ -22,7 +22,7 @@
 
 static FLIST_HEAD(engine_list);
 
-static bool check_engine_ops(struct ioengine_ops *ops)
+static bool check_engine_ops(struct thread_data *td, struct ioengine_ops *ops)
 {
 	if (ops->version != FIO_IOOPS_VERSION) {
 		log_err("bad ioops version %d (want %d)\n", ops->version,
@@ -40,6 +40,15 @@ static bool check_engine_ops(struct ioengine_ops *ops)
 	 */
 	if (ops->flags & FIO_SYNCIO)
 		return false;
+
+	/*
+	 * async engines aren't reliable with offload
+	 */
+	if (td->o.io_submit_mode == IO_MODE_OFFLOAD) {
+		log_err("%s: can't be used with offloaded submit. Use a sync "
+			"engine\n", ops->name);
+		return true;
+	}
 
 	if (!ops->event || !ops->getevents) {
 		log_err("%s: no event/getevents handler\n", ops->name);
@@ -193,7 +202,7 @@ struct ioengine_ops *load_ioengine(struct thread_data *td)
 	/*
 	 * Check that the required methods are there.
 	 */
-	if (check_engine_ops(ops))
+	if (check_engine_ops(td, ops))
 		return NULL;
 
 	return ops;
