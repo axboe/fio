@@ -724,6 +724,12 @@ static int fio_ioring_init(struct thread_data *td)
 	struct ioring_data *ld;
 	struct thread_options *to = &td->o;
 
+	if (to->io_submit_mode == IO_MODE_OFFLOAD) {
+		log_err("fio: io_submit_mode=offload is not compatible (or "
+			"useful) with io_uring\n");
+		return 1;
+	}
+
 	/* sqthread submission requires registered files */
 	if (o->sqpoll_thread)
 		o->registerfiles = 1;
