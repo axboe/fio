@@ -2682,6 +2682,24 @@ else
   pdb=no
 fi
 print_config "Windows PDB generation" "$pdb"
+
+##########################################
+# check for timerfd support
+timerfd_create="no"
+cat > $TMPC << EOF
+#include <sys/time.h>
+#include <sys/timerfd.h>
+
+int main(int argc, char **argv)
+{
+	return timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
+}
+EOF
+if compile_prog "" "" "timerfd_create"; then
+  timerfd_create="yes"
+fi
+print_config "timerfd_create" "$timerfd_create"
+
 #############################################################################
 
 if test "$wordsize" = "64" ; then
@@ -2982,6 +3000,9 @@ if test "$statx" = "yes"; then
 fi
 if test "$statx_syscall" = "yes"; then
   output_sym "CONFIG_HAVE_STATX_SYSCALL"
+fi
+if test "$timerfd_create" = "yes"; then
+  output_sym "CONFIG_HAVE_TIMERFD_CREATE"
 fi
 if test "$fallthrough" = "yes"; then
   CFLAGS="$CFLAGS -Wimplicit-fallthrough"

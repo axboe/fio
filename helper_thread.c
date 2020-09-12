@@ -1,5 +1,8 @@
 #include <signal.h>
 #include <unistd.h>
+#ifdef CONFIG_HAVE_TIMERFD_CREATE
+#include <sys/timerfd.h>
+#endif
 #ifdef CONFIG_VALGRIND_DEV
 #include <valgrind/drd.h>
 #else
@@ -13,6 +16,7 @@
 #include "pshared.h"
 
 static int sleep_accuracy_ms;
+static int timerfd = -1;
 
 enum action {
 	A_EXIT		= 1,
@@ -179,6 +183,7 @@ static uint8_t wait_for_action(int fd, unsigned int timeout_ms)
 	};
 	fd_set rfds, efds;
 	uint8_t action = 0;
+	uint64_t exp;
 	int res;
 
 	res = read_from_pipe(fd, &action, sizeof(action));
@@ -188,7 +193,25 @@ static uint8_t wait_for_action(int fd, unsigned int timeout_ms)
 	FD_SET(fd, &rfds);
 	FD_ZERO(&efds);
 	FD_SET(fd, &efds);
-	res = select(fd + 1, &rfds, NULL, &efds, &timeout);
+#ifdef CONFIG_HAVE_TIMERFD_CREATE
+	{
+		/*
+		 * If the timer frequency is 100 Hz, select() will round up
+		 * `timeout` to the next multiple of 1 / 100 Hz = 10 ms. Hence
+		 * use a high-resolution timer if possible to increase
+		 * select() timeout accuracy.
+		 */
+		struct itimerspec delta = {};
+
+		delta.it_value.tv_sec = timeout.tv_sec;
+		delta.it_value.tv_nsec = timeout.tv_usec * 1000;
+		res = timerfd_settime(timerfd, 0, &delta, NULL);
+		assert(res == 0);
+		FD_SET(timerfd, &rfds);
+	}
+#endif
+	res = select(max(fd, timerfd) + 1, &rfds, NULL, &efds,
+		     timerfd >= 0 ? NULL : &timeout);
 	if (res < 0) {
 		log_err("fio: select() call in helper thread failed: %s",
 			strerror(errno));
@@ -196,6 +219,10 @@ static uint8_t wait_for_action(int fd, unsigned int timeout_ms)
 	}
 	if (FD_ISSET(fd, &rfds))
 		read_from_pipe(fd, &action, sizeof(action));
+	if (timerfd >= 0 && FD_ISSET(timerfd, &rfds)) {
+		res = read(timerfd, &exp, sizeof(exp));
+		assert(res == sizeof(exp));
+	}
 	return action;
 }
 
@@ -272,6 +299,12 @@ static void *helper_thread_main(void *data)
 	assert(clk_tck > 0);
 	sleep_accuracy_ms = (1000 + clk_tck - 1) / clk_tck;
 
+#ifdef CONFIG_HAVE_TIMERFD_CREATE
+	timerfd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
+	assert(timerfd >= 0);
+	sleep_accuracy_ms = 1;
+#endif
+
 	sk_out_assign(hd->sk_out);
 
 	/* Let another thread handle signals. */
@@ -315,6 +348,11 @@ static void *helper_thread_main(void *data)
 
 		if (!is_backend)
 			print_thread_status();
+	}
+
+	if (timerfd >= 0) {
+		close(timerfd);
+		timerfd = -1;
 	}
 
 	fio_writeout_logs(false);
