@@ -83,6 +83,18 @@ static int read_from_pipe(int fd, void *buf, size_t len)
 }
 #endif
 
+static void block_signals(void)
+{
+#ifdef HAVE_PTHREAD_SIGMASK
+	sigset_t sigmask;
+
+	ret = pthread_sigmask(SIG_UNBLOCK, NULL, &sigmask);
+	assert(ret == 0);
+	ret = pthread_sigmask(SIG_BLOCK, &sigmask, NULL);
+	assert(ret == 0);
+#endif
+}
+
 static void submit_action(enum action a)
 {
 	const char data = a;
@@ -157,17 +169,8 @@ static void *helper_thread_main(void *data)
 
 	sk_out_assign(hd->sk_out);
 
-#ifdef HAVE_PTHREAD_SIGMASK
-	{
-	sigset_t sigmask;
-
 	/* Let another thread handle signals. */
-	ret = pthread_sigmask(SIG_UNBLOCK, NULL, &sigmask);
-	assert(ret == 0);
-	ret = pthread_sigmask(SIG_BLOCK, &sigmask, NULL);
-	assert(ret == 0);
-	}
-#endif
+	block_signals();
 
 	fio_get_mono_time(&ts);
 	memcpy(&last_du, &ts, sizeof(ts));
