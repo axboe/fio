@@ -1458,16 +1458,17 @@ static bool keep_running(struct thread_data *td)
 	return false;
 }
 
-static int exec_string(struct thread_options *o, const char *string, const char *mode)
+static int exec_string(struct thread_options *o, const char *string,
+		       const char *mode)
 {
-	size_t newlen = strlen(string) + strlen(o->name) + strlen(mode) + 13 + 1;
 	int ret;
 	char *str;
 
-	str = malloc(newlen);
-	sprintf(str, "%s > %s.%s.txt 2>&1", string, o->name, mode);
+	if (asprintf(&str, "%s > %s.%s.txt 2>&1", string, o->name, mode) < 0)
+		return -1;
 
-	log_info("%s : Saving output of %s in %s.%s.txt\n",o->name, mode, o->name, mode);
+	log_info("%s : Saving output of %s in %s.%s.txt\n", o->name, mode,
+		 o->name, mode);
 	ret = system(str);
 	if (ret == -1)
 		log_err("fio: exec of cmd <%s> failed\n", str);
@@ -1731,7 +1732,7 @@ static void *thread_main(void *data)
 	if (!init_random_map(td))
 		goto err;
 
-	if (o->exec_prerun && exec_string(o, o->exec_prerun, (const char *)"prerun"))
+	if (o->exec_prerun && exec_string(o, o->exec_prerun, "prerun"))
 		goto err;
 
 	if (o->pre_read && !pre_read_files(td))
@@ -1890,7 +1891,7 @@ static void *thread_main(void *data)
 	rate_submit_exit(td);
 
 	if (o->exec_postrun)
-		exec_string(o, o->exec_postrun, (const char *)"postrun");
+		exec_string(o, o->exec_postrun, "postrun");
 
 	if (exitall_on_terminate || (o->exitall_error && td->error))
 		fio_terminate_threads(td->groupid, td->o.exit_what);
