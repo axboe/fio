@@ -22,7 +22,7 @@ static void *worker(void *data)
 		for (index = 0; index + 4096 < size; index += 4096)
 			memset(&buf[index+512], 0x89, 512);
 		if (first) {
-			printf("loop%d: did %lu MiB\n", i+1, size/(1024UL*1024UL));
+			printf("loop%d: did %lu MiB\n", i+1, td->mib);
 			first = 0;
 		}
 	}

@@ -14,7 +14,7 @@ int fio_setaffinity(int pid, os_cpu_mask_t cpumask)
 		bSuccess = SetThreadAffinityMask(h, cpumask);
 		if (!bSuccess)
 			log_err("fio_setaffinity failed: failed to set thread affinity (pid %d, mask %.16llx)\n",
-				pid, cpumask);
+				pid, (long long unsigned) cpumask);
 
 		CloseHandle(h);
 	} else {
@@ -83,7 +83,7 @@ unsigned int cpus_online(void)
 static void print_mask(os_cpu_mask_t *cpumask)
 {
 	for (int i = 0; i < FIO_CPU_MASK_ROWS; i++)
-		dprint(FD_PROCESS, "cpumask[%d]=%lu\n", i, cpumask->row[i]);
+		dprint(FD_PROCESS, "cpumask[%d]=%" PRIu64 "\n", i, cpumask->row[i]);
 }
 
 /* Return the index of the least significant set CPU in cpumask or -1 if no
@@ -99,7 +99,7 @@ int first_set_cpu(os_cpu_mask_t *cpumask)
 		int row_first_cpu;
 
 		row_first_cpu = __builtin_ffsll(cpumask->row[row]) - 1;
-		dprint(FD_PROCESS, "row_first_cpu=%d cpumask->row[%d]=%lu\n",
+		dprint(FD_PROCESS, "row_first_cpu=%d cpumask->row[%d]=%" PRIu64 "\n",
 		       row_first_cpu, row, cpumask->row[row]);
 		if (row_first_cpu > -1) {
 			mask_first_cpu = cpus_offset + row_first_cpu;
@@ -136,7 +136,7 @@ static int last_set_cpu(os_cpu_mask_t *cpumask)
 			    row_last_cpu++;
 		}
 
-		dprint(FD_PROCESS, "row_last_cpu=%d cpumask->row[%d]=%lu\n",
+		dprint(FD_PROCESS, "row_last_cpu=%d cpumask->row[%d]=%" PRIu64 "\n",
 		       row_last_cpu, row, cpumask->row[row]);
 		if (row_last_cpu > -1) {
 			mask_last_cpu = cpus_offset + row_last_cpu;
@@ -213,13 +213,17 @@ static int mask_to_group_mask(os_cpu_mask_t *cpumask, int *processor_group, uint
 		needed_shift = FIO_CPU_MASK_STRIDE - bit_offset;
 		needed_mask_shift = FIO_CPU_MASK_STRIDE - needed;
 		needed_mask = (uint64_t)-1 >> needed_mask_shift;
-		dprint(FD_PROCESS, "bit_offset=%d end=%d needed=%d needed_shift=%d needed_mask=%ld needed_mask_shift=%d\n", bit_offset, end, needed, needed_shift, needed_mask, needed_mask_shift);
+		dprint(FD_PROCESS,
+		       "bit_offset=%d end=%d needed=%d needed_shift=%d needed_mask=%" PRIu64 "needed_mask_shift=%d\n",
+		       bit_offset, end, needed, needed_shift, needed_mask,
+		       needed_mask_shift);
 		group_cpumask |= (cpumask->row[row + 1] & needed_mask) << needed_shift;
 	}
 	group_cpumask &= (uint64_t)-1 >> (FIO_CPU_MASK_STRIDE - group_size);
 
 	/* Return group and mask */
-	dprint(FD_PROCESS, "Returning group=%d group_mask=%lu\n", group, group_cpumask);
+	dprint(FD_PROCESS, "Returning group=%d group_mask=%" PRIu64 "\n",
+	       group, group_cpumask);
 	*processor_group = group;
 	*affinity_mask = group_cpumask;
 
@@ -257,10 +261,8 @@ int fio_setaffinity(int pid, os_cpu_mask_t cpumask)
 	if (SetThreadGroupAffinity(handle, &new_group_affinity, NULL) != 0)
 		ret = 0;
 	else {
-		log_err("fio_setaffinity: failed to set thread affinity "
-			 "(pid %d, group %d, mask %" PRIx64 ", "
-			 "GetLastError=%d)\n", pid, group, group_mask,
-			 GetLastError());
+		log_err("fio_setaffinity: failed to set thread affinity (pid %d, group %d, mask %" PRIx64 ", GetLastError=%lu)\n",
+			pid, group, group_mask, GetLastError());
 		goto err;
 	}
 
@@ -319,7 +321,7 @@ int fio_getaffinity(int pid, os_cpu_mask_t *mask)
 		goto err;
 	}
 	if (!GetProcessGroupAffinity(handle, &group_count, current_groups)) {
-		log_err("%s: failed to get single group affinity for pid %d (%d)\n",
+		log_err("%s: failed to get single group affinity for pid %d (%lu)\n",
 			__func__, pid, GetLastError());
 		goto err;
 	}
@@ -329,7 +331,7 @@ int fio_getaffinity(int pid, os_cpu_mask_t *mask)
 		goto err;
 	}
 	if (!GetProcessAffinityMask(handle, &process_mask, &system_mask)) {
-		log_err("%s: GetProcessAffinityMask() failed for pid\n",
+		log_err("%s: GetProcessAffinityMask() failed for pid %d\n",
 			__func__, pid);
 		goto err;
 	}

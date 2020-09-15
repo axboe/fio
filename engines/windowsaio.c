@@ -161,15 +161,15 @@ static int windowsaio_invalidate_cache(struct fio_file *f)
 	if (ihFile != INVALID_HANDLE_VALUE) {
 		if (!CloseHandle(ihFile)) {
 			error = GetLastError();
-			log_info("windowsaio: invalidation fd close %s "
-				 "failed: error %d\n", f->file_name, error);
+			log_info("windowsaio: invalidation fd close %s failed: error %lu\n",
+				 f->file_name, error);
 			rc = 1;
 		}
 	} else {
 		error = GetLastError();
 		if (error != ERROR_FILE_NOT_FOUND) {
-			log_info("windowsaio: cache invalidation of %s failed: "
-					"error %d\n", f->file_name, error);
+			log_info("windowsaio: cache invalidation of %s failed: error %lu\n",
+				 f->file_name, error);
 			rc = 1;
 		}
 	}

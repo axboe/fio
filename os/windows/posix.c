@@ -168,7 +168,7 @@ int win_to_posix_error(DWORD winerr)
 	case ERROR_FILE_INVALID:
 		return ENXIO;
 	default:
-		log_err("fio: windows error %d not handled\n", winerr);
+		log_err("fio: windows error %lu not handled\n", winerr);
 		return EIO;
 	}
 
@@ -188,7 +188,8 @@ int GetNumLogicalProcessors(void)
 		if (error == ERROR_INSUFFICIENT_BUFFER)
 			processor_info = malloc(len);
 		else {
-			log_err("Error: GetLogicalProcessorInformation failed: %d\n", error);
+			log_err("Error: GetLogicalProcessorInformation failed: %lu\n",
+				error);
 			return -1;
 		}
 

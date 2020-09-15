@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -eu
 
 CI_TARGET_ARCH="${BUILD_ARCH:-$TRAVIS_CPU_ARCH}"
 case "$TRAVIS_OS_NAME" in
@@ -51,6 +51,5 @@ case "$TRAVIS_OS_NAME" in
 	;;
 esac
 
-echo "Python version: $(/usr/bin/python -V 2>&1)"
-echo "Python3 path: $(which python3 2>&1)"
+echo "Python3 path: $(type -p python3 2>&1)"
 echo "Python3 version: $(python3 -V 2>&1)"

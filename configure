@@ -193,6 +193,8 @@ for opt do
   ;;
   --target-win-ver=*) target_win_ver="$optarg"
   ;;
+  --enable-pdb) pdb="yes"
+  ;;
   --build-static) build_static="yes"
   ;;
   --enable-gfio) gfio_check="yes"
@@ -256,6 +258,7 @@ if test "$show_help" = "yes" ; then
   echo "--extra-cflags=         Specify extra CFLAGS to pass to compiler"
   echo "--build-32bit-win       Enable 32-bit build on Windows"
   echo "--target-win-ver=       Minimum version of Windows to target (XP or 7)"
+  echo "--enable-pdb            Enable Windows PDB symbols generation (needs clang/lld)"
   echo "--build-static          Build a static fio"
   echo "--esx                   Configure build options for esx"
   echo "--enable-gfio           Enable building of gtk gfio"
@@ -394,6 +397,8 @@ CYGWIN*)
   fi
   if test "$target_win_ver" = "XP"; then
     output_sym "CONFIG_WINDOWS_XP"
+    # Technically the below is targeting 2003
+    CFLAGS="$CFLAGS -D_WIN32_WINNT=0x0502"
   elif test "$target_win_ver" = "7"; then
     output_sym "CONFIG_WINDOWS_7"
     CFLAGS="$CFLAGS -D_WIN32_WINNT=0x0601"
@@ -939,7 +944,8 @@ cat > $TMPC << EOF
 
 int main(int argc, char **argv)
 {
-  return asprintf(NULL, "%s", "str") == 0;
+  char *buf;
+  return asprintf(&buf, "%s", "str") == 0;
 }
 EOF
 if compile_prog "" "" "have_asprintf"; then
@@ -956,7 +962,8 @@ cat > $TMPC << EOF
 int main(int argc, char **argv)
 {
   va_list ap;
-  return vasprintf(NULL, "%s", ap) == 0;
+  char *buf;
+  return vasprintf(&buf, "%s", ap) == 0;
 }
 EOF
 if compile_prog "" "" "have_vasprintf"; then
@@ -2234,19 +2241,14 @@ lex="no"
 arith="no"
 if test "$disable_lex" = "no" || test -z "$disable_lex" ; then
 if test "$targetos" != "SunOS" ; then
-LEX=$(which lex 2> /dev/null)
-if test -x "$LEX" ; then
+if has lex; then
   lex="yes"
 fi
-YACC=$(which bison 2> /dev/null)
-if test -x "$YACC" ; then
+if has bison; then
   yacc="yes"
   yacc_is_bison="yes"
-else
-  YACC=$(which yacc 2> /dev/null)
-  if test -x "$YACC" ; then
-    yacc="yes"
-  fi
+elif has yacc; then
+  yacc="yes"
 fi
 if test "$yacc" = "yes" && test "$lex" = "yes" ; then
   arith="yes"
@@ -2262,7 +2264,9 @@ int main(int argc, char **argv)
   return 0;
 }
 EOF
-if compile_prog "" "-ll" "lex"; then
+if compile_prog "" "-lfl" "flex"; then
+  LIBS="-lfl $LIBS"
+elif compile_prog "" "-ll" "lex"; then
   LIBS="-ll $LIBS"
 else
   arith="no"
@@ -2276,8 +2280,7 @@ if test "$arith" = "yes" ; then
 if test "$force_no_lex_o" = "yes" ; then
   lex_use_o="no"
 else
-$LEX -o lex.yy.c exp/expression-parser.l 2> /dev/null
-if test "$?" = "0" ; then
+if lex -o lex.yy.c exp/expression-parser.l 2> /dev/null; then
   lex_use_o="yes"
 else
   lex_use_o="no"
@@ -2698,6 +2701,27 @@ if compile_prog "" "" "statx_syscall"; then
 fi
 print_config "statx(2)/syscall" "$statx_syscall"
 
+##########################################
+# check for Windows PDB generation support
+if test "pdb" != "no" ; then
+  cat > $TMPC <<EOF
+int main(void)
+{
+  return 0;
+}
+EOF
+  if compile_prog "-g -gcodeview" "-fuse-ld=lld -Wl,-pdb,$TMPO" "pdb"; then
+    pdb=yes
+  else
+    if test "$pdb" = "yes"; then
+      feature_not_found "PDB" "clang and lld"
+    fi
+    pdb=no
+  fi
+else
+  pdb=no
+fi
+print_config "Windows PDB generation" "$pdb"
 #############################################################################
 
 if test "$wordsize" = "64" ; then
@@ -2931,9 +2955,9 @@ fi
 if test "$arith" = "yes" ; then
   output_sym "CONFIG_ARITHMETIC"
   if test "$yacc_is_bison" = "yes" ; then
-    echo "YACC=$YACC -y" >> $config_host_mak
+    echo "YACC=bison -y" >> $config_host_mak
   else
-    echo "YACC=$YACC" >> $config_host_mak
+    echo "YACC=yacc" >> $config_host_mak
   fi
   if test "$lex_use_o" = "yes" ; then
     echo "CONFIG_LEX_USE_O=y" >> $config_host_mak
@@ -3020,6 +3044,10 @@ fi
 if test "$dynamic_engines" = "yes" ; then
   output_sym "CONFIG_DYNAMIC_ENGINES"
 fi
+if test "$pdb" = yes; then
+  output_sym "CONFIG_PDB"
+fi
+
 print_config "Lib-based ioengines dynamic" "$dynamic_engines"
 cat > $TMPC << EOF
 int main(int argc, char **argv)
