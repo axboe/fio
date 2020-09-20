@@ -1105,26 +1105,6 @@ fi
 print_config "CLOCK_MONOTONIC" "$clock_monotonic"
 
 ##########################################
-# CLOCK_MONOTONIC_RAW probe
-if test "$clock_monotonic_raw" != "yes" ; then
-  clock_monotonic_raw="no"
-fi
-if test "$clock_gettime" = "yes" ; then
-  cat > $TMPC << EOF
-#include <stdio.h>
-#include <time.h>
-int main(int argc, char **argv)
-{
-  return clock_gettime(CLOCK_MONOTONIC_RAW, NULL);
-}
-EOF
-  if compile_prog "" "$LIBS" "clock monotonic"; then
-      clock_monotonic_raw="yes"
-  fi
-fi
-print_config "CLOCK_MONOTONIC_RAW" "$clock_monotonic_raw"
-
-##########################################
 # clockid_t probe
 if test "$clockid_t" != "yes" ; then
   clockid_t="no"

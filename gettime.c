@@ -127,18 +127,33 @@ static void fio_init gtod_init(void)
 
 #endif /* FIO_DEBUG_TIME */
 
-#ifdef CONFIG_CLOCK_GETTIME
-static int fill_clock_gettime(struct timespec *ts)
+/*
+ * Queries the value of the monotonic clock if a monotonic clock is available
+ * or the wall clock time if no monotonic clock is available. Returns 0 if
+ * querying the clock succeeded or -1 if querying the clock failed.
+ */
+int fio_get_mono_time(struct timespec *ts)
 {
-#if defined(CONFIG_CLOCK_MONOTONIC_RAW)
-	return clock_gettime(CLOCK_MONOTONIC_RAW, ts);
-#elif defined(CONFIG_CLOCK_MONOTONIC)
-	return clock_gettime(CLOCK_MONOTONIC, ts);
+	int ret;
+
+#ifdef CONFIG_CLOCK_GETTIME
+#if defined(CONFIG_CLOCK_MONOTONIC)
+	ret = clock_gettime(CLOCK_MONOTONIC, ts);
 #else
-	return clock_gettime(CLOCK_REALTIME, ts);
+	ret = clock_gettime(CLOCK_REALTIME, ts);
 #endif
+#else
+	struct timeval tv;
+
+	ret = gettimeofday(&tv, NULL);
+	if (ret == 0) {
+		ts->tv_sec = tv.tv_sec;
+		ts->tv_nsec = tv.tv_usec * 1000;
+	}
+#endif
+	assert(ret <= 0);
+	return ret;
 }
-#endif
 
 static void __fio_gettime(struct timespec *tp)
 {
@@ -155,8 +170,8 @@ static void __fio_gettime(struct timespec *tp)
 #endif
 #ifdef CONFIG_CLOCK_GETTIME
 	case CS_CGETTIME: {
-		if (fill_clock_gettime(tp) < 0) {
-			log_err("fio: clock_gettime fails\n");
+		if (fio_get_mono_time(tp) < 0) {
+			log_err("fio: fio_get_mono_time() fails\n");
 			assert(0);
 		}
 		break;

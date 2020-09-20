@@ -16,6 +16,7 @@ enum fio_cs {
 	CS_INVAL,
 };
 
+extern int fio_get_mono_time(struct timespec *);
 extern void fio_gettime(struct timespec *, void *);
 extern void fio_gtod_init(void);
 extern void fio_clock_init(void);

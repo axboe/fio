@@ -169,11 +169,7 @@ static void *helper_thread_main(void *data)
 	}
 #endif
 
-#ifdef CONFIG_PTHREAD_CONDATTR_SETCLOCK
-	clock_gettime(CLOCK_MONOTONIC, &ts);
-#else
-	clock_gettime(CLOCK_REALTIME, &ts);
-#endif
+	fio_get_mono_time(&ts);
 	memcpy(&last_du, &ts, sizeof(ts));
 	memcpy(&last_ss, &ts, sizeof(ts));
 	memcpy(&last_si, &ts, sizeof(ts));
@@ -204,11 +200,7 @@ static void *helper_thread_main(void *data)
 				action = 0;
 		}
 
-#ifdef CONFIG_PTHREAD_CONDATTR_SETCLOCK
-		clock_gettime(CLOCK_MONOTONIC, &ts);
-#else
-		clock_gettime(CLOCK_REALTIME, &ts);
-#endif
+		fio_get_mono_time(&ts);
 
 		if (action == A_RESET) {
 			last_du = ts;
