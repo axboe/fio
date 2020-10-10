@@ -5,8 +5,8 @@
 
 struct fio_flow {
 	unsigned int refs;
-	struct flist_head list;
 	unsigned int id;
+	struct flist_head list;
 	unsigned long long flow_counter;
 	unsigned int total_weight;
 };
