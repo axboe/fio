@@ -7,7 +7,7 @@ struct fio_flow {
 	unsigned int refs;
 	unsigned int id;
 	struct flist_head list;
-	unsigned long long flow_counter;
+	unsigned long flow_counter;
 	unsigned int total_weight;
 };
 
@@ -90,7 +90,7 @@ static struct fio_flow *flow_get(unsigned int id)
 	return flow;
 }
 
-static void flow_put(struct fio_flow *flow, unsigned long long flow_counter,
+static void flow_put(struct fio_flow *flow, unsigned long flow_counter,
 				        unsigned int weight)
 {
 	if (!flow_lock)
