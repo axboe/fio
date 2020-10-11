@@ -2299,7 +2299,7 @@ void __show_run_stats(void)
 	free(opt_lists);
 }
 
-void __show_running_run_stats(void)
+int __show_running_run_stats(void)
 {
 	struct thread_data *td;
 	unsigned long long *rt;
@@ -2350,6 +2350,8 @@ void __show_running_run_stats(void)
 
 	free(rt);
 	fio_sem_up(stat_sem);
+
+	return 0;
 }
 
 static bool status_file_disabled;

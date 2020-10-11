@@ -196,7 +196,7 @@ static bool steadystate_deviation(uint64_t iops, uint64_t bw,
 	return false;
 }
 
-void steadystate_check(void)
+int steadystate_check(void)
 {
 	int i, j, ddir, prev_groupid, group_ramp_time_over = 0;
 	unsigned long rate_time;
@@ -302,6 +302,7 @@ void steadystate_check(void)
 			}
 		}
 	}
+	return 0;
 }
 
 int td_steadystate_init(struct thread_data *td)

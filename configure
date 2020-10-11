@@ -1105,46 +1105,6 @@ fi
 print_config "CLOCK_MONOTONIC" "$clock_monotonic"
 
 ##########################################
-# CLOCK_MONOTONIC_RAW probe
-if test "$clock_monotonic_raw" != "yes" ; then
-  clock_monotonic_raw="no"
-fi
-if test "$clock_gettime" = "yes" ; then
-  cat > $TMPC << EOF
-#include <stdio.h>
-#include <time.h>
-int main(int argc, char **argv)
-{
-  return clock_gettime(CLOCK_MONOTONIC_RAW, NULL);
-}
-EOF
-  if compile_prog "" "$LIBS" "clock monotonic"; then
-      clock_monotonic_raw="yes"
-  fi
-fi
-print_config "CLOCK_MONOTONIC_RAW" "$clock_monotonic_raw"
-
-##########################################
-# CLOCK_MONOTONIC_PRECISE probe
-if test "$clock_monotonic_precise" != "yes" ; then
-  clock_monotonic_precise="no"
-fi
-if test "$clock_gettime" = "yes" ; then
-  cat > $TMPC << EOF
-#include <stdio.h>
-#include <time.h>
-int main(int argc, char **argv)
-{
-  return clock_gettime(CLOCK_MONOTONIC_PRECISE, NULL);
-}
-EOF
-  if compile_prog "" "$LIBS" "clock monotonic precise"; then
-      clock_monotonic_precise="yes"
-  fi
-fi
-print_config "CLOCK_MONOTONIC_PRECISE" "$clock_monotonic_precise"
-
-##########################################
 # clockid_t probe
 if test "$clockid_t" != "yes" ; then
   clockid_t="no"
@@ -2722,6 +2682,24 @@ else
   pdb=no
 fi
 print_config "Windows PDB generation" "$pdb"
+
+##########################################
+# check for timerfd support
+timerfd_create="no"
+cat > $TMPC << EOF
+#include <sys/time.h>
+#include <sys/timerfd.h>
+
+int main(int argc, char **argv)
+{
+	return timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
+}
+EOF
+if compile_prog "" "" "timerfd_create"; then
+  timerfd_create="yes"
+fi
+print_config "timerfd_create" "$timerfd_create"
+
 #############################################################################
 
 if test "$wordsize" = "64" ; then
@@ -3022,6 +3000,9 @@ if test "$statx" = "yes"; then
 fi
 if test "$statx_syscall" = "yes"; then
   output_sym "CONFIG_HAVE_STATX_SYSCALL"
+fi
+if test "$timerfd_create" = "yes"; then
+  output_sym "CONFIG_HAVE_TIMERFD_CREATE"
 fi
 if test "$fallthrough" = "yes"; then
   CFLAGS="$CFLAGS -Wimplicit-fallthrough"

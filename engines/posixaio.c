@@ -17,47 +17,14 @@ struct posixaio_data {
 	unsigned int queued;
 };
 
-static int fill_timespec(struct timespec *ts)
+static unsigned long long ts_utime_since_now(const struct timespec *start)
 {
-#ifdef CONFIG_CLOCK_GETTIME
-#ifdef CONFIG_CLOCK_MONOTONIC
-	clockid_t clk = CLOCK_MONOTONIC;
-#else
-	clockid_t clk = CLOCK_REALTIME;
-#endif
-	if (!clock_gettime(clk, ts))
-		return 0;
-
-	perror("clock_gettime");
-	return 1;
-#else
-	struct timeval tv;
-
-	gettimeofday(&tv, NULL);
-	ts->tv_sec = tv.tv_sec;
-	ts->tv_nsec = tv.tv_usec * 1000;
-	return 0;
-#endif
-}
-
-static unsigned long long ts_utime_since_now(struct timespec *t)
-{
-	long long sec, nsec;
 	struct timespec now;
 
-	if (fill_timespec(&now))
+	if (fio_get_mono_time(&now) < 0)
 		return 0;
-	
-	sec = now.tv_sec - t->tv_sec;
-	nsec = now.tv_nsec - t->tv_nsec;
-	if (sec > 0 && nsec < 0) {
-		sec--;
-		nsec += 1000000000;
-	}
 
-	sec *= 1000000;
-	nsec /= 1000;
-	return sec + nsec;
+	return utime_since(start, &now);
 }
 
 static int fio_posixaio_cancel(struct thread_data fio_unused *td,
@@ -102,7 +69,7 @@ static int fio_posixaio_getevents(struct thread_data *td, unsigned int min,
 	unsigned int r;
 	int i;
 
-	if (t && !fill_timespec(&start))
+	if (t && fio_get_mono_time(&start) == 0)
 		have_timeout = 1;
 	else
 		memset(&start, 0, sizeof(start));

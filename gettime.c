@@ -127,18 +127,33 @@ static void fio_init gtod_init(void)
 
 #endif /* FIO_DEBUG_TIME */
 
-#ifdef CONFIG_CLOCK_GETTIME
-static int fill_clock_gettime(struct timespec *ts)
+/*
+ * Queries the value of the monotonic clock if a monotonic clock is available
+ * or the wall clock time if no monotonic clock is available. Returns 0 if
+ * querying the clock succeeded or -1 if querying the clock failed.
+ */
+int fio_get_mono_time(struct timespec *ts)
 {
-#if defined(CONFIG_CLOCK_MONOTONIC_RAW)
-	return clock_gettime(CLOCK_MONOTONIC_RAW, ts);
-#elif defined(CONFIG_CLOCK_MONOTONIC)
-	return clock_gettime(CLOCK_MONOTONIC, ts);
+	int ret;
+
+#ifdef CONFIG_CLOCK_GETTIME
+#if defined(CONFIG_CLOCK_MONOTONIC)
+	ret = clock_gettime(CLOCK_MONOTONIC, ts);
 #else
-	return clock_gettime(CLOCK_REALTIME, ts);
+	ret = clock_gettime(CLOCK_REALTIME, ts);
 #endif
+#else
+	struct timeval tv;
+
+	ret = gettimeofday(&tv, NULL);
+	if (ret == 0) {
+		ts->tv_sec = tv.tv_sec;
+		ts->tv_nsec = tv.tv_usec * 1000;
+	}
+#endif
+	assert(ret <= 0);
+	return ret;
 }
-#endif
 
 static void __fio_gettime(struct timespec *tp)
 {
@@ -155,8 +170,8 @@ static void __fio_gettime(struct timespec *tp)
 #endif
 #ifdef CONFIG_CLOCK_GETTIME
 	case CS_CGETTIME: {
-		if (fill_clock_gettime(tp) < 0) {
-			log_err("fio: clock_gettime fails\n");
+		if (fio_get_mono_time(tp) < 0) {
+			log_err("fio: fio_get_mono_time() fails\n");
 			assert(0);
 		}
 		break;
@@ -224,19 +239,13 @@ static unsigned long get_cycles_per_msec(void)
 {
 	struct timespec s, e;
 	uint64_t c_s, c_e;
-	enum fio_cs old_cs = fio_clock_source;
 	uint64_t elapsed;
 
-#ifdef CONFIG_CLOCK_GETTIME
-	fio_clock_source = CS_CGETTIME;
-#else
-	fio_clock_source = CS_GTOD;
-#endif
-	__fio_gettime(&s);
+	fio_get_mono_time(&s);
 
 	c_s = get_cpu_clock();
 	do {
-		__fio_gettime(&e);
+		fio_get_mono_time(&e);
 		c_e = get_cpu_clock();
 
 		elapsed = ntime_since(&s, &e);
@@ -244,7 +253,6 @@ static unsigned long get_cycles_per_msec(void)
 			break;
 	} while (1);
 
-	fio_clock_source = old_cs;
 	return (c_e - c_s) * 1000000 / elapsed;
 }
 
@@ -516,23 +524,33 @@ uint64_t mtime_since_now(const struct timespec *s)
 	return mtime_since(s, &t);
 }
 
-uint64_t mtime_since(const struct timespec *s, const struct timespec *e)
+/*
+ * Returns *e - *s in milliseconds as a signed integer. Note: rounding is
+ * asymmetric. If the difference yields +1 ns then 0 is returned. If the
+ * difference yields -1 ns then -1 is returned.
+ */
+int64_t rel_time_since(const struct timespec *s, const struct timespec *e)
 {
-	int64_t sec, usec;
+	int64_t sec, nsec;
 
 	sec = e->tv_sec - s->tv_sec;
-	usec = (e->tv_nsec - s->tv_nsec) / 1000;
-	if (sec > 0 && usec < 0) {
+	nsec = e->tv_nsec - s->tv_nsec;
+	if (nsec < 0) {
 		sec--;
-		usec += 1000000;
+		nsec += 1000ULL * 1000 * 1000;
 	}
+	assert(0 <= nsec && nsec < 1000ULL * 1000 * 1000);
 
-	if (sec < 0 || (sec == 0 && usec < 0))
-		return 0;
+	return sec * 1000 + nsec / (1000 * 1000);
+}
 
-	sec *= 1000;
-	usec /= 1000;
-	return sec + usec;
+/*
+ * Returns *e - *s in milliseconds as an unsigned integer. Returns 0 if
+ * *e < *s.
+ */
+uint64_t mtime_since(const struct timespec *s, const struct timespec *e)
+{
+	return max(rel_time_since(s, e), (int64_t)0);
 }
 
 uint64_t time_since_now(const struct timespec *s)

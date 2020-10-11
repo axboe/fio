@@ -1,4 +1,8 @@
 #include <signal.h>
+#include <unistd.h>
+#ifdef CONFIG_HAVE_TIMERFD_CREATE
+#include <sys/timerfd.h>
+#endif
 #ifdef CONFIG_VALGRIND_DEV
 #include <valgrind/drd.h>
 #else
@@ -10,6 +14,9 @@
 #include "helper_thread.h"
 #include "steadystate.h"
 #include "pshared.h"
+
+static int sleep_accuracy_ms;
+static int timerfd = -1;
 
 enum action {
 	A_EXIT		= 1,
@@ -24,6 +31,13 @@ static struct helper_data {
 	pthread_t thread;
 	struct fio_sem *startup_sem;
 } *helper_data;
+
+struct interval_timer {
+	const char	*name;
+	struct timespec	expires;
+	uint32_t	interval_ms;
+	int		(*func)(void);
+};
 
 void helper_thread_destroy(void)
 {
@@ -83,6 +97,18 @@ static int read_from_pipe(int fd, void *buf, size_t len)
 }
 #endif
 
+static void block_signals(void)
+{
+#ifdef HAVE_PTHREAD_SIGMASK
+	sigset_t sigmask;
+
+	ret = pthread_sigmask(SIG_UNBLOCK, NULL, &sigmask);
+	assert(ret == 0);
+	ret = pthread_sigmask(SIG_BLOCK, &sigmask, NULL);
+	assert(ret == 0);
+#endif
+}
+
 static void submit_action(enum action a)
 {
 	const char data = a;
@@ -128,126 +154,205 @@ void helper_thread_exit(void)
 	pthread_join(helper_data->thread, NULL);
 }
 
-static unsigned int task_helper(struct timespec *last, struct timespec *now, unsigned int period, void do_task())
+/* Resets timers and returns the time in milliseconds until the next event. */
+static int reset_timers(struct interval_timer timer[], int num_timers,
+			struct timespec *now)
 {
-	unsigned int next, since;
+	uint32_t msec_to_next_event = INT_MAX;
+	int i;
 
-	since = mtime_since(last, now);
-	if (since >= period || period - since < 10) {
-		do_task();
-		timespec_add_msec(last, since);
-		if (since > period)
-			next = period - (since - period);
-		else
-			next = period;
-	} else
-		next = period - since;
+	for (i = 0; i < num_timers; ++i) {
+		timer[i].expires = *now;
+		timespec_add_msec(&timer[i].expires, timer[i].interval_ms);
+		msec_to_next_event = min_not_zero(msec_to_next_event,
+						  timer[i].interval_ms);
+	}
 
-	return next;
+	return msec_to_next_event;
+}
+
+/*
+ * Waits for an action from fd during at least timeout_ms. `fd` must be in
+ * non-blocking mode.
+ */
+static uint8_t wait_for_action(int fd, unsigned int timeout_ms)
+{
+	struct timeval timeout = {
+		.tv_sec  = timeout_ms / 1000,
+		.tv_usec = (timeout_ms % 1000) * 1000,
+	};
+	fd_set rfds, efds;
+	uint8_t action = 0;
+	uint64_t exp;
+	int res;
+
+	res = read_from_pipe(fd, &action, sizeof(action));
+	if (res > 0 || timeout_ms == 0)
+		return action;
+	FD_ZERO(&rfds);
+	FD_SET(fd, &rfds);
+	FD_ZERO(&efds);
+	FD_SET(fd, &efds);
+#ifdef CONFIG_HAVE_TIMERFD_CREATE
+	{
+		/*
+		 * If the timer frequency is 100 Hz, select() will round up
+		 * `timeout` to the next multiple of 1 / 100 Hz = 10 ms. Hence
+		 * use a high-resolution timer if possible to increase
+		 * select() timeout accuracy.
+		 */
+		struct itimerspec delta = {};
+
+		delta.it_value.tv_sec = timeout.tv_sec;
+		delta.it_value.tv_nsec = timeout.tv_usec * 1000;
+		res = timerfd_settime(timerfd, 0, &delta, NULL);
+		assert(res == 0);
+		FD_SET(timerfd, &rfds);
+	}
+#endif
+	res = select(max(fd, timerfd) + 1, &rfds, NULL, &efds,
+		     timerfd >= 0 ? NULL : &timeout);
+	if (res < 0) {
+		log_err("fio: select() call in helper thread failed: %s",
+			strerror(errno));
+		return A_EXIT;
+	}
+	if (FD_ISSET(fd, &rfds))
+		read_from_pipe(fd, &action, sizeof(action));
+	if (timerfd >= 0 && FD_ISSET(timerfd, &rfds)) {
+		res = read(timerfd, &exp, sizeof(exp));
+		assert(res == sizeof(exp));
+	}
+	return action;
+}
+
+/*
+ * Verify whether or not timer @it has expired. If timer @it has expired, call
+ * @it->func(). @now is the current time. @msec_to_next_event is an
+ * input/output parameter that represents the time until the next event.
+ */
+static int eval_timer(struct interval_timer *it, const struct timespec *now,
+		      unsigned int *msec_to_next_event)
+{
+	int64_t delta_ms;
+	bool expired;
+
+	/* interval == 0 means that the timer is disabled. */
+	if (it->interval_ms == 0)
+		return 0;
+
+	delta_ms = rel_time_since(now, &it->expires);
+	expired = delta_ms <= sleep_accuracy_ms;
+	if (expired) {
+		timespec_add_msec(&it->expires, it->interval_ms);
+		delta_ms = rel_time_since(now, &it->expires);
+		if (delta_ms < it->interval_ms - sleep_accuracy_ms ||
+		    delta_ms > it->interval_ms + sleep_accuracy_ms) {
+			dprint(FD_HELPERTHREAD,
+			       "%s: delta = %" PRIi64 " <> %u. Clock jump?\n",
+			       it->name, delta_ms, it->interval_ms);
+			delta_ms = it->interval_ms;
+			it->expires = *now;
+			timespec_add_msec(&it->expires, it->interval_ms);
+		}
+	}
+	*msec_to_next_event = min((unsigned int)delta_ms, *msec_to_next_event);
+	return expired ? it->func() : 0;
 }
 
 static void *helper_thread_main(void *data)
 {
 	struct helper_data *hd = data;
-	unsigned int msec_to_next_event, next_log, next_si = status_interval;
-	unsigned int next_ss = STEADYSTATE_MSEC;
-	struct timespec ts, last_du, last_ss, last_si;
-	char action;
-	int ret = 0;
+	unsigned int msec_to_next_event, next_log;
+	struct interval_timer timer[] = {
+		{
+			.name = "disk_util",
+			.interval_ms = DISK_UTIL_MSEC,
+			.func = update_io_ticks,
+		},
+		{
+			.name = "status_interval",
+			.interval_ms = status_interval,
+			.func = __show_running_run_stats,
+		},
+		{
+			.name = "steadystate",
+			.interval_ms = steadystate_enabled ? STEADYSTATE_MSEC :
+				0,
+			.func = steadystate_check,
+		}
+	};
+	struct timespec ts;
+	int clk_tck, ret = 0;
+
+#ifdef _SC_CLK_TCK
+	clk_tck = sysconf(_SC_CLK_TCK);
+#else
+	/*
+	 * The timer frequence is variable on Windows. Instead of trying to
+	 * query it, use 64 Hz, the clock frequency lower bound. See also
+	 * https://carpediemsystems.co.uk/2019/07/18/windows-system-timer-granularity/.
+	 */
+	clk_tck = 64;
+#endif
+	dprint(FD_HELPERTHREAD, "clk_tck = %d\n", clk_tck);
+	assert(clk_tck > 0);
+	sleep_accuracy_ms = (1000 + clk_tck - 1) / clk_tck;
+
+#ifdef CONFIG_HAVE_TIMERFD_CREATE
+	timerfd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
+	assert(timerfd >= 0);
+	sleep_accuracy_ms = 1;
+#endif
 
 	sk_out_assign(hd->sk_out);
 
-#ifdef HAVE_PTHREAD_SIGMASK
-	{
-	sigset_t sigmask;
-
 	/* Let another thread handle signals. */
-	ret = pthread_sigmask(SIG_UNBLOCK, NULL, &sigmask);
-	assert(ret == 0);
-	ret = pthread_sigmask(SIG_BLOCK, &sigmask, NULL);
-	assert(ret == 0);
-	}
-#endif
+	block_signals();
 
-#ifdef CONFIG_PTHREAD_CONDATTR_SETCLOCK
-	clock_gettime(CLOCK_MONOTONIC, &ts);
-#else
-	clock_gettime(CLOCK_REALTIME, &ts);
-#endif
-	memcpy(&last_du, &ts, sizeof(ts));
-	memcpy(&last_ss, &ts, sizeof(ts));
-	memcpy(&last_si, &ts, sizeof(ts));
+	fio_get_mono_time(&ts);
+	msec_to_next_event = reset_timers(timer, ARRAY_SIZE(timer), &ts);
 
 	fio_sem_up(hd->startup_sem);
 
-	msec_to_next_event = DISK_UTIL_MSEC;
 	while (!ret && !hd->exit) {
-		uint64_t since_du;
-		struct timeval timeout = {
-			.tv_sec  = msec_to_next_event / 1000,
-			.tv_usec = (msec_to_next_event % 1000) * 1000,
-		};
-		fd_set rfds, efds;
+		uint8_t action;
+		int i;
 
-		if (read_from_pipe(hd->pipe[0], &action, sizeof(action)) < 0) {
-			FD_ZERO(&rfds);
-			FD_SET(hd->pipe[0], &rfds);
-			FD_ZERO(&efds);
-			FD_SET(hd->pipe[0], &efds);
-			if (select(1, &rfds, NULL, &efds, &timeout) < 0) {
-				log_err("fio: select() call in helper thread failed: %s",
-					strerror(errno));
-				ret = 1;
-			}
-			if (read_from_pipe(hd->pipe[0], &action, sizeof(action)) <
-			    0)
-				action = 0;
-		}
+		action = wait_for_action(hd->pipe[0], msec_to_next_event);
+		if (action == A_EXIT)
+			break;
 
-#ifdef CONFIG_PTHREAD_CONDATTR_SETCLOCK
-		clock_gettime(CLOCK_MONOTONIC, &ts);
-#else
-		clock_gettime(CLOCK_REALTIME, &ts);
-#endif
+		fio_get_mono_time(&ts);
 
-		if (action == A_RESET) {
-			last_du = ts;
-			last_ss = ts;
-		}
+		msec_to_next_event = INT_MAX;
 
-		since_du = mtime_since(&last_du, &ts);
-		if (since_du >= DISK_UTIL_MSEC || DISK_UTIL_MSEC - since_du < 10) {
-			ret = update_io_ticks();
-			timespec_add_msec(&last_du, DISK_UTIL_MSEC);
-			msec_to_next_event = DISK_UTIL_MSEC;
-			if (since_du >= DISK_UTIL_MSEC)
-				msec_to_next_event -= (since_du - DISK_UTIL_MSEC);
-		} else
-			msec_to_next_event = DISK_UTIL_MSEC - since_du;
+		if (action == A_RESET)
+			msec_to_next_event = reset_timers(timer,
+						ARRAY_SIZE(timer), &ts);
+
+		for (i = 0; i < ARRAY_SIZE(timer); ++i)
+			ret = eval_timer(&timer[i], &ts, &msec_to_next_event);
 
 		if (action == A_DO_STAT)
 			__show_running_run_stats();
-
-		if (status_interval) {
-			next_si = task_helper(&last_si, &ts, status_interval, __show_running_run_stats);
-			msec_to_next_event = min(next_si, msec_to_next_event);
-		}
 
 		next_log = calc_log_samples();
 		if (!next_log)
 			next_log = DISK_UTIL_MSEC;
 
-		if (steadystate_enabled) {
-			next_ss = task_helper(&last_ss, &ts, STEADYSTATE_MSEC, steadystate_check);
-			msec_to_next_event = min(next_ss, msec_to_next_event);
-                }
-
 		msec_to_next_event = min(next_log, msec_to_next_event);
-		dprint(FD_HELPERTHREAD, "next_si: %u, next_ss: %u, next_log: %u, msec_to_next_event: %u\n",
-			next_si, next_ss, next_log, msec_to_next_event);
+		dprint(FD_HELPERTHREAD,
+		       "next_log: %u, msec_to_next_event: %u\n",
+		       next_log, msec_to_next_event);
 
 		if (!is_backend)
 			print_thread_status();
+	}
+
+	if (timerfd >= 0) {
+		close(timerfd);
+		timerfd = -1;
 	}
 
 	fio_writeout_logs(false);
