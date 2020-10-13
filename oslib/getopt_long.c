@@ -16,8 +16,8 @@
 
 #include "getopt.h"
 
-char *optarg = NULL;
-int optind = 0, opterr = 0, optopt = 0;
+char *optarg;
+int optind, opterr, optopt;
 
 static struct getopt_private_state {
 	const char *optptr;
