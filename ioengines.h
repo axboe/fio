@@ -77,7 +77,8 @@ enum fio_ioengine_flags {
 	FIO_NOSTATS	= 1 << 12,	/* don't do IO stats */
 	FIO_NOFILEHASH	= 1 << 13,	/* doesn't hash the files for lookup later. */
 	FIO_ASYNCIO_SYNC_TRIM
-			= 1 << 14	/* io engine has async ->queue except for trim */
+			= 1 << 14,	/* io engine has async ->queue except for trim */
+	FIO_NO_OFFLOAD	= 1 << 15,	/* no async offload */
 };
 
 /*
