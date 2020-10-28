@@ -194,8 +194,7 @@ static int fio_ime_open_file(struct thread_data *td, struct fio_file *f)
 	}
 	if (td->o.odirect)
 		flags |= O_DIRECT;
-	if (td->o.sync_io)
-		flags |= O_SYNC;
+	flags |= td->o.sync_io;
 	if (td->o.create_on_open && td->o.allow_create)
 		flags |= O_CREAT;
 

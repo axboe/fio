@@ -3733,14 +3733,32 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	{
 		.name	= "sync",
 		.lname	= "Synchronous I/O",
-		.type	= FIO_OPT_BOOL,
+		.type	= FIO_OPT_STR,
 		.off1	= offsetof(struct thread_options, sync_io),
-		.help	= "Use O_SYNC for buffered writes",
-		.def	= "0",
-		.parent = "buffered",
+		.help	= "Use synchronous write IO",
+		.def	= "none",
 		.hide	= 1,
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_IO_TYPE,
+		.posval = {
+			  { .ival = "none",
+			    .oval = 0,
+			  },
+			  { .ival = "0",
+			    .oval = 0,
+			  },
+			  { .ival = "sync",
+			    .oval = O_SYNC,
+			  },
+			  { .ival = "1",
+			    .oval = O_SYNC,
+			  },
+#ifdef O_DSYNC
+			  { .ival = "dsync",
+			    .oval = O_DSYNC,
+			  },
+#endif
+		},
 	},
 #ifdef FIO_HAVE_WRITE_HINT
 	{

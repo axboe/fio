@@ -193,6 +193,7 @@ static enum fio_q_status fio_libpmem_queue(struct thread_data *td,
 
 	dprint(FD_IO, "DEBUG fio_libpmem_queue\n");
 	dprint(FD_IO,"td->o.odirect %d td->o.sync_io %d \n",td->o.odirect, td->o.sync_io);
+	/* map both O_SYNC / DSYNC to not using NODRAIN */
 	flags = td->o.sync_io ? 0 : PMEM_F_MEM_NODRAIN;
 	flags |= td->o.odirect ? PMEM_F_MEM_NONTEMPORAL : PMEM_F_MEM_TEMPORAL;
 

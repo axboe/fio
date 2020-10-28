@@ -655,8 +655,7 @@ int generic_open_file(struct thread_data *td, struct fio_file *f)
 		}
 		flags |= OS_O_DIRECT | FIO_O_ATOMIC;
 	}
-	if (td->o.sync_io)
-		flags |= O_SYNC;
+	flags |= td->o.sync_io;
 	if (td->o.create_on_open && td->o.allow_create)
 		flags |= O_CREAT;
 skip_flags:
