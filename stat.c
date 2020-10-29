@@ -2435,7 +2435,7 @@ static struct io_logs *get_new_log(struct io_log *iolog)
 	 * forever
 	 */
 	if (!iolog->cur_log_max)
-		new_samples = DEF_LOG_ENTRIES;
+		new_samples = MAX_LOG_ENTRIES;
 	else {
 		new_samples = iolog->cur_log_max * 2;
 		if (new_samples > MAX_LOG_ENTRIES)
