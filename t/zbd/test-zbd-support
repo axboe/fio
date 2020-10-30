@@ -913,7 +913,7 @@ test48() {
     for ((i=0;i<jobs;i++)); do
 	opts+=("--name=job$i" "--filename=$dev" "--offset=$off" "--bs=16K")
 	opts+=("--io_size=$zone_size" "--iodepth=256" "--thread=1")
-	opts+=("--group_reporting=1")
+	opts+=("--size=$size" "--group_reporting=1")
 	# max_open_zones is already specified
 	opts+=($(job_var_opts_exclude "--max_open_zones"))
     done
