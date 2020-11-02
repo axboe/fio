@@ -2977,7 +2977,7 @@ static int __add_samples(struct thread_data *td, struct timespec *parent_tv,
 	next_log = avg_time;
 
 	spent = mtime_since(parent_tv, t);
-	if (spent < avg_time && avg_time - spent >= LOG_MSEC_SLACK)
+	if (spent < avg_time && avg_time - spent > LOG_MSEC_SLACK)
 		return avg_time - spent;
 
 	if (needs_lock)
@@ -3070,13 +3070,16 @@ static int add_iops_samples(struct thread_data *td, struct timespec *t)
 int calc_log_samples(void)
 {
 	struct thread_data *td;
-	unsigned int next = ~0U, tmp;
+	unsigned int next = ~0U, tmp = 0, next_mod = 0, log_avg_msec = 0;
 	struct timespec now;
 	int i;
+	long elapsed_time = 0;
 
 	fio_gettime(&now, NULL);
 
 	for_each_td(td, i) {
+		elapsed_time = mtime_since_now(&td->epoch);
+
 		if (!td->o.stats)
 			continue;
 		if (in_ramp_time(td) ||
@@ -3087,17 +3090,25 @@ int calc_log_samples(void)
 		if (!td->bw_log ||
 			(td->bw_log && !per_unit_log(td->bw_log))) {
 			tmp = add_bw_samples(td, &now);
-			if (tmp < next)
-				next = tmp;
+
+			log_avg_msec = td->bw_log->avg_msec;
 		}
 		if (!td->iops_log ||
 			(td->iops_log && !per_unit_log(td->iops_log))) {
 			tmp = add_iops_samples(td, &now);
-			if (tmp < next)
-				next = tmp;
+
+			log_avg_msec = td->iops_log->avg_msec;
 		}
+
+		if (tmp < next)
+			next = tmp;
 	}
 
+	if (log_avg_msec == 0)
+		log_avg_msec = 1000;
+
+	next_mod = elapsed_time%log_avg_msec;
+	next = min(next, (log_avg_msec-next_mod));  /* correction to keep the time on the log avg msec boundary */
 	return next == ~0U ? 0 : next;
 }
 
