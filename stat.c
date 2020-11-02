@@ -2747,7 +2747,8 @@ static unsigned long add_log_sample(struct thread_data *td,
 
 	__add_stat_to_log(iolog, ddir, elapsed, td->o.log_max != 0, priority_bit);
 
-	iolog->avg_last[ddir] = elapsed - (this_window - iolog->avg_msec);
+	iolog->avg_last[ddir] = elapsed - (elapsed % iolog->avg_msec);
+
 	return iolog->avg_msec;
 }
 
@@ -2985,7 +2986,7 @@ static int __add_samples(struct thread_data *td, struct timespec *parent_tv,
 	next_log = avg_time;
 
 	spent = mtime_since(parent_tv, t);
-	if (spent < avg_time && avg_time - spent >= LOG_MSEC_SLACK)
+	if (spent < avg_time && avg_time - spent > LOG_MSEC_SLACK)
 		return avg_time - spent;
 
 	if (needs_lock)
@@ -3078,13 +3079,16 @@ static int add_iops_samples(struct thread_data *td, struct timespec *t)
 int calc_log_samples(void)
 {
 	struct thread_data *td;
-	unsigned int next = ~0U, tmp;
+	unsigned int next = ~0U, tmp = 0, next_mod = 0, log_avg_msec_min = -1U;
 	struct timespec now;
 	int i;
+	long elapsed_time = 0;
 
 	fio_gettime(&now, NULL);
 
 	for_each_td(td, i) {
+		elapsed_time = mtime_since_now(&td->epoch);
+
 		if (!td->o.stats)
 			continue;
 		if (in_ramp_time(td) ||
@@ -3095,16 +3099,33 @@ int calc_log_samples(void)
 		if (!td->bw_log ||
 			(td->bw_log && !per_unit_log(td->bw_log))) {
 			tmp = add_bw_samples(td, &now);
-			if (tmp < next)
-				next = tmp;
+
+			if (td->bw_log)
+				log_avg_msec_min = min(log_avg_msec_min, (unsigned int)td->bw_log->avg_msec);
 		}
 		if (!td->iops_log ||
 			(td->iops_log && !per_unit_log(td->iops_log))) {
 			tmp = add_iops_samples(td, &now);
-			if (tmp < next)
-				next = tmp;
+
+			if (td->iops_log)
+				log_avg_msec_min = min(log_avg_msec_min, (unsigned int)td->iops_log->avg_msec);
 		}
+
+		if (tmp < next)
+			next = tmp;
 	}
+
+	/* if log_avg_msec_min has not been changed, set it to 0 */
+	if (log_avg_msec_min == -1U)
+		log_avg_msec_min = 0;
+
+	if (log_avg_msec_min == 0)
+		next_mod = elapsed_time;
+	else
+		next_mod = elapsed_time % log_avg_msec_min;
+
+	/* correction to keep the time on the log avg msec boundary */
+	next = min(next, (log_avg_msec_min - next_mod));
 
 	return next == ~0U ? 0 : next;
 }
