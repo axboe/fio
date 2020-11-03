@@ -1826,6 +1826,13 @@ Read and write iscsi lun with libiscsi.
 .TP
 .B nbd
 Synchronous read and write a Network Block Device (NBD).
+.TP
+.B libcufile
+I/O engine supporting libcufile synchronous access to nvidia-fs and a
+GPUDirect Storage-supported filesystem. This engine performs
+I/O without transferring buffers between user-space and the kernel,
+unless \fBverify\fR is set or \fBcuda_io\fR is \fBposix\fR. \fBiomem\fR must
+not be \fBcudamalloc\fR. This ioengine defines engine specific options.
 .SS "I/O engine specific parameters"
 In addition, there are some parameters which are only valid when a specific
 \fBioengine\fR is in use. These are used identically to normal parameters,
@@ -2139,7 +2146,36 @@ Example URIs:
 \fInbd+unix:///?socket=/tmp/socket\fR
 .TP
 \fInbds://tlshost/exportname\fR
-
+.RE
+.RE
+.TP
+.BI (libcufile)gpu_dev_ids\fR=\fPstr
+Specify the GPU IDs to use with CUDA. This is a colon-separated list of int.
+GPUs are assigned to workers roundrobin. Default is 0.
+.TP
+.BI (libcufile)cuda_io\fR=\fPstr
+Specify the type of I/O to use with CUDA. This option
+takes the following values:
+.RS
+.RS
+.TP
+.B cufile (default)
+Use libcufile and nvidia-fs. This option performs I/O directly
+between a GPUDirect Storage filesystem and GPU buffers,
+avoiding use of a bounce buffer. If \fBverify\fR is set,
+cudaMemcpy is used to copy verification data between RAM and GPU(s).
+Verification data is copied from RAM to GPU before a write
+and from GPU to RAM after a read.
+\fBdirect\fR must be 1.
+.TP
+.BI posix
+Use POSIX to perform I/O with a RAM buffer, and use
+cudaMemcpy to transfer data between RAM and the GPU(s).
+Data is copied from GPU to RAM before a write and copied
+from RAM to GPU after a read. \fBverify\fR does not affect
+the use of cudaMemcpy.
+.RE
+.RE
 .SS "I/O depth"
 .TP
 .BI iodepth \fR=\fPint
