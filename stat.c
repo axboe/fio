@@ -3091,13 +3091,15 @@ int calc_log_samples(void)
 			(td->bw_log && !per_unit_log(td->bw_log))) {
 			tmp = add_bw_samples(td, &now);
 
-			log_avg_msec = td->bw_log->avg_msec;
+			if (td->bw_log)
+				log_avg_msec = td->bw_log->avg_msec;
 		}
 		if (!td->iops_log ||
 			(td->iops_log && !per_unit_log(td->iops_log))) {
 			tmp = add_iops_samples(td, &now);
 
-			log_avg_msec = td->iops_log->avg_msec;
+			if (td->iops_log)
+				log_avg_msec = td->iops_log->avg_msec;
 		}
 
 		if (tmp < next)
@@ -3109,6 +3111,7 @@ int calc_log_samples(void)
 
 	next_mod = elapsed_time%log_avg_msec;
 	next = min(next, (log_avg_msec-next_mod));  /* correction to keep the time on the log avg msec boundary */
+
 	return next == ~0U ? 0 : next;
 }
 
