@@ -240,7 +240,7 @@ int fio_hdfsio_close_file(struct thread_data *td, struct fio_file *f)
 	return 0;
 }
 
-static int fio_hdfsio_init(struct thread_data *td)
+static int fio_hdfsio_io_u_init(struct thread_data *td, struct io_u *io_u)
 {
 	struct hdfsio_options *options = td->eo;
 	struct hdfsio_data *hd = td->io_ops_data;
@@ -349,7 +349,7 @@ static int fio_hdfsio_setup(struct thread_data *td)
 	return 0;
 }
 
-static int fio_hdfsio_io_u_init(struct thread_data *td, struct io_u *io_u)
+static int fio_hdfsio_init(struct thread_data *td)
 {
 	struct hdfsio_data *hd = td->io_ops_data;
 	struct hdfsio_options *options = td->eo;
