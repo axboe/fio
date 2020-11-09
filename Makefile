@@ -66,10 +66,10 @@ ifdef CONFIG_LIBHDFS
 endif
 
 ifdef CONFIG_LIBISCSI
-  iscsi_SRCS = engines/libiscsi.c
-  iscsi_LIBS = $(LIBISCSI_LIBS)
-  iscsi_CFLAGS = $(LIBISCSI_CFLAGS)
-  ENGINES += iscsi
+  libiscsi_SRCS = engines/libiscsi.c
+  libiscsi_LIBS = $(LIBISCSI_LIBS)
+  libiscsi_CFLAGS = $(LIBISCSI_CFLAGS)
+  ENGINES += libiscsi
 endif
 
 ifdef CONFIG_LIBNBD
@@ -85,14 +85,14 @@ else ifdef CONFIG_32BIT
   CPPFLAGS += -DBITS_PER_LONG=32
 endif
 ifdef CONFIG_LIBAIO
-  aio_SRCS = engines/libaio.c
-  aio_LIBS = -laio
+  libaio_SRCS = engines/libaio.c
+  libaio_LIBS = -laio
   ifdef CONFIG_LIBAIO_URING
-    aio_LIBS = -luring
+    libaio_LIBS = -luring
   else
-    aio_LIBS = -laio
+    libaio_LIBS = -laio
   endif
-  ENGINES += aio
+  ENGINES += libaio
 endif
 ifdef CONFIG_RDMA
   rdma_SRCS = engines/rdma.c
@@ -179,17 +179,17 @@ ifdef CONFIG_LINUX_DEVDAX
   ENGINES += dev-dax
 endif
 ifdef CONFIG_LIBPMEM
-  pmem_SRCS = engines/libpmem.c
-  pmem_LIBS = -lpmem
-  ENGINES += pmem
+  libpmem_SRCS = engines/libpmem.c
+  libpmem_LIBS = -lpmem
+  ENGINES += libpmem
 endif
 ifdef CONFIG_IME
   SOURCE += engines/ime.c
 endif
 ifdef CONFIG_LIBZBC
-  zbc_SRCS = engines/libzbc.c
-  zbc_LIBS = -lzbc
-  ENGINES += zbc
+  libzbc_SRCS = engines/libzbc.c
+  libzbc_LIBS = -lzbc
+  ENGINES += libzbc
 endif
 
 ifeq ($(CONFIG_TARGET_OS), Linux)
@@ -256,9 +256,9 @@ ifdef CONFIG_DYNAMIC_ENGINES
 define engine_template =
 $(1)_OBJS := $$($(1)_SRCS:.c=.o)
 $$($(1)_OBJS): CFLAGS := -fPIC $$($(1)_CFLAGS) $(CFLAGS)
-engines/lib$(1).so: $$($(1)_OBJS)
+engines/fio-$(1).so: $$($(1)_OBJS)
 	$$(QUIET_LINK)$(CC) -shared -rdynamic -fPIC -Wl,-soname,fio-$(1).so.1 $$($(1)_LIBS) -o $$@ $$<
-ENGS_OBJS += engines/lib$(1).so
+ENGS_OBJS += engines/fio-$(1).so
 endef
 else # !CONFIG_DYNAMIC_ENGINES
 define engine_template =

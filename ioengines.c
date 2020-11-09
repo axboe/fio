@@ -91,7 +91,7 @@ static void *dlopen_external(struct thread_data *td, const char *engine)
 	char engine_path[PATH_MAX];
 	void *dlhandle;
 
-	sprintf(engine_path, "%s/lib%s.so", FIO_EXT_ENG_DIR, engine);
+	sprintf(engine_path, "%s/fio-%s.so", FIO_EXT_ENG_DIR, engine);
 
 	dlhandle = dlopen(engine_path, RTLD_LAZY);
 	if (!dlhandle)
