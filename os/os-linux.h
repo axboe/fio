@@ -58,7 +58,7 @@
 
 #define OS_MAP_ANON		MAP_ANONYMOUS
 
-#define FIO_EXT_ENG_DIR	"/usr/lib/fio"
+#define FIO_EXT_ENG_DIR	"/usr/local/lib/fio"
 
 typedef cpu_set_t os_cpu_mask_t;
 
