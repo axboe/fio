@@ -112,6 +112,10 @@ static struct ioengine_ops *dlopen_ioengine(struct thread_data *td,
 	struct ioengine_ops *ops;
 	void *dlhandle;
 
+	if (!strncmp(engine_lib, "linuxaio", 8) ||
+	    !strncmp(engine_lib, "aio", 3))
+		engine_lib = "libaio";
+
 	dprint(FD_IO, "dload engine %s\n", engine_lib);
 
 	dlerror();
@@ -160,7 +164,7 @@ static struct ioengine_ops *__load_ioengine(const char *engine)
 	/*
 	 * linux libaio has alias names, so convert to what we want
 	 */
-	if (!strncmp(engine, "linuxaio", 8)) {
+	if (!strncmp(engine, "linuxaio", 8) || !strncmp(engine, "aio", 3)) {
 		dprint(FD_IO, "converting ioengine name: %s -> libaio\n",
 		       engine);
 		engine = "libaio";
