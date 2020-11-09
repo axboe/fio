@@ -224,7 +224,7 @@ class FioLatTest():
         lines = file_data.splitlines()
         for i in range(8):
             file_data = lines[i]
-            if file_data.startswith('3;fio-'):
+            if file_data.startswith('3;;latency'):
                 self.terse_data = file_data.split(';')
                 return True
 
