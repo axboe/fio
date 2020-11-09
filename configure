@@ -168,7 +168,6 @@ disable_native="no"
 march_set="no"
 libiscsi="no"
 libnbd="no"
-libaio_uring="no"
 libzbc=""
 dynamic_engines="no"
 prefix=/usr/local
@@ -236,8 +235,6 @@ for opt do
   --disable-libzbc) libzbc="no"
   ;;
   --disable-tcmalloc) disable_tcmalloc="yes"
-  ;;
-  --enable-libaio-uring) libaio_uring="yes"
   ;;
   --dynamic-libengines) dynamic_engines="yes"
   ;;
@@ -653,22 +650,13 @@ int main(void)
   return 0;
 }
 EOF
-  if test "$libaio_uring" = "yes"; then
-    if compile_prog "" "-luring" "libaio io_uring" ; then
-      libaio=yes
-      LIBS="-luring $LIBS"
-    else
-      feature_not_found "libaio io_uring" ""
-    fi
-  elif compile_prog "" "-laio" "libaio" ; then
+  if compile_prog "" "-laio" "libaio" ; then
     libaio=yes
-    libaio_uring=no
   else
     if test "$libaio" = "yes" ; then
       feature_not_found "linux AIO" "libaio-dev or libaio-devel"
     fi
     libaio=no
-    libaio_uring=no
   fi
 
   cat > $TMPC <<EOF
@@ -689,7 +677,6 @@ EOF
 fi
 print_config "Linux AIO support" "$libaio"
 print_config "Linux AIO support rw flags" "$libaio_rw_flags"
-print_config "Linux AIO over io_uring" "$libaio_uring"
 
 ##########################################
 # posix aio probe
@@ -2721,9 +2708,6 @@ if test "$libaio" = "yes" ; then
   output_sym "CONFIG_LIBAIO"
   if test "$libaio_rw_flags" = "yes" ; then
     output_sym "CONFIG_LIBAIO_RW_FLAGS"
-  fi
-  if test "$libaio_uring" = "yes" ; then
-    output_sym "CONFIG_LIBAIO_URING"
   fi
 fi
 if test "$posix_aio" = "yes" ; then

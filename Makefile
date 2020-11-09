@@ -87,11 +87,6 @@ endif
 ifdef CONFIG_LIBAIO
   libaio_SRCS = engines/libaio.c
   libaio_LIBS = -laio
-  ifdef CONFIG_LIBAIO_URING
-    libaio_LIBS = -luring
-  else
-    libaio_LIBS = -laio
-  endif
   ENGINES += libaio
 endif
 ifdef CONFIG_RDMA
