@@ -263,6 +263,10 @@ CFLAGS += $$($(1)_CFLAGS)
 endef
 endif
 
+FIO-VERSION-FILE: FORCE
+	@$(SHELL) $(SRCDIR)/FIO-VERSION-GEN
+-include FIO-VERSION-FILE
+
 override CFLAGS := -DFIO_VERSION='"$(FIO_VERSION)"' $(FIO_CFLAGS) $(CFLAGS)
 
 $(foreach eng,$(ENGINES),$(eval $(call engine_template,$(eng))))
@@ -432,10 +436,6 @@ all: $(PROGS) $(T_TEST_PROGS) $(UT_PROGS) $(SCRIPTS) $(ENGS_OBJS) FORCE
 
 .PHONY: all install clean test
 .PHONY: FORCE cscope
-
-FIO-VERSION-FILE: FORCE
-	@$(SHELL) $(SRCDIR)/FIO-VERSION-GEN
--include FIO-VERSION-FILE
 
 %.o : %.c
 	@mkdir -p $(dir $@)
