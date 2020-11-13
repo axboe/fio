@@ -45,7 +45,6 @@ const char fio_version_string[] = FIO_VERSION;
 #define FIO_RANDSEED		(0xb1899bedUL)
 
 static char **ini_file;
-static int max_jobs = FIO_MAX_JOBS;
 static bool dump_cmdline;
 static bool parse_only;
 static bool merge_blktrace_only;
@@ -352,8 +351,10 @@ static int add_thread_segment(void)
 	size_t size = JOBS_PER_SEG * sizeof(struct thread_data);
 	int i;
 
-	if (nr_segments + 1 >= REAL_MAX_SEG)
+	if (nr_segments + 1 >= REAL_MAX_SEG) {
+		log_err("error: maximum number of jobs reached.\n");
 		return -1;
+	}
 
 	size += 2 * sizeof(unsigned int);
 
@@ -492,11 +493,6 @@ static struct thread_data *get_new_job(bool global, struct thread_data *parent,
 		return &def_thread;
 	if (expand_thread_area()) {
 		log_err("error: failed to setup shm segment\n");
-		return NULL;
-	}
-	if (thread_number >= max_jobs) {
-		log_err("error: maximum number of jobs (%d) reached.\n",
-				max_jobs);
 		return NULL;
 	}
 
@@ -2741,12 +2737,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			warnings_fatal = 1;
 			break;
 		case 'j':
-			max_jobs = atoi(optarg);
-			if (!max_jobs || max_jobs > REAL_MAX_JOBS) {
-				log_err("fio: invalid max jobs: %d\n", max_jobs);
-				do_exit++;
-				exit_val = 1;
-			}
+			/* we don't track/need this anymore, ignore it */
 			break;
 		case 'S':
 			did_arg = true;
