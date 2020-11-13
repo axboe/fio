@@ -51,7 +51,7 @@ static bool parse_only;
 static bool merge_blktrace_only;
 
 static struct thread_data def_thread;
-struct thread_data *threads = NULL;
+struct thread_segment segments[REAL_MAX_SEG];
 static char **job_sections;
 static int nr_job_sections;
 
@@ -301,17 +301,17 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 
 void free_threads_shm(void)
 {
-	if (threads) {
-		void *tp = threads;
+	if (segments[0].threads) {
+		void *tp = segments[0].threads;
 #ifndef CONFIG_NO_SHM
 		struct shmid_ds sbuf;
 
-		threads = NULL;
+		segments[0].threads = NULL;
 		shmdt(tp);
-		shmctl(shm_id, IPC_RMID, &sbuf);
-		shm_id = -1;
+		shmctl(segments[0].shm_id, IPC_RMID, &sbuf);
+		segments[0].shm_id = -1;
 #else
-		threads = NULL;
+		segments[0].threads = NULL;
 		free(tp);
 #endif
 	}
@@ -319,7 +319,7 @@ void free_threads_shm(void)
 
 static void free_shm(void)
 {
-	if (threads) {
+	if (segments[0].threads) {
 		flow_exit();
 		fio_debug_jobp = NULL;
 		fio_warned = NULL;
@@ -345,9 +345,10 @@ static void free_shm(void)
  */
 static int setup_thread_area(void)
 {
+	struct thread_segment *seg = &segments[0];
 	int i;
 
-	if (threads)
+	if (seg->threads)
 		return 0;
 
 	/*
@@ -360,16 +361,16 @@ static int setup_thread_area(void)
 		size += 2 * sizeof(unsigned int);
 
 #ifndef CONFIG_NO_SHM
-		shm_id = shmget(0, size, IPC_CREAT | 0600);
-		if (shm_id != -1)
+		seg->shm_id = shmget(0, size, IPC_CREAT | 0600);
+		if (seg->shm_id != -1)
 			break;
 		if (errno != EINVAL && errno != ENOMEM && errno != ENOSPC) {
 			perror("shmget");
 			break;
 		}
 #else
-		threads = malloc(size);
-		if (threads)
+		seg->threads = malloc(size);
+		if (seg->threads)
 			break;
 #endif
 
@@ -377,22 +378,22 @@ static int setup_thread_area(void)
 	} while (max_jobs);
 
 #ifndef CONFIG_NO_SHM
-	if (shm_id == -1)
+	if (seg->shm_id == -1)
 		return 1;
 
-	threads = shmat(shm_id, NULL, 0);
-	if (threads == (void *) -1) {
+	seg->threads = shmat(seg->shm_id, NULL, 0);
+	if (seg->threads == (void *) -1) {
 		perror("shmat");
 		return 1;
 	}
 	if (shm_attach_to_open_removed())
-		shmctl(shm_id, IPC_RMID, NULL);
+		shmctl(seg->shm_id, IPC_RMID, NULL);
 #endif
 
-	memset(threads, 0, max_jobs * sizeof(struct thread_data));
+	memset(seg->threads, 0, max_jobs * sizeof(struct thread_data));
 	for (i = 0; i < max_jobs; i++)
-		DRD_IGNORE_VAR(threads[i]);
-	fio_debug_jobp = (unsigned int *)(threads + max_jobs);
+		DRD_IGNORE_VAR(seg->threads[i]);
+	fio_debug_jobp = (unsigned int *)(seg->threads + max_jobs);
 	*fio_debug_jobp = -1;
 	fio_warned = fio_debug_jobp + 1;
 	*fio_warned = 0;
@@ -484,7 +485,7 @@ static struct thread_data *get_new_job(bool global, struct thread_data *parent,
 		return NULL;
 	}
 
-	td = &threads[thread_number++];
+	td = &segments[0].threads[thread_number++];
 	*td = *parent;
 
 	INIT_FLIST_HEAD(&td->opt_list);
@@ -534,7 +535,7 @@ static void put_job(struct thread_data *td)
 	if (td->o.name)
 		free(td->o.name);
 
-	memset(&threads[td->thread_number - 1], 0, sizeof(*td));
+	memset(td, 0, sizeof(*td));
 	thread_number--;
 }
 
