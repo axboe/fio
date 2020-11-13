@@ -470,6 +470,7 @@ struct thread_data {
 struct thread_segment {
 	struct thread_data *threads;
 	int shm_id;
+	int nr_threads;
 };
 
 /*
@@ -522,6 +523,8 @@ enum {
 extern bool exitall_on_terminate;
 extern unsigned int thread_number;
 extern unsigned int stat_number;
+extern unsigned int nr_segments;
+extern unsigned int cur_segment;
 extern int groupid;
 extern int output_format;
 extern int append_terse_output;
@@ -551,6 +554,14 @@ extern long long trigger_timeout;
 extern char *aux_path;
 
 extern struct thread_segment segments[REAL_MAX_SEG];
+
+static inline struct thread_data *tnumber_to_td(unsigned int tnumber)
+{
+	struct thread_segment *seg;
+
+	seg = &segments[tnumber / JOBS_PER_SEG];
+	return &seg->threads[tnumber & (JOBS_PER_SEG - 1)];
+}
 
 static inline bool is_running_backend(void)
 {
@@ -715,7 +726,7 @@ extern void lat_target_reset(struct thread_data *);
  * Iterates all threads/processes within all the defined jobs
  */
 #define for_each_td(td, i)	\
-	for ((i) = 0, (td) = &segments[0].threads[0]; (i) < (int) thread_number; (i)++, (td)++)
+	for ((i) = 0, (td) = &segments[0].threads[0]; (i) < (int) thread_number; (i)++, (td) = tnumber_to_td((i)))
 #define for_each_file(td, f, i)	\
 	if ((td)->files_index)						\
 		for ((i) = 0, (f) = (td)->files[0];			\

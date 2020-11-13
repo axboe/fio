@@ -156,8 +156,13 @@ void reset_all_stats(struct thread_data *td)
 
 void reset_fio_state(void)
 {
+	int i;
+
 	groupid = 0;
 	thread_number = 0;
+	cur_segment = 0;
+	for (i = 0; i < nr_segments; i++)
+		segments[i].nr_threads = 0;
 	stat_number = 0;
 	done_secs = 0;
 }
