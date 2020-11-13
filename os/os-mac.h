@@ -27,12 +27,6 @@
 #define fio_swap32(x)	OSSwapInt32(x)
 #define fio_swap64(x)	OSSwapInt64(x)
 
-/*
- * OSX has a pitifully small shared memory segment by default,
- * so default to a lower number of max jobs supported
- */
-#define FIO_MAX_JOBS		128
-
 #ifndef CONFIG_CLOCKID_T
 typedef unsigned int clockid_t;
 #endif
