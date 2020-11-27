@@ -2536,6 +2536,14 @@ void regrow_logs(struct thread_data *td)
 	td->flags &= ~TD_F_REGROW_LOGS;
 }
 
+void regrow_agg_logs(void)
+{
+	enum fio_ddir ddir;
+
+	for (ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++)
+		regrow_log(agg_io_log[ddir]);
+}
+
 static struct io_logs *get_cur_log(struct io_log *iolog)
 {
 	struct io_logs *cur_log;
