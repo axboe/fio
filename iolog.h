@@ -182,6 +182,7 @@ static inline struct io_sample *__get_sample(void *samples, int log_offset,
 struct io_logs *iolog_cur_log(struct io_log *);
 uint64_t iolog_nr_samples(struct io_log *);
 void regrow_logs(struct thread_data *);
+void regrow_agg_logs(void);
 
 static inline struct io_sample *get_sample(struct io_log *iolog,
 					   struct io_logs *cur_log,
