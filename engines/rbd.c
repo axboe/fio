@@ -227,6 +227,13 @@ static int _fio_rbd_connect(struct thread_data *td)
 		goto failed_shutdown;
 	}
 
+        if (td->o.odirect) {
+		r = rados_conf_set(rbd->cluster, "rbd_cache", "false");
+		if (r < 0) {
+			log_info("failed to disable RBD in-memory cache\n");
+		}
+	}
+
 	r = rbd_open(rbd->io_ctx, o->rbd_name, &rbd->image, NULL /*snap */ );
 	if (r < 0) {
 		log_err("rbd_open failed.\n");
