@@ -240,6 +240,17 @@ static int _fio_rbd_connect(struct thread_data *td)
 		goto failed_open;
 	}
 
+	if (!td->o.odirect) {
+		/*
+		 * ensure cache enables writeback/around mode unless explicitly
+		 * configured for writethrough mode
+		 */
+		r = rbd_flush(rbd->image);
+		if (r < 0) {
+			log_info("rbd: failed to issue initial flush\n");
+		}
+	}
+
 	if (!_fio_rbd_setup_poll(rbd))
 		goto failed_poll;
 
