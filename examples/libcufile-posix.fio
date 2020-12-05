@@ -1,0 +1,41 @@
+# Example libcufile job, using POSIX I/O
+#
+# Required environment variables:
+#     GPU_DEV_IDS : refer to option 'gpu_dev_ids'
+#     FIO_DIR     : 'directory'. cuda_io=posix, so the path(s) may point
+#                   to any POSIX filesystem(s)
+#
+
+[global]
+ioengine=libcufile
+directory=${FIO_DIR}
+gpu_dev_ids=${GPU_DEV_IDS}
+cuda_io=posix
+# 'direct' may be 1 or 0 when using cuda_io=posix
+direct=0
+# there are no unusual requirements for 'bs' when cuda_io=posix
+bs=1m
+size=1G
+numjobs=16
+# cudaMalloc fails if too many processes attach to the GPU, use threads
+thread
+
+[read]
+rw=read
+
+[write]
+rw=write
+
+[randread]
+rw=randread
+
+[randwrite]
+rw=randwrite
+
+[verify]
+rw=write
+verify=md5
+
+[randverify]
+rw=randwrite
+verify=md5

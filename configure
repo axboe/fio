@@ -162,6 +162,7 @@ pmemblk="no"
 devdax="no"
 pmem="no"
 cuda="no"
+libcufile="no"
 disable_lex=""
 disable_pmem="no"
 disable_native="no"
@@ -224,6 +225,8 @@ for opt do
   ;;
   --enable-cuda) cuda="yes"
   ;;
+  --enable-libcufile) libcufile="yes"
+  ;;
   --disable-native) disable_native="yes"
   ;;
   --with-ime=*) ime_path="$optarg"
@@ -272,6 +275,7 @@ if test "$show_help" = "yes" ; then
   echo "--disable-shm           Disable SHM support"
   echo "--disable-optimizations Don't enable compiler optimizations"
   echo "--enable-cuda           Enable GPUDirect RDMA support"
+  echo "--enable-libcufile      Enable GPUDirect Storage cuFile support"
   echo "--disable-native        Don't build for native host"
   echo "--with-ime=             Install path for DDN's Infinite Memory Engine"
   echo "--enable-libiscsi       Enable iscsi support"
@@ -2496,6 +2500,29 @@ fi
 print_config "cuda" "$cuda"
 
 ##########################################
+# libcufile probe
+if test "$libcufile" != "no" ; then
+cat > $TMPC << EOF
+#include <cufile.h>
+
+int main(int argc, char* argv[]) {
+   cuFileDriverOpen();
+   return 0;
+}
+EOF
+  if compile_prog "" "-lcuda -lcudart -lcufile" "libcufile"; then
+    libcufile="yes"
+    LIBS="-lcuda -lcudart -lcufile $LIBS"
+  else
+    if test "$libcufile" = "yes" ; then
+      feature_not_found "libcufile" ""
+    fi
+    libcufile="no"
+  fi
+fi
+print_config "libcufile" "$libcufile"
+
+##########################################
 # check for cc -march=native
 build_native="no"
 cat > $TMPC << EOF
@@ -2965,6 +2992,9 @@ if test "$march_armv8_a_crc_crypto" = "yes" ; then
 fi
 if test "$cuda" = "yes" ; then
   output_sym "CONFIG_CUDA"
+fi
+if test "$libcufile" = "yes" ; then
+  output_sym "CONFIG_LIBCUFILE"
 fi
 if test "$march_set" = "no" && test "$build_native" = "yes" ; then
   output_sym "CONFIG_BUILD_NATIVE"

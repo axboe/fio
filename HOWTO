@@ -2048,6 +2048,14 @@ I/O engine
 		**nbd**
 			Read and write a Network Block Device (NBD).
 
+		**libcufile**
+			I/O engine supporting libcufile synchronous access to nvidia-fs and a
+			GPUDirect Storage-supported filesystem. This engine performs
+			I/O without transferring buffers between user-space and the kernel,
+			unless :option:`verify` is set or :option:`cuda_io` is `posix`.
+			:option:`iomem` must not be `cudamalloc`. This ioengine defines
+			engine specific options.
+
 I/O engine specific parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -2397,6 +2405,28 @@ with the caveat that when used on the command line, they must come after the
 	Example URIs: nbd://localhost:10809
 	nbd+unix:///?socket=/tmp/socket
 	nbds://tlshost/exportname
+
+.. option:: gpu_dev_ids=str : [libcufile]
+
+	Specify the GPU IDs to use with CUDA. This is a colon-separated list of
+	int. GPUs are assigned to workers roundrobin. Default is 0.
+
+.. option:: cuda_io=str : [libcufile]
+
+	Specify the type of I/O to use with CUDA. Default is **cufile**.
+
+	**cufile**
+		Use libcufile and nvidia-fs. This option performs I/O directly
+		between a GPUDirect Storage filesystem and GPU buffers,
+		avoiding use of a bounce buffer. If :option:`verify` is set,
+		cudaMemcpy is used to copy verificaton data between RAM and GPU.
+		Verification data is copied from RAM to GPU before a write
+		and from GPU to RAM after a read. :option:`direct` must be 1.
+	**posix**
+		Use POSIX to perform I/O with a RAM buffer, and use cudaMemcpy
+		to transfer data between RAM and the GPUs. Data is copied from
+		GPU to RAM before a write and copied from RAM to GPU after a
+		read. :option:`verify` does not affect use of cudaMemcpy.
 
 I/O depth
 ~~~~~~~~~
