@@ -1199,7 +1199,7 @@ int setup_files(struct thread_data *td)
 		o->size = total_size;
 
 	if (o->size < td_min_bs(td)) {
-		log_err("fio: blocksize too large for data set\n");
+		log_err("fio: blocksize is larger than data set range\n");
 		goto err_out;
 	}
 
