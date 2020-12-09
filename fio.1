@@ -918,10 +918,11 @@ behaves in a similar fashion, except it sends the same offset 8 number of
 times before generating a new offset.
 .RE
 .TP
-.BI unified_rw_reporting \fR=\fPbool
+.BI unified_rw_reporting \fR=\fPint
 Fio normally reports statistics on a per data direction basis, meaning that
 reads, writes, and trims are accounted and reported separately. If this
-option is set fio sums the results and report them as "mixed" instead.
+option is set to 1 fio sums the results and report them as "mixed" instead.
+If set to 2, fio will report the results as both.
 .TP
 .BI randrepeat \fR=\fPbool
 Seed the random number generator used for random I/O patterns in a

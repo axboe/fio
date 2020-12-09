@@ -306,7 +306,7 @@ void show_group_stats(struct group_run_stats *rs, struct buf_output *out)
 		max = num2str(rs->max_bw[i], rs->sig_figs, 1, i2p, rs->unit_base);
 		maxalt = num2str(rs->max_bw[i], rs->sig_figs, 1, !i2p, rs->unit_base);
 		log_buf(out, "%s: bw=%s (%s), %s-%s (%s-%s), io=%s (%s), run=%llu-%llumsec\n",
-				rs->unified_rw_rep ? "  MIXED" : str[i],
+				(rs->unified_rw_rep == 1) ? "  MIXED" : str[i],
 				agg, aggalt, min, max, minalt, maxalt, io, ioalt,
 				(unsigned long long) rs->min_run[i],
 				(unsigned long long) rs->max_run[i]);
@@ -426,6 +426,15 @@ static double convert_agg_kbytes_percent(struct group_run_stats *rs, int ddir, i
 	return p_of_agg;
 }
 
+//Todo: Fill in function for case rs->unified_rw_rep == 2 
+static void show_mixed_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
+			     struct buf_output *out)
+{
+	// Handle aggregation of Reads (ddir = 0), Writes (ddir = 1), and Trims (ddir = 2)
+	// if (ts->io_bytes[ddir]) = Stats to take from
+	log_buf(out, "  mixed stats output should be here\n");
+}
+
 static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 			     int ddir, struct buf_output *out)
 {
@@ -477,7 +486,7 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	}
 
 	log_buf(out, "  %s: IOPS=%s, BW=%s (%s)(%s/%llumsec)%s\n",
-			rs->unified_rw_rep ? "mixed" : io_ddir_name(ddir),
+			(rs->unified_rw_rep == 1) ? "mixed" : io_ddir_name(ddir),
 			iops_p, bw_p, bw_p_alt, io_p,
 			(unsigned long long) ts->runtime[ddir],
 			post_st ? : "");
@@ -1080,8 +1089,11 @@ static void show_thread_status_normal(struct thread_stat *ts,
 
 	for_each_rw_ddir(ddir) {
 		if (ts->io_bytes[ddir])
-			show_ddir_status(rs, ts, ddir, out);
+		show_ddir_status(rs, ts, ddir, out);
 	}
+
+	if (rs->unified_rw_rep == 2)
+		show_mixed_ddir_status(rs, ts, out);
 
 	show_latencies(ts, out);
 
@@ -1310,12 +1322,12 @@ static void add_ddir_status_json(struct thread_stat *ts,
 
 	assert(ddir_rw(ddir) || ddir_sync(ddir));
 
-	if (ts->unified_rw_rep && ddir != DDIR_READ)
+	if ((ts->unified_rw_rep == 1) && ddir != DDIR_READ)
 		return;
 
 	dir_object = json_create_object();
 	json_object_add_value_object(parent,
-		ts->unified_rw_rep ? "mixed" : io_ddir_name(ddir), dir_object);
+		(ts->unified_rw_rep == 1) ? "mixed" : io_ddir_name(ddir), dir_object);
 
 	if (ddir_rw(ddir)) {
 		bw_bytes = 0;
@@ -1875,7 +1887,7 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src,
 	int k, l, m;
 
 	for (l = 0; l < DDIR_RWDIR_CNT; l++) {
-		if (!dst->unified_rw_rep) {
+		if (!(dst->unified_rw_rep == 1)) {
 			sum_stat(&dst->clat_stat[l], &src->clat_stat[l], first, false);
 			sum_stat(&dst->clat_high_prio_stat[l], &src->clat_high_prio_stat[l], first, false);
 			sum_stat(&dst->clat_low_prio_stat[l], &src->clat_low_prio_stat[l], first, false);
@@ -1931,7 +1943,7 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src,
 		dst->io_u_lat_m[k] += src->io_u_lat_m[k];
 
 	for (k = 0; k < DDIR_RWDIR_CNT; k++) {
-		if (!dst->unified_rw_rep) {
+		if (!(dst->unified_rw_rep == 1)) {
 			dst->total_io_u[k] += src->total_io_u[k];
 			dst->short_io_u[k] += src->short_io_u[k];
 			dst->drop_io_u[k] += src->drop_io_u[k];
@@ -1947,7 +1959,7 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src,
 	for (k = 0; k < FIO_LAT_CNT; k++)
 		for (l = 0; l < DDIR_RWDIR_CNT; l++)
 			for (m = 0; m < FIO_IO_U_PLAT_NR; m++)
-				if (!dst->unified_rw_rep)
+				if (!(dst->unified_rw_rep == 1))
 					dst->io_u_plat[k][l][m] += src->io_u_plat[k][l][m];
 				else
 					dst->io_u_plat[k][0][m] += src->io_u_plat[k][l][m];
@@ -1957,7 +1969,7 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src,
 
 	for (k = 0; k < DDIR_RWDIR_CNT; k++) {
 		for (m = 0; m < FIO_IO_U_PLAT_NR; m++) {
-			if (!dst->unified_rw_rep) {
+			if (!(dst->unified_rw_rep == 1)) {
 				dst->io_u_plat_high_prio[k][m] += src->io_u_plat_high_prio[k][m];
 				dst->io_u_plat_low_prio[k][m] += src->io_u_plat_low_prio[k][m];
 			} else {
