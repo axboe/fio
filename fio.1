@@ -918,10 +918,32 @@ behaves in a similar fashion, except it sends the same offset 8 number of
 times before generating a new offset.
 .RE
 .TP
-.BI unified_rw_reporting \fR=\fPbool
+.BI unified_rw_reporting \fR=\fPstr
 Fio normally reports statistics on a per data direction basis, meaning that
-reads, writes, and trims are accounted and reported separately. If this
-option is set fio sums the results and report them as "mixed" instead.
+reads, writes, and trims are accounted and reported separately. This option
+determines whether fio reports the results normally, summed together, or as
+both options.
+Accepted values are:
+.RS
+.TP
+.B none
+Normal statistics reporting.
+.TP
+.B mixed
+Statistics are summed per data direction and reported together.
+.TP
+.B both
+Statistics are reported normally, followed by the mixed statistics.
+.TP
+.B 0
+Backward-compatible alias for \fBnone\fR.
+.TP
+.B 1
+Backward-compatible alias for \fBmixed\fR.
+.TP
+.B 2
+Alias for \fBboth\fR.
+.RE
 .TP
 .BI randrepeat \fR=\fPbool
 Seed the random number generator used for random I/O patterns in a

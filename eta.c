@@ -331,7 +331,7 @@ static void calc_rate(int unified_rw_rep, unsigned long mtime,
 		else
 			this_rate = 0;
 
-		if (unified_rw_rep) {
+		if (unified_rw_rep == UNIFIED_MIXED) {
 			rate[i] = 0;
 			rate[0] += this_rate;
 		} else
@@ -356,7 +356,7 @@ static void calc_iops(int unified_rw_rep, unsigned long mtime,
 		else
 			this_iops = 0;
 
-		if (unified_rw_rep) {
+		if (unified_rw_rep == UNIFIED_MIXED) {
 			iops[i] = 0;
 			iops[0] += this_iops;
 		} else
