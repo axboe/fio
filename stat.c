@@ -430,9 +430,156 @@ static double convert_agg_kbytes_percent(struct group_run_stats *rs, int ddir, i
 static void show_mixed_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 			     struct buf_output *out)
 {
-	// Handle aggregation of Reads (ddir = 0), Writes (ddir = 1), and Trims (ddir = 2)
-	// if (ts->io_bytes[ddir]) = Stats to take from
-	log_buf(out, "  mixed stats output should be here\n");
+	unsigned long runt;
+	unsigned long long min, max, bw, iops;
+	double mean, dev;
+	char *io_p, *bw_p, *bw_p_alt, *iops_p, *post_st = NULL;
+	struct thread_stat *ts_lcl;
+
+	int i2p;
+	int ddir = 0;
+	//uint64_t total_io_bytes_lcl = 0, total_io_u_lcl = 0;
+
+	/* Handle aggregation of Reads (ddir = 0), Writes (ddir = 1), and Trims (ddir = 2) */
+	ts_lcl = malloc(sizeof(struct thread_stat));
+	memset((void *)ts_lcl, 0, sizeof(struct thread_stat));
+	ts_lcl->unified_rw_rep = 1;               /* calculate mixed stats  */
+	sum_thread_stats(ts_lcl, ts, true);
+
+	log_buf(out, "  mixed stats output starts here\n");
+
+	assert(ddir_rw(ddir));
+
+	if (!ts_lcl->runtime[ddir])
+		return;
+
+	i2p = is_power_of_2(rs->kb_base);
+	runt = ts_lcl->runtime[ddir];
+
+	bw = (1000 * ts_lcl->io_bytes[ddir]) / runt;
+	io_p = num2str(ts_lcl->io_bytes[ddir], ts->sig_figs, 1, i2p, N2S_BYTE);
+	bw_p = num2str(bw, ts->sig_figs, 1, i2p, ts->unit_base);
+	bw_p_alt = num2str(bw, ts->sig_figs, 1, !i2p, ts->unit_base);
+
+	iops = (1000 * ts_lcl->total_io_u[ddir]) / runt;
+	iops_p = num2str(iops, ts->sig_figs, 1, 0, N2S_NONE);
+
+	log_buf(out, "  mixed: IOPS=%s, BW=%s (%s)(%s/%llumsec)%s\n",
+			iops_p, bw_p, bw_p_alt, io_p,
+			(unsigned long long) ts_lcl->runtime[ddir],
+			post_st ? : "");
+
+	free(post_st);
+	free(io_p);
+	free(bw_p);
+	free(bw_p_alt);
+	free(iops_p);
+
+	if (calc_lat(&ts_lcl->slat_stat[ddir], &min, &max, &mean, &dev))
+		display_lat("slat", min, max, mean, dev, out);
+	if (calc_lat(&ts_lcl->clat_stat[ddir], &min, &max, &mean, &dev))
+		display_lat("clat", min, max, mean, dev, out);
+	if (calc_lat(&ts_lcl->lat_stat[ddir], &min, &max, &mean, &dev))
+		display_lat(" lat", min, max, mean, dev, out);
+	if (calc_lat(&ts_lcl->clat_high_prio_stat[ddir], &min, &max, &mean, &dev)) {
+		display_lat(ts_lcl->lat_percentiles ? "high prio_lat" : "high prio_clat",
+				min, max, mean, dev, out);
+		if (calc_lat(&ts_lcl->clat_low_prio_stat[ddir], &min, &max, &mean, &dev))
+			display_lat(ts_lcl->lat_percentiles ? "low prio_lat" : "low prio_clat",
+					min, max, mean, dev, out);
+	}
+
+	if (ts->slat_percentiles && ts_lcl->slat_stat[ddir].samples > 0)
+		show_clat_percentiles(ts_lcl->io_u_plat[FIO_SLAT][ddir],
+				ts_lcl->slat_stat[ddir].samples,
+				ts->percentile_list,
+				ts->percentile_precision, "slat", out);
+	if (ts->clat_percentiles && ts_lcl->clat_stat[ddir].samples > 0)
+		show_clat_percentiles(ts_lcl->io_u_plat[FIO_CLAT][ddir],
+				ts_lcl->clat_stat[ddir].samples,
+				ts->percentile_list,
+				ts->percentile_precision, "clat", out);
+	if (ts->lat_percentiles && ts_lcl->lat_stat[ddir].samples > 0)
+		show_clat_percentiles(ts_lcl->io_u_plat[FIO_LAT][ddir],
+				ts_lcl->lat_stat[ddir].samples,
+				ts->percentile_list,
+				ts->percentile_precision, "lat", out);
+
+	if (ts->clat_percentiles || ts->lat_percentiles) {
+		const char *name = ts->lat_percentiles ? "lat" : "clat";
+		char prio_name[32];
+		uint64_t samples;
+
+		if (ts->lat_percentiles)
+			samples = ts_lcl->lat_stat[ddir].samples;
+		else
+			samples = ts_lcl->clat_stat[ddir].samples;
+
+		/* Only print this if some high and low priority stats were collected */
+		if (ts_lcl->clat_high_prio_stat[ddir].samples > 0 &&
+				ts_lcl->clat_low_prio_stat[ddir].samples > 0)
+		{
+			sprintf(prio_name, "high prio (%.2f%%) %s",
+					100. * (double) ts_lcl->clat_high_prio_stat[ddir].samples / (double) samples,
+					name);
+			show_clat_percentiles(ts_lcl->io_u_plat_high_prio[ddir],
+					ts_lcl->clat_high_prio_stat[ddir].samples,
+					ts->percentile_list,
+					ts->percentile_precision, prio_name, out);
+
+			sprintf(prio_name, "low prio (%.2f%%) %s",
+					100. * (double) ts_lcl->clat_low_prio_stat[ddir].samples / (double) samples,
+					name);
+			show_clat_percentiles(ts_lcl->io_u_plat_low_prio[ddir],
+					ts_lcl->clat_low_prio_stat[ddir].samples,
+					ts->percentile_list,
+					ts->percentile_precision, prio_name, out);
+		}
+	}
+
+	if (calc_lat(&ts_lcl->bw_stat[ddir], &min, &max, &mean, &dev)) {
+		double p_of_agg = 100.0, fkb_base = (double)rs->kb_base;
+		const char *bw_str;
+
+		if ((rs->unit_base == 1) && i2p)
+			bw_str = "Kibit";
+		else if (rs->unit_base == 1)
+			bw_str = "kbit";
+		else if (i2p)
+			bw_str = "KiB";
+		else
+			bw_str = "kB";
+
+		p_of_agg = convert_agg_kbytes_percent(rs, ddir, mean);
+
+		if (rs->unit_base == 1) {
+			min *= 8.0;
+			max *= 8.0;
+			mean *= 8.0;
+			dev *= 8.0;
+		}
+
+		if (mean > fkb_base * fkb_base) {
+			min /= fkb_base;
+			max /= fkb_base;
+			mean /= fkb_base;
+			dev /= fkb_base;
+			bw_str = (rs->unit_base == 1 ? "Mibit" : "MiB");
+		}
+
+		log_buf(out, "   bw (%5s/s): min=%5llu, max=%5llu, per=%3.2f%%, "
+			"avg=%5.02f, stdev=%5.02f, samples=%" PRIu64 "\n",
+			bw_str, min, max, p_of_agg, mean, dev,
+			(&ts_lcl->bw_stat[ddir])->samples);
+	}
+	if (calc_lat(&ts_lcl->iops_stat[ddir], &min, &max, &mean, &dev)) {
+		log_buf(out, "   iops        : min=%5llu, max=%5llu, "
+			"avg=%5.02f, stdev=%5.02f, samples=%" PRIu64 "\n",
+			min, max, mean, dev, (&ts_lcl->iops_stat[ddir])->samples);
+	}
+
+	log_buf(out, "  mixed stats output ends here\n");
+	log_buf(out, "\n");
 }
 
 static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
