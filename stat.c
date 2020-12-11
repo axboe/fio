@@ -437,13 +437,23 @@ static void show_mixed_ddir_status(struct group_run_stats *rs, struct thread_sta
 	struct thread_stat *ts_lcl;
 
 	int i2p;
-	int ddir = 0;
-	//uint64_t total_io_bytes_lcl = 0, total_io_u_lcl = 0;
+	int ddir = 0, i;
 
 	/* Handle aggregation of Reads (ddir = 0), Writes (ddir = 1), and Trims (ddir = 2) */
 	ts_lcl = malloc(sizeof(struct thread_stat));
 	memset((void *)ts_lcl, 0, sizeof(struct thread_stat));
 	ts_lcl->unified_rw_rep = 1;               /* calculate mixed stats  */
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
+		ts_lcl->clat_stat[i].min_val = ULONG_MAX;
+		ts_lcl->slat_stat[i].min_val = ULONG_MAX;
+		ts_lcl->lat_stat[i].min_val = ULONG_MAX;
+		ts_lcl->bw_stat[i].min_val = ULONG_MAX;
+		ts_lcl->iops_stat[i].min_val = ULONG_MAX;
+		ts_lcl->clat_high_prio_stat[i].min_val = ULONG_MAX;
+		ts_lcl->clat_low_prio_stat[i].min_val = ULONG_MAX;
+	}
+	ts_lcl->sync_stat.min_val = ULONG_MAX;
+
 	sum_thread_stats(ts_lcl, ts, true);
 
 	log_buf(out, "  mixed stats output starts here\n");
@@ -2298,6 +2308,7 @@ void __show_run_stats(void)
 		for (k = 0; k < ts->nr_block_infos; k++)
 			ts->block_infos[k] = td->ts.block_infos[k];
 
+		log_info("%s: call sum_thread_stats, idx = %d\n", __func__, idx);
 		sum_thread_stats(ts, &td->ts, idx == 1);
 
 		if (td->o.ss_dur) {
