@@ -13,7 +13,7 @@ clat_percentiles=0
 
 iodepth=1
 iodepth_batch=1
-thread=1
+thread
 numjobs=1
 runtime=300
 
