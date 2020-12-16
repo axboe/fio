@@ -12,7 +12,7 @@ max_open_zones=32
 bs=512K
 direct=1
 numjobs=16
-time_based=1
+time_based
 runtime=300
 
 [dev1]

@@ -3,7 +3,7 @@ bs=4k
 size=8g
 ioengine=libpmem
 norandommap
-time_based=1
+time_based
 group_reporting
 invalidate=1
 disable_lat=1

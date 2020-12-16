@@ -18,7 +18,7 @@ rw=write
 # Run e4defrag and aio-dio workers in parallel
 [e4defrag]
 stonewall
-time_based=30
+time_based
 runtime=30
 ioengine=e4defrag
 buffered=0
