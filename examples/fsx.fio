@@ -9,4 +9,3 @@ bs=4k
 norandommap
 direct=1
 loops=500000
-rwmixcycle=40
