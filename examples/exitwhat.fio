@@ -11,7 +11,7 @@
 filename=/tmp/test
 filesize=1G
 blocksize=4096
-group_reporting=1
+group_reporting
 exitall=1
 
 [slow1]

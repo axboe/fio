@@ -7,7 +7,7 @@
 
 [global]
 threads=1
-group_reporting=1
+group_reporting
 time_based
 size=128m
 
