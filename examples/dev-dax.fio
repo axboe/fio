@@ -2,7 +2,7 @@
 bs=2m
 ioengine=dev-dax
 norandommap
-time_based=1
+time_based
 runtime=30
 group_reporting
 disable_lat=1
@@ -18,7 +18,7 @@ cpus_allowed_policy=split
 #
 iodepth=1
 direct=0
-thread=1
+thread
 numjobs=16
 #
 # The dev-dax engine does IO to DAX device that are special character

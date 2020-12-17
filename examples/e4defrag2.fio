@@ -55,7 +55,7 @@ inplace=1
 bs=4k
 donorname=file3.def
 filename=file3
-time_based=30
+time_based
 rw=randwrite
 
 [buffered-aio-32k]
@@ -68,7 +68,7 @@ bs=32k
 filename=file3
 rw=randrw
 runtime=30
-time_based=30
+time_based
 numjobs=4
 
 [direct-aio-32k]
@@ -82,7 +82,6 @@ bs=32k
 filename=file3
 rw=randrw
 runtime=30
-time_based=30
 numjobs=4
 
 

@@ -1,6 +1,6 @@
 [global]
 threads=1
-group_reporting=1
+group_reporting
 filename=/tmp/data
 filesize=128m
 
