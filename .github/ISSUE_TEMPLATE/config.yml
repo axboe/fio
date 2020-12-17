@@ -1,0 +1,6 @@
+blank_issues_enabled: true
+
+contact_links:
+- name: General questions (e.g. "How do I...", "Why is...") that are related to fio
+  url: http://vger.kernel.org/vger-lists.html#fio
+  about: Please send questions to the fio mailing list (plain-text emails ONLY)
