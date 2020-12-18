@@ -435,6 +435,8 @@ static void show_mixed_ddir_status(struct group_run_stats *rs, struct thread_sta
 	double mean, dev;
 	char *io_p, *bw_p, *bw_p_alt, *iops_p, *post_st = NULL;
 	struct thread_stat *ts_lcl;
+	struct thread_data *td;
+	int idx, last_ts;
 
 	int i2p;
 	int ddir = 0, i;
@@ -454,9 +456,23 @@ static void show_mixed_ddir_status(struct group_run_stats *rs, struct thread_sta
 	}
 	ts_lcl->sync_stat.min_val = ULONG_MAX;
 
-	sum_thread_stats(ts_lcl, ts, true);
+	idx = 0;
+	last_ts = -1;
 
-	log_buf(out, "  mixed stats output starts here\n");
+	/* sum up stats from all the threads into the ts_lcl struct */
+	for_each_td(td, i) {
+		if (!td->o.stats)
+			continue;
+		if (idx && (!td->o.group_reporting ||
+		    (td->o.group_reporting && last_ts != td->groupid))) {
+			idx = 0;
+		}
+
+		last_ts = td->groupid;
+		idx++;
+
+		sum_thread_stats(ts_lcl, &td->ts, idx == 1);
+	}
 
 	assert(ddir_rw(ddir));
 
@@ -588,8 +604,7 @@ static void show_mixed_ddir_status(struct group_run_stats *rs, struct thread_sta
 			min, max, mean, dev, (&ts_lcl->iops_stat[ddir])->samples);
 	}
 
-	log_buf(out, "  mixed stats output ends here\n");
-	log_buf(out, "\n");
+	free(ts_lcl);
 }
 
 static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
@@ -643,7 +658,7 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	}
 
 	log_buf(out, "  %s: IOPS=%s, BW=%s (%s)(%s/%llumsec)%s\n",
-			(rs->unified_rw_rep == 1) ? "mixed" : io_ddir_name(ddir),
+			(ts->unified_rw_rep == 1) ? "mixed" : io_ddir_name(ddir),
 			iops_p, bw_p, bw_p_alt, io_p,
 			(unsigned long long) ts->runtime[ddir],
 			post_st ? : "");
@@ -1249,7 +1264,7 @@ static void show_thread_status_normal(struct thread_stat *ts,
 		show_ddir_status(rs, ts, ddir, out);
 	}
 
-	if (rs->unified_rw_rep == 2)
+	if (ts->unified_rw_rep == 2)
 		show_mixed_ddir_status(rs, ts, out);
 
 	show_latencies(ts, out);
@@ -2308,7 +2323,6 @@ void __show_run_stats(void)
 		for (k = 0; k < ts->nr_block_infos; k++)
 			ts->block_infos[k] = td->ts.block_infos[k];
 
-		log_info("%s: call sum_thread_stats, idx = %d\n", __func__, idx);
 		sum_thread_stats(ts, &td->ts, idx == 1);
 
 		if (td->o.ss_dur) {
