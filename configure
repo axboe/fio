@@ -45,6 +45,7 @@ print_config() {
 
 # Default CFLAGS
 CFLAGS="-D_GNU_SOURCE -include config-host.h $CFLAGS"
+CONFIGURE_CFLAGS="-Werror-implicit-function-declaration"
 BUILD_CFLAGS=""
 
 # Print a helpful header at the top of config.log
@@ -88,14 +89,14 @@ do_cc() {
 }
 
 compile_object() {
-  do_cc $CFLAGS -Werror-implicit-function-declaration -c -o $TMPO $TMPC
+  do_cc $CFLAGS $CONFIGURE_CFLAGS -c -o $TMPO $TMPC
 }
 
 compile_prog() {
   local_cflags="$1"
   local_ldflags="$2 $LIBS"
   echo "Compiling test case $3" >> config.log
-  do_cc $CFLAGS -Werror-implicit-function-declaration $local_cflags -o $TMPE $TMPC $LDFLAGS $local_ldflags
+  do_cc $CFLAGS $CONFIGURE_CFLAGS $local_cflags -o $TMPE $TMPC $LDFLAGS $local_ldflags
 }
 
 feature_not_found() {
@@ -360,16 +361,15 @@ Darwin)
   if test -z "$cpu" && test "$(sysctl -n hw.optional.x86_64)" = "1"; then
     cpu="x86_64"
   fi
-  # Error at compile time linking of weak/partial symbols if possible...
+  # Avoid configure feature detection of features provided by weak symbols
 cat > $TMPC <<EOF
 int main(void)
 {
   return 0;
 }
 EOF
-  if compile_prog "" "-Wl,-no_weak_imports" "disable weak symbols"; then
-    echo "Disabling weak symbols"
-    LDFLAGS="$LDFLAGS -Wl,-no_weak_imports"
+  if compile_prog "" "-Werror=partial-availability" "error on weak symbols"; then
+    CONFIGURE_CFLAGS="$CONFIGURE_CFLAGS -Werror=partial-availability"
   fi
   ;;
 SunOS)
