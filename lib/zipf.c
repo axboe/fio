@@ -29,7 +29,7 @@ static void shared_rand_init(struct zipf_state *zs, uint64_t nranges,
 	zs->nranges = nranges;
 
 	init_rand_seed(&zs->rand, seed, 0);
-	zs->rand_off = __rand(&zs->rand);
+	zs->rand_off = 0;
 }
 
 void zipf_init(struct zipf_state *zs, uint64_t nranges, double theta,
