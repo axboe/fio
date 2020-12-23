@@ -21,6 +21,7 @@
 #include "../lib/types.h"
 
 #include "windows/posix.h"
+#include "os-windows-7.h"
 
 #ifndef PTHREAD_STACK_MIN
 #define PTHREAD_STACK_MIN 65535
@@ -215,13 +216,8 @@ static inline int fio_mkdir(const char *path, mode_t mode) {
 	return 0;
 }
 
-#ifdef CONFIG_WINDOWS_XP
-#include "os-windows-xp.h"
-#else
 #define FIO_HAVE_CPU_ONLINE_SYSCONF
 unsigned int cpus_online(void);
-#include "os-windows-7.h"
-#endif
 
 int first_set_cpu(os_cpu_mask_t *cpumask);
 int fio_setaffinity(int pid, os_cpu_mask_t cpumask);

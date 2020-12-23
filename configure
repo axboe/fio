@@ -257,7 +257,7 @@ if test "$show_help" = "yes" ; then
   echo "--cc=                   Specify compiler to use"
   echo "--extra-cflags=         Specify extra CFLAGS to pass to compiler"
   echo "--build-32bit-win       Enable 32-bit build on Windows"
-  echo "--target-win-ver=       Minimum version of Windows to target (XP or 7)"
+  echo "--target-win-ver=       Minimum version of Windows to target (only accepts 7)"
   echo "--enable-pdb            Enable Windows PDB symbols generation (needs clang/lld)"
   echo "--build-static          Build a static fio"
   echo "--esx                   Configure build options for esx"
@@ -395,11 +395,7 @@ CYGWIN*)
     # Default Windows API target
     target_win_ver="7"
   fi
-  if test "$target_win_ver" = "XP"; then
-    output_sym "CONFIG_WINDOWS_XP"
-    # Technically the below is targeting 2003
-    CFLAGS="$CFLAGS -D_WIN32_WINNT=0x0502"
-  elif test "$target_win_ver" = "7"; then
+  if test "$target_win_ver" = "7"; then
     output_sym "CONFIG_WINDOWS_7"
     CFLAGS="$CFLAGS -D_WIN32_WINNT=0x0601"
   else
