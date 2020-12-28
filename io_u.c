@@ -1326,8 +1326,10 @@ static struct fio_file *__get_next_file(struct thread_data *td)
 	if (f && fio_file_open(f) && !fio_file_closing(f)) {
 		if (td->o.file_service_type == FIO_FSERVICE_SEQ)
 			goto out;
-		if (td->file_service_left--)
-			goto out;
+		if (td->file_service_left) {
+		  td->file_service_left--;
+		  goto out;
+		}
 	}
 
 	if (td->o.file_service_type == FIO_FSERVICE_RR ||
