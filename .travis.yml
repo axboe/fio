@@ -24,7 +24,12 @@ matrix:
     # Latest xcode image (needs periodic updating)
     - os: osx
       compiler: clang
-      osx_image: xcode11.2
+      osx_image: xcode12.3
+      arch: amd64
+    # Oldest xcode version supported by Homebrew
+    - os: osx
+      compiler: clang
+      osx_image: xcode10.3
       arch: amd64
   exclude:
     - os: osx
