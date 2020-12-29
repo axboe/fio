@@ -240,6 +240,7 @@ ifeq ($(CONFIG_TARGET_OS), HP-UX)
   FIO_CFLAGS += -D_LARGEFILE64_SOURCE -D_XOPEN_SOURCE_EXTENDED
 endif
 ifeq ($(CONFIG_TARGET_OS), Darwin)
+  SOURCE += os/mac/clock_gettime.c
   LIBS	 += -lpthread -ldl
 endif
 ifneq (,$(findstring CYGWIN,$(CONFIG_TARGET_OS)))
