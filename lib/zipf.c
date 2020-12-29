@@ -23,19 +23,21 @@ static void zipf_update(struct zipf_state *zs)
 }
 
 static void shared_rand_init(struct zipf_state *zs, uint64_t nranges,
-			     unsigned int seed)
+			     double center, unsigned int seed)
 {
 	memset(zs, 0, sizeof(*zs));
 	zs->nranges = nranges;
 
 	init_rand_seed(&zs->rand, seed, 0);
 	zs->rand_off = __rand(&zs->rand);
+	if (center != -1)
+		zs->rand_off = nranges * center;
 }
 
 void zipf_init(struct zipf_state *zs, uint64_t nranges, double theta,
-	       unsigned int seed)
+	       double center, unsigned int seed)
 {
-	shared_rand_init(zs, nranges, seed);
+	shared_rand_init(zs, nranges, center, seed);
 
 	zs->theta = theta;
 	zs->zeta2 = pow(1.0, zs->theta) + pow(0.5, zs->theta);
@@ -71,9 +73,9 @@ uint64_t zipf_next(struct zipf_state *zs)
 }
 
 void pareto_init(struct zipf_state *zs, uint64_t nranges, double h,
-		 unsigned int seed)
+		 double center, unsigned int seed)
 {
-	shared_rand_init(zs, nranges, seed);
+	shared_rand_init(zs, nranges, center, seed);
 	zs->pareto_pow = log(h) / log(1.0 - h);
 }
 

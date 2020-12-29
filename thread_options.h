@@ -166,6 +166,7 @@ struct thread_options {
 	fio_fp64_t zipf_theta;
 	fio_fp64_t pareto_h;
 	fio_fp64_t gauss_dev;
+	fio_fp64_t random_center;
 
 	unsigned int random_generator;
 
@@ -467,6 +468,7 @@ struct thread_options_pack {
 	fio_fp64_t zipf_theta;
 	fio_fp64_t pareto_h;
 	fio_fp64_t gauss_dev;
+	fio_fp64_t random_center;
 
 	uint32_t random_generator;
 

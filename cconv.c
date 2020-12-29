@@ -203,6 +203,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->zipf_theta.u.f = fio_uint64_to_double(le64_to_cpu(top->zipf_theta.u.i));
 	o->pareto_h.u.f = fio_uint64_to_double(le64_to_cpu(top->pareto_h.u.i));
 	o->gauss_dev.u.f = fio_uint64_to_double(le64_to_cpu(top->gauss_dev.u.i));
+	o->random_center.u.f = fio_uint64_to_double(le64_to_cpu(top->random_center.u.i));
 	o->random_generator = le32_to_cpu(top->random_generator);
 	o->hugepage_size = le32_to_cpu(top->hugepage_size);
 	o->rw_min_bs = le64_to_cpu(top->rw_min_bs);
@@ -423,6 +424,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->zipf_theta.u.i = __cpu_to_le64(fio_double_to_uint64(o->zipf_theta.u.f));
 	top->pareto_h.u.i = __cpu_to_le64(fio_double_to_uint64(o->pareto_h.u.f));
 	top->gauss_dev.u.i = __cpu_to_le64(fio_double_to_uint64(o->gauss_dev.u.f));
+	top->random_center.u.i = __cpu_to_le64(fio_double_to_uint64(o->random_center.u.f));
 	top->random_generator = cpu_to_le32(o->random_generator);
 	top->hugepage_size = cpu_to_le32(o->hugepage_size);
 	top->rw_min_bs = __cpu_to_le64(o->rw_min_bs);
