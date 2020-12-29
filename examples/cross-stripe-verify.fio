@@ -17,7 +17,7 @@ verify_backlog=1
 offset_increment=124g
 io_size=120g
 offset=120k
-group_reporting=1
+group_reporting
 verify_dump=1
 loops=2
 

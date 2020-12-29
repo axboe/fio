@@ -3,7 +3,7 @@ bs=4k
 size=8g
 ioengine=libpmem
 norandommap
-time_based=1
+time_based
 group_reporting
 invalidate=1
 disable_lat=1
@@ -13,7 +13,7 @@ clat_percentiles=0
 
 iodepth=1
 iodepth_batch=1
-thread=1
+thread
 numjobs=1
 runtime=300
 

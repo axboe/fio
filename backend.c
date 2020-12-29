@@ -62,8 +62,9 @@ struct io_log *agg_io_log[DDIR_RWDIR_CNT];
 
 int groupid = 0;
 unsigned int thread_number = 0;
+unsigned int nr_segments = 0;
+unsigned int cur_segment = 0;
 unsigned int stat_number = 0;
-int shm_id = 0;
 int temp_stall_ts;
 unsigned long done_secs = 0;
 #ifdef PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP
@@ -76,7 +77,7 @@ pthread_mutex_t overlap_check = PTHREAD_MUTEX_INITIALIZER;
 
 static void sig_int(int sig)
 {
-	if (threads) {
+	if (nr_segments) {
 		if (is_backend)
 			fio_server_got_signal(sig);
 		else {

@@ -37,6 +37,8 @@ int flow_threshold_exceeded(struct thread_data *td)
 		if (td->o.flow_sleep) {
 			io_u_quiesce(td);
 			usleep(td->o.flow_sleep);
+		} else if (td->o.zone_mode == ZONE_MODE_ZBD) {
+			io_u_quiesce(td);
 		}
 
 		return 1;

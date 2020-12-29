@@ -231,13 +231,12 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 						break;
 					log_info("fio: ENOSPC on laying out "
 						 "file, stopping\n");
-					break;
 				}
 				td_verror(td, errno, "write");
 			} else
 				td_verror(td, EIO, "write");
 
-			break;
+			goto err;
 		}
 	}
 
@@ -1200,7 +1199,7 @@ int setup_files(struct thread_data *td)
 		o->size = total_size;
 
 	if (o->size < td_min_bs(td)) {
-		log_err("fio: blocksize too large for data set\n");
+		log_err("fio: blocksize is larger than data set range\n");
 		goto err_out;
 	}
 

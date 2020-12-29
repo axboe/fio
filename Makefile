@@ -103,6 +103,9 @@ endif
 ifdef CONFIG_LINUX_EXT4_MOVE_EXTENT
   SOURCE += engines/e4defrag.c
 endif
+ifdef CONFIG_LIBCUFILE
+  SOURCE += engines/libcufile.c
+endif
 ifdef CONFIG_LINUX_SPLICE
   SOURCE += engines/splice.c
 endif
@@ -262,6 +265,10 @@ LIBS += $$($(1)_LIBS)
 CFLAGS += $$($(1)_CFLAGS)
 endef
 endif
+
+FIO-VERSION-FILE: FORCE
+	@$(SHELL) $(SRCDIR)/FIO-VERSION-GEN
+-include FIO-VERSION-FILE
 
 override CFLAGS := -DFIO_VERSION='"$(FIO_VERSION)"' $(FIO_CFLAGS) $(CFLAGS)
 
@@ -432,10 +439,6 @@ all: $(PROGS) $(T_TEST_PROGS) $(UT_PROGS) $(SCRIPTS) $(ENGS_OBJS) FORCE
 
 .PHONY: all install clean test
 .PHONY: FORCE cscope
-
-FIO-VERSION-FILE: FORCE
-	@$(SHELL) $(SRCDIR)/FIO-VERSION-GEN
--include FIO-VERSION-FILE
 
 %.o : %.c
 	@mkdir -p $(dir $@)

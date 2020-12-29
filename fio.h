@@ -467,6 +467,12 @@ struct thread_data {
 
 };
 
+struct thread_segment {
+	struct thread_data *threads;
+	int shm_id;
+	int nr_threads;
+};
+
 /*
  * when should interactive ETA output be generated
  */
@@ -510,10 +516,15 @@ enum {
 #define __fio_stringify_1(x)	#x
 #define __fio_stringify(x)	__fio_stringify_1(x)
 
+#define REAL_MAX_JOBS		4096
+#define JOBS_PER_SEG		8
+#define REAL_MAX_SEG		(REAL_MAX_JOBS / JOBS_PER_SEG)
+
 extern bool exitall_on_terminate;
 extern unsigned int thread_number;
 extern unsigned int stat_number;
-extern int shm_id;
+extern unsigned int nr_segments;
+extern unsigned int cur_segment;
 extern int groupid;
 extern int output_format;
 extern int append_terse_output;
@@ -542,7 +553,15 @@ extern char *trigger_remote_cmd;
 extern long long trigger_timeout;
 extern char *aux_path;
 
-extern struct thread_data *threads;
+extern struct thread_segment segments[REAL_MAX_SEG];
+
+static inline struct thread_data *tnumber_to_td(unsigned int tnumber)
+{
+	struct thread_segment *seg;
+
+	seg = &segments[tnumber / JOBS_PER_SEG];
+	return &seg->threads[tnumber & (JOBS_PER_SEG - 1)];
+}
 
 static inline bool is_running_backend(void)
 {
@@ -556,8 +575,6 @@ static inline void fio_ro_check(const struct thread_data *td, struct io_u *io_u)
 	assert(!(io_u->ddir == DDIR_WRITE && !td_write(td)) &&
 	       !(io_u->ddir == DDIR_TRIM && !td_trim(td)));
 }
-
-#define REAL_MAX_JOBS		4096
 
 static inline bool should_fsync(struct thread_data *td)
 {
@@ -709,7 +726,7 @@ extern void lat_target_reset(struct thread_data *);
  * Iterates all threads/processes within all the defined jobs
  */
 #define for_each_td(td, i)	\
-	for ((i) = 0, (td) = &threads[0]; (i) < (int) thread_number; (i)++, (td)++)
+	for ((i) = 0, (td) = &segments[0].threads[0]; (i) < (int) thread_number; (i)++, (td) = tnumber_to_td((i)))
 #define for_each_file(td, f, i)	\
 	if ((td)->files_index)						\
 		for ((i) = 0, (f) = (td)->files[0];			\

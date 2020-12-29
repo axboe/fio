@@ -2,7 +2,7 @@
 bs=1m
 ioengine=pmemblk
 norandommap
-time_based=1
+time_based
 runtime=30
 group_reporting
 disable_lat=1
@@ -19,7 +19,7 @@ cpus_allowed_policy=split
 #
 iodepth=1
 direct=1
-thread=1
+thread
 numjobs=16
 #
 # Unlink can be used to remove the files when done, but if you are

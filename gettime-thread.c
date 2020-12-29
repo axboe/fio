@@ -58,7 +58,7 @@ static void *gtod_thread_main(void *data)
 	 * but I'm not sure what to use outside of a simple CPU nop to relax
 	 * it - we don't want to lose precision.
 	 */
-	while (threads) {
+	while (nr_segments) {
 		fio_gtod_update();
 		nop;
 	}

@@ -216,7 +216,7 @@ class FioLatTest():
             file_data = file.read()
 
         #
-        # Read the first few lines and see if any of them begin with '3;fio-'
+        # Read the first few lines and see if any of them begin with '3;'
         # If so, the line is probably terse output. Obviously, this only
         # works for fio terse version 3 and it does not work for
         # multi-line terse output
@@ -224,7 +224,7 @@ class FioLatTest():
         lines = file_data.splitlines()
         for i in range(8):
             file_data = lines[i]
-            if file_data.startswith('3;;latency'):
+            if file_data.startswith('3;'):
                 self.terse_data = file_data.split(';')
                 return True
 

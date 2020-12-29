@@ -1,7 +1,7 @@
 ; writes 512 byte verification blocks until the disk is full,
 ; then verifies written data
 [global]
-thread=1
+thread
 bs=64k
 direct=1
 ioengine=sync
