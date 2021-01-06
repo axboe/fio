@@ -62,8 +62,8 @@
 #endif
 
 #ifdef FIO_INTERNAL
-#define ARRAY_SIZE(x)    (sizeof((x)) / (sizeof((x)[0])))
-#define FIELD_SIZE(s, f) (sizeof(((__typeof__(s))0)->f))
+#define FIO_ARRAY_SIZE(x)    (sizeof((x)) / (sizeof((x)[0])))
+#define FIO_FIELD_SIZE(s, f) (sizeof(((__typeof__(s))0)->f))
 #endif
 
 #ifndef __has_attribute

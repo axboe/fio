@@ -181,7 +181,7 @@ static int get_device_numbers(char *file_name, int *maj, int *min)
 		/*
 		 * must be a file, open "." in that path
 		 */
-		snprintf(tempname, ARRAY_SIZE(tempname), "%s", file_name);
+		snprintf(tempname, FIO_ARRAY_SIZE(tempname), "%s", file_name);
 		p = dirname(tempname);
 		if (stat(p, &st)) {
 			perror("disk util stat");
@@ -313,7 +313,7 @@ static struct disk_util *disk_util_add(struct thread_data *td, int majdev,
 		sfree(du);
 		return NULL;
 	}
-	snprintf((char *) du->dus.name, ARRAY_SIZE(du->dus.name), "%s",
+	snprintf((char *) du->dus.name, FIO_ARRAY_SIZE(du->dus.name), "%s",
 		 basename(path));
 	du->sysfs_root = strdup(path);
 	du->major = majdev;
@@ -435,7 +435,7 @@ static struct disk_util *__init_per_file_disk_util(struct thread_data *td,
 			log_err("unknown sysfs layout\n");
 			return NULL;
 		}
-		snprintf(tmp, ARRAY_SIZE(tmp), "%s", p);
+		snprintf(tmp, FIO_ARRAY_SIZE(tmp), "%s", p);
 		sprintf(path, "%s", tmp);
 	}
 

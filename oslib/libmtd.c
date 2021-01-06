@@ -35,6 +35,8 @@
 #include <sys/ioctl.h>
 #include <inttypes.h>
 
+#include "../compiler/compiler.h"
+
 #include <mtd/mtd-user.h>
 #include "libmtd.h"
 
@@ -960,7 +962,7 @@ int mtd_torture(libmtd_t desc, const struct mtd_dev_info *mtd, int fd, int eb)
 	void *buf;
 
 	normsg("run torture test for PEB %d", eb);
-	patt_count = ARRAY_SIZE(patterns);
+	patt_count = FIO_ARRAY_SIZE(patterns);
 
 	buf = xmalloc(mtd->eb_size);
 

@@ -47,7 +47,6 @@ extern "C" {
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #endif
 #define min(a, b) MIN(a, b) /* glue for linux kernel source */
-#define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 
 #define ALIGN(x,a) __ALIGN_MASK(x,(__typeof__(x))(a)-1)
 #define __ALIGN_MASK(x,mask) (((x)+(mask))&~(mask))

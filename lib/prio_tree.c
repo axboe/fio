@@ -18,8 +18,6 @@
 #include "../compiler/compiler.h"
 #include "prio_tree.h"
 
-#define ARRAY_SIZE(x)    (sizeof((x)) / (sizeof((x)[0])))
-
 /*
  * A clever mix of heap and radix trees forms a radix priority search tree (PST)
  * which is useful for storing intervals, e.g, we can consider a vma as a closed
@@ -57,9 +55,9 @@ static void fio_init prio_tree_init(void)
 {
 	unsigned int i;
 
-	for (i = 0; i < ARRAY_SIZE(index_bits_to_maxindex) - 1; i++)
+	for (i = 0; i < FIO_ARRAY_SIZE(index_bits_to_maxindex) - 1; i++)
 		index_bits_to_maxindex[i] = (1UL << (i + 1)) - 1;
-	index_bits_to_maxindex[ARRAY_SIZE(index_bits_to_maxindex) - 1] = ~0UL;
+	index_bits_to_maxindex[FIO_ARRAY_SIZE(index_bits_to_maxindex) - 1] = ~0UL;
 }
 
 /*

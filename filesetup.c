@@ -815,7 +815,7 @@ static unsigned long long get_fs_free_counts(struct thread_data *td)
 		} else if (f->filetype != FIO_TYPE_FILE)
 			continue;
 
-		snprintf(buf, ARRAY_SIZE(buf), "%s", f->file_name);
+		snprintf(buf, FIO_ARRAY_SIZE(buf), "%s", f->file_name);
 
 		if (stat(buf, &sb) < 0) {
 			if (errno != ENOENT)
@@ -838,7 +838,7 @@ static unsigned long long get_fs_free_counts(struct thread_data *td)
 			continue;
 
 		fm = calloc(1, sizeof(*fm));
-		snprintf(fm->__base, ARRAY_SIZE(fm->__base), "%s", buf);
+		snprintf(fm->__base, FIO_ARRAY_SIZE(fm->__base), "%s", buf);
 		fm->base = basename(fm->__base);
 		fm->key = sb.st_dev;
 		flist_add(&fm->list, &list);

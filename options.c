@@ -22,7 +22,7 @@ char client_sockaddr_str[INET6_ADDRSTRLEN] = { 0 };
 static const struct pattern_fmt_desc fmt_desc[] = {
 	{
 		.fmt   = "%o",
-		.len   = FIELD_SIZE(struct io_u *, offset),
+		.len   = FIO_FIELD_SIZE(struct io_u *, offset),
 		.paste = paste_blockoff
 	},
 	{ }
@@ -1387,7 +1387,7 @@ static int str_verify_pattern_cb(void *data, const char *input)
 	struct thread_data *td = cb_data_to_td(data);
 	int ret;
 
-	td->o.verify_fmt_sz = ARRAY_SIZE(td->o.verify_fmt);
+	td->o.verify_fmt_sz = FIO_ARRAY_SIZE(td->o.verify_fmt);
 	ret = parse_and_fill_pattern(input, strlen(input), td->o.verify_pattern,
 				     MAX_PATTERN_SIZE, fmt_desc,
 				     td->o.verify_fmt, &td->o.verify_fmt_sz);

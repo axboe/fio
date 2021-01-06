@@ -29,7 +29,7 @@ static void test_num2str(void)
 	char *str;
 	int i;
 
-	for (i = 0; i < ARRAY_SIZE(testcases); ++i) {
+	for (i = 0; i < FIO_ARRAY_SIZE(testcases); ++i) {
 		p = &testcases[i];
 		str = num2str(p->num, p->maxlen, p->base, p->pow2, p->unit);
 		CU_ASSERT_STRING_EQUAL(str, p->expected);
