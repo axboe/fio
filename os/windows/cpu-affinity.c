@@ -2,78 +2,6 @@
 
 #include <windows.h>
 
-#ifdef CONFIG_WINDOWS_XP
-int fio_setaffinity(int pid, os_cpu_mask_t cpumask)
-{
-	HANDLE h;
-	BOOL bSuccess = FALSE;
-
-	h = OpenThread(THREAD_QUERY_INFORMATION | THREAD_SET_INFORMATION, TRUE,
-		       pid);
-	if (h != NULL) {
-		bSuccess = SetThreadAffinityMask(h, cpumask);
-		if (!bSuccess)
-			log_err("fio_setaffinity failed: failed to set thread affinity (pid %d, mask %.16llx)\n",
-				pid, (long long unsigned) cpumask);
-
-		CloseHandle(h);
-	} else {
-		log_err("fio_setaffinity failed: failed to get handle for pid %d\n",
-			pid);
-	}
-
-	return bSuccess ? 0 : -1;
-}
-
-int fio_getaffinity(int pid, os_cpu_mask_t *mask)
-{
-	os_cpu_mask_t systemMask;
-
-	HANDLE h = OpenProcess(PROCESS_QUERY_INFORMATION, TRUE, pid);
-
-	if (h != NULL) {
-		GetProcessAffinityMask(h, mask, &systemMask);
-		CloseHandle(h);
-	} else {
-		log_err("fio_getaffinity failed: failed to get handle for pid %d\n",
-			pid);
-		return -1;
-	}
-
-	return 0;
-}
-
-void fio_cpu_clear(os_cpu_mask_t *mask, int cpu)
-{
-	*mask &= ~(1ULL << cpu);
-}
-
-void fio_cpu_set(os_cpu_mask_t *mask, int cpu)
-{
-	*mask |= 1ULL << cpu;
-}
-
-int fio_cpu_isset(os_cpu_mask_t *mask, int cpu)
-{
-	return (*mask & (1ULL << cpu)) != 0;
-}
-
-int fio_cpu_count(os_cpu_mask_t *mask)
-{
-	return hweight64(*mask);
-}
-
-int fio_cpuset_init(os_cpu_mask_t *mask)
-{
-	*mask = 0;
-	return 0;
-}
-
-int fio_cpuset_exit(os_cpu_mask_t *mask)
-{
-	return 0;
-}
-#else /* CONFIG_WINDOWS_XP */
 /* Return all processors regardless of processor group */
 unsigned int cpus_online(void)
 {
@@ -443,4 +371,3 @@ int fio_cpuset_exit(os_cpu_mask_t *mask)
 {
 	return 0;
 }
-#endif /* CONFIG_WINDOWS_XP */
