@@ -1690,12 +1690,21 @@ This engine defines engine specific options.
 .TP
 .B cpuio
 Doesn't transfer any data, but burns CPU cycles according to the
-\fBcpuload\fR and \fBcpuchunks\fR options. Setting
-\fBcpuload\fR\=85 will cause that job to do nothing but burn 85%
-of the CPU. In case of SMP machines, use `numjobs=<nr_of_cpu>'
-to get desired CPU usage, as the cpuload only loads a
-single CPU at the desired rate. A job never finishes unless there is
-at least one non-cpuio job.
+\fBcpuload\fR, \fBcpuchunks\fR and \fBcpumode\fR options.
+A job never finishes unless there is at least one non-cpuio job.
+.RS
+.P
+.PD 0
+\fBcpuload\fR\=85 will cause that job to do nothing but burn 85% of the CPU.
+In case of SMP machines, use \fBnumjobs=<nr_of_cpu>\fR\ to get desired CPU usage,
+as the cpuload only loads a single CPU at the desired rate.
+
+.P
+\fBcpumode\fR\=qsort replace the default noop instructions loop
+by a qsort algorithm to consume more energy.
+
+.P
+.RE
 .TP
 .B rdma
 The RDMA I/O engine supports both RDMA memory semantics

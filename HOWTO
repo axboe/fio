@@ -1912,12 +1912,14 @@ I/O engine
 
 		**cpuio**
 			Doesn't transfer any data, but burns CPU cycles according to the
-			:option:`cpuload` and :option:`cpuchunks` options. Setting
-			:option:`cpuload`\=85 will cause that job to do nothing but burn 85%
+			:option:`cpuload`, :option:`cpuchunks` and :option:`cpumode` options.
+			Setting :option:`cpuload`\=85 will cause that job to do nothing but burn 85%
 			of the CPU. In case of SMP machines, use :option:`numjobs`\=<nr_of_cpu>
 			to get desired CPU usage, as the cpuload only loads a
 			single CPU at the desired rate. A job never finishes unless there is
 			at least one non-cpuio job.
+			Setting :option:`cpumode`\=qsort replace the default noop instructions loop
+			by a qsort algorithm to consume more energy.
 
 		**rdma**
 			The RDMA I/O engine supports both RDMA memory semantics
