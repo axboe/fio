@@ -11,9 +11,9 @@
 // number of 32 bit integers to sort
 size_t qsort_size = (256 * (1ULL << 10)); // 256KB
 
-struct mwc_t {
+struct mwc {
 	uint32_t w;
-  uint32_t z;
+	uint32_t z;
 };
 
 enum stress_mode {
@@ -93,7 +93,7 @@ static struct fio_option options[] = {
  *      fast pseudo random number generator, see
  *      http://www.cse.yorku.ca/~oz/marsaglia-rng.html
  */
-uint32_t mwc32(struct mwc_t *mwc)
+uint32_t mwc32(struct mwc *mwc)
 {
         mwc->z = 36969 * (mwc->z & 65535) + (mwc->z >> 16);
         mwc->w = 18000 * (mwc->w & 65535) + (mwc->w >> 16);
@@ -144,7 +144,9 @@ static int do_qsort(struct thread_data *td)
 	struct thread_options *o = &td->o;
 	struct cpu_options *co = td->eo;
 	struct timespec start, now;
+
 	fio_get_mono_time(&start);
+
 	/* Sort "random" data */
 	qsort(co->qsort_data, qsort_size, sizeof(*(co->qsort_data)), stress_qsort_cmp_1);
 
@@ -158,14 +160,15 @@ static int do_qsort(struct thread_data *td)
 	qsort(co->qsort_data, qsort_size, sizeof(*(co->qsort_data)), stress_qsort_cmp_2);
 	fio_get_mono_time(&now);
 
-	/* Adjusting cpucycle automatically to be as close as possible to the expected cpuload
-	 * The time to execute do_qsort() may change over time as per :
-	 * 		 - the job concurrency
-	 *     - the cpu clock adjusted by the power management
-	 * After every do_qsort() call, the next thinktime is adjusted regarding the last run performance
+	/* Adjusting cpucycle automatically to be as close as possible to the
+	 * expected cpuload The time to execute do_qsort() may change over time
+	 * as per : - the job concurrency - the cpu clock adjusted by the power
+	 * management After every do_qsort() call, the next thinktime is
+	 * adjusted regarding the last run performance
 	 */
 	co->cpucycle = utime_since(&start, &now);
-	o->thinktime = ((unsigned long long) co->cpucycle * (100 - co->cpuload)) / co->cpuload;
+	o->thinktime = ((unsigned long long) co->cpucycle *
+				(100 - co->cpuload)) / co->cpuload;
 
 	return 0;
 }
@@ -181,12 +184,12 @@ static enum fio_q_status fio_cpuio_queue(struct thread_data *td,
 	}
 
 	switch (co->cpumode) {
-		case FIO_CPU_NOOP:
-			usec_spin(co->cpucycle);
-			break;
-		case FIO_CPU_QSORT:
-			do_qsort(td);
-			break;
+	case FIO_CPU_NOOP:
+		usec_spin(co->cpucycle);
+		break;
+	case FIO_CPU_QSORT:
+		do_qsort(td);
+		break;
 	}
 
 	return FIO_Q_COMPLETED;
@@ -204,20 +207,22 @@ static int noop_init(struct thread_data *td)
 static int qsort_cleanup(struct thread_data *td)
 {
 	struct cpu_options *co = td->eo;
-	if (co->qsort_data)
+
+	if (co->qsort_data) {
 		free(co->qsort_data);
+		co->qsort_data = NULL;
+	}
+
 	return 0;
 }
 
 static int qsort_init(struct thread_data *td)
 {
+	/* Setting up a default entropy */
+	struct mwc mwc = { 521288629UL, 362436069UL };
 	struct cpu_options *co = td->eo;
-
-	// Setting up a default entropy
-	struct mwc_t mwc = {
-	        (521288629UL),
-	        (362436069UL)
-	};
+	int32_t *ptr;
+	int i;
 
 	co->qsort_data = calloc(qsort_size, sizeof(*co->qsort_data));
 	if (co->qsort_data == NULL) {
@@ -226,7 +231,7 @@ static int qsort_init(struct thread_data *td)
 	}
 
 	/* This is expensive, init the memory once */
-	for (int32_t *ptr = co->qsort_data, i = 0; i < qsort_size; i++)
+	for (ptr = co->qsort_data, i = 0; i < qsort_size; i++)
 		*ptr++ = mwc32(&mwc);
 
 	log_info("%s (qsort): ioengine=%s, cpuload=%u, cpucycle=%u\n",
@@ -249,8 +254,9 @@ static int fio_cpuio_init(struct thread_data *td)
 	if (co->cpuload > 100)
 		co->cpuload = 100;
 
-	// Saving the current thread state
+	/* Saving the current thread state */
 	td_previous_state = td->runstate;
+
 	/* Reporting that we are preparing the engine
 	 * This is useful as the qsort() calibration takes time
 	 * This prevents the job from starting before init is completed
@@ -262,20 +268,24 @@ static int fio_cpuio_init(struct thread_data *td)
 	 */
 	o->thinktime_blocks = 1;
 	o->thinktime_spin = 0;
-	o->thinktime = ((unsigned long long) co->cpucycle * (100 - co->cpuload)) / co->cpuload;
+	o->thinktime = ((unsigned long long) co->cpucycle *
+				(100 - co->cpuload)) / co->cpuload;
 
 	o->nr_files = o->open_files = 1;
 
 	switch (co->cpumode) {
-		case FIO_CPU_NOOP:
-			noop_init(td);
-			break;
-		case FIO_CPU_QSORT:
-			qsort_init(td);
-			break;
+	case FIO_CPU_NOOP:
+		noop_init(td);
+		break;
+	case FIO_CPU_QSORT:
+		qsort_init(td);
+		break;
+	default:
+		td_vmsg(td, EINVAL, "cpu engine mode bad: %d", co->cpumode);
+		return 1;
 	}
 
-	// Let's restore the previous state.
+	/* Let's restore the previous state. */
 	td_set_runstate(td, td_previous_state);
 	return 0;
 }
@@ -285,11 +295,11 @@ static void fio_cpuio_cleanup(struct thread_data *td)
 	struct cpu_options *co = td->eo;
 
 	switch (co->cpumode) {
-		case FIO_CPU_NOOP:
-			break;
-		case FIO_CPU_QSORT:
-			qsort_cleanup(td);
-			break;
+	case FIO_CPU_NOOP:
+		break;
+	case FIO_CPU_QSORT:
+		qsort_cleanup(td);
+		break;
 	}
 }
 
@@ -300,13 +310,13 @@ static int fio_cpuio_open(struct thread_data fio_unused *td,
 }
 
 static struct ioengine_ops ioengine = {
-	.name		= "cpuio",
-	.version	= FIO_IOOPS_VERSION,
-	.queue		= fio_cpuio_queue,
-	.init		= fio_cpuio_init,
-	.cleanup	= fio_cpuio_cleanup,
-	.open_file	= fio_cpuio_open,
-	.flags		= FIO_SYNCIO | FIO_DISKLESSIO | FIO_NOIO,
+	.name			= "cpuio",
+	.version		= FIO_IOOPS_VERSION,
+	.queue			= fio_cpuio_queue,
+	.init			= fio_cpuio_init,
+	.cleanup		= fio_cpuio_cleanup,
+	.open_file		= fio_cpuio_open,
+	.flags			= FIO_SYNCIO | FIO_DISKLESSIO | FIO_NOIO,
 	.options		= options,
 	.option_struct_size	= sizeof(struct cpu_options),
 };
