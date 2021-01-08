@@ -245,6 +245,7 @@ static int fio_cpuio_init(struct thread_data *td)
 	struct thread_options *o = &td->o;
 	struct cpu_options *co = td->eo;
 	int td_previous_state;
+	char *msg;
 
 	if (!co->cpuload) {
 		td_vmsg(td, EINVAL, "cpu thread needs rate (cpuload=)","cpuio");
@@ -281,7 +282,10 @@ static int fio_cpuio_init(struct thread_data *td)
 		qsort_init(td);
 		break;
 	default:
-		td_vmsg(td, EINVAL, "cpu engine mode bad: %d", co->cpumode);
+		if (asprintf(&msg, "bad cpu engine mode: %d", co->cpumode) < 0)
+			msg = NULL;
+		td_vmsg(td, EINVAL, msg ? : "(?)", __func__);
+		free(msg);
 		return 1;
 	}
 
