@@ -110,6 +110,9 @@ done:
 	sprintf(tmp, "%.*f", (int)(maxlen - strlen(tmp) - 1),
 		(double)modulo / (double)thousand);
 
+	if (tmp[0] == '1')
+		num++;
+
 	if (asprintf(&buf, "%llu.%s%s%s", (unsigned long long) num, &tmp[2],
 		     unitprefix[post_index], unitstr[units]) < 0)
 		buf = NULL;
