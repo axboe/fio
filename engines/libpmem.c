@@ -2,7 +2,7 @@
  * libpmem: IO engine that uses PMDK libpmem to read and write data
  *
  * Copyright (C) 2017 Nippon Telegraph and Telephone Corporation.
- * Copyright 2018-2020, Intel Corporation
+ * Copyright 2018-2021, Intel Corporation
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License,
@@ -97,16 +97,9 @@ static int fio_libpmem_file(struct thread_data *td, struct fio_file *f,
 			    size_t length, off_t off)
 {
 	struct fio_libpmem_data *fdd = FILE_ENG_DATA(f);
-	mode_t mode = 0;
+	mode_t mode = S_IWUSR | S_IRUSR;
 	size_t mapped_len;
 	int is_pmem;
-
-	if(td_rw(td))
-		mode = S_IWUSR | S_IRUSR;
-	else if (td_write(td))
-		mode = S_IWUSR;
-	else
-		mode = S_IRUSR;
 
 	dprint(FD_IO, "DEBUG fio_libpmem_file\n");
 	dprint(FD_IO, "f->file_name = %s td->o.verify = %d \n", f->file_name,
