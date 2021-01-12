@@ -5064,7 +5064,7 @@ static char *fio_keyword_replace(char *opt)
 		struct fio_keyword *kw = &fio_keywords[i];
 
 		while ((s = strstr(opt, kw->word)) != NULL) {
-			char *new = malloc(strlen(opt) + 1);
+			char *new = calloc(strlen(opt) + 1, 1);
 			char *o_org = opt;
 			int olen = s - opt;
 			int len;
@@ -5081,6 +5081,7 @@ static char *fio_keyword_replace(char *opt)
 			 * in too
 			 */
 			opt += strlen(kw->word) + olen;
+			/* keeps final zero thanks to calloc */
 			if (strlen(opt))
 				memcpy(new + olen + len, opt, opt - o_org - 1);
 

@@ -327,6 +327,7 @@ void free_threads_shm(void)
 
 static void free_shm(void)
 {
+#ifndef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
 	if (nr_segments) {
 		flow_exit();
 		fio_debug_jobp = NULL;
@@ -343,6 +344,7 @@ static void free_shm(void)
 	fio_filelock_exit();
 	file_hash_exit();
 	scleanup();
+#endif
 }
 
 static int add_thread_segment(void)
