@@ -229,6 +229,7 @@ struct thread_data {
 		double pareto_h;
 		double gauss_dev;
 	};
+	double random_center;
 	int error;
 	int sig;
 	int done;

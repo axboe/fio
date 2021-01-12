@@ -1319,11 +1319,11 @@ static void __init_rand_distribution(struct thread_data *td, struct fio_file *f)
 		seed = td->rand_seeds[4];
 
 	if (td->o.random_distribution == FIO_RAND_DIST_ZIPF)
-		zipf_init(&f->zipf, nranges, td->o.zipf_theta.u.f, seed);
+		zipf_init(&f->zipf, nranges, td->o.zipf_theta.u.f, td->o.random_center.u.f, seed);
 	else if (td->o.random_distribution == FIO_RAND_DIST_PARETO)
-		pareto_init(&f->zipf, nranges, td->o.pareto_h.u.f, seed);
+		pareto_init(&f->zipf, nranges, td->o.pareto_h.u.f, td->o.random_center.u.f, seed);
 	else if (td->o.random_distribution == FIO_RAND_DIST_GAUSS)
-		gauss_init(&f->gauss, nranges, td->o.gauss_dev.u.f, seed);
+		gauss_init(&f->gauss, nranges, td->o.gauss_dev.u.f, td->o.random_center.u.f, seed);
 }
 
 static bool init_rand_distribution(struct thread_data *td)

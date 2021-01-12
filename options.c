@@ -44,6 +44,27 @@ static char *get_opt_postfix(const char *str)
 	return strdup(p);
 }
 
+static bool split_parse_distr(const char *str, double *val, double *center)
+{
+	char *cp, *p;
+	bool r;
+
+	p = strdup(str);
+	if (!p)
+		return false;
+
+	cp = strstr(p, ":");
+	r = true;
+	if (cp) {
+		*cp = '\0';
+		cp++;
+		r = str_to_float(cp, center, 0);
+	}
+	r = r && str_to_float(p, val, 0);
+	free(p);
+	return r;
+}
+
 static int bs_cmp(const void *p1, const void *p2)
 {
 	const struct bssplit *bsp1 = p1;
@@ -787,6 +808,7 @@ static int str_fst_cb(void *data, const char *str)
 {
 	struct thread_data *td = cb_data_to_td(data);
 	double val;
+	double center = -1;
 	bool done = false;
 	char *nr;
 
@@ -821,13 +843,19 @@ static int str_fst_cb(void *data, const char *str)
 		return 0;
 
 	nr = get_opt_postfix(str);
-	if (nr && !str_to_float(nr, &val, 0)) {
+	if (nr && !split_parse_distr(nr, &val, &center)) {
 		log_err("fio: file service type random postfix parsing failed\n");
 		free(nr);
 		return 1;
 	}
 
 	free(nr);
+
+	if (center != -1 && (center < 0.00 || center > 1.00)) {
+		log_err("fio: distribution center out of range (0 <= center <= 1.0)\n");
+		return 1;
+	}
+	td->random_center = center;
 
 	switch (td->o.file_service_type) {
 	case FIO_FSERVICE_ZIPF:
@@ -1030,6 +1058,7 @@ static int str_random_distribution_cb(void *data, const char *str)
 {
 	struct thread_data *td = cb_data_to_td(data);
 	double val;
+	double center = -1;
 	char *nr;
 
 	if (td->o.random_distribution == FIO_RAND_DIST_ZIPF)
@@ -1046,13 +1075,19 @@ static int str_random_distribution_cb(void *data, const char *str)
 		return 0;
 
 	nr = get_opt_postfix(str);
-	if (nr && !str_to_float(nr, &val, 0)) {
+	if (nr && !split_parse_distr(nr, &val, &center)) {
 		log_err("fio: random postfix parsing failed\n");
 		free(nr);
 		return 1;
 	}
 
 	free(nr);
+
+	if (center != -1 && (center < 0.00 || center > 1.00)) {
+		log_err("fio: distribution center out of range (0 <= center <= 1.0)\n");
+		return 1;
+	}
+	td->o.random_center.u.f = center;
 
 	if (td->o.random_distribution == FIO_RAND_DIST_ZIPF) {
 		if (val == 1.00) {

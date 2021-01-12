@@ -1132,7 +1132,7 @@ first. This may interfere with a given rate setting, if fio is asked to
 limit reads or writes to a certain rate. If that is the case, then the
 distribution may be skewed. Default: 50.
 .TP
-.BI random_distribution \fR=\fPstr:float[,str:float][,str:float]
+.BI random_distribution \fR=\fPstr:float[:float][,str:float][,str:float]
 By default, fio will use a completely uniform random distribution when asked
 to perform random I/O. Sometimes it is useful to skew the distribution in
 specific ways, ensuring that some parts of the data is more hot than others.
@@ -1167,6 +1167,14 @@ a `theta' of 1.2, you would use `random_distribution=zipf:1.2' as the
 option. If a non\-uniform model is used, fio will disable use of the random
 map. For the \fBnormal\fR distribution, a normal (Gaussian) deviation is
 supplied as a value between 0 and 100.
+.P
+The second, optional float is allowed for \fBpareto\fR, \fBzipf\fR and \fBnormal\fR
+distributions. It allows to set base of distribution in non-default place, giving
+more control over most probable outcome. This value is in range [0-1] which maps linearly to
+range of possible random values.
+Defaults are: random for \fBpareto\fR and \fBzipf\fR, and 0.5 for \fBnormal\fR.
+If you wanted to use \fBzipf\fR with a `theta` of 1.2 centered on 1/4 of allowed value range,
+you would use `random_distibution=zipf:1.2:0.25`.
 .P
 For a \fBzoned\fR distribution, fio supports specifying percentages of I/O
 access that should fall within what range of the file or device. For
