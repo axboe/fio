@@ -10,6 +10,7 @@ disable_lat=1
 disable_slat=1
 disable_clat=1
 clat_percentiles=0
+prepopulate=1
 
 iodepth=1
 iodepth_batch=1

@@ -2525,6 +2525,16 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		},
 	},
 	{
+		.name	= "prepopulate",
+		.lname	= "Prepopulate",
+		.type	= FIO_OPT_BOOL,
+		.off1	= offsetof(struct thread_options, prepopulate),
+		.help	= "Prepopulate files with some data",
+		.def	= "0",
+		.category = FIO_OPT_C_FILE,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
 		.name	= "fadvise_hint",
 		.lname	= "Fadvise hint",
 		.type	= FIO_OPT_STR,

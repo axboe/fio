@@ -338,6 +338,95 @@ error:
 	return ret;
 }
 
+/*
+ * Prepopulate regular file with data.
+ * Leaves f->fd open on success, caller must close.
+ */
+static int prepopulate_file(struct thread_data *td, struct fio_file *f)
+{
+	int flags;
+	unsigned long long left, bs;
+	char *b = NULL;
+
+	if (read_only) {
+		log_err("fio: refusing extend of file due to read-only\n");
+		return 0;
+	}
+	if (td->o.fill_device) {
+		log_err("fio: prepopulate option with fill_device makes no sense\n");
+		return 0;
+	}
+
+	flags = O_WRONLY;
+	if (td->o.allow_create)
+		flags |= O_CREAT;
+
+#ifdef WIN32
+	flags |= _O_BINARY;
+#endif
+
+	dprint(FD_FILE, "open file %s, flags %x\n", f->file_name, flags);
+	f->fd = open(f->file_name, flags, 0644);
+	if (f->fd < 0) {
+		int err = errno;
+
+		if (err == ENOENT && !td->o.allow_create)
+			log_err("fio: file creation disallowed by "
+					"allow_file_create=0\n");
+		else
+			td_verror(td, err, "open");
+		return 1;
+	}
+
+	left = f->real_file_size; // XXX ?? f->file_offset + f->io_size
+	bs = td->o.max_bs[DDIR_WRITE];
+	if (bs > left)
+		bs = left;
+
+	b = malloc(bs);
+	if (!b) {
+		td_verror(td, errno, "malloc");
+		goto err;
+	}
+
+	while (left && !td->terminate) {
+		ssize_t r;
+
+		if (bs > left)
+			bs = left;
+
+		fill_io_buffer(td, b, bs, bs);
+
+		r = write(f->fd, b, bs);
+
+		if (r > 0) {
+			left -= r;
+		} else {
+			td_verror(td, errno, "write");
+			goto err;
+		}
+	}
+
+	if (td->terminate) {
+		dprint(FD_FILE, "terminate unlink %s\n", f->file_name);
+		td_io_unlink_file(td, f);
+	} else if (td->o.create_fsync) {
+		if (fsync(f->fd) < 0) {
+			td_verror(td, errno, "fsync");
+			goto err;
+		}
+	}
+
+	free(b);
+	return 0;
+err:
+	close(f->fd);
+	f->fd = -1;
+	if (b)
+		free(b);
+	return 1;
+}
+
 unsigned long long get_rand_file_size(struct thread_data *td)
 {
 	unsigned long long ret, sized;
@@ -1240,6 +1329,44 @@ int setup_files(struct thread_data *td)
 
 			err = __file_invalidate_cache(td, f, old_len,
 								extend_len);
+
+			/*
+			 * Shut up static checker
+			 */
+			if (f->fd != -1)
+				close(f->fd);
+
+			f->fd = -1;
+			if (err)
+				break;
+		}
+		temp_stall_ts = 0;
+	}
+
+	if (err)
+		goto err_out;
+
+	/*
+	 * Prepopulate regular files with data. It might be expected
+	 * to read some "real" data instead of zero'ed files (if no writes
+	 * to file occurred prior to a read job).
+	 */
+	if (td->o.prepopulate && td_read(td)) {
+		temp_stall_ts = 1;
+
+		for_each_file(td, f, i) {
+			assert(f->filetype == FIO_TYPE_FILE);
+			if (output_format & FIO_OUTPUT_NORMAL) {
+				log_info("%s: Prepopulating IO file (%s)\n",
+							o->name, f->file_name);
+			}
+
+			err = prepopulate_file(td, f);
+			if (err)
+				break;
+
+			err = __file_invalidate_cache(td, f, f->file_offset,
+								f->io_size);
 
 			/*
 			 * Shut up static checker

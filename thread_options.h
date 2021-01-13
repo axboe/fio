@@ -230,6 +230,7 @@ struct thread_options {
 	unsigned int stats;
 	unsigned int fadvise_hint;
 	enum fio_fallocate_mode fallocate_mode;
+	unsigned int prepopulate;
 	unsigned int zero_buffers;
 	unsigned int refill_buffers;
 	unsigned int scramble_buffers;
@@ -619,6 +620,9 @@ struct thread_options_pack {
 	uint64_t max_latency;
 	fio_fp64_t latency_percentile;
 	uint32_t latency_run;
+
+
+	uint32_t prepopulate;
 
 	/*
 	 * flow support

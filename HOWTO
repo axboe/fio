@@ -1208,6 +1208,15 @@ I/O type
 	write to the end of an extended file will stall until the entire
 	file has been filled with zeroes.
 
+.. option:: prepopulate=bool
+
+	After laying down files it might be expected to fill them with some data.
+	It makes sense only for read jobs (not preceded by a write job).
+	It works on regular files and fills them up block by block. It may take
+	some time to complete (especially with big file and small block size).
+	It makes no sense with fill_device, so don't use these two together.
+	Default: false.
+
 .. option:: fadvise_hint=str
 
 	Use :manpage:`posix_fadvise(2)` or :manpage:`posix_fadvise(2)` to

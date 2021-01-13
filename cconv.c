@@ -255,6 +255,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->stats = le32_to_cpu(top->stats);
 	o->fadvise_hint = le32_to_cpu(top->fadvise_hint);
 	o->fallocate_mode = le32_to_cpu(top->fallocate_mode);
+	o->prepopulate = le32_to_cpu(top->prepopulate);
 	o->zero_buffers = le32_to_cpu(top->zero_buffers);
 	o->refill_buffers = le32_to_cpu(top->refill_buffers);
 	o->scramble_buffers = le32_to_cpu(top->scramble_buffers);
@@ -456,6 +457,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->stats = cpu_to_le32(o->stats);
 	top->fadvise_hint = cpu_to_le32(o->fadvise_hint);
 	top->fallocate_mode = cpu_to_le32(o->fallocate_mode);
+	top->prepopulate = cpu_to_le32(o->prepopulate);
 	top->zero_buffers = cpu_to_le32(o->zero_buffers);
 	top->refill_buffers = cpu_to_le32(o->refill_buffers);
 	top->scramble_buffers = cpu_to_le32(o->scramble_buffers);

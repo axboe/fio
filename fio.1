@@ -981,6 +981,14 @@ write to the end of an extended file will stall until the entire
 file has been filled with zeroes.
 .RE
 .TP
+.BI prepopulate \fR=\fPbool
+After laying down files it might be expected to fill them with some data.
+It makes sense only for read jobs (not preceded by a write job).
+It works on regular files and fills them up block by block. It may take
+some time to complete (especially with big file and small block size).
+It makes no sense with fill_device, so don\(aqt use these two together.
+Default: false.
+.TP
 .BI fadvise_hint \fR=\fPstr
 Use \fBposix_fadvise\fR\|(2) or \fBposix_madvise\fR\|(2) to advise the kernel
 what I/O patterns are likely to be issued. Accepted values are:
