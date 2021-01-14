@@ -212,12 +212,6 @@ static int fio_libpmem_close_file(struct thread_data *td, struct fio_file *f)
 	int ret = 0;
 
 	dprint(FD_IO, "DEBUG fio_libpmem_close_file\n");
-	dprint(FD_IO, "td->o.odirect %d\n", td->o.odirect);
-
-	if (!td->o.odirect) {
-		dprint(FD_IO,"pmem_drain\n");
-		pmem_drain();
-	}
 
 	if (fdd->libpmem_ptr)
 		ret = pmem_unmap(fdd->libpmem_ptr, fdd->libpmem_sz);
