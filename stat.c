@@ -426,7 +426,6 @@ static double convert_agg_kbytes_percent(struct group_run_stats *rs, int ddir, i
 	return p_of_agg;
 }
 
-//Todo: Fill in function for case rs->unified_rw_rep == 2 
 static void show_mixed_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 			     struct buf_output *out)
 {
@@ -1602,6 +1601,51 @@ static void add_ddir_status_json(struct thread_stat *ts,
 	}
 }
 
+static void add_mixed_ddir_status_json(struct thread_stat *ts,
+		struct group_run_stats *rs, struct json_object *parent)
+{
+	struct thread_stat *ts_lcl;
+	struct thread_data *td;
+	int i, idx, last_ts;
+
+	/* Handle aggregation of Reads (ddir = 0), Writes (ddir = 1), and Trims (ddir = 2) */
+	ts_lcl = malloc(sizeof(struct thread_stat));
+	memset((void *)ts_lcl, 0, sizeof(struct thread_stat));
+	ts_lcl->unified_rw_rep = 1;               /* calculate mixed stats  */
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
+		ts_lcl->clat_stat[i].min_val = ULONG_MAX;
+		ts_lcl->slat_stat[i].min_val = ULONG_MAX;
+		ts_lcl->lat_stat[i].min_val = ULONG_MAX;
+		ts_lcl->bw_stat[i].min_val = ULONG_MAX;
+		ts_lcl->iops_stat[i].min_val = ULONG_MAX;
+		ts_lcl->clat_high_prio_stat[i].min_val = ULONG_MAX;
+		ts_lcl->clat_low_prio_stat[i].min_val = ULONG_MAX;
+	}
+	ts_lcl->sync_stat.min_val = ULONG_MAX;
+
+	idx = 0;
+	last_ts = -1;
+
+	/* sum up stats from all the threads into the ts_lcl struct */
+	for_each_td(td, i) {
+		if (!td->o.stats)
+			continue;
+		if (idx && (!td->o.group_reporting ||
+		    (td->o.group_reporting && last_ts != td->groupid))) {
+			idx = 0;
+		}
+
+		last_ts = td->groupid;
+		idx++;
+
+		sum_thread_stats(ts_lcl, &td->ts, idx == 1);
+	}
+
+	/* add the aggregated stats to json parent */
+	add_ddir_status_json(ts_lcl, rs, DDIR_READ, parent);
+	free(ts_lcl);
+}
+
 static void show_thread_status_terse_all(struct thread_stat *ts,
 					 struct group_run_stats *rs, int ver,
 					 struct buf_output *out)
@@ -1730,6 +1774,9 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 	add_ddir_status_json(ts, rs, DDIR_WRITE, root);
 	add_ddir_status_json(ts, rs, DDIR_TRIM, root);
 	add_ddir_status_json(ts, rs, DDIR_SYNC, root);
+
+	if (ts->unified_rw_rep == 2)
+		add_mixed_ddir_status_json(ts, rs, root);
 
 	/* CPU Usage */
 	if (ts->total_run_time) {
