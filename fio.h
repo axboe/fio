@@ -757,17 +757,9 @@ static inline bool option_check_rate(struct thread_data *td, enum fio_ddir ddir)
 	return false;
 }
 
-static inline bool __should_check_rate(struct thread_data *td)
-{
-	return (td->flags & TD_F_CHECK_RATE) != 0;
-}
-
 static inline bool should_check_rate(struct thread_data *td)
 {
-	if (!__should_check_rate(td))
-		return false;
-
-	return ddir_rw_sum(td->bytes_done) != 0;
+	return (td->flags & TD_F_CHECK_RATE) != 0;
 }
 
 static inline unsigned long long td_max_bs(struct thread_data *td)
