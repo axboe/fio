@@ -786,6 +786,11 @@ static int __handle_option(const struct fio_option *o, const char *ptr,
 		if (o->off1) {
 			cp = td_var(data, o, o->off1);
 			*cp = strdup(ptr);
+			if (strlen(ptr) > o->maxlen - 1) {
+				log_err("value exceeds max length of %d\n",
+					o->maxlen);
+				return 1;
+			}
 		}
 
 		if (fn)
