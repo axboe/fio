@@ -282,6 +282,45 @@ bool calc_lat(struct io_stat *is, unsigned long long *min,
 	return true;
 }
 
+void show_mixed_group_stats(struct group_run_stats *rs, struct buf_output *out) {
+	char *io, *agg, *min, *max;
+	char *ioalt, *aggalt, *minalt, *maxalt;
+	u_int64_t io_mix = 0, agg_mix = 0, min_mix = -1, max_mix = 0, min_run = -1, max_run = 0;
+	int i;
+	const int i2p = is_power_of_2(rs->kb_base);
+
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
+		if (!rs->max_run[i])
+			continue;
+		io_mix += rs->iobytes[i];
+		agg_mix += rs->agg[i];
+		min_mix = min_mix < rs->min_bw[i] ? min_mix : rs->min_bw[i];
+		max_mix = max_mix > rs->max_bw[i] ? max_mix : rs->max_bw[i];
+		min_run = min_run < rs->min_run[i] ? min_run : rs->min_run[i];
+		max_run = max_run > rs->max_run[i] ? max_run : rs->max_run[i];
+	}
+	io = num2str(io_mix, rs->sig_figs, 1, i2p, N2S_BYTE);
+	ioalt = num2str(io_mix, rs->sig_figs, 1, !i2p, N2S_BYTE);
+	agg = num2str(agg_mix, rs->sig_figs, 1, i2p, rs->unit_base);
+	aggalt = num2str(agg_mix, rs->sig_figs, 1, !i2p, rs->unit_base);
+	min = num2str(min_mix, rs->sig_figs, 1, i2p, rs->unit_base);
+	minalt = num2str(min_mix, rs->sig_figs, 1, !i2p, rs->unit_base);
+	max = num2str(max_mix, rs->sig_figs, 1, i2p, rs->unit_base);
+	maxalt = num2str(max_mix, rs->sig_figs, 1, !i2p, rs->unit_base);
+	log_buf(out, "  MIXED: bw=%s (%s), %s-%s (%s-%s), io=%s (%s), run=%llu-%llumsec\n",
+			agg, aggalt, min, max, minalt, maxalt, io, ioalt,
+			(unsigned long long) min_run,
+			(unsigned long long) max_run);
+	free(io);
+	free(agg);
+	free(min);
+	free(max);
+	free(ioalt);
+	free(aggalt);
+	free(minalt);
+	free(maxalt);
+}
+
 void show_group_stats(struct group_run_stats *rs, struct buf_output *out)
 {
 	char *io, *agg, *min, *max;
@@ -320,6 +359,10 @@ void show_group_stats(struct group_run_stats *rs, struct buf_output *out)
 		free(minalt);
 		free(maxalt);
 	}
+	
+	/* Need to aggregate statisitics to show mixed values */
+	if (rs->unified_rw_rep == 2) 
+		show_mixed_group_stats(rs, out);
 }
 
 void stat_calc_dist(uint64_t *map, unsigned long total, double *io_u_dist)
@@ -434,8 +477,6 @@ static void show_mixed_ddir_status(struct group_run_stats *rs, struct thread_sta
 	double mean, dev;
 	char *io_p, *bw_p, *bw_p_alt, *iops_p, *post_st = NULL;
 	struct thread_stat *ts_lcl;
-	struct thread_data *td;
-	int idx, last_ts;
 
 	int i2p;
 	int ddir = 0, i;
@@ -455,23 +496,7 @@ static void show_mixed_ddir_status(struct group_run_stats *rs, struct thread_sta
 	}
 	ts_lcl->sync_stat.min_val = ULONG_MAX;
 
-	idx = 0;
-	last_ts = -1;
-
-	/* sum up stats from all the threads into the ts_lcl struct */
-	for_each_td(td, i) {
-		if (!td->o.stats)
-			continue;
-		if (idx && (!td->o.group_reporting ||
-		    (td->o.group_reporting && last_ts != td->groupid))) {
-			idx = 0;
-		}
-
-		last_ts = td->groupid;
-		idx++;
-
-		sum_thread_stats(ts_lcl, &td->ts, idx == 1);
-	}
+	sum_thread_stats(ts_lcl, ts, 1);
 
 	assert(ddir_rw(ddir));
 
@@ -1432,6 +1457,35 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 	}
 }
 
+static void show_mixed_ddir_status_terse(struct thread_stat *ts,
+				   struct group_run_stats *rs,
+				   int ver, struct buf_output *out)
+{
+	struct thread_stat *ts_lcl;
+	int i;
+
+	/* Handle aggregation of Reads (ddir = 0), Writes (ddir = 1), and Trims (ddir = 2) */
+	ts_lcl = malloc(sizeof(struct thread_stat));
+	memset((void *)ts_lcl, 0, sizeof(struct thread_stat));
+	ts_lcl->unified_rw_rep = 1;               /* calculate mixed stats  */
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
+		ts_lcl->clat_stat[i].min_val = ULONG_MAX;
+		ts_lcl->slat_stat[i].min_val = ULONG_MAX;
+		ts_lcl->lat_stat[i].min_val = ULONG_MAX;
+		ts_lcl->bw_stat[i].min_val = ULONG_MAX;
+		ts_lcl->iops_stat[i].min_val = ULONG_MAX;
+		ts_lcl->clat_high_prio_stat[i].min_val = ULONG_MAX;
+		ts_lcl->clat_low_prio_stat[i].min_val = ULONG_MAX;
+	}
+	ts_lcl->sync_stat.min_val = ULONG_MAX;
+
+	sum_thread_stats(ts_lcl, ts, 1);
+
+	/* add the aggregated stats to json parent */
+	show_ddir_status_terse(ts_lcl, rs, DDIR_READ, ver, out);
+	free(ts_lcl);
+}
+
 static struct json_object *add_ddir_lat_json(struct thread_stat *ts, uint32_t percentiles,
 		struct io_stat *lat_stat, uint64_t *io_u_plat)
 {
@@ -1605,8 +1659,7 @@ static void add_mixed_ddir_status_json(struct thread_stat *ts,
 		struct group_run_stats *rs, struct json_object *parent)
 {
 	struct thread_stat *ts_lcl;
-	struct thread_data *td;
-	int i, idx, last_ts;
+	int i;
 
 	/* Handle aggregation of Reads (ddir = 0), Writes (ddir = 1), and Trims (ddir = 2) */
 	ts_lcl = malloc(sizeof(struct thread_stat));
@@ -1623,23 +1676,7 @@ static void add_mixed_ddir_status_json(struct thread_stat *ts,
 	}
 	ts_lcl->sync_stat.min_val = ULONG_MAX;
 
-	idx = 0;
-	last_ts = -1;
-
-	/* sum up stats from all the threads into the ts_lcl struct */
-	for_each_td(td, i) {
-		if (!td->o.stats)
-			continue;
-		if (idx && (!td->o.group_reporting ||
-		    (td->o.group_reporting && last_ts != td->groupid))) {
-			idx = 0;
-		}
-
-		last_ts = td->groupid;
-		idx++;
-
-		sum_thread_stats(ts_lcl, &td->ts, idx == 1);
-	}
+	sum_thread_stats(ts_lcl, ts, 1);
 
 	/* add the aggregated stats to json parent */
 	add_ddir_status_json(ts_lcl, rs, DDIR_READ, parent);
@@ -1665,12 +1702,15 @@ static void show_thread_status_terse_all(struct thread_stat *ts,
 
 	/* Log Read Status */
 	show_ddir_status_terse(ts, rs, DDIR_READ, ver, out);
-	/* Log Write Status */
-	show_ddir_status_terse(ts, rs, DDIR_WRITE, ver, out);
-	/* Log Trim Status */
-	if (ver == 2 || ver == 4 || ver == 5)
-		show_ddir_status_terse(ts, rs, DDIR_TRIM, ver, out);
-
+	if (ts->unified_rw_rep != 1) {
+		/* Log Write Status */
+		show_ddir_status_terse(ts, rs, DDIR_WRITE, ver, out);
+		/* Log Trim Status */
+		if (ver == 2 || ver == 4 || ver == 5)
+			show_ddir_status_terse(ts, rs, DDIR_TRIM, ver, out);
+	}
+	if (ts->unified_rw_rep == 2)
+		show_mixed_ddir_status_terse(ts, rs, ver, out);
 	/* CPU Usage */
 	if (ts->total_run_time) {
 		double runt = (double) ts->total_run_time;
@@ -2397,7 +2437,7 @@ void __show_run_stats(void)
 		rs->kb_base = ts->kb_base;
 		rs->unit_base = ts->unit_base;
 		rs->sig_figs = ts->sig_figs;
-		rs->unified_rw_rep += ts->unified_rw_rep;
+		rs->unified_rw_rep |= ts->unified_rw_rep;
 
 		for (j = 0; j < DDIR_RWDIR_CNT; j++) {
 			if (!ts->runtime[j])
