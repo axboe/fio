@@ -1672,6 +1672,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.lname	= "Filename(s)",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= offsetof(struct thread_options, filename),
+		.maxlen	= PATH_MAX,
 		.cb	= str_filename_cb,
 		.prio	= -1, /* must come after "directory" */
 		.help	= "File(s) to use for the workload",
