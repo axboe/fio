@@ -5115,10 +5115,10 @@ static char *fio_keyword_replace(char *opt)
 			 * If there's more in the original string, copy that
 			 * in too
 			 */
-			opt += strlen(kw->word) + olen;
+			opt += olen + strlen(kw->word);
 			/* keeps final zero thanks to calloc */
 			if (strlen(opt))
-				memcpy(new + olen + len, opt, opt - o_org - 1);
+				memcpy(new + olen + len, opt, strlen(opt));
 
 			/*
 			 * replace opt and free the old opt
