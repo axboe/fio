@@ -928,7 +928,17 @@ int longest_existing_path(char *path) {
 	sprintf(buf, "%s", path);
 	done = false;
 	while (!done) {
-		buf_pos = strrchr(buf, FIO_OS_PATH_SEPARATOR);
+#if WIN32
+		// Support for Windows UNC paths (i.e. '\\server1\...').
+		if ((buf[0] == FIO_OS_PATH_SEPARATOR) && (buf[1] == FIO_OS_PATH_SEPARATOR)) {
+			buf_pos = strrchr(buf + 2, FIO_OS_PATH_SEPARATOR);
+		}
+		else
+#endif
+		{
+			buf_pos = strrchr(buf, FIO_OS_PATH_SEPARATOR);
+		}
+
 		if (!buf_pos) {
 			done = true;
 			offset = 0;
