@@ -8,7 +8,7 @@
 #include "io_u.h"
 #include "zbd_types.h"
 
-#define FIO_IOOPS_VERSION	28
+#define FIO_IOOPS_VERSION	29
 
 #ifndef CONFIG_DYNAMIC_ENGINES
 #define FIO_STATIC	static
@@ -47,6 +47,7 @@ struct ioengine_ops {
 	int (*invalidate)(struct thread_data *, struct fio_file *);
 	int (*unlink_file)(struct thread_data *, struct fio_file *);
 	int (*get_file_size)(struct thread_data *, struct fio_file *);
+	int (*prepopulate_file)(struct thread_data *, struct fio_file *);
 	void (*terminate)(struct thread_data *);
 	int (*iomem_alloc)(struct thread_data *, size_t);
 	void (*iomem_free)(struct thread_data *);
