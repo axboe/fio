@@ -2695,6 +2695,7 @@ print_config "Windows PDB generation" "$pdb"
 ##########################################
 # check for timerfd support
 timerfd_create="no"
+if test "$esx" != "yes" ; then
 cat > $TMPC << EOF
 #include <sys/time.h>
 #include <sys/timerfd.h>
@@ -2704,8 +2705,9 @@ int main(int argc, char **argv)
 	return timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
 }
 EOF
-if compile_prog "" "" "timerfd_create"; then
-  timerfd_create="yes"
+  if compile_prog "" "" "timerfd_create"; then
+    timerfd_create="yes"
+  fi
 fi
 print_config "timerfd_create" "$timerfd_create"
 
