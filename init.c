@@ -1109,11 +1109,8 @@ int ioengine_load(struct thread_data *td)
 		if (!ops)
 			goto fail;
 
-		if (ops == td->io_ops && dlhandle == td->io_ops->dlhandle) {
-			if (dlhandle)
-				dlclose(dlhandle);
+		if (ops == td->io_ops && dlhandle == td->io_ops->dlhandle)
 			return 0;
-		}
 
 		if (dlhandle && dlhandle != td->io_ops->dlhandle)
 			dlclose(dlhandle);
