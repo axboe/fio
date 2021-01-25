@@ -2574,6 +2574,13 @@ I/O rate
 	before we have to complete it and do our :option:`thinktime`. In other words, this
 	setting effectively caps the queue depth if the latter is larger.
 
+.. option:: thinktime_blocks_type=str
+
+	Only valid if :option:`thinktime` is set - control how :option:`thinktime_blocks`
+	triggers. The default is `complete`, which triggers thinktime when fio completes
+	:option:`thinktime_blocks` blocks. If this is set to `issue`, then the trigger happens
+	at the issue side.
+
 .. option:: rate=int[,int][,int]
 
 	Cap the bandwidth used by this job. The number is in bytes/sec, the normal

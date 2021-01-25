@@ -864,8 +864,8 @@ static void handle_thinktime(struct thread_data *td, enum fio_ddir ddir)
 	uint64_t total;
 	int left;
 
-	b = ddir_rw_sum(td->io_blocks);
-	if (b % td->o.thinktime_blocks)
+	b = ddir_rw_sum(td->thinktime_blocks_counter);
+	if (b % td->o.thinktime_blocks || !b)
 		return;
 
 	io_u_quiesce(td);
@@ -1076,6 +1076,10 @@ reap:
 		}
 		if (ret < 0)
 			break;
+
+		if (ddir_rw(ddir) && td->o.thinktime)
+			handle_thinktime(td, ddir);
+
 		if (!ddir_rw_sum(td->bytes_done) &&
 		    !td_ioengine_flagged(td, FIO_NOIO))
 			continue;
@@ -1090,9 +1094,6 @@ reap:
 		}
 		if (!in_ramp_time(td) && td->o.latency_target)
 			lat_target_check(td);
-
-		if (ddir_rw(ddir) && td->o.thinktime)
-			handle_thinktime(td, ddir);
 	}
 
 	check_update_rusage(td);
@@ -1743,6 +1744,11 @@ static void *thread_main(void *data)
 
 	if (rate_submit_init(td, sk_out))
 		goto err;
+
+	if (td->o.thinktime_blocks_type == THINKTIME_BLOCKS_TYPE_COMPLETE)
+		td->thinktime_blocks_counter = td->io_blocks;
+	else
+		td->thinktime_blocks_counter = td->io_issues;
 
 	set_epoch_time(td, o->log_unix_epoch);
 	fio_getrusage(&td->ru_start);

@@ -3609,6 +3609,28 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_THINKTIME,
 	},
 	{
+		.name	= "thinktime_blocks_type",
+		.lname	= "Thinktime blocks type",
+		.type	= FIO_OPT_STR,
+		.off1	= offsetof(struct thread_options, thinktime_blocks_type),
+		.help	= "How thinktime_blocks takes effect",
+		.def	= "complete",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_THINKTIME,
+		.posval = {
+			  { .ival = "complete",
+			    .oval = THINKTIME_BLOCKS_TYPE_COMPLETE,
+			    .help = "thinktime_blocks takes effect at the completion side",
+			  },
+			  {
+			    .ival = "issue",
+			    .oval = THINKTIME_BLOCKS_TYPE_ISSUE,
+			    .help = "thinktime_blocks takes effect at the issue side",
+			  },
+		},
+		.parent = "thinktime",
+	},
+	{
 		.name	= "rate",
 		.lname	= "I/O rate",
 		.type	= FIO_OPT_ULL,

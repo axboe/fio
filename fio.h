@@ -149,6 +149,9 @@ enum {
 
 	RATE_PROCESS_LINEAR = 0,
 	RATE_PROCESS_POISSON = 1,
+
+	THINKTIME_BLOCKS_TYPE_COMPLETE = 0,
+	THINKTIME_BLOCKS_TYPE_ISSUE = 1,
 };
 
 enum {
@@ -353,6 +356,8 @@ struct thread_data {
 	uint64_t zone_bytes;
 	struct fio_sem *sem;
 	uint64_t bytes_done[DDIR_RWDIR_CNT];
+
+	uint64_t *thinktime_blocks_counter;
 
 	/*
 	 * State for random io, a bitmap of blocks done vs not done

@@ -268,6 +268,7 @@ static int fio_cpuio_init(struct thread_data *td)
 	 * set thinktime_sleep and thinktime_spin appropriately
 	 */
 	o->thinktime_blocks = 1;
+	o->thinktime_blocks_type = THINKTIME_BLOCKS_TYPE_COMPLETE;
 	o->thinktime_spin = 0;
 	o->thinktime = ((unsigned long long) co->cpucycle *
 				(100 - co->cpuload)) / co->cpuload;

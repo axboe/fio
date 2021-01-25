@@ -210,6 +210,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->thinktime = le32_to_cpu(top->thinktime);
 	o->thinktime_spin = le32_to_cpu(top->thinktime_spin);
 	o->thinktime_blocks = le32_to_cpu(top->thinktime_blocks);
+	o->thinktime_blocks_type = le32_to_cpu(top->thinktime_blocks_type);
 	o->fsync_blocks = le32_to_cpu(top->fsync_blocks);
 	o->fdatasync_blocks = le32_to_cpu(top->fdatasync_blocks);
 	o->barrier_blocks = le32_to_cpu(top->barrier_blocks);
@@ -431,6 +432,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->thinktime = cpu_to_le32(o->thinktime);
 	top->thinktime_spin = cpu_to_le32(o->thinktime_spin);
 	top->thinktime_blocks = cpu_to_le32(o->thinktime_blocks);
+	top->thinktime_blocks_type = __cpu_to_le32(o->thinktime_blocks_type);
 	top->fsync_blocks = cpu_to_le32(o->fsync_blocks);
 	top->fdatasync_blocks = cpu_to_le32(o->fdatasync_blocks);
 	top->barrier_blocks = cpu_to_le32(o->barrier_blocks);

@@ -2323,6 +2323,12 @@ queue depth setting redundant, since no more than 1 I/O will be queued
 before we have to complete it and do our \fBthinktime\fR. In other words, this
 setting effectively caps the queue depth if the latter is larger.
 .TP
+.BI thinktime_blocks_type \fR=\fPstr
+Only valid if \fBthinktime\fR is set - control how \fBthinktime_blocks\fR triggers.
+The default is `complete', which triggers \fBthinktime\fR when fio completes
+\fBthinktime_blocks\fR blocks. If this is set to `issue', then the trigger happens
+at the issue side.
+.TP
 .BI rate \fR=\fPint[,int][,int]
 Cap the bandwidth used by this job. The number is in bytes/sec, the normal
 suffix rules apply. Comma-separated values may be specified for reads,
