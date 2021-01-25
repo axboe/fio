@@ -281,7 +281,6 @@ struct thread_data {
 	 * IO engine private data and dlhandle.
 	 */
 	void *io_ops_data;
-	void *io_ops_dlhandle;
 
 	/*
 	 * Queue depth of io_u's that fio MIGHT do

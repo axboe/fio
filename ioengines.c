@@ -155,7 +155,7 @@ static struct ioengine_ops *dlopen_ioengine(struct thread_data *td,
 		return NULL;
 	}
 
-	td->io_ops_dlhandle = dlhandle;
+	ops->dlhandle = dlhandle;
 	return ops;
 }
 
@@ -228,9 +228,9 @@ void free_ioengine(struct thread_data *td)
 		td->eo = NULL;
 	}
 
-	if (td->io_ops_dlhandle) {
-		dlclose(td->io_ops_dlhandle);
-		td->io_ops_dlhandle = NULL;
+	if (td->io_ops->dlhandle) {
+		dlclose(td->io_ops->dlhandle);
+		td->io_ops->dlhandle = NULL;
 	}
 
 	td->io_ops = NULL;

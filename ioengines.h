@@ -8,7 +8,7 @@
 #include "io_u.h"
 #include "zbd_types.h"
 
-#define FIO_IOOPS_VERSION	27
+#define FIO_IOOPS_VERSION	28
 
 #ifndef CONFIG_DYNAMIC_ENGINES
 #define FIO_STATIC	static
@@ -30,6 +30,7 @@ struct ioengine_ops {
 	const char *name;
 	int version;
 	int flags;
+	void *dlhandle;
 	int (*setup)(struct thread_data *);
 	int (*init)(struct thread_data *);
 	int (*post_init)(struct thread_data *);

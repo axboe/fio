@@ -1104,18 +1104,18 @@ int ioengine_load(struct thread_data *td)
 		 * for this name and see if they match. If they do, then
 		 * the engine is unchanged.
 		 */
-		dlhandle = td->io_ops_dlhandle;
+		dlhandle = td->io_ops->dlhandle;
 		ops = load_ioengine(td);
 		if (!ops)
 			goto fail;
 
-		if (ops == td->io_ops && dlhandle == td->io_ops_dlhandle) {
+		if (ops == td->io_ops && dlhandle == td->io_ops->dlhandle) {
 			if (dlhandle)
 				dlclose(dlhandle);
 			return 0;
 		}
 
-		if (dlhandle && dlhandle != td->io_ops_dlhandle)
+		if (dlhandle && dlhandle != td->io_ops->dlhandle)
 			dlclose(dlhandle);
 
 		/* Unload the old engine. */
