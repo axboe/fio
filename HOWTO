@@ -2359,6 +2359,18 @@ with the caveat that when used on the command line, they must come after the
 		transferred to the device. The writefua option is ignored with this
 		selection.
 
+.. option:: hipri : [sg]
+
+	If this option is set, fio will attempt to use polled IO completions.
+	This will have a similar effect as (io_uring)hipri. Only SCSI READ and
+	WRITE commands will have the SGV4_FLAG_HIPRI set (not UNMAP (trim) nor
+	VERIFY). Older versions of the Linux sg driver that do not support
+	hipri will simply ignore this flag and do normal IO. The Linux SCSI
+	Low Level Driver (LLD) that "owns" the device also needs to support
+	hipri (also known as iopoll and mq_poll). The MegaRAID driver is an
+	example of a SCSI LLD. Default: clear (0) which does normal
+	(interrupted based) IO.
+
 .. option:: http_host=str : [http]
 
 	Hostname to connect to. For S3, this could be the bucket hostname.
