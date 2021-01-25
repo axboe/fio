@@ -858,7 +858,8 @@ static long long usec_for_io(struct thread_data *td, enum fio_ddir ddir)
 	return 0;
 }
 
-static void handle_thinktime(struct thread_data *td, enum fio_ddir ddir)
+static void handle_thinktime(struct thread_data *td, enum fio_ddir ddir,
+			     struct timespec *time)
 {
 	unsigned long long b;
 	uint64_t total;
@@ -898,6 +899,9 @@ static void handle_thinktime(struct thread_data *td, enum fio_ddir ddir)
 		/* adjust for rate_process=poisson */
 		td->last_usec[ddir] += total;
 	}
+
+	if (time && should_check_rate(td))
+		fio_gettime(time, NULL);
 }
 
 /*
@@ -1078,7 +1082,7 @@ reap:
 			break;
 
 		if (ddir_rw(ddir) && td->o.thinktime)
-			handle_thinktime(td, ddir);
+			handle_thinktime(td, ddir, &comp_time);
 
 		if (!ddir_rw_sum(td->bytes_done) &&
 		    !td_ioengine_flagged(td, FIO_NOIO))
