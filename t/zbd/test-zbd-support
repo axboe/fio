@@ -718,12 +718,18 @@ test31() {
     local bs inc nz off opts size
 
     prep_write
-    # Start with writing 128 KB to 128 sequential zones.
+    # Start with writing 128 KB to max_open_zones sequential zones.
     bs=128K
-    nz=128
+    nz=$((max_open_zones))
+    if [[ $nz -eq 0 ]]; then
+	nz=128
+    fi
     # shellcheck disable=SC2017
     inc=$(((disk_size - (first_sequential_zone_sector * 512)) / (nz * zone_size)
 	   * zone_size))
+    if [ "$inc" -eq 0 ]; then
+	require_seq_zones $nz || return $SKIP_TESTCASE
+    fi
     opts=()
     for ((off = first_sequential_zone_sector * 512; off < disk_size;
 	  off += inc)); do
