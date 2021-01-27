@@ -1008,7 +1008,7 @@ test48() {
 
     { echo; echo "fio ${opts[*]}"; echo; } >>"${logfile}.${test_number}"
 
-    timeout -v -s KILL 45s \
+    timeout -v -s KILL 180s \
 	    "${dynamic_analyzer[@]}" "$fio" "${opts[@]}" \
 	    >> "${logfile}.${test_number}" 2>&1 || return $?
 }
