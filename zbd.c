@@ -526,8 +526,9 @@ static int parse_zone_info(struct thread_data *td, struct fio_file *f)
 		offset = z->start + z->len;
 		if (j >= nr_zones)
 			break;
-		nrz = zbd_report_zones(td, f, offset,
-					    zones, ZBD_REPORT_MAX_ZONES);
+		nrz = zbd_report_zones(td, f, offset, zones,
+				       min((uint32_t)(nr_zones - j),
+					   ZBD_REPORT_MAX_ZONES));
 		if (nrz < 0) {
 			ret = nrz;
 			log_info("fio: report zones (offset %llu) failed for %s (%d).\n",
