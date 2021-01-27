@@ -1087,16 +1087,18 @@ static struct fio_zone_info *zbd_convert_to_open_zone(struct thread_data *td,
 		uint32_t tmp_idx;
 
 		z = get_zone(f, zone_idx);
-
-		zone_lock(td, f, z);
+		if (z->has_wp)
+			zone_lock(td, f, z);
 		pthread_mutex_lock(&f->zbd_info->mutex);
-		if (z->cond != ZBD_ZONE_COND_OFFLINE &&
-		    td->o.max_open_zones == 0 && td->o.job_max_open_zones == 0)
-			goto examine_zone;
-		if (f->zbd_info->num_open_zones == 0) {
-			dprint(FD_ZBD, "%s(%s): no zones are open\n",
-			       __func__, f->file_name);
-			goto open_other_zone;
+		if (z->has_wp) {
+			if (z->cond != ZBD_ZONE_COND_OFFLINE &&
+			    td->o.max_open_zones == 0 && td->o.job_max_open_zones == 0)
+				goto examine_zone;
+			if (f->zbd_info->num_open_zones == 0) {
+				dprint(FD_ZBD, "%s(%s): no zones are open\n",
+				       __func__, f->file_name);
+				goto open_other_zone;
+			}
 		}
 
 		/*
@@ -1124,7 +1126,8 @@ static struct fio_zone_info *zbd_convert_to_open_zone(struct thread_data *td,
 		dprint(FD_ZBD, "%s(%s): no candidate zone\n",
 			__func__, f->file_name);
 		pthread_mutex_unlock(&f->zbd_info->mutex);
-		zone_unlock(z);
+		if (z->has_wp)
+			zone_unlock(z);
 		return NULL;
 
 found_candidate_zone:
@@ -1133,7 +1136,8 @@ found_candidate_zone:
 			break;
 		zone_idx = new_zone_idx;
 		pthread_mutex_unlock(&f->zbd_info->mutex);
-		zone_unlock(z);
+		if (z->has_wp)
+			zone_unlock(z);
 	}
 
 	/* Both z->mutex and f->zbd_info->mutex are held. */
