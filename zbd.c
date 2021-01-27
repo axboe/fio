@@ -324,10 +324,6 @@ static bool zbd_verify_sizes(void)
 					 (unsigned long long) new_end - f->file_offset);
 				f->io_size = new_end - f->file_offset;
 			}
-
-			f->min_zone = zbd_zone_idx(f, f->file_offset);
-			f->max_zone = zbd_zone_idx(f, f->file_offset + f->io_size);
-			assert(f->min_zone < f->max_zone);
 		}
 	}
 
@@ -679,6 +675,18 @@ int zbd_setup_files(struct thread_data *td)
 
 		if (!zbd)
 			continue;
+
+		f->min_zone = zbd_zone_idx(f, f->file_offset);
+		f->max_zone = zbd_zone_idx(f, f->file_offset + f->io_size);
+
+		/*
+		 * When all zones in the I/O range are conventional, io_size
+		 * can be smaller than zone size, making min_zone the same
+		 * as max_zone. This is why the assert below needs to be made
+		 * conditional.
+		 */
+		if (zbd_is_seq_job(f))
+			assert(f->min_zone < f->max_zone);
 
 		zbd->max_open_zones = zbd->max_open_zones ?: ZBD_MAX_OPEN_ZONES;
 
