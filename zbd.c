@@ -443,7 +443,7 @@ static int parse_zone_info(struct thread_data *td, struct fio_file *f)
 	struct fio_zone_info *p;
 	uint64_t zone_size, offset;
 	struct zoned_block_device_info *zbd_info = NULL;
-	int i, j, ret = 0;
+	int i, j, ret = -ENOMEM;
 
 	zones = calloc(ZBD_REPORT_MAX_ZONES, sizeof(struct zbd_zone));
 	if (!zones)
@@ -475,7 +475,6 @@ static int parse_zone_info(struct thread_data *td, struct fio_file *f)
 
 	zbd_info = scalloc(1, sizeof(*zbd_info) +
 			   (nr_zones + 1) * sizeof(zbd_info->zone_info[0]));
-	ret = -ENOMEM;
 	if (!zbd_info)
 		goto out;
 	mutex_init_pshared(&zbd_info->mutex);
