@@ -786,11 +786,8 @@ static void zbd_close_zone(struct thread_data *td, const struct fio_file *f,
 		if (f->zbd_info->open_zones[open_zone_idx] == zone_idx)
 			break;
 	}
-	if (open_zone_idx == f->zbd_info->num_open_zones) {
-		dprint(FD_ZBD, "%s: zone %d is not open\n",
-		       f->file_name, zone_idx);
+	if (open_zone_idx == f->zbd_info->num_open_zones)
 		return;
-	}
 
 	dprint(FD_ZBD, "%s: closing zone %d\n", f->file_name, zone_idx);
 	memmove(f->zbd_info->open_zones + open_zone_idx,
