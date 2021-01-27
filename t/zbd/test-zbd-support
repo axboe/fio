@@ -1047,6 +1047,38 @@ test51() {
 	run_fio "${opts[@]}" >> "${logfile}.${test_number}" 2>&1 || return $?
 }
 
+# Verify that zone_reset_threshold only takes logical blocks from seq
+# zones into account, and logical blocks of conv zones are not counted.
+test52() {
+	local off io_size
+
+	require_zbd || return $SKIP_TESTCASE
+	require_conv_zones 8 || return $SKIP_TESTCASE
+	require_seq_zones 8 || return $SKIP_TESTCASE
+
+	reset_zone "${dev}" -1
+
+	# Total I/O size is 1/8 = 0.125 of the I/O range of cont + seq zones.
+	# Set zone_reset_threshold as 0.1. The threshold size is less than
+	# 0.125, then, reset count zero is expected.
+	# On the other hand, half of the I/O range is covered by conv zones.
+	# If fio would count the conv zones for zone_reset_threshold, the ratio
+	# were more than 0.5 and would trigger zone resets.
+
+	off=$((first_sequential_zone_sector * 512 - 8 * zone_size))
+	io_size=$((zone_size * 16 / 8))
+	run_fio --name=job --filename=$dev --rw=randwrite --bs=$((zone_size/16))\
+		--size=$((zone_size * 16)) --softrandommap=1 \
+		--io_size=$((io_size)) "$(ioengine "psync")" --offset=$off \
+		--zonemode=zbd --direct=1 --zonesize=${zone_size} \
+		--zone_reset_threshold=.1 --zone_reset_frequency=1.0 \
+		${job_var_opts[@]} --debug=zbd \
+		>> "${logfile}.${test_number}" 2>&1 || return $?
+
+	check_written ${io_size} || return $?
+	check_reset_count -eq 0 || return $?
+}
+
 tests=()
 dynamic_analyzer=()
 reset_all_zones=
