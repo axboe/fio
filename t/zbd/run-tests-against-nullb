@@ -24,6 +24,7 @@ usage()
 	echo -e "\t-o <max_open_zones> Specify MaxOpen value, (${set_max_open} by default)."
 	echo -e "\t-n <#number of runs> Set the number of times to run the entire suite "
 	echo -e "\t   or an individual section/test."
+	echo -e "\t-q Quit t/zbd/test-zbd-support run after any failed test."
 	echo -e "\t-r Remove the /dev/nullb0 device that may still exist after"
 	echo -e "\t   running this script."
 	exit 1
@@ -241,6 +242,7 @@ zbd_test_opts=()
 libzbc=0
 num_of_runs=1
 test_case=0
+quit_on_err=0
 
 while (($#)); do
 	case "$1" in
@@ -251,6 +253,7 @@ while (($#)); do
 		-l) libzbc=1; shift;;
 		-n) num_of_runs="${2}"; shift; shift;;
 		-t) test_case="${2}"; shift; shift;;
+		-q) quit_on_err=1; shift;;
 		-h) usage; break;;
 		--) shift; break;;
 		 *) usage; exit 1;;
@@ -296,6 +299,9 @@ while ((run_nr <= $num_of_runs)); do
 		if ((test_case)); then
 			zbd_test_opts+=("-t" "${test_case}")
 		fi
+		if ((quit_on_err)); then
+			zbd_test_opts+=("-q")
+		fi
 		section$section_number
 		configure_nullb
 		rc=$?
@@ -330,9 +336,13 @@ while ((run_nr <= $num_of_runs)); do
 			exit 1
 		fi
 		((intr)) && exit 1
-		(($test_rc)) && rc=1
+		if (($test_rc)); then
+			rc=1
+			((quit_on_err)) && break
+		fi
 	done
 
+	((rc && quit_on_err)) && break
 	run_nr=$((run_nr + 1))
 done
 

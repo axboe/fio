@@ -14,6 +14,7 @@ usage() {
 	echo -e "\t-r Reset all zones before test start"
 	echo -e "\t-o <max_open_zones> Run fio with max_open_zones limit"
 	echo -e "\t-t <test #> Run only a single test case with specified number"
+	echo -e "\t-q Quit the test run after any failed test"
 	echo -e "\t-z Run fio with debug=zbd option"
 }
 
@@ -1113,6 +1114,7 @@ reset_all_zones=
 use_libzbc=
 zbd_debug=
 max_open_zones_opt=
+quit_on_err=
 
 while [ "${1#-}" != "$1" ]; do
   case "$1" in
@@ -1127,6 +1129,7 @@ while [ "${1#-}" != "$1" ]; do
     -o) max_open_zones_opt="${2}"; shift; shift;;
     -v) dynamic_analyzer=(valgrind "--read-var-info=yes");
 	shift;;
+    -q) quit_on_err=1; shift;;
     -z) zbd_debug=1; shift;;
     --) shift; break;;
   esac
@@ -1288,6 +1291,7 @@ for test_number in "${tests[@]}"; do
     echo -e "$cc_status"
     echo "$status" >> "${logfile}.${test_number}"
     [ $intr -ne 0 ] && exit 1
+    [ -n "$quit_on_err" -a "$rc" -ne 0 ] && exit 1
 done
 
 echo "$passed tests passed"
