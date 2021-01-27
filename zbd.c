@@ -734,9 +734,10 @@ static int zbd_reset_zone(struct thread_data *td, struct fio_file *f,
 {
 	uint64_t offset = z->start;
 	uint64_t length = (z+1)->start - offset;
+	uint64_t data_in_zone = z->wp - z->start;
 	int ret = 0;
 
-	if (z->wp == z->start)
+	if (!data_in_zone)
 		return 0;
 
 	assert(is_valid_offset(f, offset + length - 1));
@@ -755,7 +756,8 @@ static int zbd_reset_zone(struct thread_data *td, struct fio_file *f,
 	}
 
 	pthread_mutex_lock(&f->zbd_info->mutex);
-	f->zbd_info->sectors_with_data -= z->wp - z->start;
+	f->zbd_info->sectors_with_data -= data_in_zone;
+	f->zbd_info->wp_sectors_with_data -= data_in_zone;
 	pthread_mutex_unlock(&f->zbd_info->mutex);
 	z->wp = z->start;
 	z->verify_block = 0;
@@ -887,25 +889,32 @@ static uint64_t zbd_process_swd(const struct fio_file *f, enum swd_action a)
 {
 	struct fio_zone_info *zb, *ze, *z;
 	uint64_t swd = 0;
+	uint64_t wp_swd = 0;
 
 	zb = get_zone(f, f->min_zone);
 	ze = get_zone(f, f->max_zone);
 	for (z = zb; z < ze; z++) {
-		pthread_mutex_lock(&z->mutex);
+		if (z->has_wp) {
+			pthread_mutex_lock(&z->mutex);
+			wp_swd += z->wp - z->start;
+		}
 		swd += z->wp - z->start;
 	}
 	pthread_mutex_lock(&f->zbd_info->mutex);
 	switch (a) {
 	case CHECK_SWD:
 		assert(f->zbd_info->sectors_with_data == swd);
+		assert(f->zbd_info->wp_sectors_with_data == wp_swd);
 		break;
 	case SET_SWD:
 		f->zbd_info->sectors_with_data = swd;
+		f->zbd_info->wp_sectors_with_data = wp_swd;
 		break;
 	}
 	pthread_mutex_unlock(&f->zbd_info->mutex);
 	for (z = zb; z < ze; z++)
-		zone_unlock(z);
+		if (z->has_wp)
+			zone_unlock(z);
 
 	return swd;
 }
@@ -916,7 +925,7 @@ static uint64_t zbd_process_swd(const struct fio_file *f, enum swd_action a)
  */
 static const bool enable_check_swd = false;
 
-/* Check whether the value of zbd_info.sectors_with_data is correct. */
+/* Check whether the values of zbd_info.*sectors_with_data are correct. */
 static void zbd_check_swd(const struct fio_file *f)
 {
 	if (!enable_check_swd)
@@ -1347,8 +1356,10 @@ static void zbd_queue_io(struct thread_data *td, struct io_u *io_u, int q,
 		 * z->wp > zone_end means that one or more I/O errors
 		 * have occurred.
 		 */
-		if (z->wp <= zone_end)
+		if (z->wp <= zone_end) {
 			zbd_info->sectors_with_data += zone_end - z->wp;
+			zbd_info->wp_sectors_with_data += zone_end - z->wp;
+		}
 		pthread_mutex_unlock(&zbd_info->mutex);
 		z->wp = zone_end;
 		break;
@@ -1650,7 +1661,7 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 		}
 		/* Check whether the zone reset threshold has been exceeded */
 		if (td->o.zrf.u.f) {
-			if (f->zbd_info->sectors_with_data >=
+			if (f->zbd_info->wp_sectors_with_data >=
 			    f->io_size * td->o.zrt.u.f &&
 			    zbd_dec_and_reset_write_cnt(td, f)) {
 				zb->reset_zone = 1;
