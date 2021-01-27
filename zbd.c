@@ -1239,10 +1239,23 @@ static struct fio_zone_info *zbd_replay_write_order(struct thread_data *td,
 		assert(z);
 	}
 
-	if (z->verify_block * min_bs >= z->capacity)
+	if (z->verify_block * min_bs >= z->capacity) {
 		log_err("%s: %d * %d >= %llu\n", f->file_name, z->verify_block,
 			min_bs, (unsigned long long)z->capacity);
-	io_u->offset = z->start + z->verify_block++ * min_bs;
+		/*
+		 * If the assertion below fails during a test run, adding
+		 * "--experimental_verify=1" to the command line may help.
+		 */
+		assert(false);
+	}
+	io_u->offset = z->start + z->verify_block * min_bs;
+	if (io_u->offset + io_u->buflen >= zbd_zone_capacity_end(z)) {
+		log_err("%s: %llu + %llu >= %lu\n", f->file_name, io_u->offset,
+			io_u->buflen, zbd_zone_capacity_end(z));
+		assert(false);
+	}
+	z->verify_block += io_u->buflen / min_bs;
+
 	return z;
 }
 
