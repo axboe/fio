@@ -132,15 +132,6 @@ static uint32_t zbd_zone_idx(const struct fio_file *f, uint64_t offset)
 }
 
 /**
- * zbd_zone_swr - Test whether a zone requires sequential writes
- * @z: zone info pointer.
- */
-static inline bool zbd_zone_swr(struct fio_zone_info *z)
-{
-	return z->type == ZBD_ZONE_TYPE_SWR;
-}
-
-/**
  * zbd_zone_end - Return zone end location
  * @z: zone info pointer.
  */
@@ -171,7 +162,7 @@ static bool zbd_zone_full(const struct fio_file *f, struct fio_zone_info *z,
 {
 	assert((required & 511) == 0);
 
-	return zbd_zone_swr(z) &&
+	return z->has_wp &&
 		z->wp + required > zbd_zone_capacity_end(z);
 }
 
@@ -249,7 +240,7 @@ static bool zbd_is_seq_job(struct fio_file *f)
 	zone_idx_b = zbd_zone_idx(f, f->file_offset);
 	zone_idx_e = zbd_zone_idx(f, f->file_offset + f->io_size - 1);
 	for (zone_idx = zone_idx_b; zone_idx <= zone_idx_e; zone_idx++)
-		if (zbd_zone_swr(get_zone(f, zone_idx)))
+		if (get_zone(f, zone_idx)->has_wp)
 			return true;
 
 	return false;
@@ -429,6 +420,7 @@ static int init_zone_info(struct thread_data *td, struct fio_file *f)
 		p->type = ZBD_ZONE_TYPE_SWR;
 		p->cond = ZBD_ZONE_COND_EMPTY;
 		p->capacity = zone_capacity;
+		p->has_wp = 1;
 	}
 	/* a sentinel */
 	p->start = nr_zones * zone_size;
@@ -512,8 +504,17 @@ static int parse_zone_info(struct thread_data *td, struct fio_file *f)
 				p->wp = z->wp;
 				break;
 			}
+
+			switch (z->type) {
+			case ZBD_ZONE_TYPE_SWR:
+				p->has_wp = 1;
+				break;
+			default:
+				p->has_wp = 0;
+			}
 			p->type = z->type;
 			p->cond = z->cond;
+
 			if (j > 0 && p->start != p[-1].start + zone_size) {
 				log_info("%s: invalid zone data\n",
 					 f->file_name);
@@ -811,7 +812,7 @@ static int zbd_reset_zones(struct thread_data *td, struct fio_file *f,
 	for (z = zb; z < ze; z++) {
 		uint32_t nz = zbd_zone_nr(f, z);
 
-		if (!zbd_zone_swr(z))
+		if (!z->has_wp)
 			continue;
 		zone_lock(td, f, z);
 		if (all_zones) {
@@ -1313,7 +1314,7 @@ static void zbd_queue_io(struct thread_data *td, struct io_u *io_u, int q,
 	assert(zone_idx < zbd_info->nr_zones);
 	z = get_zone(f, zone_idx);
 
-	if (!zbd_zone_swr(z))
+	if (!z->has_wp)
 		return;
 
 	if (!success)
@@ -1373,7 +1374,7 @@ static void zbd_put_io(struct thread_data *td, const struct io_u *io_u)
 	assert(zone_idx < zbd_info->nr_zones);
 	z = get_zone(f, zone_idx);
 
-	if (!zbd_zone_swr(z))
+	if (!z->has_wp)
 		return;
 
 	dprint(FD_ZBD,
@@ -1538,7 +1539,7 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 	orig_zb = zb;
 
 	/* Accept the I/O offset for conventional zones. */
-	if (!zbd_zone_swr(zb))
+	if (!zb->has_wp)
 		return io_u_accept;
 
 	/*
