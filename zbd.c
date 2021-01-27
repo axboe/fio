@@ -1033,7 +1033,8 @@ static uint32_t pick_random_zone_idx(const struct fio_file *f,
 /*
  * Modify the offset of an I/O unit that does not refer to an open zone such
  * that it refers to an open zone. Close an open zone and open a new zone if
- * necessary. This algorithm can only work correctly if all write pointers are
+ * necessary. The open zone is searched across sequential zones.
+ * This algorithm can only work correctly if all write pointers are
  * a multiple of the fio block size. The caller must neither hold z->mutex
  * nor f->zbd_info->mutex. Returns with z->mutex held upon success.
  */
@@ -1159,7 +1160,8 @@ open_other_zone:
 	/* Zone 'z' is full, so try to open a new zone. */
 	for (i = f->io_size / f->zbd_info->zone_size; i > 0; i--) {
 		zone_idx++;
-		zone_unlock(z);
+		if (z->has_wp)
+			zone_unlock(z);
 		z++;
 		if (!is_valid_offset(f, z->start)) {
 			/* Wrap-around. */
@@ -1167,6 +1169,8 @@ open_other_zone:
 			z = get_zone(f, zone_idx);
 		}
 		assert(is_valid_offset(f, z->start));
+		if (!z->has_wp)
+			continue;
 		zone_lock(td, f, z);
 		if (z->open)
 			continue;
@@ -1202,6 +1206,7 @@ out:
 	dprint(FD_ZBD, "%s(%s): returning zone %d\n", __func__, f->file_name,
 	       zone_idx);
 	io_u->offset = z->start;
+	assert(z->has_wp);
 	assert(z->cond != ZBD_ZONE_COND_OFFLINE);
 	return z;
 }
@@ -1228,12 +1233,12 @@ static struct fio_zone_info *zbd_replay_write_order(struct thread_data *td,
 }
 
 /*
- * Find another zone for which @io_u fits below the write pointer. Start
- * searching in zones @zb + 1 .. @zl and continue searching in zones
- * @zf .. @zb - 1.
+ * Find another zone for which @io_u fits in the readable data in the zone.
+ * Search in zones @zb + 1 .. @zl. For random workload, also search in zones
+ * @zb - 1 .. @zf.
  *
- * Either returns NULL or returns a zone pointer and holds the mutex for that
- * zone.
+ * Either returns NULL or returns a zone pointer. When the zone has write
+ * pointer, hold the mutex for the zone.
  */
 static struct fio_zone_info *
 zbd_find_zone(struct thread_data *td, struct io_u *io_u,
@@ -1250,19 +1255,23 @@ zbd_find_zone(struct thread_data *td, struct io_u *io_u,
 	 */
 	for (z1 = zb + 1, z2 = zb - 1; z1 < zl || z2 >= zf; z1++, z2--) {
 		if (z1 < zl && z1->cond != ZBD_ZONE_COND_OFFLINE) {
-			zone_lock(td, f, z1);
+			if (z1->has_wp)
+				zone_lock(td, f, z1);
 			if (z1->start + min_bs <= z1->wp)
 				return z1;
-			zone_unlock(z1);
+			if (z1->has_wp)
+				zone_unlock(z1);
 		} else if (!td_random(td)) {
 			break;
 		}
 		if (td_random(td) && z2 >= zf &&
 		    z2->cond != ZBD_ZONE_COND_OFFLINE) {
-			zone_lock(td, f, z2);
+			if (z2->has_wp)
+				zone_lock(td, f, z2);
 			if (z2->start + min_bs <= z2->wp)
 				return z2;
-			zone_unlock(z2);
+			if (z2->has_wp)
+				zone_unlock(z2);
 		}
 	}
 	dprint(FD_ZBD, "%s: adjusting random read offset failed\n",
