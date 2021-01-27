@@ -2055,7 +2055,7 @@ cat > $TMPC << EOF
 int main(int argc, char **argv)
 {
   int rc;
-  rc = pmem_is_pmem(NULL, NULL);
+  rc = pmem_is_pmem(NULL, 0);
   return 0;
 }
 EOF
