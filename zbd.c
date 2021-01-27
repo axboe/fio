@@ -1078,7 +1078,8 @@ static struct fio_zone_info *zbd_convert_to_open_zone(struct thread_data *td,
 
 		zone_lock(td, f, z);
 		pthread_mutex_lock(&f->zbd_info->mutex);
-		if (td->o.max_open_zones == 0 && td->o.job_max_open_zones == 0)
+		if (z->cond != ZBD_ZONE_COND_OFFLINE &&
+		    td->o.max_open_zones == 0 && td->o.job_max_open_zones == 0)
 			goto examine_zone;
 		if (f->zbd_info->num_open_zones == 0) {
 			dprint(FD_ZBD, "%s(%s): no zones are open\n",
@@ -1200,6 +1201,7 @@ out:
 	dprint(FD_ZBD, "%s(%s): returning zone %d\n", __func__, f->file_name,
 	       zone_idx);
 	io_u->offset = z->start;
+	assert(z->cond != ZBD_ZONE_COND_OFFLINE);
 	return z;
 }
 
