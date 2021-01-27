@@ -1107,7 +1107,8 @@ static struct fio_zone_info *zbd_convert_to_open_zone(struct thread_data *td,
 		 * Ignore zones which don't belong to thread's offset/size area.
 		 */
 		open_zone_idx = pick_random_zone_idx(f, io_u);
-		assert(open_zone_idx < f->zbd_info->num_open_zones);
+		assert(!open_zone_idx ||
+		       open_zone_idx < f->zbd_info->num_open_zones);
 		tmp_idx = open_zone_idx;
 		for (i = 0; i < f->zbd_info->num_open_zones; i++) {
 			uint32_t tmpz;
