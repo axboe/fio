@@ -828,7 +828,7 @@ test37() {
     local bs off size capacity
 
     prep_write
-    capacity=$(total_zone_capacity 1 $first_sequential_zone_sector $dev)
+    capacity=$(total_zone_capacity 1 $((first_sequential_zone_sector*512)) $dev)
     if [ "$first_sequential_zone_sector" = 0 ]; then
 	off=0
     else
