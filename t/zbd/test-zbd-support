@@ -237,6 +237,17 @@ require_seq_zones() {
 	return 0
 }
 
+require_conv_zones() {
+	local req_c_zones=${1}
+	local conv_bytes=$((first_sequential_zone_sector * 512))
+
+	if ((req_c_zones > conv_bytes / zone_size)); then
+		SKIP_REASON="$dev does not have $req_c_zones conventional zones"
+		return 1
+	fi
+	return 0
+}
+
 # Check whether buffered writes are refused.
 test1() {
     run_fio --name=job1 --filename="$dev" --rw=write --direct=0 --bs=4K	\
@@ -989,6 +1000,51 @@ test49() {
 	return $?
     check_written $((capacity * 2)) || return $?
     check_read $((capacity * 2)) || return $?
+}
+
+# Verify that conv zones are not locked and only seq zones are locked during
+# random read on conv-seq mixed zones.
+test50() {
+	local off
+
+	require_zbd || return $SKIP_TESTCASE
+	require_conv_zones 8 || return $SKIP_TESTCASE
+	require_seq_zones 8 || return $SKIP_TESTCASE
+
+	reset_zone "${dev}" -1
+
+	off=$((first_sequential_zone_sector * 512 - 8 * zone_size))
+	run_fio --name=job --filename=${dev} --offset=${off} --bs=64K \
+		--size=$((16 * zone_size)) "$(ioengine "libaio")" --rw=randread\
+		--time_based --runtime=3 --zonemode=zbd --zonesize=${zone_size}\
+		--direct=1 --group_reporting=1 ${job_var_opts[@]} \
+		>> "${logfile}.${test_number}" 2>&1 || return $?
+}
+
+# Verify that conv zones are neither locked nor opened during random write on
+# conv-seq mixed zones. Zone lock and zone open shall happen only on seq zones.
+test51() {
+	local off jobs=16
+	local -a opts
+
+	require_zbd || return $SKIP_TESTCASE
+	require_conv_zones 8 || return $SKIP_TESTCASE
+	require_seq_zones 8 || return $SKIP_TESTCASE
+
+	prep_write
+
+	off=$((first_sequential_zone_sector * 512 - 8 * zone_size))
+	opts+=("--size=$((16 * zone_size))" "$(ioengine "libaio")")
+	opts+=("--zonemode=zbd" "--direct=1" "--zonesize=${zone_size}")
+	opts+=("--max_open_zones=2" "--offset=$off")
+	opts+=("--thread=1" "--group_reporting=1")
+	opts+=("--time_based" "--runtime=30" "--rw=randwrite")
+	for ((i=0;i<jobs;i++)); do
+		opts+=("--name=job${i}" "--filename=$dev")
+		opts+=("--bs=$(((i+1)*16))K")
+		opts+=($(job_var_opts_exclude "--max_open_zones"))
+	done
+	run_fio "${opts[@]}" >> "${logfile}.${test_number}" 2>&1 || return $?
 }
 
 tests=()
