@@ -946,9 +946,6 @@ static void zbd_init_swd(struct fio_file *f)
 {
 	uint64_t swd;
 
-	if (!enable_check_swd)
-		return;
-
 	swd = zbd_process_swd(f, SET_SWD);
 	dprint(FD_ZBD, "%s(%s): swd = %" PRIu64 "\n", __func__, f->file_name,
 	       swd);
