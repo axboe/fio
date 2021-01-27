@@ -226,6 +226,17 @@ require_regular_block_dev() {
 	return 0
 }
 
+require_seq_zones() {
+	local req_seq_zones=${1}
+	local seq_bytes=$((disk_size - first_sequential_zone_sector * 512))
+
+	if ((req_seq_zones > seq_bytes / zone_size)); then
+		SKIP_REASON="$dev does not have $req_seq_zones sequential zones"
+		return 1
+	fi
+	return 0
+}
+
 # Check whether buffered writes are refused.
 test1() {
     run_fio --name=job1 --filename="$dev" --rw=write --direct=0 --bs=4K	\
@@ -265,6 +276,7 @@ test2() {
 test3() {
     local off opts=() rc
 
+    require_seq_zones 129 || return $SKIP_TESTCASE
     off=$((first_sequential_zone_sector * 512 + 128 * zone_size))
     size=$((zone_size))
     [ -n "$is_zbd" ] && reset_zone "$dev" $((off / 512))
@@ -282,6 +294,7 @@ test3() {
 test4() {
     local off opts=()
 
+    require_seq_zones 130 || return $SKIP_TESTCASE
     off=$((first_sequential_zone_sector * 512 + 129 * zone_size))
     size=$((zone_size))
     [ -n "$is_zbd" ] && reset_zone "$dev" $((off / 512))
@@ -631,6 +644,7 @@ test27() {
 test28() {
     local i jobs=16 off opts
 
+    require_seq_zones 65 || return $SKIP_TESTCASE
     off=$((first_sequential_zone_sector * 512 + 64 * zone_size))
     [ -n "$is_zbd" ] && reset_zone "$dev" $((off / 512))
     prep_write
@@ -655,6 +669,7 @@ test28() {
 test29() {
     local i jobs=16 off opts=()
 
+    require_seq_zones 80 || return $SKIP_TESTCASE
     off=$((first_sequential_zone_sector * 512 + 64 * zone_size))
     size=$((16*zone_size))
     prep_write
@@ -931,6 +946,7 @@ test48() {
     local i jobs=16 off opts=()
 
     require_zbd || return $SKIP_TESTCASE
+    require_seq_zones 80 || return $SKIP_TESTCASE
 
     off=$((first_sequential_zone_sector * 512 + 64 * zone_size))
     size=$((16*zone_size))
