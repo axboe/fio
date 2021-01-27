@@ -20,6 +20,7 @@ usage()
 	echo -e "\t   tests."
 	echo -e "\t-s <#section> Only run the section with the given number."
 	echo -e "\t-l Use libzbc ioengine to run the tests."
+	echo -e "\t-t <#test> Only run the test with the given number in every section."
 	echo -e "\t-o <max_open_zones> Specify MaxOpen value, (${set_max_open} by default)."
 	echo -e "\t-n <#number of runs> Set the number of times to run the entire suite "
 	echo -e "\t   or an individual section/test."
@@ -239,6 +240,7 @@ set_max_open=8
 zbd_test_opts=()
 libzbc=0
 num_of_runs=1
+test_case=0
 
 while (($#)); do
 	case "$1" in
@@ -248,6 +250,7 @@ while (($#)); do
 		-r) cleanup_nullb; exit 0;;
 		-l) libzbc=1; shift;;
 		-n) num_of_runs="${2}"; shift; shift;;
+		-t) test_case="${2}"; shift; shift;;
 		-h) usage; break;;
 		--) shift; break;;
 		 *) usage; exit 1;;
@@ -290,6 +293,9 @@ while ((run_nr <= $num_of_runs)); do
 			exit 1
 		fi
 		zbd_test_opts=()
+		if ((test_case)); then
+			zbd_test_opts+=("-t" "${test_case}")
+		fi
 		section$section_number
 		configure_nullb
 		rc=$?
