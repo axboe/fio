@@ -203,7 +203,7 @@ int blkzoned_report_zones(struct thread_data *td, struct fio_file *f,
 		default:
 			/* Treat all these conditions as offline (don't use!) */
 			z->cond = ZBD_ZONE_COND_OFFLINE;
-			break;
+			z->wp = z->start;
 		}
 	}
 

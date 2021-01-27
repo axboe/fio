@@ -283,7 +283,7 @@ static int libzbc_report_zones(struct thread_data *td, struct fio_file *f,
 		default:
 			/* Treat all these conditions as offline (don't use!) */
 			zbdz->cond = ZBD_ZONE_COND_OFFLINE;
-			break;
+			zbdz->wp = zbdz->start;
 		}
 	}
 
