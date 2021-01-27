@@ -1563,9 +1563,31 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 	zb = get_zone(f, zone_idx_b);
 	orig_zb = zb;
 
-	/* Accept the I/O offset for conventional zones. */
-	if (!zb->has_wp)
+	if (!zb->has_wp) {
+		/* Accept non-write I/Os for conventional zones. */
+		if (io_u->ddir != DDIR_WRITE)
+			return io_u_accept;
+		/*
+		 * Make sure that writes to conventional zones
+		 * don't cross over to any sequential zones.
+		 */
+		if (!(zb + 1)->has_wp ||
+		    io_u->offset + io_u->buflen <= (zb + 1)->start)
+			return io_u_accept;
+
+		if (io_u->offset + min_bs > (zb + 1)->start) {
+			dprint(FD_IO,
+			       "%s: off=%llu + min_bs=%u > next zone %lu\n",
+			       f->file_name, io_u->offset, min_bs,
+			       (zb + 1)->start);
+			io_u->offset = zb->start + (zb + 1)->start - io_u->offset;
+			new_len = min(io_u->buflen, (zb + 1)->start - io_u->offset);
+		} else {
+			new_len = (zb + 1)->start - io_u->offset;
+		}
+		io_u->buflen = new_len / min_bs * min_bs;
 		return io_u_accept;
+	}
 
 	/*
 	 * Accept the I/O offset for reads if reading beyond the write pointer
