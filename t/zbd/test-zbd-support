@@ -1153,6 +1153,7 @@ test54() {
 		>> "${logfile}.${test_number}" 2>&1 || return $?
 }
 
+SECONDS=0
 tests=()
 dynamic_analyzer=()
 reset_all_zones=
@@ -1346,4 +1347,5 @@ fi
 if [ $failed -gt 0 ]; then
     echo " $failed tests failed"
 fi
+echo "Run time: $(TZ=UTC0 printf "%(%H:%M:%S)T\n" $(( SECONDS )) )"
 exit $rc
