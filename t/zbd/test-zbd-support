@@ -1135,6 +1135,24 @@ test53() {
 	return 1
 }
 
+# Test read/write mix with verify.
+test54() {
+	require_zbd || return $SKIP_TESTCASE
+	require_seq_zones 8 || return $SKIP_TESTCASE
+
+	run_fio --name=job --filename=${dev} "$(ioengine "libaio")" \
+		--time_based=1 --runtime=30s --continue_on_error=0 \
+		--offset=$((first_sequential_zone_sector * 512)) \
+		--size=$((8*zone_size)) --direct=1 --iodepth=1 \
+		--rw=randrw:2 --rwmixwrite=25 --bsrange=4k-${zone_size} \
+		--zonemode=zbd --zonesize=${zone_size} \
+		--verify=crc32c --do_verify=1 --verify_backlog=2 \
+		--experimental_verify=1 \
+		--alloc-size=65536 --random_generator=tausworthe64 \
+		${job_var_opts[@]} --debug=zbd \
+		>> "${logfile}.${test_number}" 2>&1 || return $?
+}
+
 tests=()
 dynamic_analyzer=()
 reset_all_zones=
