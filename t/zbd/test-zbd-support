@@ -1178,6 +1178,7 @@ while [ "${1#-}" != "$1" ]; do
     -q) quit_on_err=1; shift;;
     -z) zbd_debug=1; shift;;
     --) shift; break;;
+     *) usage; exit 1;;
   esac
 done
 
