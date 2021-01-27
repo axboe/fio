@@ -464,15 +464,20 @@ test13() {
 
 # Random write to conventional zones.
 test14() {
-    local size
+    local off size
 
+    if ! result=($(first_online_zone "$dev")); then
+	echo "Failed to determine first online zone"
+	exit 1
+    fi
+    off=${result[0]}
     prep_write
     size=$((16 * 2**20)) # 20 MB
     require_conv_zone_bytes "${size}" || return $SKIP_TESTCASE
 
     run_one_fio_job "$(ioengine "libaio")" --iodepth=64 --rw=randwrite --bs=16K \
 		    --zonemode=zbd --zonesize="${zone_size}" --do_verify=1 \
-		    --verify=md5 --size=$size				   \
+		    --verify=md5 --offset=$off --size=$size\
 		    >>"${logfile}.${test_number}" 2>&1 || return $?
     check_written $((size)) || return $?
     check_read $((size)) || return $?
@@ -529,17 +534,26 @@ test16() {
 
 # Random reads and writes in the last zone.
 test17() {
-    local io off read size written
+    local io off last read size written
 
     off=$(((disk_size / zone_size - 1) * zone_size))
     size=$((disk_size - off))
+    if ! last=($(last_online_zone "$dev")); then
+	echo "Failed to determine last online zone"
+	exit 1
+    fi
+    if [[ "$((last * 512))" -lt "$off" ]]; then
+	off=$((last * 512))
+	size=$zone_size
+    fi
     if [ -n "$is_zbd" ]; then
 	reset_zone "$dev" $((off / 512)) || return $?
     fi
     prep_write
     run_one_fio_job "$(ioengine "libaio")" --iodepth=8 --rw=randrw --bs=4K \
 		    --zonemode=zbd --zonesize="${zone_size}"		\
-		    --offset=$off --loops=2 --norandommap=1\
+		    --offset=$off --loops=2 --norandommap=1 \
+		    --size="$size"\
 		    >>"${logfile}.${test_number}" 2>&1 || return $?
     written=$(fio_written <"${logfile}.${test_number}")
     read=$(fio_read <"${logfile}.${test_number}")
@@ -867,10 +881,17 @@ test38() {
 
 # Read one block from a block device.
 read_one_block() {
+    local off
     local bs
 
+    if ! result=($(first_online_zone "$dev")); then
+	echo "Failed to determine first online zone"
+	exit 1
+    fi
+    off=${result[0]}
     bs=$((logical_block_size))
-    run_one_fio_job --rw=read "$(ioengine "psync")" --bs=$bs --size=$bs "$@" 2>&1 |
+    run_one_fio_job --rw=read "$(ioengine "psync")" --offset=$off --bs=$bs \
+		    --size=$bs "$@" 2>&1 |
 	tee -a "${logfile}.${test_number}"
 }
 
