@@ -1561,7 +1561,12 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 	case DDIR_READ:
 		if (td->runstate == TD_VERIFYING && td_write(td)) {
 			zb = zbd_replay_write_order(td, io_u, zb);
-			zone_unlock(zb);
+			/*
+			 * Since we return with the zone lock still held,
+			 * add an annotation to let Coverity know that it
+			 * is intentional.
+			 */
+			/* coverity[missing_unlock] */
 			goto accept;
 		}
 		/*
