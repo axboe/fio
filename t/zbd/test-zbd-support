@@ -221,8 +221,8 @@ test2() {
     if [ -z "$is_zbd" ]; then
 	opts+=("--zonesize=${zone_size}")
     fi
-    run_fio "${opts[@]}" >> "${logfile}.${test_number}" 2>&1 || return $?
-    ! grep -q 'WRITE:' "${logfile}.${test_number}"
+    run_fio "${opts[@]}" >> "${logfile}.${test_number}" 2>&1 && return 1
+    grep -q 'buflen exceeds zone size' "${logfile}.${test_number}"
 }
 
 # Run fio against an empty zone. This causes fio to report "No I/O performed".
