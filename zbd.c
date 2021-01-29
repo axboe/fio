@@ -1251,8 +1251,8 @@ static struct fio_zone_info *zbd_replay_write_order(struct thread_data *td,
 	}
 	io_u->offset = z->start + z->verify_block * min_bs;
 	if (io_u->offset + io_u->buflen >= zbd_zone_capacity_end(z)) {
-		log_err("%s: %llu + %llu >= %lu\n", f->file_name, io_u->offset,
-			io_u->buflen, zbd_zone_capacity_end(z));
+		log_err("%s: %llu + %llu >= %llu\n", f->file_name, io_u->offset,
+			io_u->buflen, (unsigned long long) zbd_zone_capacity_end(z));
 		assert(false);
 	}
 	z->verify_block += io_u->buflen / min_bs;
@@ -1592,9 +1592,9 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 
 		if (io_u->offset + min_bs > (zb + 1)->start) {
 			dprint(FD_IO,
-			       "%s: off=%llu + min_bs=%u > next zone %lu\n",
-			       f->file_name, io_u->offset, min_bs,
-			       (zb + 1)->start);
+			       "%s: off=%llu + min_bs=%u > next zone %llu\n",
+			       f->file_name, io_u->offset,
+			       min_bs, (unsigned long long) (zb + 1)->start);
 			io_u->offset = zb->start + (zb + 1)->start - io_u->offset;
 			new_len = min(io_u->buflen, (zb + 1)->start - io_u->offset);
 		} else {
@@ -1691,9 +1691,9 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 		if (io_u->buflen > f->zbd_info->zone_size) {
 			td_verror(td, EINVAL, "I/O buflen exceeds zone size");
 			dprint(FD_IO,
-			       "%s: I/O buflen %llu exceeds zone size %lu\n",
+			       "%s: I/O buflen %llu exceeds zone size %llu\n",
 			       f->file_name, io_u->buflen,
-			       f->zbd_info->zone_size);
+			       (unsigned long long) f->zbd_info->zone_size);
 			goto eof;
 		}
 		if (!zbd_open_zone(td, f, zone_idx_b)) {
