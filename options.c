@@ -5426,6 +5426,19 @@ void fio_options_free(struct thread_data *td)
 	}
 }
 
+void fio_dump_options_free(struct thread_data *td)
+{
+	while (!flist_empty(&td->opt_list)) {
+		struct print_option *p;
+
+		p = flist_first_entry(&td->opt_list, struct print_option, list);
+		flist_del_init(&p->list);
+		free(p->name);
+		free(p->value);
+		free(p);
+	}
+}
+
 struct fio_option *fio_option_find(const char *name)
 {
 	return find_option(fio_options, name);
