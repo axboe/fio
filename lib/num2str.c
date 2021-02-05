@@ -105,7 +105,7 @@ done:
 	/*
 	 * Fill in everything and return the result.
 	 */
-	assert(maxlen - strlen(tmp) - 1 > 0);
+	assert(maxlen > ( strlen(tmp) + 1 ));
 	assert(modulo < thousand);
 	sprintf(tmp, "%.*f", (int)(maxlen - strlen(tmp) - 1),
 		(double)modulo / (double)thousand);
