@@ -2661,11 +2661,12 @@ I/O latency
 	true, fio will continue running and try to meet :option:`latency_target`
 	by adjusting queue depth.
 
-.. option:: max_latency=time
+.. option:: max_latency=time[,time][,time]
 
 	If set, fio will exit the job with an ETIMEDOUT error if it exceeds this
 	maximum latency. When the unit is omitted, the value is interpreted in
-	microseconds.
+	microseconds. Comma-separated values may be specified for reads, writes,
+	and trims as described in :option:`blocksize`.
 
 .. option:: rate_cycle=int
 

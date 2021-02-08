@@ -2397,10 +2397,11 @@ Used with \fBlatency_target\fR. If false (default), fio will find the highest
 queue depth that meets \fBlatency_target\fR and exit. If true, fio will continue
 running and try to meet \fBlatency_target\fR by adjusting queue depth.
 .TP
-.BI max_latency \fR=\fPtime
+.BI max_latency \fR=\fPtime[,time][,time]
 If set, fio will exit the job with an ETIMEDOUT error if it exceeds this
 maximum latency. When the unit is omitted, the value is interpreted in
-microseconds.
+microseconds. Comma-separated values may be specified for reads, writes,
+and trims as described in \fBblocksize\fR.
 .TP
 .BI rate_cycle \fR=\fPint
 Average bandwidth for \fBrate\fR and \fBrate_min\fR over this number
