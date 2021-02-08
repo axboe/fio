@@ -961,7 +961,9 @@ static int fixup_options(struct thread_data *td)
 	/*
 	 * Fix these up to be nsec internally
 	 */
-	o->max_latency *= 1000ULL;
+	for_each_rw_ddir(ddir)
+		o->max_latency[ddir] *= 1000ULL;
+
 	o->latency_target *= 1000ULL;
 
 	return ret;

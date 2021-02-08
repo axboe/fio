@@ -1389,11 +1389,16 @@ static long set_io_u_file(struct thread_data *td, struct io_u *io_u)
 	return 0;
 }
 
-static void lat_fatal(struct thread_data *td, struct io_completion_data *icd,
+static void lat_fatal(struct thread_data *td, struct io_u *io_u, struct io_completion_data *icd,
 		      unsigned long long tnsec, unsigned long long max_nsec)
 {
-	if (!td->error)
-		log_err("fio: latency of %llu nsec exceeds specified max (%llu nsec)\n", tnsec, max_nsec);
+	if (!td->error) {
+		log_err("fio: latency of %llu nsec exceeds specified max (%llu nsec): %s %s %llu %llu\n",
+					tnsec, max_nsec,
+					io_u->file->file_name,
+					io_ddir_name(io_u->ddir),
+					io_u->offset, io_u->buflen);
+	}
 	td_verror(td, ETIMEDOUT, "max latency exceeded");
 	icd->error = ETIMEDOUT;
 }
@@ -1888,11 +1893,13 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 				icd->error = ops->io_u_lat(td, tnsec);
 		}
 
-		if (td->o.max_latency && tnsec > td->o.max_latency)
-			lat_fatal(td, icd, tnsec, td->o.max_latency);
-		if (td->o.latency_target && tnsec > td->o.latency_target) {
-			if (lat_target_failed(td))
-				lat_fatal(td, icd, tnsec, td->o.latency_target);
+		if (ddir_rw(idx)) {
+			if (td->o.max_latency[idx] && tnsec > td->o.max_latency[idx])
+				lat_fatal(td, io_u, icd, tnsec, td->o.max_latency[idx]);
+			if (td->o.latency_target && tnsec > td->o.latency_target) {
+				if (lat_target_failed(td))
+					lat_fatal(td, io_u, icd, tnsec, td->o.latency_target);
+			}
 		}
 	}
 
