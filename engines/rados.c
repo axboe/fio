@@ -38,6 +38,7 @@ struct rados_options {
 	char *pool_name;
 	char *client_name;
 	int busy_poll;
+	int touch_objects;
 };
 
 static struct fio_option options[] = {
@@ -75,6 +76,16 @@ static struct fio_option options[] = {
 		.help     = "Busy poll for completions instead of sleeping",
 		.off1     = offsetof(struct rados_options, busy_poll),
 		.def	  = "0",
+		.category = FIO_OPT_C_ENGINE,
+		.group    = FIO_OPT_G_RBD,
+	},
+	{
+		.name     = "touch_objects",
+		.lname    = "touch objects on start",
+		.type     = FIO_OPT_BOOL,
+		.help     = "Touch (create) objects on start",
+		.off1     = offsetof(struct rados_options, touch_objects),
+		.def	  = "1",
 		.category = FIO_OPT_C_ENGINE,
 		.group    = FIO_OPT_G_RBD,
 	},
@@ -194,9 +205,11 @@ static int _fio_rados_connect(struct thread_data *td)
 	for (i = 0; i < td->o.nr_files; i++) {
 		f = td->files[i];
 		f->real_file_size = file_size;
-		r = rados_write(rados->io_ctx, f->file_name, "", 0, 0);
-		if (r < 0) {
-			goto failed_obj_create;
+		if (o->touch_objects) {
+			r = rados_write(rados->io_ctx, f->file_name, "", 0, 0);
+			if (r < 0) {
+				goto failed_obj_create;
+			}
 		}
 	}
 	return 0;

@@ -2049,6 +2049,11 @@ by default.
 Poll store instead of waiting for completion. Usually this provides better
 throughput at cost of higher(up to 100%) CPU utilization.
 .TP
+.BI (rados)touch_objects \fR=\fPbool
+During initialization, touch (create if do not exist) all objects (files).
+Touching all objects affects ceph caches and likely impacts test results.
+Enabled by default.
+.TP
 .BI (http)http_host \fR=\fPstr
 Hostname to connect to. For S3, this could be the bucket name. Default
 is \fBlocalhost\fR
