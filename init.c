@@ -1238,7 +1238,8 @@ enum {
 	FPRE_NONE = 0,
 	FPRE_JOBNAME,
 	FPRE_JOBNUM,
-	FPRE_FILENUM
+	FPRE_FILENUM,
+	FPRE_CLIENTUID
 };
 
 static struct fpre_keyword {
@@ -1249,6 +1250,7 @@ static struct fpre_keyword {
 	{ .keyword = "$jobname",	.key = FPRE_JOBNAME, },
 	{ .keyword = "$jobnum",		.key = FPRE_JOBNUM, },
 	{ .keyword = "$filenum",	.key = FPRE_FILENUM, },
+	{ .keyword = "$clientuid",	.key = FPRE_CLIENTUID, },
 	{ .keyword = NULL, },
 	};
 
@@ -1326,6 +1328,21 @@ static char *make_filename(char *buf, size_t buf_size,struct thread_options *o,
 				int ret;
 
 				ret = snprintf(dst, dst_left, "%d", filenum);
+				if (ret < 0)
+					break;
+				else if (ret > dst_left) {
+					log_err("fio: truncated filename\n");
+					dst += dst_left;
+					dst_left = 0;
+				} else {
+					dst += ret;
+					dst_left -= ret;
+				}
+				break;
+				}
+			case FPRE_CLIENTUID: {
+				int ret;
+				ret = snprintf(dst, dst_left, "%s", client_sockaddr_str);
 				if (ret < 0)
 					break;
 				else if (ret > dst_left) {
