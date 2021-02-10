@@ -809,6 +809,8 @@ Target file/device
 
 		**$jobname**
 				The name of the worker thread or process.
+		**$clientuid**
+				IP of the fio process when using client/server mode.
 		**$jobnum**
 				The incremental number of the worker thread or process.
 		**$filenum**
