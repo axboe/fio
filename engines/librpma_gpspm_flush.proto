@@ -1,0 +1,15 @@
+syntax = "proto2";
+
+message GPSPM_flush_request {
+    /* an offset of a region to be flushed within its memory registration */
+    required fixed64 offset = 1;
+    /* a length of a region to be flushed */
+    required fixed64 length = 2;
+    /* a user-defined operation context */
+    required fixed64 op_context = 3;
+}
+
+message GPSPM_flush_response {
+    /* the operation context of a completed request */
+    required fixed64 op_context = 1;
+}
