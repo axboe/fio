@@ -234,8 +234,10 @@ struct thread_options {
 	unsigned int zero_buffers;
 	unsigned int refill_buffers;
 	unsigned int scramble_buffers;
-	char buffer_pattern[MAX_PATTERN_SIZE];
+	char *buffer_pattern;//[MAX_PATTERN_SIZE];
 	unsigned int buffer_pattern_bytes;
+	unsigned int buffer_pattern_ofs;
+	unsigned int buffer_pattern_ofs_dummy;
 	unsigned int compress_percentage;
 	unsigned int compress_chunk;
 	unsigned int dedupe_percentage;
@@ -536,8 +538,10 @@ struct thread_options_pack {
 	uint32_t zero_buffers;
 	uint32_t refill_buffers;
 	uint32_t scramble_buffers;
-	uint8_t buffer_pattern[MAX_PATTERN_SIZE];
+	uint8_t *buffer_pattern;//[MAX_PATTERN_SIZE];
 	uint32_t buffer_pattern_bytes;
+	uint32_t buffer_pattern_ofs;
+	uint32_t buffer_pattern_ofs_dummy;
 	uint32_t compress_percentage;
 	uint32_t compress_chunk;
 	uint32_t dedupe_percentage;

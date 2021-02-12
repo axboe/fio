@@ -27,6 +27,8 @@ int parse_and_fill_pattern(const char *in, unsigned int in_len,
 			   struct pattern_fmt *fmt,
 			   unsigned int *fmt_sz_out);
 
+int load_pattern(const char *filename, char** data);
+
 int paste_format_inplace(char *pattern, unsigned int pattern_len,
 			 struct pattern_fmt *fmt, unsigned int fmt_sz,
 			 void *priv);

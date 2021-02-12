@@ -170,7 +170,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->verify_offset = le32_to_cpu(top->verify_offset);
 
 	memcpy(o->verify_pattern, top->verify_pattern, MAX_PATTERN_SIZE);
-	memcpy(o->buffer_pattern, top->buffer_pattern, MAX_PATTERN_SIZE);
+	//	memcpy(o->buffer_pattern, top->buffer_pattern, MAX_PATTERN_SIZE);
 
 	o->verify_pattern_bytes = le32_to_cpu(top->verify_pattern_bytes);
 	o->verify_fatal = le32_to_cpu(top->verify_fatal);
@@ -553,7 +553,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	}
 
 	memcpy(top->verify_pattern, o->verify_pattern, MAX_PATTERN_SIZE);
-	memcpy(top->buffer_pattern, o->buffer_pattern, MAX_PATTERN_SIZE);
+	//	memcpy(top->buffer_pattern, o->buffer_pattern, MAX_PATTERN_SIZE);
 
 	top->size = __cpu_to_le64(o->size);
 	top->io_size = __cpu_to_le64(o->io_size);

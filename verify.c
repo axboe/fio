@@ -38,7 +38,18 @@ static void __fill_hdr(struct thread_data *td, struct io_u *io_u,
 
 void fill_buffer_pattern(struct thread_data *td, void *p, unsigned int len)
 {
-	(void)cpy_pattern(td->o.buffer_pattern, td->o.buffer_pattern_bytes, p, len);
+  unsigned int l;
+  while (len > 0) {
+    l = len;
+    if (l > td->o.buffer_pattern_bytes - td->o.buffer_pattern_ofs)
+      l = td->o.buffer_pattern_bytes - td->o.buffer_pattern_ofs;
+    memcpy(p, td->o.buffer_pattern + td->o.buffer_pattern_ofs, l);
+
+    len -= l;
+    td->o.buffer_pattern_ofs += l;
+    if (td->o.buffer_pattern_ofs == td->o.buffer_pattern_bytes)
+      td->o.buffer_pattern_ofs = 0;
+  }
 }
 
 static void __fill_buffer(struct thread_options *o, uint64_t seed, void *p,
