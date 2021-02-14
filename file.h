@@ -207,6 +207,7 @@ extern "C" {
 extern int __must_check generic_open_file(struct thread_data *, struct fio_file *);
 extern int __must_check generic_close_file(struct thread_data *, struct fio_file *);
 extern int __must_check generic_get_file_size(struct thread_data *, struct fio_file *);
+extern int __must_check generic_prepopulate_file(struct thread_data *, struct fio_file *);
 #ifdef __cplusplus
 }
 #endif

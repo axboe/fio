@@ -255,6 +255,7 @@ FIO_STATIC struct ioengine_ops ioengine = {
 	.open_file	= fio_libpmem_open_file,
 	.close_file	= fio_libpmem_close_file,
 	.get_file_size	= generic_get_file_size,
+	.prepopulate_file = generic_prepopulate_file,
 	.flags		= FIO_SYNCIO | FIO_RAWIO | FIO_DISKLESSIO | FIO_NOEXTEND |
 				FIO_NODISKUTIL | FIO_BARRIER | FIO_MEMALIGN,
 };
