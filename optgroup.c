@@ -178,6 +178,10 @@ static const struct opt_group fio_opt_cat_groups[] = {
 		.mask	= FIO_OPT_G_LIBCUFILE,
 	},
 	{
+		.name	= "DAOS File System (dfs) I/O engine", /* dfs */
+		.mask	= FIO_OPT_G_DFS,
+	},
+	{
 		.name	= NULL,
 	},
 };

@@ -2011,6 +2011,11 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			  { .ival = "nbd",
 			    .help = "Network Block Device (NBD) IO engine"
 			  },
+#ifdef CONFIG_DFS
+			  { .ival = "dfs",
+			    .help = "DAOS File System (dfs) IO engine",
+			  },
+#endif
 		},
 	},
 	{
