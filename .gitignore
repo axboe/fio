@@ -30,3 +30,4 @@ doc/output
 /tags
 /TAGS
 /t/zbd/test-zbd-support.log.*
+/t/fuzz/fuzz_parseini
