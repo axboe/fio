@@ -285,9 +285,7 @@ static bool zbd_verify_sizes(void)
 				return false;
 			}
 
-			if (td->o.zone_skip &&
-			    (td->o.zone_skip < td->o.zone_size ||
-			     td->o.zone_skip % td->o.zone_size)) {
+			if (td->o.zone_skip % td->o.zone_size) {
 				log_err("%s: zoneskip %llu is not a multiple of the device zone size %llu.\n",
 					f->file_name, (unsigned long long) td->o.zone_skip,
 					(unsigned long long) td->o.zone_size);
