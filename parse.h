@@ -130,7 +130,7 @@ static inline void *td_var(void *to, const struct fio_option *o,
 
 static inline int parse_is_percent(unsigned long long val)
 {
-	return val <= -1ULL && val >= (-1ULL - 100ULL);
+	return val >= -101;
 }
 
 static inline int parse_is_percent_uncapped(unsigned long long val)
