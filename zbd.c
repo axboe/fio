@@ -647,7 +647,7 @@ static bool zbd_open_zone(struct thread_data *td, const struct fio_file *f,
 static int zbd_reset_zone(struct thread_data *td, struct fio_file *f,
 			  struct fio_zone_info *z);
 
-int zbd_setup_files(struct thread_data *td)
+int zbd_init_files(struct thread_data *td)
 {
 	struct fio_file *f;
 	int i;
@@ -656,6 +656,44 @@ int zbd_setup_files(struct thread_data *td)
 		if (zbd_init_zone_info(td, f))
 			return 1;
 	}
+	return 0;
+}
+
+void zbd_recalc_options_with_zone_granularity(struct thread_data *td)
+{
+	struct fio_file *f;
+	int i;
+
+	for_each_file(td, f, i) {
+		struct zoned_block_device_info *zbd = f->zbd_info;
+		// zonemode=strided doesn't get per-file zone size.
+		uint64_t zone_size = zbd ? zbd->zone_size : td->o.zone_size;
+
+		if (zone_size == 0)
+			continue;
+
+		if (td->o.size_nz > 0) {
+			td->o.size = td->o.size_nz * zone_size;
+		}
+		if (td->o.io_size_nz > 0) {
+			td->o.io_size = td->o.io_size_nz * zone_size;
+		}
+		if (td->o.start_offset_nz > 0) {
+			td->o.start_offset = td->o.start_offset_nz * zone_size;
+		}
+		if (td->o.offset_increment_nz > 0) {
+			td->o.offset_increment = td->o.offset_increment_nz * zone_size;
+		}
+		if (td->o.zone_skip_nz > 0) {
+			td->o.zone_skip = td->o.zone_skip_nz * zone_size;
+		}
+	}
+}
+
+int zbd_setup_files(struct thread_data *td)
+{
+	struct fio_file *f;
+	int i;
 
 	if (!zbd_using_direct_io()) {
 		log_err("Using direct I/O is mandatory for writing to ZBD drives\n\n");

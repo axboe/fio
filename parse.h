@@ -21,6 +21,7 @@ enum fio_opt_type {
 	FIO_OPT_BOOL,
 	FIO_OPT_FLOAT_LIST,
 	FIO_OPT_STR_SET,
+	FIO_OPT_STR_VAL_ZONE,
 	FIO_OPT_DEPRECATED,
 	FIO_OPT_SOFT_DEPRECATED,
 	FIO_OPT_UNSUPPORTED,	/* keep this last */
@@ -133,9 +134,15 @@ static inline int parse_is_percent(unsigned long long val)
 	return val >= -101;
 }
 
+#define ZONE_BASE_VAL ((-1ULL >> 1) + 1)
 static inline int parse_is_percent_uncapped(unsigned long long val)
 {
-	return (long long)val <= -1;
+	return ZONE_BASE_VAL + -1U < val;
+}
+
+static inline int parse_is_zone(unsigned long long val)
+{
+	return (val - ZONE_BASE_VAL) <= -1U;
 }
 
 struct print_option {

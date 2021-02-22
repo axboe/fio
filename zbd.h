@@ -87,6 +87,8 @@ struct zoned_block_device_info {
 	struct fio_zone_info	zone_info[0];
 };
 
+int zbd_init_files(struct thread_data *td);
+void zbd_recalc_options_with_zone_granularity(struct thread_data *td);
 int zbd_setup_files(struct thread_data *td);
 void zbd_free_zone_info(struct fio_file *f);
 void zbd_file_reset(struct thread_data *td, struct fio_file *f);

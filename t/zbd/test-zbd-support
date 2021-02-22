@@ -1153,6 +1153,54 @@ test54() {
 		>> "${logfile}.${test_number}" 2>&1 || return $?
 }
 
+# test 'z' suffix parsing only
+test55() {
+	local bs
+	bs=$((logical_block_size))
+
+	require_zbd || return $SKIP_TESTCASE
+	# offset=1z + offset_increment=10z + size=2z
+	require_seq_zones 13 || return $SKIP_TESTCASE
+
+	run_fio	--name=j		\
+		--filename=${dev}	\
+		--direct=1		\
+		"$(ioengine "psync")"	\
+		--zonemode=zbd		\
+		--zonesize=${zone_size}	\
+		--rw=write		\
+		--bs=${bs}		\
+		--numjobs=2		\
+		--offset_increment=10z	\
+		--offset=1z		\
+		--size=2z		\
+		--io_size=3z		\
+		${job_var_opts[@]} --debug=zbd \
+		>> "${logfile}.${test_number}" 2>&1 || return $?
+}
+
+# test 'z' suffix parsing only
+test56() {
+	local bs
+	bs=$((logical_block_size))
+
+	require_regular_block_dev || return $SKIP_TESTCASE
+	require_seq_zones 10 || return $SKIP_TESTCASE
+
+	run_fio	--name=j		\
+		--filename=${dev}	\
+		--direct=1		\
+		"$(ioengine "psync")"	\
+		--zonemode=strided	\
+		--zonesize=${zone_size}	\
+		--rw=write		\
+		--bs=${bs}		\
+		--size=10z		\
+		--zoneskip=2z		\
+		${job_var_opts[@]} --debug=zbd \
+		>> "${logfile}.${test_number}" 2>&1 || return $?
+}
+
 SECONDS=0
 tests=()
 dynamic_analyzer=()

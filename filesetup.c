@@ -1118,6 +1118,13 @@ int setup_files(struct thread_data *td)
 	if (o->read_iolog_file)
 		goto done;
 
+	if (td->o.zone_mode == ZONE_MODE_ZBD) {
+		err = zbd_init_files(td);
+		if (err)
+			goto err_out;
+	}
+	zbd_recalc_options_with_zone_granularity(td);
+
 	/*
 	 * check sizes. if the files/devices do not exist and the size
 	 * isn't passed to fio, abort.
@@ -1395,16 +1402,17 @@ int setup_files(struct thread_data *td)
 	}
 
 done:
-	if (o->create_only)
-		td->done = 1;
-
-	td_restore_runstate(td, old_state);
-
 	if (td->o.zone_mode == ZONE_MODE_ZBD) {
 		err = zbd_setup_files(td);
 		if (err)
 			goto err_out;
 	}
+
+	if (o->create_only)
+		td->done = 1;
+
+	td_restore_runstate(td, old_state);
+
 	return 0;
 
 err_offset:

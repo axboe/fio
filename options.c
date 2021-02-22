@@ -1471,8 +1471,13 @@ static int str_offset_cb(void *data, unsigned long long *__val)
 	if (parse_is_percent(v)) {
 		td->o.start_offset = 0;
 		td->o.start_offset_percent = -1ULL - v;
+		td->o.start_offset_nz = 0;
 		dprint(FD_PARSE, "SET start_offset_percent %d\n",
 					td->o.start_offset_percent);
+	} else if (parse_is_zone(v)) {
+		td->o.start_offset = 0;
+		td->o.start_offset_percent = 0;
+		td->o.start_offset_nz = v - ZONE_BASE_VAL;
 	} else
 		td->o.start_offset = v;
 
@@ -1487,8 +1492,13 @@ static int str_offset_increment_cb(void *data, unsigned long long *__val)
 	if (parse_is_percent(v)) {
 		td->o.offset_increment = 0;
 		td->o.offset_increment_percent = -1ULL - v;
+		td->o.offset_increment_nz = 0;
 		dprint(FD_PARSE, "SET offset_increment_percent %d\n",
 					td->o.offset_increment_percent);
+	} else if (parse_is_zone(v)) {
+		td->o.offset_increment = 0;
+		td->o.offset_increment_percent = 0;
+		td->o.offset_increment_nz = v - ZONE_BASE_VAL;
 	} else
 		td->o.offset_increment = v;
 
@@ -1505,6 +1515,10 @@ static int str_size_cb(void *data, unsigned long long *__val)
 		td->o.size_percent = -1ULL - v;
 		dprint(FD_PARSE, "SET size_percent %d\n",
 					td->o.size_percent);
+	} else if (parse_is_zone(v)) {
+		td->o.size = 0;
+		td->o.size_percent = 0;
+		td->o.size_nz = v - ZONE_BASE_VAL;
 	} else
 		td->o.size = v;
 
@@ -1525,8 +1539,26 @@ static int str_io_size_cb(void *data, unsigned long long *__val)
 		}
 		dprint(FD_PARSE, "SET io_size_percent %d\n",
 					td->o.io_size_percent);
+	} else if (parse_is_zone(v)) {
+		td->o.io_size = 0;
+		td->o.io_size_percent = 0;
+		td->o.io_size_nz = v - ZONE_BASE_VAL;
 	} else
 		td->o.io_size = v;
+
+	return 0;
+}
+
+static int str_zoneskip_cb(void *data, unsigned long long *__val)
+{
+	struct thread_data *td = cb_data_to_td(data);
+	unsigned long long v = *__val;
+
+	if (parse_is_zone(v)) {
+		td->o.zone_skip = 0;
+		td->o.zone_skip_nz = v - ZONE_BASE_VAL;
+	} else
+		td->o.zone_skip = v;
 
 	return 0;
 }
@@ -2081,11 +2113,10 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	{
 		.name	= "size",
 		.lname	= "Size",
-		.type	= FIO_OPT_STR_VAL,
+		.type	= FIO_OPT_STR_VAL_ZONE,
 		.cb	= str_size_cb,
 		.off1	= offsetof(struct thread_options, size),
 		.help	= "Total size of device or files",
-		.interval = 1024 * 1024,
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_INVALID,
 	},
@@ -2093,11 +2124,10 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.name	= "io_size",
 		.alias	= "io_limit",
 		.lname	= "IO Size",
-		.type	= FIO_OPT_STR_VAL,
+		.type	= FIO_OPT_STR_VAL_ZONE,
 		.cb	= str_io_size_cb,
 		.off1	= offsetof(struct thread_options, io_size),
 		.help	= "Total size of I/O to be performed",
-		.interval = 1024 * 1024,
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_INVALID,
 	},
@@ -2138,12 +2168,11 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.name	= "offset",
 		.lname	= "IO offset",
 		.alias	= "fileoffset",
-		.type	= FIO_OPT_STR_VAL,
+		.type	= FIO_OPT_STR_VAL_ZONE,
 		.cb	= str_offset_cb,
 		.off1	= offsetof(struct thread_options, start_offset),
 		.help	= "Start IO from this offset",
 		.def	= "0",
-		.interval = 1024 * 1024,
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_INVALID,
 	},
@@ -2161,14 +2190,13 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	{
 		.name	= "offset_increment",
 		.lname	= "IO offset increment",
-		.type	= FIO_OPT_STR_VAL,
+		.type	= FIO_OPT_STR_VAL_ZONE,
 		.cb	= str_offset_increment_cb,
 		.off1	= offsetof(struct thread_options, offset_increment),
 		.help	= "What is the increment from one offset to the next",
 		.parent = "offset",
 		.hide	= 1,
 		.def	= "0",
-		.interval = 1024 * 1024,
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_INVALID,
 	},
@@ -3404,11 +3432,11 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	{
 		.name	= "zoneskip",
 		.lname	= "Zone skip",
-		.type	= FIO_OPT_STR_VAL,
+		.type	= FIO_OPT_STR_VAL_ZONE,
+		.cb	= str_zoneskip_cb,
 		.off1	= offsetof(struct thread_options, zone_skip),
 		.help	= "Space between IO zones",
 		.def	= "0",
-		.interval = 1024 * 1024,
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_ZONE,
 	},
