@@ -1909,7 +1909,7 @@ static int fio_append_iolog_gz(struct sk_entry *first, struct io_log *log)
 			break;
 		}
 		flist_add_tail(&entry->list, &first->next);
-	} while (ret != Z_STREAM_END);
+	}
 
 	ret = deflateEnd(&stream);
 	if (ret == Z_OK)
