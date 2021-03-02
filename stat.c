@@ -1413,7 +1413,7 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 					&minv);
 	else
 		len = 0;
-
+		
 	for (i = 0; i < FIO_IO_U_LIST_MAX_LEN; i++) {
 		if (i >= len) {
 			log_buf(out, ";0%%=0");
@@ -1478,7 +1478,12 @@ static void show_mixed_ddir_status_terse(struct thread_stat *ts,
 		ts_lcl->clat_low_prio_stat[i].min_val = ULONG_MAX;
 	}
 	ts_lcl->sync_stat.min_val = ULONG_MAX;
-
+	ts_lcl->lat_percentiles = ts->lat_percentiles;
+	ts_lcl->clat_percentiles = ts->clat_percentiles;
+	ts_lcl->slat_percentiles = ts->slat_percentiles;
+	ts_lcl->percentile_precision = ts->percentile_precision;		
+	memcpy(ts_lcl->percentile_list, ts->percentile_list, sizeof(ts->percentile_list));
+	
 	sum_thread_stats(ts_lcl, ts, 1);
 
 	/* add the aggregated stats to json parent */
@@ -1675,6 +1680,11 @@ static void add_mixed_ddir_status_json(struct thread_stat *ts,
 		ts_lcl->clat_low_prio_stat[i].min_val = ULONG_MAX;
 	}
 	ts_lcl->sync_stat.min_val = ULONG_MAX;
+	ts_lcl->lat_percentiles = ts->lat_percentiles;
+	ts_lcl->clat_percentiles = ts->clat_percentiles;
+	ts_lcl->slat_percentiles = ts->slat_percentiles;
+	ts_lcl->percentile_precision = ts->percentile_precision;		
+	memcpy(ts_lcl->percentile_list, ts->percentile_list, sizeof(ts->percentile_list));
 
 	sum_thread_stats(ts_lcl, ts, 1);
 
@@ -1700,7 +1710,7 @@ static void show_thread_status_terse_all(struct thread_stat *ts,
 		log_buf(out, "%d;%s;%s;%d;%d", ver, fio_version_string,
 			ts->name, ts->groupid, ts->error);
 
-	/* Log Read Status */
+	/* Log Read Status, or mixed if unified_rw_rep = 1 */
 	show_ddir_status_terse(ts, rs, DDIR_READ, ver, out);
 	if (ts->unified_rw_rep != 1) {
 		/* Log Write Status */
