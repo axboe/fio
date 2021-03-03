@@ -22,7 +22,7 @@ static int open_file(struct thread_data *td, struct fio_file *f)
 	dprint(FD_FILE, "fd open %s\n", f->file_name);
 
 	if (f->filetype != FIO_TYPE_FILE) {
-		log_err("fio: only files are supported fallocate \n");
+		log_err("fio: only files are supported\n");
 		return 1;
 	}
 	if (!strcmp(f->file_name, "-")) {
