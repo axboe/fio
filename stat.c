@@ -285,7 +285,7 @@ bool calc_lat(struct io_stat *is, unsigned long long *min,
 void show_mixed_group_stats(struct group_run_stats *rs, struct buf_output *out) {
 	char *io, *agg, *min, *max;
 	char *ioalt, *aggalt, *minalt, *maxalt;
-	u_int64_t io_mix = 0, agg_mix = 0, min_mix = -1, max_mix = 0, min_run = -1, max_run = 0;
+	uint64_t io_mix = 0, agg_mix = 0, min_mix = -1, max_mix = 0, min_run = -1, max_run = 0;
 	int i;
 	const int i2p = is_power_of_2(rs->kb_base);
 
