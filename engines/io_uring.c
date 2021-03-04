@@ -507,7 +507,7 @@ static void fio_ioring_unmap(struct ioring_data *ld)
 {
 	int i;
 
-	for (i = 0; i < ARRAY_SIZE(ld->mmap); i++)
+	for (i = 0; i < FIO_ARRAY_SIZE(ld->mmap); i++)
 		munmap(ld->mmap[i].ptr, ld->mmap[i].len);
 	close(ld->ring_fd);
 }
@@ -696,7 +696,11 @@ static int fio_ioring_post_init(struct thread_data *td)
 
 	err = fio_ioring_queue_init(td);
 	if (err) {
-		td_verror(td, errno, "io_queue_init");
+		int __errno = errno;
+
+		if (__errno == ENOSYS)
+			log_err("fio: your kernel doesn't support io_uring\n");
+		td_verror(td, __errno, "io_queue_init");
 		return 1;
 	}
 

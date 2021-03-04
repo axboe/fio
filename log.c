@@ -42,6 +42,7 @@ size_t log_valist(const char *fmt, va_list args)
 }
 
 /* add prefix for the specified type in front of the valist */
+#ifdef FIO_INC_DEBUG
 void log_prevalist(int type, const char *fmt, va_list args)
 {
 	char *buf1, *buf2;
@@ -64,6 +65,7 @@ void log_prevalist(int type, const char *fmt, va_list args)
 	len = log_info_buf(buf2, len);
 	free(buf2);
 }
+#endif
 
 ssize_t log_info(const char *format, ...)
 {

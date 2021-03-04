@@ -60,6 +60,10 @@
 
 #ifdef FIO_HAVE_SGIO
 
+#ifndef SGV4_FLAG_HIPRI
+#define SGV4_FLAG_HIPRI 0x800
+#endif
+
 enum {
 	FIO_SG_WRITE		= 1,
 	FIO_SG_WRITE_VERIFY	= 2,
@@ -68,12 +72,22 @@ enum {
 
 struct sg_options {
 	void *pad;
+	unsigned int hipri;
 	unsigned int readfua;
 	unsigned int writefua;
 	unsigned int write_mode;
 };
 
 static struct fio_option options[] = {
+        {
+                .name   = "hipri",
+                .lname  = "High Priority",
+                .type   = FIO_OPT_STR_SET,
+                .off1   = offsetof(struct sg_options, hipri),
+                .help   = "Use polled IO completions",
+                .category = FIO_OPT_C_ENGINE,
+                .group  = FIO_OPT_G_SG,
+        },
 	{
 		.name	= "readfua",
 		.lname	= "sg engine read fua flag support",
@@ -527,6 +541,8 @@ static int fio_sgio_prep(struct thread_data *td, struct io_u *io_u)
 		else
 			hdr->cmdp[0] = 0x88; // read(16)
 
+		if (o->hipri)
+			hdr->flags |= SGV4_FLAG_HIPRI;
 		if (o->readfua)
 			hdr->cmdp[1] |= 0x08;
 
@@ -542,6 +558,8 @@ static int fio_sgio_prep(struct thread_data *td, struct io_u *io_u)
 				hdr->cmdp[0] = 0x2a; // write(10)
 			else
 				hdr->cmdp[0] = 0x8a; // write(16)
+			if (o->hipri)
+				hdr->flags |= SGV4_FLAG_HIPRI;
 			if (o->writefua)
 				hdr->cmdp[1] |= 0x08;
 			break;
@@ -865,6 +883,7 @@ static int fio_sgio_init(struct thread_data *td)
 {
 	struct sgio_data *sd;
 	struct sgio_trim *st;
+	struct sg_io_hdr *h3p;
 	int i;
 
 	sd = calloc(1, sizeof(*sd));
@@ -880,12 +899,13 @@ static int fio_sgio_init(struct thread_data *td)
 #ifdef FIO_SGIO_DEBUG
 	sd->trim_queue_map = calloc(td->o.iodepth, sizeof(int));
 #endif
-	for (i = 0; i < td->o.iodepth; i++) {
+	for (i = 0, h3p = sd->sgbuf; i < td->o.iodepth; i++, ++h3p) {
 		sd->trim_queues[i] = calloc(1, sizeof(struct sgio_trim));
 		st = sd->trim_queues[i];
 		st->unmap_param = calloc(td->o.iodepth + 1, sizeof(char[16]));
 		st->unmap_range_count = 0;
 		st->trim_io_us = calloc(td->o.iodepth, sizeof(struct io_u *));
+		h3p->interface_id = 'S';
 	}
 
 	td->io_ops_data = sd;

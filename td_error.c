@@ -20,7 +20,7 @@ int td_non_fatal_error(struct thread_data *td, enum error_type_bit etype,
 
 	if (!td->o.ignore_error[etype]) {
 		td->o.ignore_error[etype] = __NON_FATAL_ERR;
-		td->o.ignore_error_nr[etype] = ARRAY_SIZE(__NON_FATAL_ERR);
+		td->o.ignore_error_nr[etype] = FIO_ARRAY_SIZE(__NON_FATAL_ERR);
 	}
 
 	if (!(td->o.continue_on_error & (1 << etype)))

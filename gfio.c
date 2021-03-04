@@ -1274,7 +1274,7 @@ static GtkActionEntry menu_items[] = {
 	{ "Quit", GTK_STOCK_QUIT, NULL,   "<Control>Q", NULL, G_CALLBACK(quit_clicked) },
 	{ "About", GTK_STOCK_ABOUT, NULL,  NULL, NULL, G_CALLBACK(about_dialog) },
 };
-static gint nmenu_items = ARRAY_SIZE(menu_items);
+static gint nmenu_items = FIO_ARRAY_SIZE(menu_items);
 
 static const gchar *ui_string = " \
 	<ui> \
@@ -1447,7 +1447,7 @@ static GtkWidget *new_client_page(struct gui_entry *ge)
 	gtk_container_add(GTK_CONTAINER(bottom_align), ge->buttonbox);
 	gtk_box_pack_start(GTK_BOX(main_vbox), bottom_align, FALSE, FALSE, 0);
 
-	add_buttons(ge, buttonspeclist, ARRAY_SIZE(buttonspeclist));
+	add_buttons(ge, buttonspeclist, FIO_ARRAY_SIZE(buttonspeclist));
 
 	/*
 	 * Set up thread status progress bar

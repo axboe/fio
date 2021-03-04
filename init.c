@@ -327,6 +327,7 @@ void free_threads_shm(void)
 
 static void free_shm(void)
 {
+#ifndef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
 	if (nr_segments) {
 		flow_exit();
 		fio_debug_jobp = NULL;
@@ -343,6 +344,7 @@ static void free_shm(void)
 	fio_filelock_exit();
 	file_hash_exit();
 	scleanup();
+#endif
 }
 
 static int add_thread_segment(void)
@@ -971,13 +973,13 @@ static void init_rand_file_service(struct thread_data *td)
 	const unsigned int seed = td->rand_seeds[FIO_RAND_FILE_OFF];
 
 	if (td->o.file_service_type == FIO_FSERVICE_ZIPF) {
-		zipf_init(&td->next_file_zipf, nranges, td->zipf_theta, seed);
+		zipf_init(&td->next_file_zipf, nranges, td->zipf_theta, td->random_center, seed);
 		zipf_disable_hash(&td->next_file_zipf);
 	} else if (td->o.file_service_type == FIO_FSERVICE_PARETO) {
-		pareto_init(&td->next_file_zipf, nranges, td->pareto_h, seed);
+		pareto_init(&td->next_file_zipf, nranges, td->pareto_h, td->random_center, seed);
 		zipf_disable_hash(&td->next_file_zipf);
 	} else if (td->o.file_service_type == FIO_FSERVICE_GAUSS) {
-		gauss_init(&td->next_file_gauss, nranges, td->gauss_dev, seed);
+		gauss_init(&td->next_file_gauss, nranges, td->gauss_dev, td->random_center, seed);
 		gauss_disable_hash(&td->next_file_gauss);
 	}
 }
@@ -1102,18 +1104,15 @@ int ioengine_load(struct thread_data *td)
 		 * for this name and see if they match. If they do, then
 		 * the engine is unchanged.
 		 */
-		dlhandle = td->io_ops_dlhandle;
+		dlhandle = td->io_ops->dlhandle;
 		ops = load_ioengine(td);
 		if (!ops)
 			goto fail;
 
-		if (ops == td->io_ops && dlhandle == td->io_ops_dlhandle) {
-			if (dlhandle)
-				dlclose(dlhandle);
+		if (ops == td->io_ops && dlhandle == td->io_ops->dlhandle)
 			return 0;
-		}
 
-		if (dlhandle && dlhandle != td->io_ops_dlhandle)
+		if (dlhandle && dlhandle != td->io_ops->dlhandle)
 			dlclose(dlhandle);
 
 		/* Unload the old engine. */
@@ -1239,7 +1238,8 @@ enum {
 	FPRE_NONE = 0,
 	FPRE_JOBNAME,
 	FPRE_JOBNUM,
-	FPRE_FILENUM
+	FPRE_FILENUM,
+	FPRE_CLIENTUID
 };
 
 static struct fpre_keyword {
@@ -1250,6 +1250,7 @@ static struct fpre_keyword {
 	{ .keyword = "$jobname",	.key = FPRE_JOBNAME, },
 	{ .keyword = "$jobnum",		.key = FPRE_JOBNUM, },
 	{ .keyword = "$filenum",	.key = FPRE_FILENUM, },
+	{ .keyword = "$clientuid",	.key = FPRE_CLIENTUID, },
 	{ .keyword = NULL, },
 	};
 
@@ -1327,6 +1328,21 @@ static char *make_filename(char *buf, size_t buf_size,struct thread_options *o,
 				int ret;
 
 				ret = snprintf(dst, dst_left, "%d", filenum);
+				if (ret < 0)
+					break;
+				else if (ret > dst_left) {
+					log_err("fio: truncated filename\n");
+					dst += dst_left;
+					dst_left = 0;
+				} else {
+					dst += ret;
+					dst_left -= ret;
+				}
+				break;
+				}
+			case FPRE_CLIENTUID: {
+				int ret;
+				ret = snprintf(dst, dst_left, "%s", client_sockaddr_str);
 				if (ret < 0)
 					break;
 				else if (ret > dst_left) {

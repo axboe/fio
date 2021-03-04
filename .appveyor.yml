@@ -19,7 +19,7 @@ environment:
       CONFIGURE_OPTIONS:
       DISTRO: cygwin
     - ARCHITECTURE: x86
-      CONFIGURE_OPTIONS: --build-32bit-win --target-win-ver=xp
+      CONFIGURE_OPTIONS: --build-32bit-win
       DISTRO: cygwin
 
 install:

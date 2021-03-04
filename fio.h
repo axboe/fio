@@ -149,6 +149,9 @@ enum {
 
 	RATE_PROCESS_LINEAR = 0,
 	RATE_PROCESS_POISSON = 1,
+
+	THINKTIME_BLOCKS_TYPE_COMPLETE = 0,
+	THINKTIME_BLOCKS_TYPE_ISSUE = 1,
 };
 
 enum {
@@ -229,6 +232,7 @@ struct thread_data {
 		double pareto_h;
 		double gauss_dev;
 	};
+	double random_center;
 	int error;
 	int sig;
 	int done;
@@ -280,7 +284,6 @@ struct thread_data {
 	 * IO engine private data and dlhandle.
 	 */
 	void *io_ops_data;
-	void *io_ops_dlhandle;
 
 	/*
 	 * Queue depth of io_u's that fio MIGHT do
@@ -353,6 +356,8 @@ struct thread_data {
 	uint64_t zone_bytes;
 	struct fio_sem *sem;
 	uint64_t bytes_done[DDIR_RWDIR_CNT];
+
+	uint64_t *thinktime_blocks_counter;
 
 	/*
 	 * State for random io, a bitmap of blocks done vs not done
@@ -756,17 +761,9 @@ static inline bool option_check_rate(struct thread_data *td, enum fio_ddir ddir)
 	return false;
 }
 
-static inline bool __should_check_rate(struct thread_data *td)
-{
-	return (td->flags & TD_F_CHECK_RATE) != 0;
-}
-
 static inline bool should_check_rate(struct thread_data *td)
 {
-	if (!__should_check_rate(td))
-		return false;
-
-	return ddir_rw_sum(td->bytes_done) != 0;
+	return (td->flags & TD_F_CHECK_RATE) != 0;
 }
 
 static inline unsigned long long td_max_bs(struct thread_data *td)

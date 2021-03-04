@@ -584,6 +584,9 @@ string:
 .B $jobname
 The name of the worker thread or process.
 .TP
+.B $clientuid
+IP of the fio process when using client/server mode.
+.TP
 .B $jobnum
 The incremental number of the worker thread or process.
 .TP
@@ -1133,7 +1136,7 @@ first. This may interfere with a given rate setting, if fio is asked to
 limit reads or writes to a certain rate. If that is the case, then the
 distribution may be skewed. Default: 50.
 .TP
-.BI random_distribution \fR=\fPstr:float[,str:float][,str:float]
+.BI random_distribution \fR=\fPstr:float[:float][,str:float][,str:float]
 By default, fio will use a completely uniform random distribution when asked
 to perform random I/O. Sometimes it is useful to skew the distribution in
 specific ways, ensuring that some parts of the data is more hot than others.
@@ -1168,6 +1171,14 @@ a `theta' of 1.2, you would use `random_distribution=zipf:1.2' as the
 option. If a non\-uniform model is used, fio will disable use of the random
 map. For the \fBnormal\fR distribution, a normal (Gaussian) deviation is
 supplied as a value between 0 and 100.
+.P
+The second, optional float is allowed for \fBpareto\fR, \fBzipf\fR and \fBnormal\fR
+distributions. It allows to set base of distribution in non-default place, giving
+more control over most probable outcome. This value is in range [0-1] which maps linearly to
+range of possible random values.
+Defaults are: random for \fBpareto\fR and \fBzipf\fR, and 0.5 for \fBnormal\fR.
+If you wanted to use \fBzipf\fR with a `theta` of 1.2 centered on 1/4 of allowed value range,
+you would use `random_distibution=zipf:1.2:0.25`.
 .P
 For a \fBzoned\fR distribution, fio supports specifying percentages of I/O
 access that should fall within what range of the file or device. For
@@ -1691,12 +1702,21 @@ This engine defines engine specific options.
 .TP
 .B cpuio
 Doesn't transfer any data, but burns CPU cycles according to the
-\fBcpuload\fR and \fBcpuchunks\fR options. Setting
-\fBcpuload\fR\=85 will cause that job to do nothing but burn 85%
-of the CPU. In case of SMP machines, use `numjobs=<nr_of_cpu>'
-to get desired CPU usage, as the cpuload only loads a
-single CPU at the desired rate. A job never finishes unless there is
-at least one non-cpuio job.
+\fBcpuload\fR, \fBcpuchunks\fR and \fBcpumode\fR options.
+A job never finishes unless there is at least one non-cpuio job.
+.RS
+.P
+.PD 0
+\fBcpuload\fR\=85 will cause that job to do nothing but burn 85% of the CPU.
+In case of SMP machines, use \fBnumjobs=<nr_of_cpu>\fR\ to get desired CPU usage,
+as the cpuload only loads a single CPU at the desired rate.
+
+.P
+\fBcpumode\fR\=qsort replace the default noop instructions loop
+by a qsort algorithm to consume more energy.
+
+.P
+.RE
 .TP
 .B rdma
 The RDMA I/O engine supports both RDMA memory semantics
@@ -2098,6 +2118,16 @@ client and the server or in certain loopback configurations.
 Specify stat system call type to measure lookup/getattr performance.
 Default is \fBstat\fR for \fBstat\fR\|(2).
 .TP
+.BI (sg)hipri
+If this option is set, fio will attempt to use polled IO completions. This
+will have a similar effect as (io_uring)hipri. Only SCSI READ and WRITE
+commands will have the SGV4_FLAG_HIPRI set (not UNMAP (trim) nor VERIFY).
+Older versions of the Linux sg driver that do not support hipri will simply
+ignore this flag and do normal IO. The Linux SCSI Low Level Driver (LLD)
+that "owns" the device also needs to support hipri (also known as iopoll
+and mq_poll). The MegaRAID driver is an example of a SCSI LLD.
+Default: clear (0) which does normal (interrupted based) IO.
+.TP
 .BI (sg)readfua \fR=\fPbool
 With readfua option set to 1, read operations include the force
 unit access (fua) flag. Default: 0.
@@ -2296,6 +2326,12 @@ fio wait \fBthinktime\fR usecs after every block. This effectively makes any
 queue depth setting redundant, since no more than 1 I/O will be queued
 before we have to complete it and do our \fBthinktime\fR. In other words, this
 setting effectively caps the queue depth if the latter is larger.
+.TP
+.BI thinktime_blocks_type \fR=\fPstr
+Only valid if \fBthinktime\fR is set - control how \fBthinktime_blocks\fR triggers.
+The default is `complete', which triggers \fBthinktime\fR when fio completes
+\fBthinktime_blocks\fR blocks. If this is set to `issue', then the trigger happens
+at the issue side.
 .TP
 .BI rate \fR=\fPint[,int][,int]
 Cap the bandwidth used by this job. The number is in bytes/sec, the normal

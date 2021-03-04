@@ -14,6 +14,7 @@ usage() {
 	echo -e "\t-r Reset all zones before test start"
 	echo -e "\t-o <max_open_zones> Run fio with max_open_zones limit"
 	echo -e "\t-t <test #> Run only a single test case with specified number"
+	echo -e "\t-q Quit the test run after any failed test"
 	echo -e "\t-z Run fio with debug=zbd option"
 }
 
@@ -190,6 +191,64 @@ prep_write() {
 		reset_zone "${dev}" -1
 }
 
+SKIP_TESTCASE=255
+
+require_scsi_dev() {
+	if ! is_scsi_device "$dev"; then
+		SKIP_REASON="$dev is not a SCSI device"
+		return 1
+	fi
+	return 0
+}
+
+require_conv_zone_bytes() {
+	local req_bytes=${1}
+
+	if ((req_bytes > first_sequential_zone_sector * 512)); then
+		SKIP_REASON="$dev does not have enough conventional zones"
+		return 1
+	fi
+	return 0
+}
+
+require_zbd() {
+	if [[ -z ${is_zbd} ]]; then
+		SKIP_REASON="$dev is not a zoned block device"
+		return 1
+	fi
+	return 0
+}
+
+require_regular_block_dev() {
+	if [[ -n ${is_zbd} ]]; then
+		SKIP_REASON="$dev is not a regular block device"
+		return 1
+	fi
+	return 0
+}
+
+require_seq_zones() {
+	local req_seq_zones=${1}
+	local seq_bytes=$((disk_size - first_sequential_zone_sector * 512))
+
+	if ((req_seq_zones > seq_bytes / zone_size)); then
+		SKIP_REASON="$dev does not have $req_seq_zones sequential zones"
+		return 1
+	fi
+	return 0
+}
+
+require_conv_zones() {
+	local req_c_zones=${1}
+	local conv_bytes=$((first_sequential_zone_sector * 512))
+
+	if ((req_c_zones > conv_bytes / zone_size)); then
+		SKIP_REASON="$dev does not have $req_c_zones conventional zones"
+		return 1
+	fi
+	return 0
+}
+
 # Check whether buffered writes are refused.
 test1() {
     run_fio --name=job1 --filename="$dev" --rw=write --direct=0 --bs=4K	\
@@ -221,14 +280,15 @@ test2() {
     if [ -z "$is_zbd" ]; then
 	opts+=("--zonesize=${zone_size}")
     fi
-    run_fio "${opts[@]}" >> "${logfile}.${test_number}" 2>&1 || return $?
-    ! grep -q 'WRITE:' "${logfile}.${test_number}"
+    run_fio "${opts[@]}" >> "${logfile}.${test_number}" 2>&1 && return 1
+    grep -q 'buflen exceeds zone size' "${logfile}.${test_number}"
 }
 
 # Run fio against an empty zone. This causes fio to report "No I/O performed".
 test3() {
     local off opts=() rc
 
+    require_seq_zones 129 || return $SKIP_TESTCASE
     off=$((first_sequential_zone_sector * 512 + 128 * zone_size))
     size=$((zone_size))
     [ -n "$is_zbd" ] && reset_zone "$dev" $((off / 512))
@@ -246,6 +306,7 @@ test3() {
 test4() {
     local off opts=()
 
+    require_seq_zones 130 || return $SKIP_TESTCASE
     off=$((first_sequential_zone_sector * 512 + 129 * zone_size))
     size=$((zone_size))
     [ -n "$is_zbd" ] && reset_zone "$dev" $((off / 512))
@@ -327,10 +388,7 @@ test8() {
 test9() {
     local size
 
-    if ! is_scsi_device "$dev"; then
-	echo "$dev is not a SCSI device" >>"${logfile}.${test_number}"
-	return 0
-    fi
+    require_scsi_dev || return $SKIP_TESTCASE
 
     prep_write
     size=$((4 * zone_size))
@@ -346,10 +404,7 @@ test9() {
 test10() {
     local size
 
-    if ! is_scsi_device "$dev"; then
-	echo "$dev is not a SCSI device" >>"${logfile}.${test_number}"
-	return 0
-    fi
+    require_scsi_dev || return $SKIP_TESTCASE
 
     prep_write
     size=$((4 * zone_size))
@@ -409,18 +464,20 @@ test13() {
 
 # Random write to conventional zones.
 test14() {
-    local size
+    local off size
 
+    if ! result=($(first_online_zone "$dev")); then
+	echo "Failed to determine first online zone"
+	exit 1
+    fi
+    off=${result[0]}
     prep_write
     size=$((16 * 2**20)) # 20 MB
-    if [ $size -gt $((first_sequential_zone_sector * 512)) ]; then
-	echo "$dev does not have enough sequential zones" \
-	     >>"${logfile}.${test_number}"
-	return 0
-    fi
+    require_conv_zone_bytes "${size}" || return $SKIP_TESTCASE
+
     run_one_fio_job "$(ioengine "libaio")" --iodepth=64 --rw=randwrite --bs=16K \
 		    --zonemode=zbd --zonesize="${zone_size}" --do_verify=1 \
-		    --verify=md5 --size=$size				   \
+		    --verify=md5 --offset=$off --size=$size\
 		    >>"${logfile}.${test_number}" 2>&1 || return $?
     check_written $((size)) || return $?
     check_read $((size)) || return $?
@@ -477,17 +534,26 @@ test16() {
 
 # Random reads and writes in the last zone.
 test17() {
-    local io off read size written
+    local io off last read size written
 
     off=$(((disk_size / zone_size - 1) * zone_size))
     size=$((disk_size - off))
+    if ! last=($(last_online_zone "$dev")); then
+	echo "Failed to determine last online zone"
+	exit 1
+    fi
+    if [[ "$((last * 512))" -lt "$off" ]]; then
+	off=$((last * 512))
+	size=$zone_size
+    fi
     if [ -n "$is_zbd" ]; then
 	reset_zone "$dev" $((off / 512)) || return $?
     fi
     prep_write
     run_one_fio_job "$(ioengine "libaio")" --iodepth=8 --rw=randrw --bs=4K \
 		    --zonemode=zbd --zonesize="${zone_size}"		\
-		    --offset=$off --loops=2 --norandommap=1\
+		    --offset=$off --loops=2 --norandommap=1 \
+		    --size="$size"\
 		    >>"${logfile}.${test_number}" 2>&1 || return $?
     written=$(fio_written <"${logfile}.${test_number}")
     read=$(fio_read <"${logfile}.${test_number}")
@@ -604,6 +670,7 @@ test27() {
 test28() {
     local i jobs=16 off opts
 
+    require_seq_zones 65 || return $SKIP_TESTCASE
     off=$((first_sequential_zone_sector * 512 + 64 * zone_size))
     [ -n "$is_zbd" ] && reset_zone "$dev" $((off / 512))
     prep_write
@@ -628,6 +695,7 @@ test28() {
 test29() {
     local i jobs=16 off opts=()
 
+    require_seq_zones 80 || return $SKIP_TESTCASE
     off=$((first_sequential_zone_sector * 512 + 64 * zone_size))
     size=$((16*zone_size))
     prep_write
@@ -664,12 +732,18 @@ test31() {
     local bs inc nz off opts size
 
     prep_write
-    # Start with writing 128 KB to 128 sequential zones.
+    # Start with writing 128 KB to max_open_zones sequential zones.
     bs=128K
-    nz=128
+    nz=$((max_open_zones))
+    if [[ $nz -eq 0 ]]; then
+	nz=128
+    fi
     # shellcheck disable=SC2017
     inc=$(((disk_size - (first_sequential_zone_sector * 512)) / (nz * zone_size)
 	   * zone_size))
+    if [ "$inc" -eq 0 ]; then
+	require_seq_zones $nz || return $SKIP_TESTCASE
+    fi
     opts=()
     for ((off = first_sequential_zone_sector * 512; off < disk_size;
 	  off += inc)); do
@@ -695,6 +769,8 @@ test31() {
 # also allows to verify the performance of a drive.
 test32() {
     local off opts=() size
+
+    require_zbd || return $SKIP_TESTCASE
 
     prep_write
     off=$((first_sequential_zone_sector * 512))
@@ -773,7 +849,7 @@ test37() {
     local bs off size capacity
 
     prep_write
-    capacity=$(total_zone_capacity 1 $first_sequential_zone_sector $dev)
+    capacity=$(total_zone_capacity 1 $((first_sequential_zone_sector*512)) $dev)
     if [ "$first_sequential_zone_sector" = 0 ]; then
 	off=0
     else
@@ -805,16 +881,23 @@ test38() {
 
 # Read one block from a block device.
 read_one_block() {
+    local off
     local bs
 
+    if ! result=($(first_online_zone "$dev")); then
+	echo "Failed to determine first online zone"
+	exit 1
+    fi
+    off=${result[0]}
     bs=$((logical_block_size))
-    run_one_fio_job --rw=read "$(ioengine "psync")" --bs=$bs --size=$bs "$@" 2>&1 |
+    run_one_fio_job --rw=read "$(ioengine "psync")" --offset=$off --bs=$bs \
+		    --size=$bs "$@" 2>&1 |
 	tee -a "${logfile}.${test_number}"
 }
 
 # Check whether fio accepts --zonemode=none for zoned block devices.
 test39() {
-    [ -n "$is_zbd" ] || return 0
+    require_zbd || return $SKIP_TESTCASE
     read_one_block --zonemode=none >/dev/null || return $?
     check_read $((logical_block_size)) || return $?
 }
@@ -824,7 +907,7 @@ test40() {
     local bs
 
     bs=$((logical_block_size))
-    [ -n "$is_zbd" ] || return 0
+    require_zbd || return $SKIP_TESTCASE
     read_one_block --zonemode=strided |
 	grep -q 'fio: --zonesize must be specified when using --zonemode=strided' ||
 	return $?
@@ -834,21 +917,21 @@ test40() {
 
 # Check whether fio checks the zone size for zoned block devices.
 test41() {
-    [ -n "$is_zbd" ] || return 0
+    require_zbd || return $SKIP_TESTCASE
     read_one_block --zonemode=zbd --zonesize=$((2 * zone_size)) |
 	grep -q 'job parameter zonesize.*does not match disk zone size'
 }
 
 # Check whether fio handles --zonesize=0 correctly for regular block devices.
 test42() {
-    [ -n "$is_zbd" ] && return 0
+    require_regular_block_dev || return $SKIP_TESTCASE
     read_one_block --zonemode=zbd --zonesize=0 |
 	grep -q 'Specifying the zone size is mandatory for regular block devices with --zonemode=zbd'
 }
 
 # Check whether fio handles --zonesize=1 correctly for regular block devices.
 test43() {
-    [ -n "$is_zbd" ] && return 0
+    require_regular_block_dev || return $SKIP_TESTCASE
     read_one_block --zonemode=zbd --zonesize=1 |
 	grep -q 'zone size must be at least 512 bytes for --zonemode=zbd'
 }
@@ -862,7 +945,7 @@ test44() {
 test45() {
     local bs i
 
-    [ -z "$is_zbd" ] && return 0
+    require_zbd || return $SKIP_TESTCASE
     prep_write
     bs=$((logical_block_size))
     run_one_fio_job "$(ioengine "psync")" --iodepth=1 --rw=randwrite --bs=$bs\
@@ -901,6 +984,9 @@ test47() {
 test48() {
     local i jobs=16 off opts=()
 
+    require_zbd || return $SKIP_TESTCASE
+    require_seq_zones 80 || return $SKIP_TESTCASE
+
     off=$((first_sequential_zone_sector * 512 + 64 * zone_size))
     size=$((16*zone_size))
     prep_write
@@ -922,7 +1008,7 @@ test48() {
 
     { echo; echo "fio ${opts[*]}"; echo; } >>"${logfile}.${test_number}"
 
-    timeout -v -s KILL 45s \
+    timeout -v -s KILL 180s \
 	    "${dynamic_analyzer[@]}" "$fio" "${opts[@]}" \
 	    >> "${logfile}.${test_number}" 2>&1 || return $?
 }
@@ -930,11 +1016,7 @@ test48() {
 # Check if fio handles --zonecapacity on a normal block device correctly
 test49() {
 
-    if [ -n "$is_zbd" ]; then
-	echo "$dev is not a regular block device" \
-	     >>"${logfile}.${test_number}"
-	return 0
-    fi
+    require_regular_block_dev || return $SKIP_TESTCASE
 
     size=$((2 * zone_size))
     capacity=$((zone_size * 3 / 4))
@@ -948,12 +1030,137 @@ test49() {
     check_read $((capacity * 2)) || return $?
 }
 
+# Verify that conv zones are not locked and only seq zones are locked during
+# random read on conv-seq mixed zones.
+test50() {
+	local off
+
+	require_zbd || return $SKIP_TESTCASE
+	require_conv_zones 8 || return $SKIP_TESTCASE
+	require_seq_zones 8 || return $SKIP_TESTCASE
+
+	reset_zone "${dev}" -1
+
+	off=$((first_sequential_zone_sector * 512 - 8 * zone_size))
+	run_fio --name=job --filename=${dev} --offset=${off} --bs=64K \
+		--size=$((16 * zone_size)) "$(ioengine "libaio")" --rw=randread\
+		--time_based --runtime=3 --zonemode=zbd --zonesize=${zone_size}\
+		--direct=1 --group_reporting=1 ${job_var_opts[@]} \
+		>> "${logfile}.${test_number}" 2>&1 || return $?
+}
+
+# Verify that conv zones are neither locked nor opened during random write on
+# conv-seq mixed zones. Zone lock and zone open shall happen only on seq zones.
+test51() {
+	local off jobs=16
+	local -a opts
+
+	require_zbd || return $SKIP_TESTCASE
+	require_conv_zones 8 || return $SKIP_TESTCASE
+	require_seq_zones 8 || return $SKIP_TESTCASE
+
+	prep_write
+
+	off=$((first_sequential_zone_sector * 512 - 8 * zone_size))
+	opts+=("--size=$((16 * zone_size))" "$(ioengine "libaio")")
+	opts+=("--zonemode=zbd" "--direct=1" "--zonesize=${zone_size}")
+	opts+=("--max_open_zones=2" "--offset=$off")
+	opts+=("--thread=1" "--group_reporting=1")
+	opts+=("--time_based" "--runtime=30" "--rw=randwrite")
+	for ((i=0;i<jobs;i++)); do
+		opts+=("--name=job${i}" "--filename=$dev")
+		opts+=("--bs=$(((i+1)*16))K")
+		opts+=($(job_var_opts_exclude "--max_open_zones"))
+	done
+	run_fio "${opts[@]}" >> "${logfile}.${test_number}" 2>&1 || return $?
+}
+
+# Verify that zone_reset_threshold only takes logical blocks from seq
+# zones into account, and logical blocks of conv zones are not counted.
+test52() {
+	local off io_size
+
+	require_zbd || return $SKIP_TESTCASE
+	require_conv_zones 8 || return $SKIP_TESTCASE
+	require_seq_zones 8 || return $SKIP_TESTCASE
+
+	reset_zone "${dev}" -1
+
+	# Total I/O size is 1/8 = 0.125 of the I/O range of cont + seq zones.
+	# Set zone_reset_threshold as 0.1. The threshold size is less than
+	# 0.125, then, reset count zero is expected.
+	# On the other hand, half of the I/O range is covered by conv zones.
+	# If fio would count the conv zones for zone_reset_threshold, the ratio
+	# were more than 0.5 and would trigger zone resets.
+
+	off=$((first_sequential_zone_sector * 512 - 8 * zone_size))
+	io_size=$((zone_size * 16 / 8))
+	run_fio --name=job --filename=$dev --rw=randwrite --bs=$((zone_size/16))\
+		--size=$((zone_size * 16)) --softrandommap=1 \
+		--io_size=$((io_size)) "$(ioengine "psync")" --offset=$off \
+		--zonemode=zbd --direct=1 --zonesize=${zone_size} \
+		--zone_reset_threshold=.1 --zone_reset_frequency=1.0 \
+		${job_var_opts[@]} --debug=zbd \
+		>> "${logfile}.${test_number}" 2>&1 || return $?
+
+	check_written ${io_size} || return $?
+	check_reset_count -eq 0 || return $?
+}
+
+# Check both reads and writes are executed by random I/O to conventional zones.
+test53() {
+	local off capacity io read_b=0 written_b=0
+
+	require_zbd || return $SKIP_TESTCASE
+	require_conv_zones 4 || return $SKIP_TESTCASE
+
+	off=$((first_sequential_zone_sector * 512 - 4 * zone_size))
+	capacity=$(total_zone_capacity 4 $off $dev)
+	run_fio --name=job --filename=${dev} --rw=randrw --bs=64K \
+		--size=$((4 * zone_size)) "$(ioengine "psync")" --offset=${off}\
+		--zonemode=zbd --direct=1 --zonesize=${zone_size} \
+		${job_var_opts[@]} \
+		>> "${logfile}.${test_number}" 2>&1 || return $?
+
+	written_b=$(fio_written <"${logfile}.${test_number}")
+	read_b=$(fio_read <"${logfile}.${test_number}")
+	io=$((written_b + read_b))
+	echo "Number of bytes read: $read_b" >>"${logfile}.${test_number}"
+	echo "Number of bytes written: $written_b" >>"${logfile}.${test_number}"
+	echo "Total number of bytes read and written: $io <> $capacity" \
+	     >>"${logfile}.${test_number}"
+	if ((io==capacity && written_b != 0 && read_b != 0)); then
+		return 0
+	fi
+	return 1
+}
+
+# Test read/write mix with verify.
+test54() {
+	require_zbd || return $SKIP_TESTCASE
+	require_seq_zones 8 || return $SKIP_TESTCASE
+
+	run_fio --name=job --filename=${dev} "$(ioengine "libaio")" \
+		--time_based=1 --runtime=30s --continue_on_error=0 \
+		--offset=$((first_sequential_zone_sector * 512)) \
+		--size=$((8*zone_size)) --direct=1 --iodepth=1 \
+		--rw=randrw:2 --rwmixwrite=25 --bsrange=4k-${zone_size} \
+		--zonemode=zbd --zonesize=${zone_size} \
+		--verify=crc32c --do_verify=1 --verify_backlog=2 \
+		--experimental_verify=1 \
+		--alloc-size=65536 --random_generator=tausworthe64 \
+		${job_var_opts[@]} --debug=zbd \
+		>> "${logfile}.${test_number}" 2>&1 || return $?
+}
+
+SECONDS=0
 tests=()
 dynamic_analyzer=()
 reset_all_zones=
 use_libzbc=
 zbd_debug=
 max_open_zones_opt=
+quit_on_err=
 
 while [ "${1#-}" != "$1" ]; do
   case "$1" in
@@ -968,8 +1175,10 @@ while [ "${1#-}" != "$1" ]; do
     -o) max_open_zones_opt="${2}"; shift; shift;;
     -v) dynamic_analyzer=(valgrind "--read-var-info=yes");
 	shift;;
+    -q) quit_on_err=1; shift;;
     -z) zbd_debug=1; shift;;
     --) shift; break;;
+     *) usage; exit 1;;
   esac
 done
 
@@ -1087,10 +1296,12 @@ fi
 logfile=$0.log
 
 passed=0
+skipped=0
 failed=0
 if [ -t 1 ]; then
     red="\e[1;31m"
     green="\e[1;32m"
+    cyan="\e[1;36m"
     end="\e[m"
 else
     red=""
@@ -1101,14 +1312,23 @@ rc=0
 
 intr=0
 trap 'intr=1' SIGINT
+ret=0
 
 for test_number in "${tests[@]}"; do
     rm -f "${logfile}.${test_number}"
+    unset SKIP_REASON
     echo -n "Running test $(printf "%02d" $test_number) ... "
-    if eval "test$test_number" && check_log $test_number; then
+    eval "test$test_number"
+    ret=$?
+    if ((!ret)) && check_log $test_number; then
 	status="PASS"
 	cc_status="${green}${status}${end}"
 	((passed++))
+    elif ((ret==SKIP_TESTCASE)); then
+	status="SKIP"
+	echo "${SKIP_REASON}" >> "${logfile}.${test_number}"
+	cc_status="${cyan}${status}${end}    ${SKIP_REASON}"
+	((skipped++))
     else
 	status="FAIL"
 	cc_status="${red}${status}${end}"
@@ -1118,10 +1338,15 @@ for test_number in "${tests[@]}"; do
     echo -e "$cc_status"
     echo "$status" >> "${logfile}.${test_number}"
     [ $intr -ne 0 ] && exit 1
+    [ -n "$quit_on_err" -a "$rc" -ne 0 ] && exit 1
 done
 
 echo "$passed tests passed"
-if [ $failed -gt 0 ]; then
-    echo " and $failed tests failed"
+if [ $skipped -gt 0 ]; then
+    echo " $skipped tests skipped"
 fi
+if [ $failed -gt 0 ]; then
+    echo " $failed tests failed"
+fi
+echo "Run time: $(TZ=UTC0 printf "%(%H:%M:%S)T\n" $(( SECONDS )) )"
 exit $rc

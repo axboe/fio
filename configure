@@ -45,6 +45,7 @@ print_config() {
 
 # Default CFLAGS
 CFLAGS="-D_GNU_SOURCE -include config-host.h $CFLAGS"
+CONFIGURE_CFLAGS="-Werror-implicit-function-declaration"
 BUILD_CFLAGS=""
 
 # Print a helpful header at the top of config.log
@@ -88,14 +89,14 @@ do_cc() {
 }
 
 compile_object() {
-  do_cc $CFLAGS -Werror-implicit-function-declaration -c -o $TMPO $TMPC
+  do_cc $CFLAGS $CONFIGURE_CFLAGS -c -o $TMPO $TMPC
 }
 
 compile_prog() {
   local_cflags="$1"
   local_ldflags="$2 $LIBS"
   echo "Compiling test case $3" >> config.log
-  do_cc $CFLAGS -Werror-implicit-function-declaration $local_cflags -o $TMPE $TMPC $LDFLAGS $local_ldflags
+  do_cc $CFLAGS $CONFIGURE_CFLAGS $local_cflags -o $TMPE $TMPC $LDFLAGS $local_ldflags
 }
 
 feature_not_found() {
@@ -257,7 +258,7 @@ if test "$show_help" = "yes" ; then
   echo "--cc=                   Specify compiler to use"
   echo "--extra-cflags=         Specify extra CFLAGS to pass to compiler"
   echo "--build-32bit-win       Enable 32-bit build on Windows"
-  echo "--target-win-ver=       Minimum version of Windows to target (XP or 7)"
+  echo "--target-win-ver=       Minimum version of Windows to target (only accepts 7)"
   echo "--enable-pdb            Enable Windows PDB symbols generation (needs clang/lld)"
   echo "--build-static          Build a static fio"
   echo "--esx                   Configure build options for esx"
@@ -360,16 +361,15 @@ Darwin)
   if test -z "$cpu" && test "$(sysctl -n hw.optional.x86_64)" = "1"; then
     cpu="x86_64"
   fi
-  # Error at compile time linking of weak/partial symbols if possible...
+  # Avoid configure feature detection of features provided by weak symbols
 cat > $TMPC <<EOF
 int main(void)
 {
   return 0;
 }
 EOF
-  if compile_prog "" "-Wl,-no_weak_imports" "disable weak symbols"; then
-    echo "Disabling weak symbols"
-    LDFLAGS="$LDFLAGS -Wl,-no_weak_imports"
+  if compile_prog "" "-Werror=partial-availability" "error on weak symbols"; then
+    CONFIGURE_CFLAGS="$CONFIGURE_CFLAGS -Werror=partial-availability"
   fi
   ;;
 SunOS)
@@ -395,11 +395,7 @@ CYGWIN*)
     # Default Windows API target
     target_win_ver="7"
   fi
-  if test "$target_win_ver" = "XP"; then
-    output_sym "CONFIG_WINDOWS_XP"
-    # Technically the below is targeting 2003
-    CFLAGS="$CFLAGS -D_WIN32_WINNT=0x0502"
-  elif test "$target_win_ver" = "7"; then
+  if test "$target_win_ver" = "7"; then
     output_sym "CONFIG_WINDOWS_7"
     CFLAGS="$CFLAGS -D_WIN32_WINNT=0x0601"
   else
@@ -2059,7 +2055,7 @@ cat > $TMPC << EOF
 int main(int argc, char **argv)
 {
   int rc;
-  rc = pmem_is_pmem(NULL, NULL);
+  rc = pmem_is_pmem(NULL, 0);
   return 0;
 }
 EOF
@@ -2699,6 +2695,7 @@ print_config "Windows PDB generation" "$pdb"
 ##########################################
 # check for timerfd support
 timerfd_create="no"
+if test "$esx" != "yes" ; then
 cat > $TMPC << EOF
 #include <sys/time.h>
 #include <sys/timerfd.h>
@@ -2708,8 +2705,9 @@ int main(int argc, char **argv)
 	return timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
 }
 EOF
-if compile_prog "" "" "timerfd_create"; then
-  timerfd_create="yes"
+  if compile_prog "" "" "timerfd_create"; then
+    timerfd_create="yes"
+  fi
 fi
 print_config "timerfd_create" "$timerfd_create"
 

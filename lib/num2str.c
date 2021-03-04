@@ -7,8 +7,6 @@
 #include "../oslib/asprintf.h"
 #include "num2str.h"
 
-#define ARRAY_SIZE(x)    (sizeof((x)) / (sizeof((x)[0])))
-
 /**
  * num2str() - Cheesy number->string conversion, complete with carry rounding error.
  * @num: quantity (e.g., number of blocks, bytes or bits)
@@ -38,7 +36,7 @@ char *num2str(uint64_t num, int maxlen, int base, int pow2, enum n2s_unit units)
 	char *buf;
 
 	compiletime_assert(sizeof(sistr) == sizeof(iecstr), "unit prefix arrays must be identical sizes");
-	assert(units < ARRAY_SIZE(unitstr));
+	assert(units < FIO_ARRAY_SIZE(unitstr));
 
 	if (pow2)
 		unitprefix = iecstr;
@@ -69,7 +67,7 @@ char *num2str(uint64_t num, int maxlen, int base, int pow2, enum n2s_unit units)
 	 * Divide by K/Ki until string length of num <= maxlen.
 	 */
 	modulo = -1U;
-	while (post_index < ARRAY_SIZE(sistr)) {
+	while (post_index < FIO_ARRAY_SIZE(sistr)) {
 		sprintf(tmp, "%llu", (unsigned long long) num);
 		if (strlen(tmp) <= maxlen)
 			break;
@@ -80,7 +78,7 @@ char *num2str(uint64_t num, int maxlen, int base, int pow2, enum n2s_unit units)
 		post_index++;
 	}
 
-	if (post_index >= ARRAY_SIZE(sistr))
+	if (post_index >= FIO_ARRAY_SIZE(sistr))
 		post_index = 0;
 
 	/*
@@ -111,6 +109,9 @@ done:
 	assert(modulo < thousand);
 	sprintf(tmp, "%.*f", (int)(maxlen - strlen(tmp) - 1),
 		(double)modulo / (double)thousand);
+
+	if (tmp[0] == '1')
+		num++;
 
 	if (asprintf(&buf, "%llu.%s%s%s", (unsigned long long) num, &tmp[2],
 		     unitprefix[post_index], unitstr[units]) < 0)

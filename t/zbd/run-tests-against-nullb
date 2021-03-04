@@ -1,0 +1,354 @@
+#!/bin/bash
+#
+# Copyright (C) 2020 Western Digital Corporation or its affiliates.
+#
+# This file is released under the GPL.
+#
+# Run t/zbd/test-zbd-support script against a variety of conventional,
+# zoned and mixed zone configurations.
+#
+
+usage()
+{
+	echo "This script runs the tests from t/zbd/test-zbd-support script"
+        echo "against a nullb device in a variety of conventional and zoned"
+	echo "configurations."
+	echo "Usage: ${0} [OPTIONS]"
+	echo "Options:"
+	echo -e "\t-h Show this message."
+	echo -e "\t-L List the device layouts for every section without running"
+	echo -e "\t   tests."
+	echo -e "\t-s <#section> Only run the section with the given number."
+	echo -e "\t-l Use libzbc ioengine to run the tests."
+	echo -e "\t-t <#test> Only run the test with the given number in every section."
+	echo -e "\t-o <max_open_zones> Specify MaxOpen value, (${set_max_open} by default)."
+	echo -e "\t-n <#number of runs> Set the number of times to run the entire suite "
+	echo -e "\t   or an individual section/test."
+	echo -e "\t-q Quit t/zbd/test-zbd-support run after any failed test."
+	echo -e "\t-r Remove the /dev/nullb0 device that may still exist after"
+	echo -e "\t   running this script."
+	exit 1
+}
+
+cleanup_nullb()
+{
+	for d in /sys/kernel/config/nullb/*; do [ -d "$d" ] && rmdir "$d"; done
+	modprobe -r null_blk
+	modprobe null_blk nr_devices=0 || exit $?
+	for d in /sys/kernel/config/nullb/*; do
+		[ -d "$d" ] && rmdir "$d"
+	done
+	modprobe -r null_blk
+	[ -e /sys/module/null_blk ] && exit $?
+}
+
+create_nullb()
+{
+	modprobe null_blk nr_devices=0 &&
+	cd /sys/kernel/config/nullb &&
+	mkdir nullb0 &&
+	cd nullb0 || return $?
+}
+
+configure_nullb()
+{
+	echo 0 > completion_nsec &&
+		echo ${dev_blocksize} > blocksize &&
+		echo ${dev_size} > size &&
+		echo 1 > memory_backed || return $?
+
+	if ((conv_pcnt < 100)); then
+		echo 1 > zoned &&
+			echo "${zone_size}" > zone_size || return $?
+
+		if ((zone_capacity < zone_size)); then
+			if ((!zcap_supported)); then
+				echo "null_blk does not support zone capacity"
+				return 2
+			fi
+			echo "${zone_capacity}" > zone_capacity
+		fi
+		if ((conv_pcnt)); then
+			if ((!conv_supported)); then
+				echo "null_blk does not support conventional zones"
+				return 2
+			fi
+			nr_conv=$((dev_size/zone_size*conv_pcnt/100))
+			echo "${nr_conv}" > zone_nr_conv
+		fi
+	fi
+
+	echo 1 > power || return $?
+	return 0
+}
+
+show_nullb_config()
+{
+	if ((conv_pcnt < 100)); then
+		echo "    $(printf "Zoned Device, %d%% Conventional Zones (%d)" \
+			  ${conv_pcnt} ${nr_conv})"
+		echo "    $(printf "Zone Size: %d MB" ${zone_size})"
+		echo "    $(printf "Zone Capacity: %d MB" ${zone_capacity})"
+		if ((max_open)); then
+			echo "    $(printf "Max Open: %d Zones" ${max_open})"
+		else
+			echo "    Max Open: Unlimited Zones"
+		fi
+	else
+		echo "    Non-zoned Device"
+	fi
+}
+
+#
+# Test sections.
+#
+# Fully conventional device.
+section1()
+{
+	conv_pcnt=100
+	max_open=0
+}
+
+# Zoned device with no conventional zones, ZCAP == ZSIZE, unlimited MaxOpen.
+section2()
+{
+	conv_pcnt=0
+	zone_size=1
+	zone_capacity=1
+	max_open=0
+}
+
+# Zoned device with no conventional zones, ZCAP < ZSIZE, unlimited MaxOpen.
+section3()
+{
+	conv_pcnt=0
+	zone_size=4
+	zone_capacity=3
+	max_open=0
+}
+
+# Zoned device with mostly sequential zones, ZCAP == ZSIZE, unlimited MaxOpen.
+section4()
+{
+	conv_pcnt=10
+	zone_size=1
+	zone_capacity=1
+	max_open=0
+}
+
+# Zoned device with mostly sequential zones, ZCAP < ZSIZE, unlimited MaxOpen.
+section5()
+{
+	conv_pcnt=10
+	zone_size=4
+	zone_capacity=3
+	max_open=0
+}
+
+# Zoned device with mostly conventional zones, ZCAP == ZSIZE, unlimited MaxOpen.
+section6()
+{
+	conv_pcnt=66
+	zone_size=1
+	zone_capacity=1
+	max_open=0
+}
+
+# Zoned device with mostly conventional zones, ZCAP < ZSIZE, unlimited MaxOpen.
+section7()
+{
+	dev_size=2048
+	conv_pcnt=66
+	zone_size=4
+	zone_capacity=3
+	max_open=0
+}
+
+# Zoned device with no conventional zones, ZCAP == ZSIZE, limited MaxOpen.
+section8()
+{
+	dev_size=1024
+	conv_pcnt=0
+	zone_size=1
+	zone_capacity=1
+	max_open=${set_max_open}
+	zbd_test_opts+=("-o ${max_open}")
+}
+
+# Zoned device with no conventional zones, ZCAP < ZSIZE, limited MaxOpen.
+section9()
+{
+	conv_pcnt=0
+	zone_size=4
+	zone_capacity=3
+	max_open=${set_max_open}
+	zbd_test_opts+=("-o ${max_open}")
+}
+
+# Zoned device with mostly sequential zones, ZCAP == ZSIZE, limited MaxOpen.
+section10()
+{
+	conv_pcnt=10
+	zone_size=1
+	zone_capacity=1
+	max_open=${set_max_open}
+	zbd_test_opts+=("-o ${max_open}")
+}
+
+# Zoned device with mostly sequential zones, ZCAP < ZSIZE, limited MaxOpen.
+section11()
+{
+	conv_pcnt=10
+	zone_size=4
+	zone_capacity=3
+	max_open=${set_max_open}
+	zbd_test_opts+=("-o ${max_open}")
+}
+
+# Zoned device with mostly conventional zones, ZCAP == ZSIZE, limited MaxOpen.
+section12()
+{
+	conv_pcnt=66
+	zone_size=1
+	zone_capacity=1
+	max_open=${set_max_open}
+	zbd_test_opts+=("-o ${max_open}")
+}
+
+# Zoned device with mostly conventional zones, ZCAP < ZSIZE, limited MaxOpen.
+section13()
+{
+	dev_size=2048
+	conv_pcnt=66
+	zone_size=4
+	zone_capacity=3
+	max_open=${set_max_open}
+	zbd_test_opts+=("-o ${max_open}")
+}
+
+#
+# Entry point.
+#
+SECONDS=0
+scriptdir="$(cd "$(dirname "$0")" && pwd)"
+sections=()
+zcap_supported=1
+conv_supported=1
+list_only=0
+dev_size=1024
+dev_blocksize=4096
+set_max_open=8
+zbd_test_opts=()
+libzbc=0
+num_of_runs=1
+test_case=0
+quit_on_err=0
+
+while (($#)); do
+	case "$1" in
+		-s) sections+=("$2"); shift; shift;;
+		-o) set_max_open="${2}"; shift; shift;;
+		-L) list_only=1; shift;;
+		-r) cleanup_nullb; exit 0;;
+		-l) libzbc=1; shift;;
+		-n) num_of_runs="${2}"; shift; shift;;
+		-t) test_case="${2}"; shift; shift;;
+		-q) quit_on_err=1; shift;;
+		-h) usage; break;;
+		--) shift; break;;
+		 *) usage; exit 1;;
+	esac
+done
+
+if [ "${#sections[@]}" = 0 ]; then
+	readarray -t sections < <(declare -F | grep "section[0-9]*" |  tr -c -d "[:digit:]\n" | sort -n)
+fi
+
+cleanup_nullb
+
+#
+# Test creating null_blk device and check if newer features are supported
+#
+if ! eval "create_nullb"; then
+	echo "can't create nullb"
+	exit 1
+fi
+if ! cat /sys/kernel/config/nullb/features | grep -q zone_capacity; then
+	zcap_supported=0
+fi
+if ! cat /sys/kernel/config/nullb/features | grep -q zone_nr_conv; then
+	conv_supported=0
+fi
+
+rc=0
+test_rc=0
+intr=0
+run_nr=1
+trap 'kill ${zbd_test_pid}; intr=1' SIGINT
+
+while ((run_nr <= $num_of_runs)); do
+	echo -e "\nRun #$run_nr:"
+	for section_number in "${sections[@]}"; do
+		cleanup_nullb
+		echo "---------- Section $(printf "%02d" $section_number) ----------"
+		if ! eval "create_nullb"; then
+			echo "error creating nullb"
+			exit 1
+		fi
+		zbd_test_opts=()
+		if ((test_case)); then
+			zbd_test_opts+=("-t" "${test_case}")
+		fi
+		if ((quit_on_err)); then
+			zbd_test_opts+=("-q")
+		fi
+		section$section_number
+		configure_nullb
+		rc=$?
+		((rc == 2)) && continue
+		if ((rc)); then
+			echo "can't set up nullb for section $(printf "%02d" $section_number)"
+			exit 1
+		fi
+		show_nullb_config
+		if ((libzbc)); then
+			if ((zone_capacity < zone_size)); then
+				echo "libzbc doesn't support zone capacity, skipping section $(printf "%02d" $section_number)"
+				continue
+			fi
+			if ((conv_pcnt == 100)); then
+				echo "libzbc only supports zoned devices, skipping section $(printf "%02d" $section_number)"
+				continue
+			fi
+			zbd_test_opts+=("-l")
+		fi
+		cd "${scriptdir}"
+		((intr)) && exit 1
+		((list_only)) && continue
+
+		./test-zbd-support ${zbd_test_opts[@]} /dev/nullb0 &
+		zbd_test_pid=$!
+		if kill -0 "${zbd_test_pid}"; then
+			wait "${zbd_test_pid}"
+			test_rc=$?
+		else
+			echo "can't run ZBD tests"
+			exit 1
+		fi
+		((intr)) && exit 1
+		if (($test_rc)); then
+			rc=1
+			((quit_on_err)) && break
+		fi
+	done
+
+	((rc && quit_on_err)) && break
+	run_nr=$((run_nr + 1))
+done
+
+if ((!list_only)); then
+	echo "--------------------------------"
+	echo "Total run time: $(TZ=UTC0 printf "%(%H:%M:%S)T\n" $(( SECONDS )) )"
+fi
+
+exit $rc

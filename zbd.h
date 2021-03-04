@@ -28,6 +28,7 @@ enum io_u_action {
  * @mutex: protects the modifiable members in this structure
  * @type: zone type (BLK_ZONE_TYPE_*)
  * @cond: zone state (BLK_ZONE_COND_*)
+ * @has_wp: whether or not this zone can have a valid write pointer
  * @open: whether or not this zone is currently open. Only relevant if
  *		max_open_zones > 0.
  * @reset_zone: whether or not this zone should be reset before writing to it
@@ -40,6 +41,7 @@ struct fio_zone_info {
 	uint32_t		verify_block;
 	enum zbd_zone_type	type:2;
 	enum zbd_zone_cond	cond:4;
+	unsigned int		has_wp:1;
 	unsigned int		open:1;
 	unsigned int		reset_zone:1;
 };
@@ -53,6 +55,8 @@ struct fio_zone_info {
  *		num_open_zones).
  * @zone_size: size of a single zone in bytes.
  * @sectors_with_data: total size of data in all zones in units of 512 bytes
+ * @wp_sectors_with_data: total size of data in zones with write pointers in
+ *                        units of 512 bytes
  * @zone_size_log2: log2 of the zone size in bytes if it is a power of 2 or 0
  *		if the zone size is not a power of 2.
  * @nr_zones: number of zones
@@ -73,6 +77,7 @@ struct zoned_block_device_info {
 	pthread_mutex_t		mutex;
 	uint64_t		zone_size;
 	uint64_t		sectors_with_data;
+	uint64_t		wp_sectors_with_data;
 	uint32_t		zone_size_log2;
 	uint32_t		nr_zones;
 	uint32_t		refcount;

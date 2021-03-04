@@ -71,7 +71,7 @@ first_sequential_zone() {
 
     if [ -n "${blkzone}" ] && [ ! -n "${use_libzbc}" ]; then
 	${blkzone} report "$dev" |
-	    sed -n 's/^[[:blank:]]*start:[[:blank:]]\([0-9a-zA-Z]*\),[[:blank:]]len[[:blank:]]\([0-9a-zA-Z]*\),.*type:[[:blank:]]2(.*/\1 \2/p' |
+	    sed -n 's/^[[:blank:]]*start:[[:blank:]]\([0-9a-zA-Z]*\),[[:blank:]]len[[:blank:]]\([0-9a-zA-Z]*\),.*zcond:\(14\|[[:blank:]][0-4]\)(.*type:[[:blank:]]\([2]\)(.*/\1 \2/p' |
 	    {
 		read -r starting_sector length &&
 		    # Convert from hex to decimal
@@ -79,7 +79,7 @@ first_sequential_zone() {
 	    }
     else
 	${zbc_report_zones} "$dev" |
-	    sed -n 's/^Zone [0-9]*: type 0x2 .*, sector \([0-9]*\), \([0-9]*\) sectors,.*$/\1 \2/p' |
+	    sed -n 's/^Zone [0-9]*: type 0x2 .*,[[:blank:]]cond[[:blank:]]0x[0-4e][[:blank:]].*, sector \([0-9]*\), \([0-9]*\) sectors.*$/\1 \2/p' |
 	    head -n1
     fi
 }
@@ -119,6 +119,58 @@ total_zone_capacity() {
 	fi
 
 	echo $((capacity * 512))
+}
+
+# Reports the starting sector and length of the first zone of device $1
+# that is not in offline (or similar) condition.
+first_online_zone() {
+    local dev=$1
+
+    if [ -z "$is_zbd" ]; then
+	echo 0
+	return
+    fi
+
+    if [ -n "${blkzone}" ] && [ ! -n "${use_libzbc}" ]; then
+	${blkzone} report "$dev" |
+	    sed -n 's/^[[:blank:]]*start:[[:blank:]]\([0-9a-zA-Z]*\),[[:blank:]]len[[:blank:]]\([0-9a-zA-Z]*\),.*zcond:\(14\|[[:blank:]][0-4]\)(.*type:[[:blank:]][12](.*/\1/p' |
+	    head -n1 |
+	    {
+		read -r starting_sector &&
+		    # Convert from hex to decimal
+		    echo $((starting_sector))
+	    }
+    else
+	${zbc_report_zones} "$dev" |
+	    sed -n 's/^Zone[[:blank:]][0-9]*:[[:blank:]]type[[:blank:]]0x[12][[:blank:]].*,[[:blank:]]cond[[:blank:]]0x[0-4e][[:blank:]].*,[[:blank:]]sector[[:blank:]]\([0-9]*\),.*$/\1/p' |
+	    head -n1
+    fi
+}
+
+# Reports the starting sector and length of the last zone of device $1
+# that is not in offline (or similar) condition.
+last_online_zone() {
+    local dev=$1
+
+    if [ -z "$is_zbd" ]; then
+	echo 0
+	return
+    fi
+
+    if [ -n "${blkzone}" ] && [ ! -n "${use_libzbc}" ]; then
+	${blkzone} report "$dev" |
+	    sed -n 's/^[[:blank:]]*start:[[:blank:]]\([0-9a-zA-Z]*\),[[:blank:]]len[[:blank:]]\([0-9a-zA-Z]*\),.*zcond:\(14\|[[:blank:]][0-4]\)(.*type:[[:blank:]][12](.*/\1/p' |
+	    tail -1 |
+	    {
+		read -r starting_sector &&
+		    # Convert from hex to decimal
+		    echo $((starting_sector))
+	    }
+    else
+	${zbc_report_zones} "$dev" |
+	    sed -n 's/^Zone[[:blank:]][0-9]*:[[:blank:]]type[[:blank:]]0x[12][[:blank:]].*,[[:blank:]]cond[[:blank:]]0x[0-4e][[:blank:]].*,[[:blank:]]sector[[:blank:]]\([0-9]*\),.*$/\1/p' |
+	    tail -1
+    fi
 }
 
 max_open_zones() {

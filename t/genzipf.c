@@ -297,11 +297,11 @@ int main(int argc, char *argv[])
 	nranges /= block_size;
 
 	if (dist_type == TYPE_ZIPF)
-		zipf_init(&zs, nranges, dist_val, 1);
+		zipf_init(&zs, nranges, dist_val, -1, 1);
 	else if (dist_type == TYPE_PARETO)
-		pareto_init(&zs, nranges, dist_val, 1);
+		pareto_init(&zs, nranges, dist_val, -1, 1);
 	else
-		gauss_init(&gs, nranges, dist_val, 1);
+		gauss_init(&gs, nranges, dist_val, -1, 1);
 
 	hash_bits = 0;
 	hash_size = nranges;

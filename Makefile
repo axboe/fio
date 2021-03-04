@@ -346,6 +346,23 @@ T_MEMLOCK_PROGS = t/memlock
 T_TT_OBJS = t/time-test.o
 T_TT_PROGS = t/time-test
 
+T_FUZZ_OBJS = t/fuzz/fuzz_parseini.o
+T_FUZZ_OBJS += $(OBJS)
+ifdef CONFIG_ARITHMETIC
+T_FUZZ_OBJS += lex.yy.o y.tab.o
+endif
+# in case there is no fuzz driver defined by environment variable LIB_FUZZING_ENGINE, use a simple one
+# For instance, with compiler clang, address sanitizer and libFuzzer as a fuzzing engine, you should define
+# export CFLAGS="-fsanitize=address,fuzzer-no-link"
+# export LIB_FUZZING_ENGINE="-fsanitize=address"
+# export CC=clang
+# before running configure && make
+# You can adapt this with different compilers, sanitizers, and fuzzing engines
+ifndef LIB_FUZZING_ENGINE
+T_FUZZ_OBJS += t/fuzz/onefile.o
+endif
+T_FUZZ_PROGS = t/fuzz/fuzz_parseini
+
 T_OBJS = $(T_SMALLOC_OBJS)
 T_OBJS += $(T_IEEE_OBJS)
 T_OBJS += $(T_ZIPF_OBJS)
@@ -359,6 +376,7 @@ T_OBJS += $(T_PIPE_ASYNC_OBJS)
 T_OBJS += $(T_MEMLOCK_OBJS)
 T_OBJS += $(T_TT_OBJS)
 T_OBJS += $(T_IOU_RING_OBJS)
+T_OBJS += $(T_FUZZ_OBJS)
 
 ifneq (,$(findstring CYGWIN,$(CONFIG_TARGET_OS)))
     T_DEDUPE_OBJS += $(WINDOWS_OBJS)
@@ -382,6 +400,7 @@ endif
 ifneq (,$(findstring Linux,$(CONFIG_TARGET_OS)))
 T_TEST_PROGS += $(T_IOU_RING_PROGS)
 endif
+T_TEST_PROGS += $(T_FUZZ_PROGS)
 
 PROGS += $(T_PROGS)
 
@@ -533,6 +552,13 @@ t/ieee754: $(T_IEEE_OBJS)
 fio: $(FIO_OBJS)
 	$(QUIET_LINK)$(CC) $(LDFLAGS) -o $@ $(FIO_OBJS) $(LIBS) $(HDFSLIB)
 
+t/fuzz/fuzz_parseini: $(T_FUZZ_OBJS)
+ifndef LIB_FUZZING_ENGINE
+	$(QUIET_LINK)$(CC) $(LDFLAGS) -o $@ $(T_FUZZ_OBJS) $(LIBS) $(HDFSLIB)
+else
+	$(QUIET_LINK)$(CXX) $(LDFLAGS) -o $@ $(T_FUZZ_OBJS) $(LIB_FUZZING_ENGINE) $(LIBS) $(HDFSLIB)
+endif
+
 gfio: $(GFIO_OBJS)
 	$(QUIET_LINK)$(CC) $(filter-out -static, $(LDFLAGS)) -o gfio $(GFIO_OBJS) $(LIBS) $(GFIO_LIBS) $(GTK_LDFLAGS) $(HDFSLIB)
 
@@ -600,9 +626,10 @@ fulltest:
 	   make -j &&						 	\
 	   sudo make install)						\
 	fi &&					 			\
-	sudo t/zbd/run-tests-against-regular-nullb &&		 	\
+	sudo t/zbd/run-tests-against-nullb -s 1 &&		 	\
 	if [ -e /sys/module/null_blk/parameters/zoned ]; then		\
-		sudo t/zbd/run-tests-against-zoned-nullb;	 	\
+		sudo t/zbd/run-tests-against-nullb -s 2;	 	\
+		sudo t/zbd/run-tests-against-nullb -s 4;	 	\
 	fi
 
 install: $(PROGS) $(SCRIPTS) $(ENGS_OBJS) tools/plot/fio2gnuplot.1 FORCE

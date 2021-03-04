@@ -501,7 +501,7 @@ static int str_match_len(const struct value_pair *vp, const char *str)
 
 static const char *opt_type_name(const struct fio_option *o)
 {
-	compiletime_assert(ARRAY_SIZE(opt_type_names) - 1 == FIO_OPT_UNSUPPORTED,
+	compiletime_assert(FIO_ARRAY_SIZE(opt_type_names) - 1 == FIO_OPT_UNSUPPORTED,
 				"opt_type_names[] index");
 
 	if (o->type <= FIO_OPT_UNSUPPORTED)
@@ -786,6 +786,11 @@ static int __handle_option(const struct fio_option *o, const char *ptr,
 		if (o->off1) {
 			cp = td_var(data, o, o->off1);
 			*cp = strdup(ptr);
+			if (strlen(ptr) > o->maxlen - 1) {
+				log_err("value exceeds max length of %d\n",
+					o->maxlen);
+				return 1;
+			}
 		}
 
 		if (fn)

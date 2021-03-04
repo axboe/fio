@@ -809,6 +809,8 @@ Target file/device
 
 		**$jobname**
 				The name of the worker thread or process.
+		**$clientuid**
+				IP of the fio process when using client/server mode.
 		**$jobnum**
 				The incremental number of the worker thread or process.
 		**$filenum**
@@ -1362,7 +1364,7 @@ I/O type
 	limit reads or writes to a certain rate.  If that is the case, then the
 	distribution may be skewed. Default: 50.
 
-.. option:: random_distribution=str:float[,str:float][,str:float]
+.. option:: random_distribution=str:float[:float][,str:float][,str:float]
 
 	By default, fio will use a completely uniform random distribution when asked
 	to perform random I/O. Sometimes it is useful to skew the distribution in
@@ -1396,6 +1398,14 @@ I/O type
 	option. If a non-uniform model is used, fio will disable use of the random
 	map. For the **normal** distribution, a normal (Gaussian) deviation is
 	supplied as a value between 0 and 100.
+
+	The second, optional float is allowed for **pareto**, **zipf** and **normal** distributions.
+	It allows to set base of distribution in non-default place, giving more control
+	over most probable outcome. This value is in range [0-1] which maps linearly to
+	range of possible random values.
+	Defaults are: random for **pareto** and **zipf**, and 0.5 for **normal**.
+	If you wanted to use **zipf** with a `theta` of 1.2 centered on 1/4 of allowed value range,
+	you would use ``random_distibution=zipf:1.2:0.25``.
 
 	For a **zoned** distribution, fio supports specifying percentages of I/O
 	access that should fall within what range of the file or device. For
@@ -1913,12 +1923,14 @@ I/O engine
 
 		**cpuio**
 			Doesn't transfer any data, but burns CPU cycles according to the
-			:option:`cpuload` and :option:`cpuchunks` options. Setting
-			:option:`cpuload`\=85 will cause that job to do nothing but burn 85%
+			:option:`cpuload`, :option:`cpuchunks` and :option:`cpumode` options.
+			Setting :option:`cpuload`\=85 will cause that job to do nothing but burn 85%
 			of the CPU. In case of SMP machines, use :option:`numjobs`\=<nr_of_cpu>
 			to get desired CPU usage, as the cpuload only loads a
 			single CPU at the desired rate. A job never finishes unless there is
 			at least one non-cpuio job.
+			Setting :option:`cpumode`\=qsort replace the default noop instructions loop
+			by a qsort algorithm to consume more energy.
 
 		**rdma**
 			The RDMA I/O engine supports both RDMA memory semantics
@@ -2350,6 +2362,18 @@ with the caveat that when used on the command line, they must come after the
 		transferred to the device. The writefua option is ignored with this
 		selection.
 
+.. option:: hipri : [sg]
+
+	If this option is set, fio will attempt to use polled IO completions.
+	This will have a similar effect as (io_uring)hipri. Only SCSI READ and
+	WRITE commands will have the SGV4_FLAG_HIPRI set (not UNMAP (trim) nor
+	VERIFY). Older versions of the Linux sg driver that do not support
+	hipri will simply ignore this flag and do normal IO. The Linux SCSI
+	Low Level Driver (LLD) that "owns" the device also needs to support
+	hipri (also known as iopoll and mq_poll). The MegaRAID driver is an
+	example of a SCSI LLD. Default: clear (0) which does normal
+	(interrupted based) IO.
+
 .. option:: http_host=str : [http]
 
 	Hostname to connect to. For S3, this could be the bucket hostname.
@@ -2552,6 +2576,13 @@ I/O rate
 	queue depth setting redundant, since no more than 1 I/O will be queued
 	before we have to complete it and do our :option:`thinktime`. In other words, this
 	setting effectively caps the queue depth if the latter is larger.
+
+.. option:: thinktime_blocks_type=str
+
+	Only valid if :option:`thinktime` is set - control how :option:`thinktime_blocks`
+	triggers. The default is `complete`, which triggers thinktime when fio completes
+	:option:`thinktime_blocks` blocks. If this is set to `issue`, then the trigger happens
+	at the issue side.
 
 .. option:: rate=int[,int][,int]
 

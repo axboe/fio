@@ -311,7 +311,7 @@ static void *helper_thread_main(void *data)
 	block_signals();
 
 	fio_get_mono_time(&ts);
-	msec_to_next_event = reset_timers(timer, ARRAY_SIZE(timer), &ts);
+	msec_to_next_event = reset_timers(timer, FIO_ARRAY_SIZE(timer), &ts);
 
 	fio_sem_up(hd->startup_sem);
 
@@ -329,9 +329,9 @@ static void *helper_thread_main(void *data)
 
 		if (action == A_RESET)
 			msec_to_next_event = reset_timers(timer,
-						ARRAY_SIZE(timer), &ts);
+						FIO_ARRAY_SIZE(timer), &ts);
 
-		for (i = 0; i < ARRAY_SIZE(timer); ++i)
+		for (i = 0; i < FIO_ARRAY_SIZE(timer); ++i)
 			ret = eval_timer(&timer[i], &ts, &msec_to_next_event);
 
 		if (action == A_DO_STAT)

@@ -95,6 +95,7 @@ static void *dlopen_external(struct thread_data *td, const char *engine)
 
 	sprintf(engine_path, "%s/fio-%s.so", FIO_EXT_ENG_DIR, engine);
 
+	dprint(FD_IO, "dlopen external %s\n", engine_path);
 	dlhandle = dlopen(engine_path, RTLD_LAZY);
 	if (!dlhandle)
 		log_info("Engine %s not found; Either name is invalid, was not built, or fio-engine-%s package is missing.\n",
@@ -116,7 +117,7 @@ static struct ioengine_ops *dlopen_ioengine(struct thread_data *td,
 	    !strncmp(engine_lib, "aio", 3))
 		engine_lib = "libaio";
 
-	dprint(FD_IO, "dload engine %s\n", engine_lib);
+	dprint(FD_IO, "dlopen engine %s\n", engine_lib);
 
 	dlerror();
 	dlhandle = dlopen(engine_lib, RTLD_LAZY);
@@ -155,7 +156,7 @@ static struct ioengine_ops *dlopen_ioengine(struct thread_data *td,
 		return NULL;
 	}
 
-	td->io_ops_dlhandle = dlhandle;
+	ops->dlhandle = dlhandle;
 	return ops;
 }
 
@@ -194,7 +195,9 @@ struct ioengine_ops *load_ioengine(struct thread_data *td)
 	 * so as not to break job files not using the prefix.
 	 */
 	ops = __load_ioengine(td->o.ioengine);
-	if (!ops)
+
+	/* We do re-dlopen existing handles, for reference counting */
+	if (!ops || ops->dlhandle)
 		ops = dlopen_ioengine(td, name);
 
 	/*
@@ -228,9 +231,10 @@ void free_ioengine(struct thread_data *td)
 		td->eo = NULL;
 	}
 
-	if (td->io_ops_dlhandle) {
-		dlclose(td->io_ops_dlhandle);
-		td->io_ops_dlhandle = NULL;
+	if (td->io_ops->dlhandle) {
+		dprint(FD_IO, "dlclose ioengine %s\n", td->io_ops->name);
+		dlclose(td->io_ops->dlhandle);
+		td->io_ops->dlhandle = NULL;
 	}
 
 	td->io_ops = NULL;
