@@ -2794,12 +2794,6 @@ fi
 if test "$clock_monotonic" = "yes" ; then
   output_sym "CONFIG_CLOCK_MONOTONIC"
 fi
-if test "$clock_monotonic_raw" = "yes" ; then
-  output_sym "CONFIG_CLOCK_MONOTONIC_RAW"
-fi
-if test "$clock_monotonic_precise" = "yes" ; then
-  output_sym "CONFIG_CLOCK_MONOTONIC_PRECISE"
-fi
 if test "$clockid_t" = "yes"; then
   output_sym "CONFIG_CLOCKID_T"
 fi
