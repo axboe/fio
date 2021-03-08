@@ -233,8 +233,7 @@ static int prep_more_ios(struct submitter *s, int max_ios)
 	next_tail = tail = *ring->tail;
 	do {
 		next_tail++;
-		read_barrier();
-		if (next_tail == *ring->head)
+		if (next_tail == atomic_load_acquire(ring->head))
 			break;
 
 		index = tail & sq_ring_mask;
@@ -244,10 +243,8 @@ static int prep_more_ios(struct submitter *s, int max_ios)
 		tail = next_tail;
 	} while (prepped < max_ios);
 
-	if (*ring->tail != tail) {
-		*ring->tail = tail;
-		write_barrier();
-	}
+	if (prepped)
+		atomic_store_release(ring->tail, tail);
 	return prepped;
 }
 
@@ -284,7 +281,7 @@ static int reap_events(struct submitter *s)
 		struct file *f;
 
 		read_barrier();
-		if (head == *ring->tail)
+		if (head == atomic_load_acquire(ring->tail))
 			break;
 		cqe = &ring->cqes[head & cq_ring_mask];
 		if (!do_nop) {
@@ -301,9 +298,10 @@ static int reap_events(struct submitter *s)
 		head++;
 	} while (1);
 
-	s->inflight -= reaped;
-	*ring->head = head;
-	write_barrier();
+	if (reaped) {
+		s->inflight -= reaped;
+		atomic_store_release(ring->head, head);
+	}
 	return reaped;
 }
 
@@ -320,6 +318,7 @@ static void *submitter_fn(void *data)
 	prepped = 0;
 	do {
 		int to_wait, to_submit, this_reap, to_prep;
+		unsigned ring_flags = 0;
 
 		if (!prepped && s->inflight < depth) {
 			to_prep = min(depth - s->inflight, batch_submit);
@@ -338,15 +337,20 @@ submit:
 		 * Only need to call io_uring_enter if we're not using SQ thread
 		 * poll, or if IORING_SQ_NEED_WAKEUP is set.
 		 */
-		if (!sq_thread_poll || (*ring->flags & IORING_SQ_NEED_WAKEUP)) {
+		if (sq_thread_poll)
+			ring_flags = atomic_load_acquire(ring->flags);
+		if (!sq_thread_poll || ring_flags & IORING_SQ_NEED_WAKEUP) {
 			unsigned flags = 0;
 
 			if (to_wait)
 				flags = IORING_ENTER_GETEVENTS;
-			if ((*ring->flags & IORING_SQ_NEED_WAKEUP))
+			if (ring_flags & IORING_SQ_NEED_WAKEUP)
 				flags |= IORING_ENTER_SQ_WAKEUP;
 			ret = io_uring_enter(s, to_submit, to_wait, flags);
 			s->calls++;
+		} else {
+			/* for SQPOLL, we submitted it all effectively */
+			ret = to_submit;
 		}
 
 		/*
