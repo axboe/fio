@@ -696,11 +696,11 @@ static int fio_ioring_post_init(struct thread_data *td)
 
 	err = fio_ioring_queue_init(td);
 	if (err) {
-		int __errno = errno;
+		int init_err = errno;
 
-		if (__errno == ENOSYS)
+		if (init_err == ENOSYS)
 			log_err("fio: your kernel doesn't support io_uring\n");
-		td_verror(td, __errno, "io_queue_init");
+		td_verror(td, init_err, "io_queue_init");
 		return 1;
 	}
 
