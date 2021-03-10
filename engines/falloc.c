@@ -25,8 +25,8 @@ static int open_file(struct thread_data *td, struct fio_file *f)
 
 	dprint(FD_FILE, "fd open %s\n", f->file_name);
 
-	if (f->filetype != FIO_TYPE_FILE) {
-		log_err("fio: only files are supported fallocate \n");
+	if (f->filetype != FIO_TYPE_FILE && f->filetype != FIO_TYPE_BLOCK) {
+		log_err("fio: only files and blockdev are supported fallocate \n");
 		return 1;
 	}
 	if (!strcmp(f->file_name, "-")) {
