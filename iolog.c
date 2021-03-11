@@ -607,12 +607,11 @@ static int open_socket(const char *path)
 /*
  * open iolog, check version, and call appropriate parser
  */
-static bool init_iolog_read(struct thread_data *td)
+static bool init_iolog_read(struct thread_data *td, char *fname)
 {
-	char buffer[256], *p, *fname;
+	char buffer[256], *p;
 	FILE *f = NULL;
 
-	fname = get_name_by_idx(td->o.read_iolog_file, td->subjob_number);
 	dprint(FD_IO, "iolog: name=%s\n", fname);
 
 	if (is_socket(fname)) {
@@ -701,15 +700,16 @@ bool init_iolog(struct thread_data *td)
 
 	if (td->o.read_iolog_file) {
 		int need_swap;
+		char * fname = get_name_by_idx(td->o.read_iolog_file, td->subjob_number);
 
 		/*
 		 * Check if it's a blktrace file and load that if possible.
 		 * Otherwise assume it's a normal log file and load that.
 		 */
-		if (is_blktrace(td->o.read_iolog_file, &need_swap))
-			ret = load_blktrace(td, td->o.read_iolog_file, need_swap);
+		if (is_blktrace(fname, &need_swap))
+			ret = load_blktrace(td, fname, need_swap);
 		else
-			ret = init_iolog_read(td);
+			ret = init_iolog_read(td, fname);
 	} else if (td->o.write_iolog_file)
 		ret = init_iolog_write(td);
 	else
