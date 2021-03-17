@@ -2537,6 +2537,7 @@ int fio_backend(struct sk_out *sk_out)
 	for_each_td(td, i) {
 		steadystate_free(td);
 		fio_options_free(td);
+		fio_dump_options_free(td);
 		if (td->rusage_sem) {
 			fio_sem_remove(td->rusage_sem);
 			td->rusage_sem = NULL;

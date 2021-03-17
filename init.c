@@ -448,19 +448,6 @@ static void dump_opt_list(struct thread_data *td)
 	}
 }
 
-static void fio_dump_options_free(struct thread_data *td)
-{
-	while (!flist_empty(&td->opt_list)) {
-		struct print_option *p;
-
-		p = flist_first_entry(&td->opt_list, struct print_option, list);
-		flist_del_init(&p->list);
-		free(p->name);
-		free(p->value);
-		free(p);
-	}
-}
-
 static void copy_opt_list(struct thread_data *dst, struct thread_data *src)
 {
 	struct flist_head *entry;

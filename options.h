@@ -16,6 +16,7 @@ void add_opt_posval(const char *, const char *, const char *);
 void del_opt_posval(const char *, const char *);
 struct thread_data;
 void fio_options_free(struct thread_data *);
+void fio_dump_options_free(struct thread_data *);
 char *get_next_str(char **ptr);
 int get_max_str_idx(char *input);
 char* get_name_by_idx(char *input, int index);
