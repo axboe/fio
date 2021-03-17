@@ -2067,6 +2067,9 @@ I/O engine
 			unless :option:`verify` is set or :option:`cuda_io` is `posix`.
 			:option:`iomem` must not be `cudamalloc`. This ioengine defines
 			engine specific options.
+		**dfs**
+			I/O engine supporting asynchronous read and write operations to the
+			DAOS File System (DFS) via libdfs.
 
 I/O engine specific parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2451,6 +2454,24 @@ with the caveat that when used on the command line, they must come after the
 		to transfer data between RAM and the GPUs. Data is copied from
 		GPU to RAM before a write and copied from RAM to GPU after a
 		read. :option:`verify` does not affect use of cudaMemcpy.
+
+.. option:: pool=str : [dfs]
+
+	Specify the UUID of the DAOS pool to connect to.
+
+.. option:: cont=str : [dfs]
+
+	Specify the UUID of the DAOS container to open.
+
+.. option:: chunk_size=int : [dfs]
+
+	Specificy a different chunk size (in bytes) for the dfs file.
+	Use DAOS container's chunk size by default.
+
+.. option:: object_class=str : [dfs]
+
+	Specificy a different object class for the dfs file.
+	Use DAOS container's object class by default.
 
 I/O depth
 ~~~~~~~~~

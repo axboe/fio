@@ -130,6 +130,11 @@ ifdef CONFIG_HTTP
   http_LIBS = -lcurl -lssl -lcrypto
   ENGINES += http
 endif
+ifdef CONFIG_DFS
+  dfs_SRCS = engines/dfs.c
+  dfs_LIBS = -luuid -ldaos -ldfs
+  ENGINES += dfs
+endif
 SOURCE += oslib/asprintf.c
 ifndef CONFIG_STRSEP
   SOURCE += oslib/strsep.c

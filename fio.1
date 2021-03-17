@@ -1856,6 +1856,10 @@ GPUDirect Storage-supported filesystem. This engine performs
 I/O without transferring buffers between user-space and the kernel,
 unless \fBverify\fR is set or \fBcuda_io\fR is \fBposix\fR. \fBiomem\fR must
 not be \fBcudamalloc\fR. This ioengine defines engine specific options.
+.TP
+.B dfs
+I/O engine supporting asynchronous read and write operations to the DAOS File
+System (DFS) via libdfs.
 .SS "I/O engine specific parameters"
 In addition, there are some parameters which are only valid when a specific
 \fBioengine\fR is in use. These are used identically to normal parameters,
@@ -2209,6 +2213,20 @@ from RAM to GPU after a read. \fBverify\fR does not affect
 the use of cudaMemcpy.
 .RE
 .RE
+.TP
+.BI (dfs)pool
+Specify the UUID of the DAOS pool to connect to.
+.TP
+.BI (dfs)cont
+Specify the UUID of the DAOS DAOS container to open.
+.TP
+.BI (dfs)chunk_size
+Specificy a different chunk size (in bytes) for the dfs file.
+Use DAOS container's chunk size by default.
+.TP
+.BI (dfs)object_class
+Specificy a different object class for the dfs file.
+Use DAOS container's object class by default.
 .SS "I/O depth"
 .TP
 .BI iodepth \fR=\fPint

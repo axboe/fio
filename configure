@@ -171,6 +171,7 @@ march_set="no"
 libiscsi="no"
 libnbd="no"
 libzbc=""
+dfs=""
 dynamic_engines="no"
 prefix=/usr/local
 
@@ -242,6 +243,8 @@ for opt do
   ;;
   --dynamic-libengines) dynamic_engines="yes"
   ;;
+  --disable-dfs) dfs="no"
+  ;;
   --help)
     show_help="yes"
     ;;
@@ -284,6 +287,7 @@ if test "$show_help" = "yes" ; then
   echo "--disable-libzbc        Disable libzbc even if found"
   echo "--disable-tcmalloc	Disable tcmalloc support"
   echo "--dynamic-libengines	Lib-based ioengines as dynamic libraries"
+  echo "--disable-dfs		Disable DAOS File System support even if found"
   exit $exit_val
 fi
 
@@ -413,6 +417,7 @@ CYGWIN*)
   clock_gettime="yes" # clock_monotonic probe has dependency on this
   clock_monotonic="yes"
   sched_idle="yes"
+  pthread_condattr_setclock="no"
   ;;
 esac
 
@@ -758,10 +763,8 @@ print_config "POSIX pshared support" "$posix_pshared"
 
 ##########################################
 # POSIX pthread_condattr_setclock() probe
-if test "$pthread_condattr_setclock" != "yes" ; then
-  pthread_condattr_setclock="no"
-fi
-cat > $TMPC <<EOF
+if test "$pthread_condattr_setclock" != "no" ; then
+  cat > $TMPC <<EOF
 #include <pthread.h>
 int main(void)
 {
@@ -770,11 +773,12 @@ int main(void)
   return 0;
 }
 EOF
-if compile_prog "" "$LIBS" "pthread_condattr_setclock" ; then
-  pthread_condattr_setclock=yes
-elif compile_prog "" "$LIBS -lpthread" "pthread_condattr_setclock" ; then
-  pthread_condattr_setclock=yes
-  LIBS="$LIBS -lpthread"
+  if compile_prog "" "$LIBS" "pthread_condattr_setclock" ; then
+    pthread_condattr_setclock=yes
+  elif compile_prog "" "$LIBS -lpthread" "pthread_condattr_setclock" ; then
+    pthread_condattr_setclock=yes
+    LIBS="$LIBS -lpthread"
+  fi
 fi
 print_config "pthread_condattr_setclock()" "$pthread_condattr_setclock"
 
@@ -2180,6 +2184,33 @@ fi
 print_config "NBD engine" "$libnbd"
 
 ##########################################
+# check for dfs (DAOS File System)
+if test "$dfs" != "no" ; then
+  cat > $TMPC << EOF
+#include <fcntl.h>
+#include <daos.h>
+#include <daos_fs.h>
+
+int main(int argc, char **argv)
+{
+  daos_handle_t	poh;
+  daos_handle_t	coh;
+  dfs_t		*dfs;
+
+  (void) dfs_mount(poh, coh, O_RDWR, &dfs);
+
+  return 0;
+}
+EOF
+  if compile_prog "" "-luuid -ldfs -ldaos" "dfs"; then
+    dfs="yes"
+  else
+    dfs="no"
+  fi
+fi
+print_config "DAOS File System (dfs) Engine" "$dfs"
+
+##########################################
 # Check if we have lex/yacc available
 yacc="no"
 yacc_is_bison="no"
@@ -2987,6 +3018,9 @@ if test "$cuda" = "yes" ; then
 fi
 if test "$libcufile" = "yes" ; then
   output_sym "CONFIG_LIBCUFILE"
+fi
+if test "$dfs" = "yes" ; then
+  output_sym "CONFIG_DFS"
 fi
 if test "$march_set" = "no" && test "$build_native" = "yes" ; then
   output_sym "CONFIG_BUILD_NATIVE"
