@@ -146,6 +146,9 @@ enum block_info_state {
 #define FIO_JOBNAME_SIZE	128
 #define FIO_JOBDESC_SIZE	256
 #define FIO_VERROR_SIZE		128
+#define UNIFIED_SPLIT		0
+#define UNIFIED_MIXED		1
+#define UNIFIED_BOTH		2
 
 enum fio_lat {
 	FIO_SLAT = 0,

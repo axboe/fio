@@ -1146,11 +1146,31 @@ I/O type
 	behaves in a similar fashion, except it sends the same offset 8 number of
 	times before generating a new offset.
 
-.. option:: unified_rw_reporting=bool
+.. option:: unified_rw_reporting=str
 
 	Fio normally reports statistics on a per data direction basis, meaning that
-	reads, writes, and trims are accounted and reported separately. If this
-	option is set fio sums the results and report them as "mixed" instead.
+	reads, writes, and trims are accounted and reported separately. This option
+	determines whether fio reports the results normally, summed together, or as
+	both options.
+	Accepted values are:
+
+		**none**
+			Normal statistics reporting.
+
+		**mixed**
+			Statistics are summed per data direction and reported together.
+
+		**both**
+			Statistics are reported normally, followed by the mixed statistics.
+
+		**0**
+			Backward-compatible alias for **none**.
+
+		**1**
+			Backward-compatible alias for **mixed**.
+		
+		**2**
+			Alias for **both**.
 
 .. option:: randrepeat=bool
 
