@@ -418,6 +418,7 @@ CYGWIN*)
   clock_monotonic="yes"
   sched_idle="yes"
   pthread_condattr_setclock="no"
+  pthread_affinity="no"
   ;;
 esac
 
@@ -802,6 +803,29 @@ elif compile_prog "" "$LIBS -lpthread" "pthread_sigmask" ; then
   LIBS="$LIBS -lpthread"
 fi
 print_config "pthread_sigmask()" "$pthread_sigmask"
+
+##########################################
+# pthread_getaffinity_np() probe
+if test "$pthread_getaffinity" != "yes" ; then
+  pthread_getaffinity="no"
+fi
+cat > $TMPC <<EOF
+#include <stddef.h> /* NULL */
+#include <signal.h> /* pthread_sigmask() */
+#include <pthread.h>
+int main(void)
+{
+  cpu_set_t set;
+  return pthread_getaffinity_np(pthread_self(), sizeof(set), &set);
+}
+EOF
+if compile_prog "" "$LIBS" "pthread_getaffinity" ; then
+  pthread_getaffinity="yes"
+elif compile_prog "" "$LIBS -lpthread" "pthread_getaffinity" ; then
+  pthread_getaffinity="yes"
+  LIBS="$LIBS -lpthread"
+fi
+print_config "pthread_getaffinity_np()" "$pthread_getaffinity"
 
 ##########################################
 # solaris aio probe
@@ -2822,6 +2846,9 @@ if test "$pthread_condattr_setclock" = "yes" ; then
 fi
 if test "$pthread_sigmask" = "yes" ; then
   output_sym "CONFIG_PTHREAD_SIGMASK"
+fi
+if test "$pthread_getaffinity" = "yes" ; then
+  output_sym "CONFIG_PTHREAD_GETAFFINITY"
 fi
 if test "$have_asprintf" = "yes" ; then
     output_sym "CONFIG_HAVE_ASPRINTF"
