@@ -671,12 +671,17 @@ static int clock_cmp(const void *p1, const void *p2)
 int fio_monotonic_clocktest(int debug)
 {
 	struct clock_thread *cthreads;
-	unsigned int nr_cpus = cpus_online();
+	unsigned int seen_cpus, nr_cpus = cpus_online();
 	struct clock_entry *entries;
 	unsigned long nr_entries, tentries, failed = 0;
 	struct clock_entry *prev, *this;
 	uint32_t seq = 0;
 	unsigned int i;
+#ifdef CONFIG_PTHREAD_GETAFFINITY
+	os_cpu_mask_t mask;
+
+	fio_get_thread_affinity(mask);
+#endif
 
 	if (debug) {
 		log_info("cs: reliable_tsc: %s\n", tsc_reliable ? "yes" : "no");
@@ -703,32 +708,44 @@ int fio_monotonic_clocktest(int debug)
 	if (debug)
 		log_info("cs: Testing %u CPUs\n", nr_cpus);
 
+	seen_cpus = 0;
 	for (i = 0; i < nr_cpus; i++) {
 		struct clock_thread *t = &cthreads[i];
 
+#ifdef CONFIG_PTHREAD_GETAFFINITY
+		if (!fio_cpu_isset(&mask, i))
+			continue;
+#endif
 		t->cpu = i;
 		t->debug = debug;
 		t->seq = &seq;
 		t->nr_entries = nr_entries;
-		t->entries = &entries[i * nr_entries];
+		t->entries = &entries[seen_cpus * nr_entries];
 		__fio_sem_init(&t->lock, FIO_SEM_LOCKED);
 		if (pthread_create(&t->thread, NULL, clock_thread_fn, t)) {
 			failed++;
 			nr_cpus = i;
 			break;
 		}
+		seen_cpus++;
 	}
 
 	for (i = 0; i < nr_cpus; i++) {
 		struct clock_thread *t = &cthreads[i];
-
+#ifdef CONFIG_PTHREAD_GETAFFINITY
+		if (!fio_cpu_isset(&mask, i))
+			continue;
+#endif
 		fio_sem_up(&t->lock);
 	}
 
 	for (i = 0; i < nr_cpus; i++) {
 		struct clock_thread *t = &cthreads[i];
 		void *ret;
-
+#ifdef CONFIG_PTHREAD_GETAFFINITY
+		if (!fio_cpu_isset(&mask, i))
+			continue;
+#endif
 		pthread_join(t->thread, &ret);
 		if (ret)
 			failed++;
@@ -742,6 +759,9 @@ int fio_monotonic_clocktest(int debug)
 		goto err;
 	}
 
+#ifdef CONFIG_PTHREAD_GETAFFINITY
+	tentries = nr_entries * seen_cpus;
+#endif
 	qsort(entries, tentries, sizeof(struct clock_entry), clock_cmp);
 
 	/* silence silly gcc */
