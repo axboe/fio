@@ -677,10 +677,14 @@ int fio_monotonic_clocktest(int debug)
 	struct clock_entry *prev, *this;
 	uint32_t seq = 0;
 	unsigned int i;
-#ifdef CONFIG_PTHREAD_GETAFFINITY
 	os_cpu_mask_t mask;
 
+#ifdef CONFIG_PTHREAD_GETAFFINITY
 	fio_get_thread_affinity(mask);
+#else
+	memset(&mask, 0, sizeof(mask));
+	for (i = 0; i < nr_cpus; i++)
+		fio_cpu_set(&mask, i);
 #endif
 
 	if (debug) {
@@ -712,10 +716,8 @@ int fio_monotonic_clocktest(int debug)
 	for (i = 0; i < nr_cpus; i++) {
 		struct clock_thread *t = &cthreads[i];
 
-#ifdef CONFIG_PTHREAD_GETAFFINITY
 		if (!fio_cpu_isset(&mask, i))
 			continue;
-#endif
 		t->cpu = i;
 		t->debug = debug;
 		t->seq = &seq;
@@ -732,20 +734,18 @@ int fio_monotonic_clocktest(int debug)
 
 	for (i = 0; i < nr_cpus; i++) {
 		struct clock_thread *t = &cthreads[i];
-#ifdef CONFIG_PTHREAD_GETAFFINITY
+
 		if (!fio_cpu_isset(&mask, i))
 			continue;
-#endif
 		fio_sem_up(&t->lock);
 	}
 
 	for (i = 0; i < nr_cpus; i++) {
 		struct clock_thread *t = &cthreads[i];
 		void *ret;
-#ifdef CONFIG_PTHREAD_GETAFFINITY
+
 		if (!fio_cpu_isset(&mask, i))
 			continue;
-#endif
 		pthread_join(t->thread, &ret);
 		if (ret)
 			failed++;
@@ -759,9 +759,7 @@ int fio_monotonic_clocktest(int debug)
 		goto err;
 	}
 
-#ifdef CONFIG_PTHREAD_GETAFFINITY
 	tentries = nr_entries * seen_cpus;
-#endif
 	qsort(entries, tentries, sizeof(struct clock_entry), clock_cmp);
 
 	/* silence silly gcc */
