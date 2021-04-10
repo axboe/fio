@@ -2328,6 +2328,12 @@ with the caveat that when used on the command line, they must come after the
         Poll store instead of waiting for completion. Usually this provides better
         throughput at cost of higher(up to 100%) CPU utilization.
 
+.. option:: touch_objects=bool : [rados]
+
+        During initialization, touch (create if do not exist) all objects (files).
+        Touching all objects affects ceph caches and likely impacts test results.
+        Enabled by default.
+
 .. option:: skip_bad=bool : [mtd]
 
 	Skip operations against known bad blocks.
