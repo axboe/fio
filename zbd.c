@@ -842,16 +842,13 @@ static void zbd_close_zone(struct thread_data *td, const struct fio_file *f,
  * @f: fio file for which to reset zones
  * @zb: first zone to reset.
  * @ze: first zone not to reset.
- * @all_zones: whether to reset all zones or only those zones for which the
- *	write pointer is not a multiple of td->o.min_bs[DDIR_WRITE].
  */
 static int zbd_reset_zones(struct thread_data *td, struct fio_file *f,
 			   struct fio_zone_info *const zb,
-			   struct fio_zone_info *const ze, bool all_zones)
+			   struct fio_zone_info *const ze)
 {
 	struct fio_zone_info *z;
 	const uint32_t min_bs = td->o.min_bs[DDIR_WRITE];
-	bool reset_wp;
 	int res = 0;
 
 	assert(min_bs);
@@ -864,16 +861,10 @@ static int zbd_reset_zones(struct thread_data *td, struct fio_file *f,
 		if (!z->has_wp)
 			continue;
 		zone_lock(td, f, z);
-		if (all_zones) {
-			pthread_mutex_lock(&f->zbd_info->mutex);
-			zbd_close_zone(td, f, nz);
-			pthread_mutex_unlock(&f->zbd_info->mutex);
-
-			reset_wp = z->wp != z->start;
-		} else {
-			reset_wp = z->wp % min_bs != 0;
-		}
-		if (reset_wp) {
+		pthread_mutex_lock(&f->zbd_info->mutex);
+		zbd_close_zone(td, f, nz);
+		pthread_mutex_unlock(&f->zbd_info->mutex);
+		if (z->wp != z->start) {
 			dprint(FD_ZBD, "%s: resetting zone %u\n",
 			       f->file_name, zbd_zone_nr(f, z));
 			if (zbd_reset_zone(td, f, z) < 0)
@@ -996,8 +987,8 @@ void zbd_file_reset(struct thread_data *td, struct fio_file *f)
 	 * writing any data to avoid that a zone reset has to be issued while
 	 * writing data, which causes data loss.
 	 */
-	zbd_reset_zones(td, f, zb, ze, td->o.verify != VERIFY_NONE &&
-			td->runstate != TD_VERIFYING);
+	if (td->o.verify != VERIFY_NONE && td->runstate != TD_VERIFYING)
+		zbd_reset_zones(td, f, zb, ze);
 	zbd_reset_write_cnt(td, f);
 }
 
