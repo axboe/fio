@@ -131,7 +131,7 @@ static inline void *td_var(void *to, const struct fio_option *o,
 
 static inline int parse_is_percent(unsigned long long val)
 {
-	return val >= -101;
+	return val >= -101ULL;
 }
 
 #define ZONE_BASE_VAL ((-1ULL >> 1) + 1)
