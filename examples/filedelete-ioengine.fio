@@ -1,0 +1,18 @@
+# Example filedelete job
+
+# 'filedelete' engine only do 'unlink(filename)', file will not be open().
+# 'filesize' must be set, then files will be created at setup stage.
+# 'unlink' is better set to 0, since the file is deleted in measurement.
+# the options disabled completion latency output such as 'disable_clat' and 'gtod_reduce' must not set.
+[global]
+ioengine=filedelete
+filesize=4k
+nrfiles=200
+unlink=0
+
+[t0]
+[t1]
+[t2]
+[t3]
+[t4]
+[t5]

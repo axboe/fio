@@ -1847,6 +1847,11 @@ Simply do stat() and do no I/O to the file. You need to set 'filesize'
 and 'nrfiles', so that files will be created.
 This engine is to measure file lookup and meta data access.
 .TP
+.B filedelete
+Simply delete files by unlink() and do no I/O to the file. You need to set 'filesize'
+and 'nrfiles', so that files will be created.
+This engine is to measure file delete.
+.TP
 .B libpmem
 Read and write using mmap I/O to a file on a filesystem
 mounted with DAX on a persistent memory device through the PMDK
