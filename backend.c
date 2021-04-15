@@ -1341,22 +1341,19 @@ int init_io_u_buffers(struct thread_data *td)
 	return 0;
 }
 
+#ifdef FIO_HAVE_IOSCHED_SWITCH
 /*
- * This function is Linux specific.
+ * These functions are Linux specific.
  * FIO_HAVE_IOSCHED_SWITCH enabled currently means it's Linux.
  */
-static int switch_ioscheduler(struct thread_data *td)
+static int set_ioscheduler(struct thread_data *td, struct fio_file *file)
 {
-#ifdef FIO_HAVE_IOSCHED_SWITCH
 	char tmp[256], tmp2[128], *p;
 	FILE *f;
 	int ret;
 
-	if (td_ioengine_flagged(td, FIO_DISKLESSIO))
-		return 0;
-
-	assert(td->files && td->files[0]);
-	sprintf(tmp, "%s/queue/scheduler", td->files[0]->du->sysfs_root);
+	assert(file->du && file->du->sysfs_root);
+	sprintf(tmp, "%s/queue/scheduler", file->du->sysfs_root);
 
 	f = fopen(tmp, "r+");
 	if (!f) {
@@ -1417,10 +1414,54 @@ static int switch_ioscheduler(struct thread_data *td)
 
 	fclose(f);
 	return 0;
-#else
-	return 0;
-#endif
 }
+
+static int switch_ioscheduler(struct thread_data *td)
+{
+	struct fio_file *f;
+	unsigned int i;
+	int ret = 0;
+
+	if (td_ioengine_flagged(td, FIO_DISKLESSIO))
+		return 0;
+
+	assert(td->files && td->files[0]);
+
+	for_each_file(td, f, i) {
+
+		/* Only consider regular files and block device files */
+		switch (f->filetype) {
+		case FIO_TYPE_FILE:
+		case FIO_TYPE_BLOCK:
+			/*
+			 * Make sure that the device hosting the file could
+			 * be determined.
+			 */
+			if (!f->du)
+				continue;
+			break;
+		case FIO_TYPE_CHAR:
+		case FIO_TYPE_PIPE:
+		default:
+			continue;
+		}
+
+		ret = set_ioscheduler(td, f);
+		if (ret)
+			return ret;
+	}
+
+	return 0;
+}
+
+#else
+
+static int switch_ioscheduler(struct thread_data *td)
+{
+	return 0;
+}
+
+#endif /* FIO_HAVE_IOSCHED_SWITCH */
 
 static bool keep_running(struct thread_data *td)
 {

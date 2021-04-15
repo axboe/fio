@@ -690,7 +690,8 @@ of how that would work.
 .TP
 .BI ioscheduler \fR=\fPstr
 Attempt to switch the device hosting the file to the specified I/O scheduler
-before running.
+before running. If the file is a pipe, a character device file or if device
+hosting the file could not be determined, this option is ignored.
 .TP
 .BI create_serialize \fR=\fPbool
 If true, serialize the file creation for the jobs. This may be handy to
