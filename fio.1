@@ -176,6 +176,9 @@ Set this \fIcommand\fR as remote trigger.
 .BI \-\-aux\-path \fR=\fPpath
 Use the directory specified by \fIpath\fP for generated state files instead
 of the current working directory.
+.TP
+.BI \-\-latency\-stats \fR=\fPnr
+Change default latency stats number. The default buckets number is 10.
 .SH "JOB FILE FORMAT"
 Any parameters following the options will be assumed to be job files, unless
 they match a job file parameter. Multiple job files can be listed and each job
@@ -3748,11 +3751,22 @@ I/O depths:
 .RS
 .P
 .B
+I/O latencies nanoseconds:
+.RE
+.P
+.nf
+			<=2, 4, 10, 20, 50, 100, 250, 500, 750, 1000
+			The number of buckets may vary.
+.fi
+.RS
+.P
+.B
 I/O latencies microseconds:
 .RE
 .P
 .nf
 			<=2, 4, 10, 20, 50, 100, 250, 500, 750, 1000
+			The number of buckets may vary.
 .fi
 .RS
 .P
@@ -3762,6 +3776,7 @@ I/O latencies milliseconds:
 .P
 .nf
 			<=2, 4, 10, 20, 50, 100, 250, 500, 750, 1000, 2000, >=2000
+			The number of buckets may vary.
 .fi
 .RS
 .P
@@ -3813,7 +3828,7 @@ minimal output v3, separated by semicolons:
 In client/server mode terse output differs from what appears when jobs are run
 locally. Disk utilization data is omitted from the standard terse output and
 for v3 and later appears on its own separate line at the end of each terse
-reporting cycle.
+reporting cycle. The number of buckets may vary.
 .SH JSON OUTPUT
 The \fBjson\fR output format is intended to be both human readable and convenient
 for automated parsing. For the most part its sections mirror those of the

@@ -19,7 +19,14 @@
 
 #define LOG_MSEC_SLACK	1
 
+#define STAT_LAT_NR_DEF 10
+#define STAT_LAT_RANGE_MAX 1000
+#define STAT_NAME_LEN 20
+
 struct fio_sem *stat_sem;
+
+static int stat_lat_nr = STAT_LAT_NR_DEF;
+static int *stat_lat_ranges;
 
 void clear_rusage_stat(struct thread_data *td)
 {
@@ -798,11 +805,25 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	}
 }
 
-static bool show_lat(double *io_u_lat, int nr, const char **ranges,
-		     const char *msg, struct buf_output *out)
+static int stat_get_range(int i)
+{
+	int range = STAT_LAT_RANGE_MAX;
+
+	if (i + 1 >= stat_lat_nr)
+		range *= i + 2 - stat_lat_nr;
+	else
+		range = stat_lat_ranges[i + 1];
+
+	return range;
+}
+
+static bool show_lat(double *io_u_lat, int nr, const char *msg,
+		     struct buf_output *out)
 {
 	bool new_line = true, shown = false;
 	int i, line = 0;
+	int range;
+	int range_max = STAT_LAT_RANGE_MAX * 2;
 
 	for (i = 0; i < nr; i++) {
 		if (io_u_lat[i] <= 0.0)
@@ -817,7 +838,9 @@ static bool show_lat(double *io_u_lat, int nr, const char **ranges,
 		}
 		if (line)
 			log_buf(out, ", ");
-		log_buf(out, "%s%3.2f%%", ranges[i], io_u_lat[i]);
+		range = stat_get_range(i);
+		log_buf(out, "%s%d=%3.2f%%", range > range_max ? ">=" : "",
+			range > range_max ? range_max : range, io_u_lat[i]);
 		line++;
 		if (line == 5)
 			new_line = true;
@@ -831,27 +854,17 @@ static bool show_lat(double *io_u_lat, int nr, const char **ranges,
 
 static void show_lat_n(double *io_u_lat_n, struct buf_output *out)
 {
-	const char *ranges[] = { "2=", "4=", "10=", "20=", "50=", "100=",
-				 "250=", "500=", "750=", "1000=", };
-
-	show_lat(io_u_lat_n, FIO_IO_U_LAT_N_NR, ranges, "nsec", out);
+	show_lat(io_u_lat_n, FIO_IO_U_LAT_N_NR, "nsec", out);
 }
 
 static void show_lat_u(double *io_u_lat_u, struct buf_output *out)
 {
-	const char *ranges[] = { "2=", "4=", "10=", "20=", "50=", "100=",
-				 "250=", "500=", "750=", "1000=", };
-
-	show_lat(io_u_lat_u, FIO_IO_U_LAT_U_NR, ranges, "usec", out);
+	show_lat(io_u_lat_u, FIO_IO_U_LAT_U_NR, "usec", out);
 }
 
 static void show_lat_m(double *io_u_lat_m, struct buf_output *out)
 {
-	const char *ranges[] = { "2=", "4=", "10=", "20=", "50=", "100=",
-				 "250=", "500=", "750=", "1000=", "2000=",
-				 ">=2000=", };
-
-	show_lat(io_u_lat_m, FIO_IO_U_LAT_M_NR, ranges, "msec", out);
+	show_lat(io_u_lat_m, FIO_IO_U_LAT_M_NR, "msec", out);
 }
 
 static void show_latencies(struct thread_stat *ts, struct buf_output *out)
@@ -1805,6 +1818,9 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 	double usr_cpu, sys_cpu;
 	int i;
 	size_t size;
+	char name[STAT_NAME_LEN];
+	int range;
+	int range_max = STAT_LAT_RANGE_MAX * 2;
 
 	root = json_create_object();
 	json_object_add_value_string(root, "jobname", ts->name);
@@ -1852,11 +1868,10 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 	json_object_add_value_object(root, "iodepth_level", tmp);
 	/* Only show fixed 7 I/O depth levels*/
 	for (i = 0; i < 7; i++) {
-		char name[20];
 		if (i < 6)
-			snprintf(name, 20, "%d", 1 << i);
+			snprintf(name, STAT_NAME_LEN, "%d", 1 << i);
 		else
-			snprintf(name, 20, ">=%d", 1 << i);
+			snprintf(name, STAT_NAME_LEN, ">=%d", 1 << i);
 		json_object_add_value_float(tmp, (const char *)name, io_u_dist[i]);
 	}
 
@@ -1866,13 +1881,12 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 	json_object_add_value_object(root, "iodepth_submit", tmp);
 	/* Only show fixed 7 I/O depth levels*/
 	for (i = 0; i < 7; i++) {
-		char name[20];
 		if (i == 0)
-			snprintf(name, 20, "0");
+			snprintf(name, STAT_NAME_LEN, "0");
 		else if (i < 6)
-			snprintf(name, 20, "%d", 1 << (i+1));
+			snprintf(name, STAT_NAME_LEN, "%d", 1 << (i+1));
 		else
-			snprintf(name, 20, ">=%d", 1 << i);
+			snprintf(name, STAT_NAME_LEN, ">=%d", 1 << i);
 		json_object_add_value_float(tmp, (const char *)name, io_u_dist[i]);
 	}
 
@@ -1882,13 +1896,12 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 	json_object_add_value_object(root, "iodepth_complete", tmp);
 	/* Only show fixed 7 I/O depth levels*/
 	for (i = 0; i < 7; i++) {
-		char name[20];
 		if (i == 0)
-			snprintf(name, 20, "0");
+			snprintf(name, STAT_NAME_LEN, "0");
 		else if (i < 6)
-			snprintf(name, 20, "%d", 1 << (i+1));
+			snprintf(name, STAT_NAME_LEN, "%d", 1 << (i+1));
 		else
-			snprintf(name, 20, ">=%d", 1 << i);
+			snprintf(name, STAT_NAME_LEN, ">=%d", 1 << i);
 		json_object_add_value_float(tmp, (const char *)name, io_u_dist[i]);
 	}
 
@@ -1902,26 +1915,25 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 	tmp = json_create_object();
 	json_object_add_value_object(root, "latency_ns", tmp);
 	for (i = 0; i < FIO_IO_U_LAT_N_NR; i++) {
-		const char *ranges[] = { "2", "4", "10", "20", "50", "100",
-				 "250", "500", "750", "1000", };
-		json_object_add_value_float(tmp, ranges[i], io_u_lat_n[i]);
+		snprintf(name, STAT_NAME_LEN, "%d", stat_get_range(i));
+		json_object_add_value_float(tmp, name, io_u_lat_n[i]);
 	}
 	/* Microsecond latency */
 	tmp = json_create_object();
 	json_object_add_value_object(root, "latency_us", tmp);
 	for (i = 0; i < FIO_IO_U_LAT_U_NR; i++) {
-		const char *ranges[] = { "2", "4", "10", "20", "50", "100",
-				 "250", "500", "750", "1000", };
-		json_object_add_value_float(tmp, ranges[i], io_u_lat_u[i]);
+		snprintf(name, STAT_NAME_LEN, "%d", stat_get_range(i));
+		json_object_add_value_float(tmp, name, io_u_lat_u[i]);
 	}
 	/* Millisecond latency */
 	tmp = json_create_object();
 	json_object_add_value_object(root, "latency_ms", tmp);
 	for (i = 0; i < FIO_IO_U_LAT_M_NR; i++) {
-		const char *ranges[] = { "2", "4", "10", "20", "50", "100",
-				 "250", "500", "750", "1000", "2000",
-				 ">=2000", };
-		json_object_add_value_float(tmp, ranges[i], io_u_lat_m[i]);
+		range = stat_get_range(i);
+		snprintf(name, STAT_NAME_LEN, "%s%d",
+			 range > range_max ? ">=" : "",
+			 range > range_max ? range_max : range);
+		json_object_add_value_float(tmp, name, io_u_lat_m[i]);
 	}
 
 	/* Additional output if continue_on_error set - default off*/
@@ -2284,6 +2296,7 @@ void init_thread_stat(struct thread_stat *ts)
 	}
 	ts->sync_stat.min_val = -1UL;
 	ts->groupid = -1;
+	stat_alloc_lat(ts);
 }
 
 void __show_run_stats(void)
@@ -2572,6 +2585,9 @@ void __show_run_stats(void)
 		log_info_buf(out->buf, out->buflen);
 		buf_output_free(out);
 	}
+
+	for (i = 0; i < nr_ts; i++)
+		stat_free_lat(&threadstats[i]);
 
 	fio_idle_prof_cleanup();
 
@@ -3446,3 +3462,95 @@ uint32_t *io_u_block_info(struct thread_data *td, struct io_u *io_u)
 	return info;
 }
 
+
+int stat_get_lat_n_nr(void)
+{
+	return stat_lat_nr;
+}
+
+int stat_get_lat_u_nr(void)
+{
+	return stat_lat_nr;
+}
+
+int stat_get_lat_m_nr(void)
+{
+	return stat_lat_nr + 2;
+}
+
+void stat_alloc_lat_ranges(void)
+{
+	int i;
+	int range = STAT_LAT_RANGE_MAX;
+	int widths[] = { 1, 2, 6, 10, 30, 50, 150, 250 };
+	int width_nr = sizeof(widths) / sizeof(widths[0]);
+	int idx = width_nr - 1;
+
+	for (i = 0; i < width_nr; i++) {
+		widths[i] = widths[i] * STAT_LAT_NR_DEF / stat_lat_nr;
+		if (!widths[i])
+			widths[i]++;
+	}
+
+	stat_lat_ranges = scalloc(stat_lat_nr, sizeof(int));
+
+	for (i = stat_lat_nr; i; i--) {
+		if (range > widths[idx])
+			range -= widths[idx];
+		else if (idx)
+			range -= widths[--idx];
+		stat_lat_ranges[i - 1] = range;
+	}
+
+	if (stat_lat_ranges[0] <= 0)
+		stat_lat_ranges[0] = 1;
+
+	for (i = 1; i < stat_lat_nr; i++) {
+		if (stat_lat_ranges[i] <= stat_lat_ranges[i - 1])
+			stat_lat_ranges[i] = stat_lat_ranges[i - 1] + 1;
+	}
+
+	for (i = 0; i < stat_lat_nr; i++)
+		dprint(FD_STAT, "lat_range[%d]: %d\n", i, stat_lat_ranges[i]);
+}
+
+void stat_alloc_lat(struct thread_stat *ts)
+{
+	ts->io_u_lat_n = scalloc(FIO_IO_U_LAT_N_NR, sizeof(uint64_t));
+	ts->io_u_lat_u = scalloc(FIO_IO_U_LAT_U_NR, sizeof(uint64_t));
+	ts->io_u_lat_m = scalloc(FIO_IO_U_LAT_M_NR, sizeof(uint64_t));
+
+	if (!stat_lat_ranges)
+		stat_alloc_lat_ranges();
+}
+
+void stat_free_lat(struct thread_stat *ts)
+{
+	sfree(ts->io_u_lat_n);
+	sfree(ts->io_u_lat_u);
+	sfree(ts->io_u_lat_m);
+	sfree(stat_lat_ranges);
+	stat_lat_ranges = NULL;
+}
+
+bool stat_set_lat(int nr)
+{
+	if (nr >= STAT_LAT_RANGE_MAX)
+		return false;
+
+	stat_lat_nr = nr;
+
+	return true;
+}
+
+int stat_get_lat_idx(int lat)
+{
+	int i;
+
+	for (i = stat_lat_nr - 1; i >= 0; i--) {
+		if (lat >= stat_lat_ranges[i])
+			break;
+	}
+
+	return i;
+}
