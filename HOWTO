@@ -1836,11 +1836,12 @@ I/O size
 
 .. option:: filesize=irange(int)
 
-	Individual file sizes. May be a range, in which case fio will select sizes
-	for files at random within the given range and limited to :option:`size` in
-	total (if that is given). If not given, each created file is the same size.
-	This option overrides :option:`size` in terms of file size, which means
-	this value is used as a fixed size or possible range of each file.
+	Individual file sizes. May be a range, in which case fio will select sizes for
+	files at random within the given range. If not given, each created file is the
+	same size. This option overrides :option:`size` in terms of file size, i.e. if
+	:option:`filesize` is specified then :option:`size` becomes merely the default
+	for :option:`io_size` and has no effect at all if :option:`io_size` is set
+	explicitly.
 
 .. option:: file_append=bool
 
