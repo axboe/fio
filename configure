@@ -170,9 +170,9 @@ disable_native="no"
 march_set="no"
 libiscsi="no"
 libnbd="no"
+libnfs="no"
 libzbc=""
 dfs=""
-libnfs="no"
 dynamic_engines="no"
 prefix=/usr/local
 
@@ -242,7 +242,7 @@ for opt do
   ;;
   --disable-tcmalloc) disable_tcmalloc="yes"
   ;;
-  --enable-libnfs) libnfs="yes"
+  --disable-nfs) disable_nfs="yes"
   ;;
   --dynamic-libengines) dynamic_engines="yes"
   ;;
@@ -274,6 +274,7 @@ if test "$show_help" = "yes" ; then
   echo "--disable-rados         Disable Rados support even if found"
   echo "--disable-rbd           Disable Rados Block Device even if found"
   echo "--disable-http          Disable HTTP support even if found"
+  echo "--disable-nfs           Disable userspace NFS support even if found"
   echo "--disable-gfapi         Disable gfapi"
   echo "--enable-libhdfs        Enable hdfs support"
   echo "--enable-libnfs         Enable nfs support"
@@ -2280,21 +2281,21 @@ EOF
   fi
 fi
 print_config "DAOS File System (dfs) Engine" "$dfs"
-# Check if we have libnfs (for nfs support).
-if test "$libnfs" = "yes" ; then
+
+##########################################
+# Check if we have libnfs (for userspace nfs support).
+if test "$disable_nfs" != "yes"; then
   if $(pkg-config libnfs); then
     libnfs="yes"
     libnfs_cflags=$(pkg-config --cflags libnfs)
-    # libnfs_libs=$(pkg-config --libs libnfs)
-    libnfs_libs=/usr/local/lib/libnfs.a
+    libnfs_libs=$(pkg-config --libs libnfs)
   else
     if test "$libnfs" = "yes" ; then
       echo "libnfs" "Install libnfs"
     fi
-    libnfs="no"
   fi
 fi
-print_config "nfs engine" "$libnfs"
+print_config "NFS engine" "$libnfs"
 
 ##########################################
 # Check if we have lex/yacc available
