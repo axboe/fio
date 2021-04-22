@@ -107,7 +107,7 @@
 
 	<WixVariable Id="WixUILicenseRtf" Value="eula.rtf" />
 
-	<UIRef Id="WixUI_Minimal"/>
+	<UIRef Id="WixUI_Minimal_NoEULA"/>
 
 	<MajorUpgrade AllowDowngrades="no" DowngradeErrorMessage="A newer version of the application is already installed."
                   AllowSameVersionUpgrades="yes"/>

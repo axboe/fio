@@ -44,7 +44,10 @@ if exist ..\..\fio.pdb (
 @if ERRORLEVEL 1 goto end
 "%WIX%bin\candle" -nologo -arch %FIO_ARCH% examples.wxs
 @if ERRORLEVEL 1 goto end
-"%WIX%bin\light" -nologo -sice:ICE61 install.wixobj examples.wixobj -ext WixUIExtension -out %FIO_VERSION%-%FIO_ARCH%.msi
+"%WIX%bin\candle" -nologo -arch %FIO_ARCH% WixUI_Minimal_NoEULA.wxs
+@if ERRORLEVEL 1 goto end
+
+"%WIX%bin\light" -nologo -sice:ICE61 install.wixobj examples.wixobj WixUI_Minimal_NoEULA.wixobj -loc WixUI_fio.wxl -ext WixUIExtension -out %FIO_VERSION%-%FIO_ARCH%.msi
 :end
 
 if defined SIGN_FIO (
