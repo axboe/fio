@@ -683,12 +683,33 @@ static int server_cmpl_process(struct thread_data *td)
 	struct librpma_fio_server_data *csd = td->io_ops_data;
 	struct server_data *sd = csd->server_data;
 	struct rpma_completion *cmpl = &sd->msgs_queued[sd->msg_queued_nr];
+	struct librpma_fio_options_values *o = td->eo;
 	int ret;
 
 	ret = rpma_conn_completion_get(csd->conn, cmpl);
 	if (ret == RPMA_E_NO_COMPLETION) {
-		/* lack of completion is not an error */
-		return 0;
+		if (o->busy_wait_polling == 0) {
+			ret = rpma_conn_completion_wait(csd->conn);
+			if (ret == RPMA_E_NO_COMPLETION) {
+				/* lack of completion is not an error */
+				return 0;
+			} else if (ret != 0) {
+				librpma_td_verror(td, ret, "rpma_conn_completion_wait");
+				goto err_terminate;
+			}
+
+			ret = rpma_conn_completion_get(csd->conn, cmpl);
+			if (ret == RPMA_E_NO_COMPLETION) {
+				/* lack of completion is not an error */
+				return 0;
+			} else if (ret != 0) {
+				librpma_td_verror(td, ret, "rpma_conn_completion_get");
+				goto err_terminate;
+			}
+		} else {
+			/* lack of completion is not an error */
+			return 0;
+		}
 	} else if (ret != 0) {
 		librpma_td_verror(td, ret, "rpma_conn_completion_get");
 		goto err_terminate;

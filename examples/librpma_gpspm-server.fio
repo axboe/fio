@@ -20,6 +20,8 @@ thread
 # set to 1 (true) ONLY when Direct Write to PMem from the remote host is possible
 # (https://pmem.io/rpma/documentation/basic-direct-write-to-pmem.html)
 direct_write_to_pmem=0
+# set to 0 (false) to wait for completion instead of busy-wait polling completion.
+busy_wait_polling=1
 numjobs=1 # number of expected incomming connections
 iodepth=2 # number of parallel GPSPM requests
 size=100MiB # size of workspace for a single connection

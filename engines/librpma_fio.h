@@ -41,6 +41,8 @@ struct librpma_fio_options_values {
 	char *port;
 	/* Direct Write to PMem is possible */
 	unsigned int direct_write_to_pmem;
+	/* Set to 0 to wait for completion instead of busy-wait polling completion. */
+	unsigned int busy_wait_polling;
 };
 
 extern struct fio_option librpma_fio_options[];

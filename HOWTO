@@ -2237,6 +2237,11 @@ with the caveat that when used on the command line, they must come after the
 	Set to 1 only when Direct Write to PMem from the remote host is possible.
 	Otherwise, set to 0.
 
+.. option:: busy_wait_polling=bool : [librpma_*_server]
+
+	Set to 0 to wait for completion instead of busy-wait polling completion.
+	Default: 1.
+
 .. option:: interface=str : [netsplice] [net]
 
 	The IP address of the network interface used to send or receive UDP
