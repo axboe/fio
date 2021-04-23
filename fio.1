@@ -1999,6 +1999,10 @@ The IP address to be used for RDMA-CM based I/O.
 .BI (librpma_*_server)direct_write_to_pmem \fR=\fPbool
 Set to 1 only when Direct Write to PMem from the remote host is possible. Otherwise, set to 0.
 .TP
+.BI (librpma_*_server)busy_wait_polling \fR=\fPbool
+Set to 0 to wait for completion instead of busy-wait polling completion.
+Default: 1.
+.TP
 .BI (netsplice,net)interface \fR=\fPstr
 The IP address of the network interface used to send or receive UDP
 multicast.
