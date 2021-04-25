@@ -46,6 +46,12 @@ struct solaris_rand_seed {
 #define os_ctime_r(x, y, z)     ctime_r((x), (y), (z))
 #define FIO_OS_HAS_CTIME_R
 
+#ifdef CONFIG_PTHREAD_GETAFFINITY
+#define FIO_HAVE_GET_THREAD_AFFINITY
+#define fio_get_thread_affinity(mask)	\
+	pthread_getaffinity_np(pthread_self(), sizeof(mask), &(mask))
+#endif
+
 typedef psetid_t os_cpu_mask_t;
 
 static inline int chardev_size(struct fio_file *f, unsigned long long *bytes)

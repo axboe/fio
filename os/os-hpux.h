@@ -38,6 +38,13 @@
 #define FIO_USE_GENERIC_SWAP
 
 #define FIO_OS_HAVE_AIOCB_TYPEDEF
+
+#ifdef CONFIG_PTHREAD_GETAFFINITY
+#define FIO_HAVE_GET_THREAD_AFFINITY
+#define fio_get_thread_affinity(mask)	\
+	pthread_getaffinity_np(pthread_self(), sizeof(mask), &(mask))
+#endif
+
 typedef struct aiocb64 os_aiocb_t;
 
 static inline int blockdev_invalidate_cache(struct fio_file *f)

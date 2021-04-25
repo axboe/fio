@@ -58,6 +58,12 @@
 #define MAP_HUGETLB 0x40000 /* arch specific */
 #endif
 
+#ifdef CONFIG_PTHREAD_GETAFFINITY
+#define FIO_HAVE_GET_THREAD_AFFINITY
+#define fio_get_thread_affinity(mask)	\
+	pthread_getaffinity_np(pthread_self(), sizeof(mask), &(mask))
+#endif
+
 #ifndef CONFIG_NO_SHM
 /*
  * Bionic doesn't support SysV shared memeory, so implement it using ashmem

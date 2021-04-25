@@ -92,6 +92,12 @@ typedef cpumask_t os_cpu_mask_t;
 /* No CPU_COUNT(), but use the default function defined in os/os.h */
 #define fio_cpu_count(mask)             CPU_COUNT((mask))
 
+#ifdef CONFIG_PTHREAD_GETAFFINITY
+#define FIO_HAVE_GET_THREAD_AFFINITY
+#define fio_get_thread_affinity(mask)	\
+	pthread_getaffinity_np(pthread_self(), sizeof(mask), &(mask))
+#endif
+
 static inline int fio_cpuset_init(os_cpu_mask_t *mask)
 {
 	CPUMASK_ASSZERO(*mask);

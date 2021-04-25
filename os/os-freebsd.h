@@ -37,6 +37,12 @@ typedef cpuset_t os_cpu_mask_t;
 #define fio_cpu_isset(mask, cpu)	(CPU_ISSET((cpu), (mask)) != 0)
 #define fio_cpu_count(mask)		CPU_COUNT((mask))
 
+#ifdef CONFIG_PTHREAD_GETAFFINITY
+#define FIO_HAVE_GET_THREAD_AFFINITY
+#define fio_get_thread_affinity(mask)	\
+	pthread_getaffinity_np(pthread_self(), sizeof(mask), &(mask))
+#endif
+
 static inline int fio_cpuset_init(os_cpu_mask_t *mask)
 {
         CPU_ZERO(mask);
