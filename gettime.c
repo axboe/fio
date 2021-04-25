@@ -679,7 +679,7 @@ int fio_monotonic_clocktest(int debug)
 	unsigned int i;
 	os_cpu_mask_t mask;
 
-#ifdef CONFIG_PTHREAD_GETAFFINITY
+#ifdef FIO_HAVE_GET_THREAD_AFFINITY
 	fio_get_thread_affinity(mask);
 #else
 	memset(&mask, 0, sizeof(mask));

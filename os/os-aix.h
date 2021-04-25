@@ -18,6 +18,12 @@
 
 #define FIO_USE_GENERIC_SWAP
 
+#ifdef CONFIG_PTHREAD_GETAFFINITY
+#define FIO_HAVE_GET_THREAD_AFFINITY
+#define fio_get_thread_affinity(mask)	\
+	pthread_getaffinity_np(pthread_self(), sizeof(mask), &(mask))
+#endif
+
 static inline int blockdev_invalidate_cache(struct fio_file *f)
 {
 	return ENOTSUP;

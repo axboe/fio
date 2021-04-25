@@ -74,8 +74,11 @@ typedef cpu_set_t os_cpu_mask_t;
 	sched_getaffinity((pid), (ptr))
 #endif
 
+#ifdef CONFIG_PTHREAD_GETAFFINITY
+#define FIO_HAVE_GET_THREAD_AFFINITY
 #define fio_get_thread_affinity(mask)	\
 	pthread_getaffinity_np(pthread_self(), sizeof(mask), &(mask))
+#endif
 
 #define fio_cpu_clear(mask, cpu)	(void) CPU_CLR((cpu), (mask))
 #define fio_cpu_set(mask, cpu)		(void) CPU_SET((cpu), (mask))
