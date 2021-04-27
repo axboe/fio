@@ -414,7 +414,6 @@ enum fio_q_status td_io_queue(struct thread_data *td, struct io_u *io_u)
 	if (!td->io_ops->commit) {
 		io_u_mark_submit(td, 1);
 		io_u_mark_complete(td, 1);
-		zbd_put_io_u(td, io_u);
 	}
 
 	if (ret == FIO_Q_COMPLETED) {
