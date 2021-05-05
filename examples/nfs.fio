@@ -7,7 +7,6 @@ size=104857600
 lat_percentiles=1
 group_reporting
 numjobs=10
-direct=1
 ramp_time=5s
 filename_format=myfiles.$clientuid.$jobnum.$filenum
 time_based=1
