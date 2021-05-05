@@ -1,4 +1,3 @@
-// https://github.com/axboe/fio/pull/762 sample pull req for new engine
 #include <stdlib.h>
 #include <poll.h>
 #include <nfsc/libnfs.h>
@@ -17,13 +16,13 @@ enum nfs_op_type {
 struct fio_libnfs_options {
 	struct nfs_context *context;
 	char *nfs_url;
-	// the following implements a circular queue of outstanding IOs
-	int outstanding_events; // IOs issued to libnfs, that have not returned yet
-	int prev_requested_event_index; // event last returned via fio_libnfs_event
-	int next_buffered_event; // round robin-pointer within events[]
-	int buffered_event_count; // IOs completed by libnfs faiting for FIO
-	int free_event_buffer_index; // next empty buffer
-	unsigned int queue_depth; // nfs_callback needs this info, but doesn't have fio td structure to pull it from
+	unsigned int queue_depth; /* nfs_callback needs this info, but doesn't have fio td structure to pull it from */
+	/* the following implement a circular queue of outstanding IOs */
+	int outstanding_events; /* IOs issued to libnfs, that have not returned yet */
+	int prev_requested_event_index; /* event last returned via fio_libnfs_event */
+	int next_buffered_event; /* round robin-pointer within events[] */
+	int buffered_event_count; /* IOs completed by libnfs, waiting for FIO */
+	int free_event_buffer_index; /* next free buffer */
 	struct io_u**events;
 };
 
@@ -60,11 +59,11 @@ static struct io_u *fio_libnfs_event(struct thread_data *td, int event)
 	assert(o->events[o->next_buffered_event]);
 	o->events[o->next_buffered_event] = NULL;
 	o->next_buffered_event = (o->next_buffered_event + 1) % td->o.iodepth;
-	// validate our state machine
+	/* validate our state machine */
 	assert(o->buffered_event_count);
 	o->buffered_event_count--;
 	assert(io_u);
-	// assert that fio_libnfs_event is being called in sequential fashion
+	/* assert that fio_libnfs_event is being called in sequential fashion */
 	assert(event == 0 || o->prev_requested_event_index + 1 == event);
 	if (o->buffered_event_count == 0) {
 		o->prev_requested_event_index = -1;
@@ -77,11 +76,11 @@ static struct io_u *fio_libnfs_event(struct thread_data *td, int event)
 static int nfs_event_loop(struct thread_data *td, bool flush) {
 	struct fio_libnfs_options *o = td->eo;
 	struct pollfd pfds[1]; /* nfs:0 */
-	// we already have stuff queued for fio, no need to waste cpu on poll()
+	/* we already have stuff queued for fio, no need to waste cpu on poll() */
 	if (o->buffered_event_count) {
 		return o->buffered_event_count;
 	}
-	// fio core logic seems to stop calling this event-loop if we ever return with 0 events
+	/* fio core logic seems to stop calling this event-loop if we ever return with 0 events */
 	#define SHOULD_WAIT() (o->outstanding_events == td->o.iodepth || (flush && o->outstanding_events))
 
 	do {
@@ -130,7 +129,7 @@ static void nfs_callback(int res, struct nfs_context *nfs, void *data,
 	if (res < 0) {
 		log_err("Failed NFS operation(code:%d): %s\n", res, nfs_get_error(o->context));
 		io_u->error = -res;
-		// res is used for read math below, don't wanna pass negative there
+		/* res is used for read math below, don't wanna pass negative there */
 		res = 0;
 	} else if (io_u->ddir == DDIR_READ) {
 		memcpy(io_u->buf, data, res);
@@ -138,7 +137,7 @@ static void nfs_callback(int res, struct nfs_context *nfs, void *data,
 			log_err("Got NFS EOF, this is probably not expected\n");
 		}
 	}
-	// fio uses resid to track remaining data
+	/* fio uses resid to track remaining data */
 	io_u->resid = io_u->xfer_buflen - res;
 
 	assert(!o->events[o->free_event_buffer_index]);
@@ -248,7 +247,7 @@ static int do_mount(struct thread_data *td, const char *url)
  */
 static int fio_libnfs_setup(struct thread_data *td)
 {
-	// flipping this makes using gdb easier, but tends to hang fio on exit
+	/* Using threads with libnfs causes fio to hang on exit, lower performance */
 	td->o.use_thread = 0;
 	return 0;
 }
