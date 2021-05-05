@@ -77,9 +77,8 @@ static int nfs_event_loop(struct thread_data *td, bool flush) {
 	struct fio_libnfs_options *o = td->eo;
 	struct pollfd pfds[1]; /* nfs:0 */
 	/* we already have stuff queued for fio, no need to waste cpu on poll() */
-	if (o->buffered_event_count) {
+	if (o->buffered_event_count)
 		return o->buffered_event_count;
-	}
 	/* fio core logic seems to stop calling this event-loop if we ever return with 0 events */
 	#define SHOULD_WAIT() (o->outstanding_events == td->o.iodepth || (flush && o->outstanding_events))
 
@@ -105,8 +104,8 @@ static int nfs_event_loop(struct thread_data *td, bool flush) {
 		}
 	} while (SHOULD_WAIT());
 	return o->buffered_event_count;
-}
 #undef SHOULD_WAIT
+}
 
 /*
  * The ->getevents() hook is used to reap completion events from an async
@@ -133,9 +132,8 @@ static void nfs_callback(int res, struct nfs_context *nfs, void *data,
 		res = 0;
 	} else if (io_u->ddir == DDIR_READ) {
 		memcpy(io_u->buf, data, res);
-		if (res == 0) {
+		if (res == 0)
 			log_err("Got NFS EOF, this is probably not expected\n");
-		}
 	}
 	/* fio uses resid to track remaining data */
 	io_u->resid = io_u->xfer_buflen - res;
@@ -213,9 +211,8 @@ static int do_mount(struct thread_data *td, const char *url)
 	int path_len = 0;
 	char *mnt_dir = NULL;
 
-	if (options->context) {
+	if (options->context)
 		return 0;
-	}
 
 	options->context = nfs_init_context();
 	if (options->context == NULL) {
@@ -294,9 +291,8 @@ static int fio_libnfs_open(struct thread_data *td, struct fio_file *f)
 	}
 	ret = nfs_open(options->context, f->file_name, flags, &nfs_data->nfsfh);
 
-	if (ret != 0) {
+	if (ret != 0)
 		log_err("Failed to open %s: %s\n", f->file_name, nfs_get_error(options->context));
-	}
 	f->engine_data = nfs_data;
 	return ret;
 }
@@ -306,9 +302,8 @@ static int fio_libnfs_close(struct thread_data *td, struct fio_file *f)
 	struct nfs_data *nfs_data = f->engine_data;
 	struct fio_libnfs_options *o = nfs_data->options;
 	int ret = 0;
-	if (nfs_data->nfsfh) {
+	if (nfs_data->nfsfh)
 		ret = nfs_close(o->context, nfs_data->nfsfh);
-	}
 	free(nfs_data);
 	f->engine_data = NULL;
 	return ret;
