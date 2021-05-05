@@ -46,12 +46,6 @@ static struct fio_option options[] = {
 	},
 };
 
-/*
- * The ->event() hook is called to match an event number with an io_u.
- * After the core has called ->getevents() and it has returned eg 3,
- * the ->event() hook must return the 3 events that have completed for
- * subsequent calls to ->event() with [0-2]. Required.
- */
 static struct io_u *fio_libnfs_event(struct thread_data *td, int event)
 {
 	struct fio_libnfs_options *o = td->eo;
@@ -107,12 +101,6 @@ static int nfs_event_loop(struct thread_data *td, bool flush) {
 #undef SHOULD_WAIT
 }
 
-/*
- * The ->getevents() hook is used to reap completion events from an async
- * io engine. It returns the number of completed events since the last call,
- * which may then be retrieved by calling the ->event() hook with the event
- * numbers. Required.
- */
 static int fio_libnfs_getevents(struct thread_data *td, unsigned int min,
 				  unsigned int max, const struct timespec *t)
 {
@@ -157,16 +145,6 @@ static int queue_read(struct fio_libnfs_options *o, struct io_u *io_u) {
 	return nfs_pread_async(o->context,  nfs_data->nfsfh, io_u->offset, io_u->buflen, nfs_callback,  io_u);
 }
 
-/*
- * The ->queue() hook is responsible for initiating io on the io_u
- * being passed in. If the io engine is a synchronous one, io may complete
- * before ->queue() returns. Required.
- *
- * The io engine must transfer in the direction noted by io_u->ddir
- * to the buffer pointed to by io_u->xfer_buf for as many bytes as
- * io_u->xfer_buflen. Residual data count may be set in io_u->resid
- * for a short read/write.
- */
 static enum fio_q_status fio_libnfs_queue(struct thread_data *td,
 					    struct io_u *io_u)
 {
@@ -201,7 +179,9 @@ static enum fio_q_status fio_libnfs_queue(struct thread_data *td,
 	return ret;
 }
 
-/** Do a mount if one has not been done before */
+/*
+ * Do a mount if one has not been done before 
+ */
 static int do_mount(struct thread_data *td, const char *url)
 {
 	size_t event_size = sizeof(struct io_u **) * td->o.iodepth;
@@ -237,11 +217,6 @@ static int do_mount(struct thread_data *td, const char *url)
 	return ret;
 }
 
-/*
- * The init function is called once per thread/process, and should set up
- * any structures that this io engine requires to keep track of io. Not
- * required.
- */
 static int fio_libnfs_setup(struct thread_data *td)
 {
 	/* Using threads with libnfs causes fio to hang on exit, lower performance */
@@ -249,11 +224,6 @@ static int fio_libnfs_setup(struct thread_data *td)
 	return 0;
 }
 
-/*
- * This is paired with the ->init() function and is called when a thread is
- * done doing io. Should tear down anything setup by the ->init() function.
- * Not required.
- */
 static void fio_libnfs_cleanup(struct thread_data *td)
 {
 	struct fio_libnfs_options *o = td->eo;
@@ -342,4 +312,3 @@ static void fio_exit fio_nfs_unregister(void)
 {
 	unregister_ioengine(&ioengine);
 }
-
