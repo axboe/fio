@@ -142,7 +142,7 @@ check_min_lib_version() {
   fi
   : "${_feature:=${1}}"
   if "${cross_prefix}"pkg-config --version > /dev/null 2>&1; then
-    if eval "echo \$$_feature" = "yes" ; then
+    if test "$(eval echo \"\$$_feature\")" = "yes" ; then
       feature_not_found "$_feature" "$1 >= $2"
     fi
   else
