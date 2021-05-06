@@ -24,6 +24,37 @@
 #include <linux/blkzoned.h>
 
 /*
+ * If the uapi headers installed on the system lacks zone capacity support,
+ * use our local versions. If the installed headers are recent enough to
+ * support zone capacity, do not redefine any structs.
+ */
+#ifndef CONFIG_HAVE_REP_CAPACITY
+#define BLK_ZONE_REP_CAPACITY	(1 << 0)
+
+struct blk_zone_v2 {
+	__u64	start;          /* Zone start sector */
+	__u64	len;            /* Zone length in number of sectors */
+	__u64	wp;             /* Zone write pointer position */
+	__u8	type;           /* Zone type */
+	__u8	cond;           /* Zone condition */
+	__u8	non_seq;        /* Non-sequential write resources active */
+	__u8	reset;          /* Reset write pointer recommended */
+	__u8	resv[4];
+	__u64	capacity;       /* Zone capacity in number of sectors */
+	__u8	reserved[24];
+};
+#define blk_zone blk_zone_v2
+
+struct blk_zone_report_v2 {
+	__u64	sector;
+	__u32	nr_zones;
+	__u32	flags;
+struct blk_zone zones[0];
+};
+#define blk_zone_report blk_zone_report_v2
+#endif /* CONFIG_HAVE_REP_CAPACITY */
+
+/*
  * Read up to 255 characters from the first line of a file. Strip the trailing
  * newline.
  */
@@ -116,10 +147,8 @@ out:
 static uint64_t zone_capacity(struct blk_zone_report *hdr,
 			      struct blk_zone *blkz)
 {
-#ifdef CONFIG_HAVE_REP_CAPACITY
 	if (hdr->flags & BLK_ZONE_REP_CAPACITY)
 		return blkz->capacity << 9;
-#endif
 	return blkz->len << 9;
 }
 
