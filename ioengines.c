@@ -234,7 +234,6 @@ void free_ioengine(struct thread_data *td)
 	if (td->io_ops->dlhandle) {
 		dprint(FD_IO, "dlclose ioengine %s\n", td->io_ops->name);
 		dlclose(td->io_ops->dlhandle);
-		td->io_ops->dlhandle = NULL;
 	}
 
 	td->io_ops = NULL;
