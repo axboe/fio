@@ -7,6 +7,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <errno.h>
 
 #include "../arch/arch.h" /* IWYU pragma: export */
 #include "../lib/types.h"
@@ -56,6 +57,10 @@ typedef enum {
 #include "os-dragonfly.h"
 #else
 #error "unsupported os"
+#endif
+
+#ifndef EDQUOT
+#define EDQUOT	EIO
 #endif
 
 #ifdef CONFIG_POSIXAIO
