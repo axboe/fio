@@ -226,11 +226,16 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 			if (r < 0) {
 				int __e = errno;
 
-				if (__e == ENOSPC) {
+				if (__e == ENOSPC || __e == EDQUOT) {
+					const char *__e_name;
 					if (td->o.fill_device)
 						break;
-					log_info("fio: ENOSPC on laying out "
-						 "file, stopping\n");
+					if (__e == ENOSPC)
+						__e_name = "ENOSPC";
+					else
+						__e_name = "EDQUOT";
+					log_info("fio: %s on laying out "
+						 "file, stopping\n", __e_name);
 				}
 				td_verror(td, errno, "write");
 			} else
