@@ -198,7 +198,7 @@ def compute_temp_file(fio_data_file,disk_perf,gnuplot_output_dir, min_time, max_
 			# Index will be used to remember what file was featuring what value
 			index=index+1
 
-			time, perf, x, block_size = line[1]
+			time, perf, x, block_size = line[1][:4]
 			if (blk_size == 0):
 				try:
 					blk_size=int(block_size)
