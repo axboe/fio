@@ -16,6 +16,8 @@ extern int blkzoned_report_zones(struct thread_data *td,
 				struct zbd_zone *zones, unsigned int nr_zones);
 extern int blkzoned_reset_wp(struct thread_data *td, struct fio_file *f,
 				uint64_t offset, uint64_t length);
+extern int blkzoned_get_max_open_zones(struct thread_data *td, struct fio_file *f,
+				       unsigned int *max_open_zones);
 #else
 /*
  * Define stubs for systems that do not have zoned block device support.
@@ -41,6 +43,11 @@ static inline int blkzoned_report_zones(struct thread_data *td,
 }
 static inline int blkzoned_reset_wp(struct thread_data *td, struct fio_file *f,
 				    uint64_t offset, uint64_t length)
+{
+	return -EIO;
+}
+static inline int blkzoned_get_max_open_zones(struct thread_data *td, struct fio_file *f,
+					      unsigned int *max_open_zones)
 {
 	return -EIO;
 }

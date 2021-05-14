@@ -8,7 +8,7 @@
 #include "io_u.h"
 #include "zbd_types.h"
 
-#define FIO_IOOPS_VERSION	29
+#define FIO_IOOPS_VERSION	30
 
 #ifndef CONFIG_DYNAMIC_ENGINES
 #define FIO_STATIC	static
@@ -59,6 +59,8 @@ struct ioengine_ops {
 			    uint64_t, struct zbd_zone *, unsigned int);
 	int (*reset_wp)(struct thread_data *, struct fio_file *,
 			uint64_t, uint64_t);
+	int (*get_max_open_zones)(struct thread_data *, struct fio_file *,
+				  unsigned int *);
 	int option_struct_size;
 	struct fio_option *options;
 };
