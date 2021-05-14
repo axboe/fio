@@ -74,12 +74,16 @@ static char *read_file(const char *path)
 	return strdup(line);
 }
 
-int blkzoned_get_zoned_model(struct thread_data *td, struct fio_file *f,
-			     enum zbd_zoned_model *model)
+/*
+ * Get the value of a sysfs attribute for a block device.
+ *
+ * Returns NULL on failure.
+ * Returns a pointer to a string on success.
+ * The caller is responsible for freeing the memory.
+ */
+static char *blkzoned_get_sysfs_attr(const char *file_name, const char *attr)
 {
-	const char *file_name = f->file_name;
-	char *zoned_attr_path = NULL;
-	char *model_str = NULL;
+	char *attr_path = NULL;
 	struct stat statbuf;
 	char *sys_devno_path = NULL;
 	char *part_attr_path = NULL;
@@ -87,13 +91,7 @@ int blkzoned_get_zoned_model(struct thread_data *td, struct fio_file *f,
 	char sys_path[PATH_MAX];
 	ssize_t sz;
 	char *delim = NULL;
-
-	if (f->filetype != FIO_TYPE_BLOCK) {
-		*model = ZBD_IGNORE;
-		return 0;
-	}
-
-	*model = ZBD_NONE;
+	char *attr_str = NULL;
 
 	if (stat(file_name, &statbuf) < 0)
 		goto out;
@@ -123,24 +121,44 @@ int blkzoned_get_zoned_model(struct thread_data *td, struct fio_file *f,
 		*delim = '\0';
 	}
 
-	if (asprintf(&zoned_attr_path,
-		     "/sys/dev/block/%s/queue/zoned", sys_path) < 0)
+	if (asprintf(&attr_path,
+		     "/sys/dev/block/%s/%s", sys_path, attr) < 0)
 		goto out;
 
-	model_str = read_file(zoned_attr_path);
+	attr_str = read_file(attr_path);
+out:
+	free(attr_path);
+	free(part_str);
+	free(part_attr_path);
+	free(sys_devno_path);
+
+	return attr_str;
+}
+
+int blkzoned_get_zoned_model(struct thread_data *td, struct fio_file *f,
+			     enum zbd_zoned_model *model)
+{
+	char *model_str = NULL;
+
+	if (f->filetype != FIO_TYPE_BLOCK) {
+		*model = ZBD_IGNORE;
+		return 0;
+	}
+
+	*model = ZBD_NONE;
+
+	model_str = blkzoned_get_sysfs_attr(f->file_name, "queue/zoned");
 	if (!model_str)
-		goto out;
-	dprint(FD_ZBD, "%s: zbd model string: %s\n", file_name, model_str);
+		return 0;
+
+	dprint(FD_ZBD, "%s: zbd model string: %s\n", f->file_name, model_str);
 	if (strcmp(model_str, "host-aware") == 0)
 		*model = ZBD_HOST_AWARE;
 	else if (strcmp(model_str, "host-managed") == 0)
 		*model = ZBD_HOST_MANAGED;
-out:
+
 	free(model_str);
-	free(zoned_attr_path);
-	free(part_str);
-	free(part_attr_path);
-	free(sys_devno_path);
+
 	return 0;
 }
 
