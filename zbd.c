@@ -588,7 +588,8 @@ static int zbd_create_zone_info(struct thread_data *td, struct fio_file *f)
 
 	if (ret == 0) {
 		f->zbd_info->model = zbd_model;
-		f->zbd_info->max_open_zones = td->o.max_open_zones;
+		f->zbd_info->max_open_zones =
+			min_not_zero(td->o.max_open_zones, ZBD_MAX_OPEN_ZONES);
 	}
 	return ret;
 }
@@ -725,8 +726,6 @@ int zbd_setup_files(struct thread_data *td)
 		 */
 		if (zbd_is_seq_job(f))
 			assert(f->min_zone < f->max_zone);
-
-		zbd->max_open_zones = zbd->max_open_zones ?: ZBD_MAX_OPEN_ZONES;
 
 		if (td->o.max_open_zones > 0 &&
 		    zbd->max_open_zones != td->o.max_open_zones) {
