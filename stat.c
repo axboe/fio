@@ -462,7 +462,7 @@ static double convert_agg_kbytes_percent(struct group_run_stats *rs, int ddir, i
 {
 	double p_of_agg = 100.0;
 	if (rs && rs->agg[ddir] > 1024) {
-		p_of_agg = mean * 100 / (double) (rs->agg[ddir] / 1024.0);
+		p_of_agg = mean * 100.0 / (double) (rs->agg[ddir] / 1024.0);
 
 		if (p_of_agg > 100.0)
 			p_of_agg = 100.0;
