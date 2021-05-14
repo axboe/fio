@@ -19,6 +19,7 @@ struct libzbc_data {
 	struct zbc_device	*zdev;
 	enum zbc_dev_model	model;
 	uint64_t		nr_sectors;
+	uint32_t		max_open_seq_req;
 };
 
 static int libzbc_get_dev_info(struct libzbc_data *ld, struct fio_file *f)
@@ -32,6 +33,7 @@ static int libzbc_get_dev_info(struct libzbc_data *ld, struct fio_file *f)
 	zbc_get_device_info(ld->zdev, zinfo);
 	ld->model = zinfo->zbd_model;
 	ld->nr_sectors = zinfo->zbd_sectors;
+	ld->max_open_seq_req = zinfo->zbd_max_nr_open_seq_req;
 
 	dprint(FD_ZBD, "%s: vendor_id:%s, type: %s, model: %s\n",
 	       f->file_name, zinfo->zbd_vendor_id,
@@ -335,6 +337,24 @@ err:
 	return -ret;
 }
 
+static int libzbc_get_max_open_zones(struct thread_data *td, struct fio_file *f,
+				     unsigned int *max_open_zones)
+{
+	struct libzbc_data *ld;
+	int ret;
+
+	ret = libzbc_open_dev(td, f, &ld);
+	if (ret)
+		return ret;
+
+	if (ld->max_open_seq_req == ZBC_NO_LIMIT)
+		*max_open_zones = 0;
+	else
+		*max_open_zones = ld->max_open_seq_req;
+
+	return 0;
+}
+
 ssize_t libzbc_rw(struct thread_data *td, struct io_u *io_u)
 {
 	struct libzbc_data *ld = td->io_ops_data;
@@ -414,6 +434,7 @@ FIO_STATIC struct ioengine_ops ioengine = {
 	.get_zoned_model	= libzbc_get_zoned_model,
 	.report_zones		= libzbc_report_zones,
 	.reset_wp		= libzbc_reset_wp,
+	.get_max_open_zones	= libzbc_get_max_open_zones,
 	.queue			= libzbc_queue,
 	.flags			= FIO_SYNCIO | FIO_NOEXTEND | FIO_RAWIO,
 };
