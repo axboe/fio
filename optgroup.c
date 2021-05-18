@@ -186,6 +186,10 @@ static const struct opt_group fio_opt_cat_groups[] = {
 		.mask	= FIO_OPT_G_DFS,
 	},
 	{
+		.name	= "NFS I/O engine", /* nfs */
+		.mask	= FIO_OPT_G_NFS,
+	},
+	{
 		.name	= NULL,
 	},
 };

@@ -2026,6 +2026,11 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .help = "DAOS File System (dfs) IO engine",
 			  },
 #endif
+#ifdef CONFIG_NFS
+			  { .ival = "nfs",
+			    .help = "NFS IO engine",
+			  },
+#endif
 		},
 	},
 	{

@@ -1901,6 +1901,12 @@ not be \fBcudamalloc\fR. This ioengine defines engine specific options.
 .B dfs
 I/O engine supporting asynchronous read and write operations to the DAOS File
 System (DFS) via libdfs.
+.TP
+.B nfs
+I/O engine supporting asynchronous read and write operations to
+NFS filesystems from userspace via libnfs. This is useful for
+achieving higher concurrency and thus throughput than is possible
+via kernel NFS.
 .SS "I/O engine specific parameters"
 In addition, there are some parameters which are only valid when a specific
 \fBioengine\fR is in use. These are used identically to normal parameters,
@@ -2283,6 +2289,10 @@ Use DAOS container's chunk size by default.
 .BI (dfs)object_class
 Specificy a different object class for the dfs file.
 Use DAOS container's object class by default.
+.TP
+.BI (nfs)nfs_url
+URL in libnfs format, eg nfs://<server|ipv4|ipv6>/path[?arg=val[&arg=val]*]
+Refer to the libnfs README for more details.
 .SS "I/O depth"
 .TP
 .BI iodepth \fR=\fPint
