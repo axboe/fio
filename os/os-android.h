@@ -71,10 +71,14 @@
 #include <stdio.h>
 #include <linux/ashmem.h>
 #include <linux/shm.h>
+#include <android/api-level.h>
+#if __ANDROID_API__ >= __ANDROID_API_O__
+#include <android/sharedmem.h>
+#else
+#define ASHMEM_DEVICE	"/dev/ashmem"
+#endif
 #define shmid_ds shmid64_ds
 #define SHM_HUGETLB    04000
-
-#define ASHMEM_DEVICE	"/dev/ashmem"
 
 static inline int shmctl(int __shmid, int __cmd, struct shmid_ds *__buf)
 {
@@ -89,6 +93,16 @@ static inline int shmctl(int __shmid, int __cmd, struct shmid_ds *__buf)
 	return ret;
 }
 
+#if __ANDROID_API__ >= __ANDROID_API_O__
+static inline int shmget(key_t __key, size_t __size, int __shmflg)
+{
+	char keybuf[11];
+
+	sprintf(keybuf, "%d", __key);
+
+	return ASharedMemory_create(keybuf, __size + sizeof(uint64_t));
+}
+#else
 static inline int shmget(key_t __key, size_t __size, int __shmflg)
 {
 	int fd,ret;
@@ -114,6 +128,7 @@ error:
 	close(fd);
 	return ret;
 }
+#endif
 
 static inline void *shmat(int __shmid, const void *__shmaddr, int __shmflg)
 {
