@@ -2,7 +2,7 @@
  * libpmem: IO engine that uses PMDK libpmem to read and write data
  *
  * Copyright (C) 2017 Nippon Telegraph and Telephone Corporation.
- * Copyright 2018-2020, Intel Corporation
+ * Copyright 2018-2021, Intel Corporation
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License,
@@ -18,7 +18,8 @@
 /*
  * libpmem engine
  *
- * IO engine that uses libpmem to write data (and memcpy to read)
+ * IO engine that uses libpmem (part of PMDK collection) to write data
+ *	and libc's memcpy to read. It requires PMDK >= 1.5.
  *
  * To use:
  *   ioengine=libpmem
@@ -43,25 +44,13 @@
  *     mkdir /mnt/pmem0
  *     mount -o dax /dev/pmem0 /mnt/pmem0
  *
- * See examples/libpmem.fio for more.
- *
- *
- * libpmem.so
- *   By default, the libpmem engine will let the system find the libpmem.so
- *   that it uses. You can use an alternative libpmem by setting the
- *   FIO_PMEM_LIB environment variable to the full path to the desired
- *   libpmem.so. This engine requires PMDK >= 1.5.
+ * See examples/libpmem.fio for complete usage example.
  */
 
 #include <stdio.h>
-#include <limits.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <sys/sysmacros.h>
-#include <libgen.h>
 #include <libpmem.h>
 
 #include "../fio.h"
@@ -77,8 +66,8 @@ static int fio_libpmem_init(struct thread_data *td)
 {
 	struct thread_options *o = &td->o;
 
-	dprint(FD_IO,"o->rw_min_bs %llu \n o->fsync_blocks %u \n o->fdatasync_blocks %u \n",
-			o->rw_min_bs,o->fsync_blocks,o->fdatasync_blocks);
+	dprint(FD_IO, "o->rw_min_bs %llu\n o->fsync_blocks %u\n o->fdatasync_blocks %u\n",
+			o->rw_min_bs, o->fsync_blocks, o->fdatasync_blocks);
 	dprint(FD_IO, "DEBUG fio_libpmem_init\n");
 
 	if ((o->rw_min_bs & page_mask) &&
@@ -91,22 +80,16 @@ static int fio_libpmem_init(struct thread_data *td)
 }
 
 /*
- * This is the pmem_map_file execution function
+ * This is the pmem_map_file execution function, a helper to
+ * fio_libpmem_open_file function.
  */
 static int fio_libpmem_file(struct thread_data *td, struct fio_file *f,
 			    size_t length, off_t off)
 {
 	struct fio_libpmem_data *fdd = FILE_ENG_DATA(f);
-	mode_t mode = 0;
+	mode_t mode = S_IWUSR | S_IRUSR;
 	size_t mapped_len;
 	int is_pmem;
-
-	if(td_rw(td))
-		mode = S_IWUSR | S_IRUSR;
-	else if (td_write(td))
-		mode = S_IWUSR;
-	else
-		mode = S_IRUSR;
 
 	dprint(FD_IO, "DEBUG fio_libpmem_file\n");
 	dprint(FD_IO, "f->file_name = %s td->o.verify = %d \n", f->file_name,
@@ -142,11 +125,11 @@ static int fio_libpmem_open_file(struct thread_data *td, struct fio_file *f)
 {
 	struct fio_libpmem_data *fdd;
 
-	dprint(FD_IO,"DEBUG fio_libpmem_open_file\n");
-	dprint(FD_IO,"f->io_size=%ld \n",f->io_size);
-	dprint(FD_IO,"td->o.size=%lld \n",td->o.size);
-	dprint(FD_IO,"td->o.iodepth=%d\n",td->o.iodepth);
-	dprint(FD_IO,"td->o.iodepth_batch=%d \n",td->o.iodepth_batch);
+	dprint(FD_IO, "DEBUG fio_libpmem_open_file\n");
+	dprint(FD_IO, "f->io_size=%ld\n", f->io_size);
+	dprint(FD_IO, "td->o.size=%lld\n", td->o.size);
+	dprint(FD_IO, "td->o.iodepth=%d\n", td->o.iodepth);
+	dprint(FD_IO, "td->o.iodepth_batch=%d\n", td->o.iodepth_batch);
 
 	if (fio_file_open(f))
 		td_io_close_file(td, f);
@@ -167,8 +150,8 @@ static int fio_libpmem_prep(struct thread_data *td, struct io_u *io_u)
 	struct fio_file *f = io_u->file;
 	struct fio_libpmem_data *fdd = FILE_ENG_DATA(f);
 
-	dprint(FD_IO, "DEBUG fio_libpmem_prep\n" );
-	dprint(FD_IO," io_u->offset %llu : fdd->libpmem_off %ld : "
+	dprint(FD_IO, "DEBUG fio_libpmem_prep\n");
+	dprint(FD_IO, "io_u->offset %llu : fdd->libpmem_off %ld : "
 			"io_u->buflen %llu : fdd->libpmem_sz %ld\n",
 			io_u->offset, fdd->libpmem_off,
 			io_u->buflen, fdd->libpmem_sz);
@@ -192,8 +175,9 @@ static enum fio_q_status fio_libpmem_queue(struct thread_data *td,
 	io_u->error = 0;
 
 	dprint(FD_IO, "DEBUG fio_libpmem_queue\n");
-	dprint(FD_IO,"td->o.odirect %d td->o.sync_io %d \n",td->o.odirect, td->o.sync_io);
-	/* map both O_SYNC / DSYNC to not using NODRAIN */
+	dprint(FD_IO, "td->o.odirect %d td->o.sync_io %d\n",
+			td->o.odirect, td->o.sync_io);
+	/* map both O_SYNC / DSYNC to not use NODRAIN */
 	flags = td->o.sync_io ? 0 : PMEM_F_MEM_NODRAIN;
 	flags |= td->o.odirect ? PMEM_F_MEM_NONTEMPORAL : PMEM_F_MEM_TEMPORAL;
 
@@ -203,7 +187,7 @@ static enum fio_q_status fio_libpmem_queue(struct thread_data *td,
 		break;
 	case DDIR_WRITE:
 		dprint(FD_IO, "DEBUG mmap_data=%p, xfer_buf=%p\n",
-				io_u->mmap_data, io_u->xfer_buf );
+				io_u->mmap_data, io_u->xfer_buf);
 		pmem_memcpy(io_u->mmap_data,
 					io_u->xfer_buf,
 					io_u->xfer_buflen,
@@ -227,13 +211,7 @@ static int fio_libpmem_close_file(struct thread_data *td, struct fio_file *f)
 	struct fio_libpmem_data *fdd = FILE_ENG_DATA(f);
 	int ret = 0;
 
-	dprint(FD_IO,"DEBUG fio_libpmem_close_file\n");
-	dprint(FD_IO,"td->o.odirect %d \n",td->o.odirect);
-
-	if (!td->o.odirect) {
-		dprint(FD_IO,"pmem_drain\n");
-		pmem_drain();
-	}
+	dprint(FD_IO, "DEBUG fio_libpmem_close_file\n");
 
 	if (fdd->libpmem_ptr)
 		ret = pmem_unmap(fdd->libpmem_ptr, fdd->libpmem_sz);
