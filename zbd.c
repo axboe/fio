@@ -588,7 +588,7 @@ static int zbd_set_max_open_zones(struct thread_data *td, struct fio_file *f)
 	unsigned int max_open_zones;
 	int ret;
 
-	if (zbd->model != ZBD_HOST_MANAGED) {
+	if (zbd->model != ZBD_HOST_MANAGED || td->o.ignore_zone_limits) {
 		/* Only host-managed devices have a max open limit */
 		zbd->max_open_zones = td->o.max_open_zones;
 		goto out;

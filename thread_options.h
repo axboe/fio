@@ -355,6 +355,7 @@ struct thread_options {
 	unsigned int read_beyond_wp;
 	int max_open_zones;
 	unsigned int job_max_open_zones;
+	unsigned int ignore_zone_limits;
 	fio_fp64_t zrt;
 	fio_fp64_t zrf;
 };
@@ -657,6 +658,7 @@ struct thread_options_pack {
 
 	uint32_t zone_mode;
 	int32_t max_open_zones;
+	uint32_t ignore_zone_limits;
 } __attribute__((packed));
 
 extern void convert_thread_options_to_cpu(struct thread_options *o, struct thread_options_pack *top);

@@ -835,6 +835,11 @@ threads/processes.
 .BI job_max_open_zones \fR=\fPint
 Limit on the number of simultaneously opened zones per single thread/process.
 .TP
+.BI ignore_zone_limits \fR=\fPbool
+If this isn't set, fio will query the max open zones limit from the zoned block
+device, and exit if the specified \fBmax_open_zones\fR value is larger than the
+limit reported by the device. Default: false.
+.TP
 .BI zone_reset_threshold \fR=\fPfloat
 A number between zero and one that indicates the ratio of logical blocks with
 data to the total number of logical blocks in the test above which zones
