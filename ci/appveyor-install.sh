@@ -31,6 +31,7 @@ case "${DISTRO}" in
         pacman.exe --noconfirm -S \
             mingw-w64-${PACKAGE_ARCH}-clang \
             mingw-w64-${PACKAGE_ARCH}-cunit \
+            mingw-w64-${PACKAGE_ARCH}-toolchain \
             mingw-w64-${PACKAGE_ARCH}-lld
         ;;
 esac
