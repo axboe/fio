@@ -33,6 +33,7 @@ case "${DISTRO}" in
             mingw-w64-${PACKAGE_ARCH}-cunit \
             mingw-w64-${PACKAGE_ARCH}-toolchain \
             mingw-w64-${PACKAGE_ARCH}-lld
+        pacman.exe -Q # List installed packages
         ;;
 esac
 
