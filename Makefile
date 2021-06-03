@@ -40,6 +40,11 @@ ifdef CONFIG_PDB
   LDFLAGS += -fuse-ld=lld $(LINK_PDBFILE)
 endif
 
+# If clang, do not use builtin stpcpy as it breaks the build
+ifeq ($(CC),clang)
+  FIO_CFLAGS += -fno-builtin-stpcpy
+endif
+
 ifdef CONFIG_GFIO
   PROGS += gfio
 endif
