@@ -173,15 +173,23 @@ last_online_zone() {
     fi
 }
 
+# Get max_open_zones of SMR drives using sg_inq or libzbc tools. Two test cases
+# 31 and 32 use this max_open_zones value. The test case 31 uses max_open_zones
+# to decide number of write target zones. The test case 32 passes max_open_zones
+# value to fio with --max_open_zones option. Of note is that fio itself has the
+# feature to get max_open_zones from the device through sysfs or ioengine
+# specific implementation. This max_open_zones fetch by test script is required
+# in case fio is running on an old Linux kernel version which lacks
+# max_open_zones in sysfs, or which lacks zoned block device support completely.
 max_open_zones() {
     local dev=$1
 
     if [ -n "${sg_inq}" ] && [ ! -n "${use_libzbc}" ]; then
 	if ! ${sg_inq} -e --page=0xB6 --len=20 --hex "$dev" \
 		 > /dev/null 2>&1; then
-	    # Non scsi device such as null_blk can not return max open zones.
-	    # Use default value.
-	    echo 128
+	    # When sg_inq can not get max open zones, specify 0 which indicates
+	    # fio to get max open zones limit from the device.
+	    echo 0
 	else
 	    ${sg_inq} -e --page=0xB6 --len=20 --hex "$dev" | tail -1 |
 		{
