@@ -1348,6 +1348,7 @@ fi
 if [[ -n ${max_open_zones_opt} ]]; then
 	# Override max_open_zones with the script option value
 	max_open_zones="${max_open_zones_opt}"
+	global_var_opts+=("--ignore_zone_limits=1")
 	job_var_opts+=("--max_open_zones=${max_open_zones_opt}")
 fi
 
