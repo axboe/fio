@@ -731,32 +731,28 @@ test30() {
 test31() {
     local bs inc nz off opts size
 
-    prep_write
-    # Start with writing 128 KB to max_open_zones sequential zones.
-    bs=128K
+    [ -n "$is_zbd" ] && reset_zone "$dev" -1
+
+    # As preparation, write 128 KB to sequential write required zones. Limit
+    # write target zones up to max_open_zones to keep test time reasonable.
+    # To distribute the write target zones evenly, skip certain zones for every
+    # write. Utilize zonemode strided for such write patterns.
+    bs=$((128 * 1024))
     nz=$((max_open_zones))
     if [[ $nz -eq 0 ]]; then
 	nz=128
     fi
-    # shellcheck disable=SC2017
-    inc=$(((disk_size - (first_sequential_zone_sector * 512)) / (nz * zone_size)
-	   * zone_size))
-    if [ "$inc" -eq 0 ]; then
-	require_seq_zones $nz || return $SKIP_TESTCASE
-    fi
-    opts=()
-    for ((off = first_sequential_zone_sector * 512; off < disk_size;
-	  off += inc)); do
-	opts+=("--name=$dev" "--filename=$dev" "--offset=$off" "--io_size=$bs")
-	opts+=("--bs=$bs" "--size=$zone_size" "$(ioengine "libaio")")
-	opts+=("--rw=write" "--direct=1" "--thread=1" "--stats=0")
-	opts+=("--zonemode=zbd" "--zonesize=${zone_size}")
-	opts+=(${job_var_opts[@]})
-    done
-    "$(dirname "$0")/../../fio" "${opts[@]}" >> "${logfile}.${test_number}" 2>&1
-    # Next, run the test.
     off=$((first_sequential_zone_sector * 512))
     size=$((disk_size - off))
+    inc=$(((size / nz / zone_size) * zone_size))
+    opts=("--name=$dev" "--filename=$dev" "--rw=write" "--bs=${bs}")
+    opts+=("--offset=$off" "--size=$((inc * nz))" "--io_size=$((bs * nz))")
+    opts+=("--zonemode=strided" "--zonesize=${bs}" "--zonerange=${inc}")
+    opts+=("--direct=1")
+    echo "fio ${opts[@]}" >> "${logfile}.${test_number}"
+    "$(dirname "$0")/../../fio" "${opts[@]}" >> "${logfile}.${test_number}" 2>&1
+
+    # Next, run the test.
     opts=("--name=$dev" "--filename=$dev" "--offset=$off" "--size=$size")
     opts+=("--bs=$bs" "$(ioengine "psync")" "--rw=randread" "--direct=1")
     opts+=("--thread=1" "--time_based" "--runtime=30" "--zonemode=zbd")
