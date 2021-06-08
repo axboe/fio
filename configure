@@ -2285,7 +2285,7 @@ print_config "DAOS File System (dfs) Engine" "$dfs"
 ##########################################
 # Check if we have libnfs (for userspace nfs support).
 if test "$disable_nfs" != "yes"; then
-  if $(pkg-config libnfs); then
+  if $(pkg-config libnfs > /dev/null 2>&1); then
     libnfs="yes"
     libnfs_cflags=$(pkg-config --cflags libnfs)
     libnfs_libs=$(pkg-config --libs libnfs)
