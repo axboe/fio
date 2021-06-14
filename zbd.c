@@ -32,6 +32,11 @@ int zbd_get_zoned_model(struct thread_data *td, struct fio_file *f,
 {
 	int ret;
 
+	if (f->filetype == FIO_TYPE_PIPE) {
+		log_err("zonemode=zbd does not support pipes\n");
+		return -EINVAL;
+	}
+
 	if (td->io_ops && td->io_ops->get_zoned_model)
 		ret = td->io_ops->get_zoned_model(td, f, model);
 	else
