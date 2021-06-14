@@ -808,8 +808,7 @@ int zbd_setup_files(struct thread_data *td)
 		struct fio_zone_info *z;
 		int zi;
 
-		if (!zbd)
-			continue;
+		assert(zbd);
 
 		f->min_zone = zbd_zone_idx(f, f->file_offset);
 		f->max_zone = zbd_zone_idx(f, f->file_offset + f->io_size);
@@ -1470,8 +1469,7 @@ static void zbd_queue_io(struct thread_data *td, struct io_u *io_u, int q,
 	uint32_t zone_idx;
 	uint64_t zone_end;
 
-	if (!zbd_info)
-		return;
+	assert(zbd_info);
 
 	zone_idx = zbd_zone_idx(f, io_u->offset);
 	assert(zone_idx < zbd_info->nr_zones);
@@ -1531,8 +1529,7 @@ static void zbd_put_io(struct thread_data *td, const struct io_u *io_u)
 	struct fio_zone_info *z;
 	uint32_t zone_idx;
 
-	if (!zbd_info)
-		return;
+	assert(zbd_info);
 
 	zone_idx = zbd_zone_idx(f, io_u->offset);
 	assert(zone_idx < zbd_info->nr_zones);
@@ -1588,6 +1585,7 @@ void setup_zbd_zone_mode(struct thread_data *td, struct io_u *io_u)
 
 	assert(td->o.zone_mode == ZONE_MODE_ZBD);
 	assert(td->o.zone_size);
+	assert(f->zbd_info);
 
 	zone_idx = zbd_zone_idx(f, f->last_pos[ddir]);
 	z = get_zone(f, zone_idx);
@@ -1662,6 +1660,7 @@ enum fio_ddir zbd_adjust_ddir(struct thread_data *td, struct io_u *io_u,
 	 * devices with all empty zones. Overwrite the first I/O direction as
 	 * write to make sure data to read exists.
 	 */
+	assert(io_u->file->zbd_info);
 	if (ddir != DDIR_READ || !td_rw(td))
 		return ddir;
 
@@ -1691,9 +1690,7 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 	uint64_t new_len;
 	int64_t range;
 
-	if (!f->zbd_info)
-		return io_u_accept;
-
+	assert(f->zbd_info);
 	assert(min_bs);
 	assert(is_valid_offset(f, io_u->offset));
 	assert(io_u->buflen);
