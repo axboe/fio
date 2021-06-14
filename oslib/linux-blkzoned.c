@@ -140,10 +140,8 @@ int blkzoned_get_zoned_model(struct thread_data *td, struct fio_file *f,
 {
 	char *model_str = NULL;
 
-	if (f->filetype != FIO_TYPE_BLOCK) {
-		*model = ZBD_IGNORE;
-		return 0;
-	}
+	if (f->filetype != FIO_TYPE_BLOCK)
+		return -EINVAL;
 
 	*model = ZBD_NONE;
 

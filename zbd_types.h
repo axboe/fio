@@ -14,10 +14,9 @@
  * Zoned block device models.
  */
 enum zbd_zoned_model {
-	ZBD_IGNORE,		/* Ignore file */
-	ZBD_NONE,		/* No zone support. Emulate zones. */
-	ZBD_HOST_AWARE,		/* Host-aware zoned block device */
-	ZBD_HOST_MANAGED,	/* Host-managed zoned block device */
+	ZBD_NONE		= 0x1,	/* No zone support. Emulate zones. */
+	ZBD_HOST_AWARE		= 0x2,	/* Host-aware zoned block device */
+	ZBD_HOST_MANAGED	= 0x3,	/* Host-managed zoned block device */
 };
 
 /*

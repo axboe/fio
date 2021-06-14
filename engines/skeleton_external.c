@@ -156,7 +156,6 @@ static int fio_skeleton_close(struct thread_data *td, struct fio_file *f)
 /*
  * Hook for getting the zoned model of a zoned block device for zonemode=zbd.
  * The zoned model can be one of (see zbd_types.h):
- * - ZBD_IGNORE: skip regular files
  * - ZBD_NONE: regular block device (zone emulation will be used)
  * - ZBD_HOST_AWARE: host aware zoned block device
  * - ZBD_HOST_MANAGED: host managed zoned block device

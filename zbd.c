@@ -661,8 +661,6 @@ static int zbd_create_zone_info(struct thread_data *td, struct fio_file *f)
 		return ret;
 
 	switch (zbd_model) {
-	case ZBD_IGNORE:
-		return 0;
 	case ZBD_HOST_AWARE:
 	case ZBD_HOST_MANAGED:
 		ret = parse_zone_info(td, f);
@@ -680,6 +678,7 @@ static int zbd_create_zone_info(struct thread_data *td, struct fio_file *f)
 		return -EINVAL;
 	}
 
+	assert(f->zbd_info);
 	f->zbd_info->model = zbd_model;
 
 	ret = zbd_set_max_open_zones(td, f);

@@ -180,10 +180,8 @@ static int libzbc_get_zoned_model(struct thread_data *td, struct fio_file *f,
 	struct libzbc_data *ld;
 	int ret;
 
-	if (f->filetype != FIO_TYPE_BLOCK && f->filetype != FIO_TYPE_CHAR) {
-		*model = ZBD_IGNORE;
-		return 0;
-	}
+	if (f->filetype != FIO_TYPE_BLOCK && f->filetype != FIO_TYPE_CHAR)
+		return -EINVAL;
 
 	ret = libzbc_open_dev(td, f, &ld);
 	if (ret)
