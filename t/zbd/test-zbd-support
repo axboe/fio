@@ -922,7 +922,7 @@ test41() {
 test42() {
     require_regular_block_dev || return $SKIP_TESTCASE
     read_one_block --zonemode=zbd --zonesize=0 |
-	grep -q 'Specifying the zone size is mandatory for regular block devices with --zonemode=zbd'
+	grep -q 'Specifying the zone size is mandatory for regular file/block device with --zonemode=zbd'
 }
 
 # Check whether fio handles --zonesize=1 correctly for regular block devices.
