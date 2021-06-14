@@ -37,6 +37,12 @@ int zbd_get_zoned_model(struct thread_data *td, struct fio_file *f,
 		return -EINVAL;
 	}
 
+	/* If regular file, always emulate zones inside the file. */
+	if (f->filetype == FIO_TYPE_FILE) {
+		*model = ZBD_NONE;
+		return 0;
+	}
+
 	if (td->io_ops && td->io_ops->get_zoned_model)
 		ret = td->io_ops->get_zoned_model(td, f, model);
 	else
@@ -414,7 +420,7 @@ static int init_zone_info(struct thread_data *td, struct fio_file *f)
 	int i;
 
 	if (zone_size == 0) {
-		log_err("%s: Specifying the zone size is mandatory for regular block devices with --zonemode=zbd\n\n",
+		log_err("%s: Specifying the zone size is mandatory for regular file/block device with --zonemode=zbd\n\n",
 			f->file_name);
 		return 1;
 	}
@@ -433,6 +439,12 @@ static int init_zone_info(struct thread_data *td, struct fio_file *f)
 			f->file_name, (unsigned long long) td->o.zone_capacity,
 			(unsigned long long) td->o.zone_size);
 		return 1;
+	}
+
+	if (f->real_file_size < zone_size) {
+		log_err("%s: file/device size %"PRIu64" is smaller than zone size %"PRIu64"\n",
+			f->file_name, f->real_file_size, zone_size);
+		return -EINVAL;
 	}
 
 	nr_zones = (f->real_file_size + zone_size - 1) / zone_size;
