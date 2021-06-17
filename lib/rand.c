@@ -125,10 +125,7 @@ void __fill_random_buf(void *buf, unsigned int len, uint64_t seed)
 uint64_t fill_random_buf(struct frand_state *fs, void *buf,
 			 unsigned int len)
 {
-	uint64_t r = __rand(fs);
-
-	if (sizeof(int) != sizeof(long *))
-		r *= (unsigned long) __rand(fs);
+	uint64_t r = __get_next_seed(fs);
 
 	__fill_random_buf(buf, len, r);
 	return r;
@@ -188,10 +185,7 @@ uint64_t fill_random_buf_percentage(struct frand_state *fs, void *buf,
 				    unsigned int segment, unsigned int len,
 				    char *pattern, unsigned int pbytes)
 {
-	uint64_t r = __rand(fs);
-
-	if (sizeof(int) != sizeof(long *))
-		r *= (unsigned long) __rand(fs);
+	uint64_t r = __get_next_seed(fs);
 
 	__fill_random_buf_percentage(r, buf, percentage, segment, len,
 					pattern, pbytes);
