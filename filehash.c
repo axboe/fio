@@ -60,10 +60,8 @@ static struct fio_file *__lookup_file_hash(const char *name)
 		if (!f->file_name)
 			continue;
 
-		if (!strcmp(f->file_name, name)) {
-			assert(f->fd != -1);
+		if (!strcmp(f->file_name, name))
 			return f;
-		}
 	}
 
 	return NULL;
