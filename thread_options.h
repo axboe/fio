@@ -187,6 +187,9 @@ struct thread_options {
 	unsigned long long start_delay;
 	unsigned long long start_delay_orig;
 	unsigned long long start_delay_high;
+	unsigned long long per_job_start_delay;
+	unsigned long long per_job_start_delay_orig;
+	unsigned long long per_job_start_delay_high;
 	unsigned long long timeout;
 	unsigned long long ramp_time;
 	unsigned int ss_state;
