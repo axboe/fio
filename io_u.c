@@ -1045,41 +1045,11 @@ void io_u_mark_depth(struct thread_data *td, unsigned int nr)
 
 static void io_u_mark_lat_nsec(struct thread_data *td, unsigned long long nsec)
 {
-	int idx = 0;
+	int idx;
 
 	assert(nsec < 1000);
 
-	switch (nsec) {
-	case 750 ... 999:
-		idx = 9;
-		break;
-	case 500 ... 749:
-		idx = 8;
-		break;
-	case 250 ... 499:
-		idx = 7;
-		break;
-	case 100 ... 249:
-		idx = 6;
-		break;
-	case 50 ... 99:
-		idx = 5;
-		break;
-	case 20 ... 49:
-		idx = 4;
-		break;
-	case 10 ... 19:
-		idx = 3;
-		break;
-	case 4 ... 9:
-		idx = 2;
-		break;
-	case 2 ... 3:
-		idx = 1;
-		fallthrough;
-	case 0 ... 1:
-		break;
-	}
+	idx = stat_get_lat_idx(nsec);
 
 	assert(idx < FIO_IO_U_LAT_N_NR);
 	td->ts.io_u_lat_n[idx]++;
@@ -1087,41 +1057,11 @@ static void io_u_mark_lat_nsec(struct thread_data *td, unsigned long long nsec)
 
 static void io_u_mark_lat_usec(struct thread_data *td, unsigned long long usec)
 {
-	int idx = 0;
+	int idx;
 
 	assert(usec < 1000 && usec >= 1);
 
-	switch (usec) {
-	case 750 ... 999:
-		idx = 9;
-		break;
-	case 500 ... 749:
-		idx = 8;
-		break;
-	case 250 ... 499:
-		idx = 7;
-		break;
-	case 100 ... 249:
-		idx = 6;
-		break;
-	case 50 ... 99:
-		idx = 5;
-		break;
-	case 20 ... 49:
-		idx = 4;
-		break;
-	case 10 ... 19:
-		idx = 3;
-		break;
-	case 4 ... 9:
-		idx = 2;
-		break;
-	case 2 ... 3:
-		idx = 1;
-		fallthrough;
-	case 0 ... 1:
-		break;
-	}
+	idx = stat_get_lat_idx(usec);
 
 	assert(idx < FIO_IO_U_LAT_U_NR);
 	td->ts.io_u_lat_u[idx]++;
@@ -1129,45 +1069,20 @@ static void io_u_mark_lat_usec(struct thread_data *td, unsigned long long usec)
 
 static void io_u_mark_lat_msec(struct thread_data *td, unsigned long long msec)
 {
-	int idx = 0;
+	int idx;
+	int nr = stat_get_lat_m_nr();
 
 	assert(msec >= 1);
 
 	switch (msec) {
 	default:
-		idx = 11;
+		idx = nr - 1;
 		break;
 	case 1000 ... 1999:
-		idx = 10;
+		idx = nr - 2;
 		break;
-	case 750 ... 999:
-		idx = 9;
-		break;
-	case 500 ... 749:
-		idx = 8;
-		break;
-	case 250 ... 499:
-		idx = 7;
-		break;
-	case 100 ... 249:
-		idx = 6;
-		break;
-	case 50 ... 99:
-		idx = 5;
-		break;
-	case 20 ... 49:
-		idx = 4;
-		break;
-	case 10 ... 19:
-		idx = 3;
-		break;
-	case 4 ... 9:
-		idx = 2;
-		break;
-	case 2 ... 3:
-		idx = 1;
-		fallthrough;
-	case 0 ... 1:
+	case 1 ... 999:
+		idx = stat_get_lat_idx(msec);
 		break;
 	}
 
