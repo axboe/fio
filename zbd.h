@@ -50,7 +50,8 @@ struct fio_zone_info {
  * zoned_block_device_info - zoned block device characteristics
  * @model: Device model.
  * @max_open_zones: global limit on the number of simultaneously opened
- *	sequential write zones.
+ *	sequential write zones. A zero value means unlimited open zones,
+ *	and that open zones will not be tracked in the open_zones array.
  * @mutex: Protects the modifiable members in this structure (refcount and
  *		num_open_zones).
  * @zone_size: size of a single zone in bytes.

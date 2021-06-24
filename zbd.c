@@ -636,8 +636,12 @@ static int zbd_set_max_open_zones(struct thread_data *td, struct fio_file *f)
 
 out:
 	/* Ensure that the limit is not larger than FIO's internal limit */
-	zbd->max_open_zones = min_not_zero(zbd->max_open_zones,
-					   (uint32_t) ZBD_MAX_OPEN_ZONES);
+	if (zbd->max_open_zones > ZBD_MAX_OPEN_ZONES) {
+		td_verror(td, EINVAL, "'max_open_zones' value is too large");
+		log_err("'max_open_zones' value is larger than %u\n", ZBD_MAX_OPEN_ZONES);
+		return -EINVAL;
+	}
+
 	dprint(FD_ZBD, "%s: using max open zones limit: %"PRIu32"\n",
 	       f->file_name, zbd->max_open_zones);
 
@@ -827,8 +831,14 @@ int zbd_setup_files(struct thread_data *td)
 			log_err("Different 'max_open_zones' values\n");
 			return 1;
 		}
-		if (zbd->max_open_zones > ZBD_MAX_OPEN_ZONES) {
-			log_err("'max_open_zones' value is limited by %u\n", ZBD_MAX_OPEN_ZONES);
+
+		/*
+		 * The per job max open zones limit cannot be used without a
+		 * global max open zones limit. (As the tracking of open zones
+		 * is disabled when there is no global max open zones limit.)
+		 */
+		if (td->o.job_max_open_zones && !zbd->max_open_zones) {
+			log_err("'job_max_open_zones' cannot be used without a global open zones limit\n");
 			return 1;
 		}
 
@@ -1093,6 +1103,8 @@ static bool is_zone_open(const struct thread_data *td, const struct fio_file *f,
 	struct zoned_block_device_info *zbdi = f->zbd_info;
 	int i;
 
+	/* This function should never be called when zbdi->max_open_zones == 0 */
+	assert(zbdi->max_open_zones);
 	assert(td->o.job_max_open_zones == 0 || td->num_open_zones <= td->o.job_max_open_zones);
 	assert(td->o.job_max_open_zones <= zbdi->max_open_zones);
 	assert(zbdi->num_open_zones <= zbdi->max_open_zones);
@@ -1127,6 +1139,14 @@ static bool zbd_open_zone(struct thread_data *td, const struct fio_file *f,
 	 */
 	if (td->o.verify != VERIFY_NONE && zbd_zone_full(f, z, min_bs))
 		return false;
+
+	/*
+	 * zbdi->max_open_zones == 0 means that there is no limit on the maximum
+	 * number of open zones. In this case, do no track open zones in
+	 * zbdi->open_zones array.
+	 */
+	if (!zbdi->max_open_zones)
+		return true;
 
 	pthread_mutex_lock(&zbdi->mutex);
 	if (is_zone_open(td, f, zone_idx)) {
