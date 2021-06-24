@@ -842,6 +842,14 @@ int zbd_setup_files(struct thread_data *td)
 			return 1;
 		}
 
+		/*
+		 * zbd->max_open_zones is the global limit shared for all jobs
+		 * that target the same zoned block device. Force sync the per
+		 * thread global limit with the actual global limit. (The real
+		 * per thread/job limit is stored in td->o.job_max_open_zones).
+		 */
+		td->o.max_open_zones = zbd->max_open_zones;
+
 		for (zi = f->min_zone; zi < f->max_zone; zi++) {
 			z = &zbd->zone_info[zi];
 			if (z->cond != ZBD_ZONE_COND_IMP_OPEN &&
@@ -1205,7 +1213,7 @@ static struct fio_zone_info *zbd_convert_to_open_zone(struct thread_data *td,
 
 	assert(is_valid_offset(f, io_u->offset));
 
-	if (td->o.max_open_zones || td->o.job_max_open_zones) {
+	if (zbdi->max_open_zones || td->o.job_max_open_zones) {
 		/*
 		 * This statement accesses zbdi->open_zones[] on purpose
 		 * without locking.
@@ -1236,7 +1244,7 @@ static struct fio_zone_info *zbd_convert_to_open_zone(struct thread_data *td,
 		pthread_mutex_lock(&zbdi->mutex);
 		if (z->has_wp) {
 			if (z->cond != ZBD_ZONE_COND_OFFLINE &&
-			    td->o.max_open_zones == 0 && td->o.job_max_open_zones == 0)
+			    zbdi->max_open_zones == 0 && td->o.job_max_open_zones == 0)
 				goto examine_zone;
 			if (zbdi->num_open_zones == 0) {
 				dprint(FD_ZBD, "%s(%s): no zones are open\n",
@@ -1297,8 +1305,8 @@ open_other_zone:
 	/* Check if number of open zones reaches one of limits. */
 	wait_zone_close =
 		zbdi->num_open_zones == f->max_zone - f->min_zone ||
-		(td->o.max_open_zones &&
-		 zbdi->num_open_zones == td->o.max_open_zones) ||
+		(zbdi->max_open_zones &&
+		 zbdi->num_open_zones == zbdi->max_open_zones) ||
 		(td->o.job_max_open_zones &&
 		 td->num_open_zones == td->o.job_max_open_zones);
 
