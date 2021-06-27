@@ -55,7 +55,7 @@ unlink=0
 # size, this is not required.
 #
 filename=/pmem0/fio-test,4096,1024
-filename=/pmem1/fio-test,4096,1024
+#filename=/pmem1/fio-test,4096,1024
 
 [pmemblk-write]
 rw=randwrite
