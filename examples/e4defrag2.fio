@@ -48,7 +48,7 @@ donorname=file.def
 
 ########
 # Run random e4defrag and various aio workers in parallel
-[e4defrag-fuzzer-4k]
+[e4defrag-fuzzer-4k-bis]
 stonewall
 continue_on_error=all
 inplace=1

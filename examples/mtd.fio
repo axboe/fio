@@ -6,7 +6,7 @@ ignore_error=,EIO
 blocksize=512,512,16384
 skip_bad=1
 
-[write]
+[trim]
 stonewall
 rw=trim
 
@@ -14,7 +14,7 @@ rw=trim
 stonewall
 rw=write
 
-[write]
+[trimwrite]
 stonewall
 block_error_percentiles=1
 rw=trimwrite
