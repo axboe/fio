@@ -259,6 +259,7 @@ struct thread_data {
 
 	struct frand_state buf_state;
 	struct frand_state buf_state_prev;
+	struct frand_state buf_state_ret;
 	struct frand_state dedupe_state;
 	struct frand_state zone_state;
 	struct frand_state prio_state;

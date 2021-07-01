@@ -2182,8 +2182,16 @@ static struct frand_state *get_buf_state(struct thread_data *td)
 
 	v = rand_between(&td->dedupe_state, 1, 100);
 
-	if (v <= td->o.dedupe_percentage)
-		return &td->buf_state_prev;
+	if (v <= td->o.dedupe_percentage) {
+		/*
+		 * The caller advances the returned frand_state.
+		 * A copy of prev should be returned instead since
+		 * a subsequent intention to generate a deduped buffer
+		 * might result in generating a unique one
+		 */
+		frand_copy(&td->buf_state_ret, &td->buf_state_prev);
+		return &td->buf_state_ret;
+	}
 
 	return &td->buf_state;
 }
