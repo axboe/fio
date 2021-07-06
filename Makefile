@@ -293,7 +293,7 @@ else # !CONFIG_DYNAMIC_ENGINES
 define engine_template =
 SOURCE += $$($(1)_SRCS)
 LIBS += $$($(1)_LIBS)
-CFLAGS += $$($(1)_CFLAGS)
+override CFLAGS += $$($(1)_CFLAGS)
 endef
 endif
 
