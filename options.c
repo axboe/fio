@@ -1374,8 +1374,12 @@ static int str_buffer_pattern_cb(void *data, const char *input)
 	int ret;
 
 	/* FIXME: for now buffer pattern does not support formats */
-	ret = parse_and_fill_pattern(input, strlen(input), td->o.buffer_pattern,
+	ret = load_pattern(input, &td->o.buffer_pattern);
+	#if 0
+	td->o.buffer_pattern = malloc(MAX_PATTERN_SIZE);
+	ret = parse_and_fill_pattern(input, strlen(input), &td->o.buffer_pattern,
 				     MAX_PATTERN_SIZE, NULL, NULL, NULL);
+	#endif
 	if (ret < 0)
 		return 1;
 

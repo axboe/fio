@@ -370,6 +370,33 @@ int parse_and_fill_pattern(const char *in, unsigned int in_len,
 	return total;
 }
 
+int load_pattern(const char *filename, char** data)
+{
+  off_t size;
+  int fd;
+  ssize_t rsize;
+  fd = open(filename, O_RDONLY);
+  if (fd < 0)
+    return 0;
+
+  size = lseek(fd, 0, SEEK_END);
+  if (size < 0)
+  {
+    close(fd);
+    return 0;
+  }
+  lseek(fd, 0, SEEK_SET);
+
+  if (size > 128 * 1024 * 1024)
+    size = 128 * 1024 * 1024;
+
+  *data = malloc(size);  
+  rsize = read(fd, *data, size);
+  close(fd);
+  return rsize;
+}
+
+
 /**
  * dup_pattern() - Duplicates part of the pattern all over the buffer.
  *
