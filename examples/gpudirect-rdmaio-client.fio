@@ -1,15 +1,23 @@
 # Example gpudirect rdma client job
 [global]
 ioengine=rdma
-hostname=[hostname]
-port=[port]
-verb=[read/write/send/recv]
-mem=cudamalloc
-gpu_dev_id=0
+hostname=${RDMA_SERVER}
+port=8888
 bs=1m
 size=100g
+mem=cudamalloc
+gpu_dev_id=0
 
-[sender]
+[cudadirect-client-rdma-write]
+# use IBV_WC_RDMA_WRITE
 rw=write
-iodepth=1
-iodepth_batch_complete=1
+direct=1
+numjobs=2
+iodepth=16
+
+[cudadirect-client-rdma-read]
+# use IBV_WC_RDMA_READ
+rw=read
+direct=1
+numjobs=2
+iodepth=16

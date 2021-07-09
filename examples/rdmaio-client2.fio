@@ -1,0 +1,21 @@
+# Example rdma client job
+[global]
+ioengine=rdma
+hostname=${RDMA_SERVER}
+port=8888
+# Data exchange method
+# verb=[read/write/send/recv]
+bs=1m
+size=100g
+# IO direction:  [read] as the server, [write] as for client
+rw=write
+
+[client-rdma-read]
+verb=read
+numjobs=2
+iodepth=16
+
+[client-rdma-write]
+verb=write
+numjobs=2
+iodepth=16
