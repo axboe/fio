@@ -409,8 +409,9 @@ struct fio_net_cmd *fio_net_recv_cmd(int sk, bool wait)
 			if (cmdret->opcode == FIO_NET_CMD_TEXT) {
 				struct cmd_text_pdu *__pdu = (struct cmd_text_pdu *) cmdret->payload;
 				char *buf = (char *) __pdu->buf;
+				int len = le32_to_cpu(__pdu->buf_len);
 
-				buf[__pdu->buf_len] = '\0';
+				buf[len] = '\0';
 			} else if (cmdret->opcode == FIO_NET_CMD_JOB) {
 				struct cmd_job_pdu *__pdu = (struct cmd_job_pdu *) cmdret->payload;
 				char *buf = (char *) __pdu->buf;
