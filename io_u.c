@@ -2172,6 +2172,7 @@ void io_u_queued(struct thread_data *td, struct io_u *io_u)
 static struct frand_state *get_buf_state(struct thread_data *td)
 {
 	unsigned int v;
+	unsigned long long i;
 
 	if (!td->o.dedupe_percentage)
 		return &td->buf_state;
@@ -2182,16 +2183,25 @@ static struct frand_state *get_buf_state(struct thread_data *td)
 
 	v = rand_between(&td->dedupe_state, 1, 100);
 
-	if (v <= td->o.dedupe_percentage) {
-		/*
-		 * The caller advances the returned frand_state.
-		 * A copy of prev should be returned instead since
-		 * a subsequent intention to generate a deduped buffer
-		 * might result in generating a unique one
-		 */
-		frand_copy(&td->buf_state_ret, &td->buf_state_prev);
-		return &td->buf_state_ret;
-	}
+	if (v <= td->o.dedupe_percentage)
+		switch (td->o.dedupe_mode) {
+		case DEDUPE_MODE_REPEAT:
+			/*
+			* The caller advances the returned frand_state.
+			* A copy of prev should be returned instead since
+			* a subsequent intention to generate a deduped buffer
+			* might result in generating a unique one
+			*/
+			frand_copy(&td->buf_state_ret, &td->buf_state_prev);
+			return &td->buf_state_ret;
+		case DEDUPE_MODE_WORKING_SET:
+			i = rand_between(&td->dedupe_working_set_index_state, 0, td->num_unique_pages - 1);
+			frand_copy(&td->buf_state_ret, &td->dedupe_working_set_states[i]);
+			return &td->buf_state_ret;
+		default:
+			log_err("unexpected dedupe mode %u\n", td->o.dedupe_mode);
+			assert(0);
+		}
 
 	return &td->buf_state;
 }

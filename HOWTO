@@ -1705,6 +1705,36 @@ Buffers and memory
 	this option will also enable :option:`refill_buffers` to prevent every buffer
 	being identical.
 
+.. option:: dedupe_mode=str
+
+	If ``dedupe_percentage=<int>`` is given, then this option controls how fio
+	generates the dedupe buffers.
+
+		**repeat**
+			Generate dedupe buffers by repeating previous writes
+		**working_set**
+			Generate dedupe buffers from working set
+
+	``repeat`` is the default option for fio. Dedupe buffers are generated
+	by repeating previous unique write.
+
+	``working_set`` is a more realistic workload.
+	With ``working_set``, ``dedupe_working_set_percentage=<int>`` should be provided.
+	Given that, fio will use the initial unique write buffers as its working set.
+	Upon deciding to dedupe, fio will randomly choose a buffer from the working set.
+	Note that by using ``working_set`` the dedupe percentage will converge
+	to the desired over time while ``repeat`` maintains the desired percentage
+	throughout the job.
+
+.. option:: dedupe_working_set_percentage=int
+
+	If ``dedupe_mode=<str>`` is set to ``working_set``, then this controls
+	the percentage of size of the file or device used as the buffers
+	fio will choose to generate the dedupe buffers from
+
+	Note that size needs to be explicitly provided and only 1 file per
+	job is supported
+
 .. option:: invalidate=bool
 
 	Invalidate the buffer/page cache parts of the files to be used prior to

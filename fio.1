@@ -1509,6 +1509,48 @@ all \-\- this option only controls the distribution of unique buffers. Setting
 this option will also enable \fBrefill_buffers\fR to prevent every buffer
 being identical.
 .TP
+.BI dedupe_mode \fR=\fPstr
+If \fBdedupe_percentage\fR is given, then this option controls how fio
+generates the dedupe buffers.
+.RS
+.RS
+.TP
+.B repeat
+.P
+.RS
+Generate dedupe buffers by repeating previous writes
+.RE
+.TP
+.B working_set
+.P
+.RS
+Generate dedupe buffers from working set
+.RE
+.RE
+.P
+\fBrepeat\fR is the default option for fio. Dedupe buffers are generated
+by repeating previous unique write.
+
+\fBworking_set\fR is a more realistic workload.
+With \fBworking_set\fR, \fBdedupe_working_set_percentage\fR should be provided.
+Given that, fio will use the initial unique write buffers as its working set.
+Upon deciding to dedupe, fio will randomly choose a buffer from the working set.
+Note that by using \fBworking_set\fR the dedupe percentage will converge
+to the desired over time while \fBrepeat\fR maintains the desired percentage
+throughout the job.
+.RE
+.RE
+.TP
+.BI dedupe_working_set_percentage \fR=\fPint
+If \fBdedupe_mode\fR is set to \fBworking_set\fR, then this controls
+the percentage of size of the file or device used as the buffers
+fio will choose to generate the dedupe buffers from
+.P
+.RS
+Note that \fBsize\fR needs to be explicitly provided and only 1 file
+per job is supported
+.RE
+.TP
 .BI invalidate \fR=\fPbool
 Invalidate the buffer/page cache parts of the files to be used prior to
 starting I/O if the platform and file type support it. Defaults to true.

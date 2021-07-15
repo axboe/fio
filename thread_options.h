@@ -31,6 +31,14 @@ enum fio_memtype {
 	MEM_CUDA_MALLOC,/* use GPU memory */
 };
 
+/*
+ * What mode to use for deduped data generation
+ */
+enum dedupe_mode {
+	DEDUPE_MODE_REPEAT = 0,
+	DEDUPE_MODE_WORKING_SET = 1,
+};
+
 #define ERROR_STR_MAX	128
 
 #define BSSPLIT_MAX	64
@@ -243,6 +251,8 @@ struct thread_options {
 	unsigned int compress_percentage;
 	unsigned int compress_chunk;
 	unsigned int dedupe_percentage;
+	unsigned int dedupe_mode;
+	unsigned int dedupe_working_set_percentage;
 	unsigned int time_based;
 	unsigned int disable_lat;
 	unsigned int disable_clat;
@@ -549,6 +559,8 @@ struct thread_options_pack {
 	uint32_t compress_percentage;
 	uint32_t compress_chunk;
 	uint32_t dedupe_percentage;
+	uint32_t dedupe_mode;
+	uint32_t dedupe_working_set_percentage;
 	uint32_t time_based;
 	uint32_t disable_lat;
 	uint32_t disable_clat;

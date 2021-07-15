@@ -473,11 +473,14 @@ static void show_chunk(struct chunk *c)
 	}
 }
 
-static void show_stat(uint64_t nextents, uint64_t nchunks)
+static void show_stat(uint64_t nextents, uint64_t nchunks, uint64_t ndupextents)
 {
 	double perc, ratio;
 
-	printf("Extents=%lu, Unique extents=%lu\n", (unsigned long) nextents, (unsigned long) nchunks);
+	printf("Extents=%lu, Unique extents=%lu", (unsigned long) nextents, (unsigned long) nchunks);
+	if (!bloom)
+		printf(" Duplicated extents=%lu", (unsigned long) ndupextents);
+	printf("\n");
 
 	if (nchunks) {
 		ratio = (double) nextents / (double) nchunks;
@@ -485,17 +488,20 @@ static void show_stat(uint64_t nextents, uint64_t nchunks)
 	} else
 		printf("De-dupe ratio: 1:infinite\n");
 
+	if (ndupextents)
+		printf("De-dupe working set at least: %3.2f%%\n", 100.0 * (double) ndupextents / (double) nextents);
+
 	perc = 1.00 - ((double) nchunks / (double) nextents);
 	perc *= 100.0;
 	printf("Fio setting: dedupe_percentage=%u\n", (int) (perc + 0.50));
 
 }
 
-static void iter_rb_tree(uint64_t *nextents, uint64_t *nchunks)
+static void iter_rb_tree(uint64_t *nextents, uint64_t *nchunks, uint64_t *ndupextents)
 {
 	struct fio_rb_node *n;
 
-	*nchunks = *nextents = 0;
+	*nchunks = *nextents = *ndupextents = 0;
 
 	n = rb_first(&rb_root);
 	if (!n)
@@ -507,6 +513,7 @@ static void iter_rb_tree(uint64_t *nextents, uint64_t *nchunks)
 		c = rb_entry(n, struct chunk, rb_node);
 		(*nchunks)++;
 		*nextents += c->count;
+		*ndupextents += (c->count > 1);
 
 		if (dump_output)
 			show_chunk(c);
@@ -530,7 +537,7 @@ static int usage(char *argv[])
 
 int main(int argc, char *argv[])
 {
-	uint64_t nextents = 0, nchunks = 0;
+	uint64_t nextents = 0, nchunks = 0, ndupextents = 0;
 	int c, ret;
 
 	arch_init(argv);
@@ -583,9 +590,9 @@ int main(int argc, char *argv[])
 
 	if (!ret) {
 		if (!bloom)
-			iter_rb_tree(&nextents, &nchunks);
+			iter_rb_tree(&nextents, &nchunks, &ndupextents);
 
-		show_stat(nextents, nchunks);
+		show_stat(nextents, nchunks, ndupextents);
 	}
 
 	fio_sem_remove(rb_lock);

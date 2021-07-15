@@ -47,6 +47,7 @@
 #include "workqueue.h"
 #include "steadystate.h"
 #include "lib/nowarn_snprintf.h"
+#include "dedupe.h"
 
 #ifdef CONFIG_SOLARISAIO
 #include <sys/asynch.h>
@@ -140,6 +141,7 @@ enum {
 	FIO_RAND_POISSON2_OFF,
 	FIO_RAND_POISSON3_OFF,
 	FIO_RAND_PRIO_CMDS,
+	FIO_RAND_DEDUPE_WORKING_SET_IX,
 	FIO_RAND_NR_OFFS,
 };
 
@@ -263,6 +265,10 @@ struct thread_data {
 	struct frand_state dedupe_state;
 	struct frand_state zone_state;
 	struct frand_state prio_state;
+	struct frand_state dedupe_working_set_index_state;
+	struct frand_state *dedupe_working_set_states;
+
+	unsigned long long num_unique_pages;
 
 	struct zone_split_index **zone_state_index;
 	unsigned int num_open_zones;
