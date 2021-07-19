@@ -77,6 +77,7 @@
 #define SIGCONT	0
 #define SIGUSR1	1
 #define SIGUSR2 2
+#define SIGKILL 15 /* SIGKILL doesn't exists, let's use SIGTERM */
 
 typedef int sigset_t;
 typedef int siginfo_t;

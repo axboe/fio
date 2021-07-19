@@ -2139,6 +2139,9 @@ I/O engine
 			achieving higher concurrency and thus throughput than is possible
 			via kernel NFS.
 
+		**exec**
+			Execute 3rd party tools. Could be used to perform monitoring during jobs runtime.
+
 I/O engine specific parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -2565,6 +2568,28 @@ with the caveat that when used on the command line, they must come after the
 
 	URL in libnfs format, eg nfs://<server|ipv4|ipv6>/path[?arg=val[&arg=val]*]
 	Refer to the libnfs README for more details.
+
+.. option:: program=str : [exec]
+
+	Specify the program to execute.
+
+.. option:: arguments=str : [exec]
+
+	Specify arguments to pass to program.
+	Some special variables can be expanded to pass fio's job details to the program.
+
+	**%r**
+		Replaced by the duration of the job in seconds.
+	**%n**
+		Replaced by the name of the job.
+
+.. option:: grace_time=int : [exec]
+
+	Specify the time between the SIGTERM and SIGKILL signals. Default is 1 second.
+
+.. option:: std_redirect=boot : [exec]
+
+	If set, stdout and stderr streams are redirected to files named from the job name. Default is true.
 
 I/O depth
 ~~~~~~~~~
