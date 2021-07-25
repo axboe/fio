@@ -118,6 +118,7 @@ char *expand_variables(struct thread_options *o, char *arguments)
 	/* %n is replaced by the name of the running job */
 	expanded_name = str_replace(expanded_runtime, "%n", o->name);
 
+	free(expanded_runtime);
 	return expanded_name;
 }
 
@@ -151,20 +152,23 @@ static int exec_background(struct thread_options *o, struct exec_options *eo)
 
 		/* Creating the stderr & stdout output files */
 		outfd = open(outfilename, O_CREAT | O_WRONLY | O_TRUNC, 0644);
-		if (!outfd) {
+		if (outfd < 0) {
 			log_err("fio: cannot open output file %s : %s\n",
 				outfilename, strerror(errno));
 			free(outfilename);
 			free(errfilename);
+			free(expanded_arguments);
 			return -1;
 		}
 
 		errfd = open(errfilename, O_CREAT | O_WRONLY | O_TRUNC, 0644);
-		if (!errfd) {
+		if (errfd < 0) {
 			log_err("fio: cannot open output file %s : %s\n",
 				errfilename, strerror(errno));
 			free(outfilename);
 			free(errfilename);
+			free(expanded_arguments);
+			close(outfd);
 			return -1;
 		}
 	} else {
@@ -184,6 +188,7 @@ static int exec_background(struct thread_options *o, struct exec_options *eo)
 			free(outfilename);
 			free(errfilename);
 		}
+		free(expanded_arguments);
 		return 0;
 	}
 
@@ -196,6 +201,7 @@ static int exec_background(struct thread_options *o, struct exec_options *eo)
 			free(outfilename);
 			free(errfilename);
 		}
+		free(expanded_arguments);
 		return -1;
 	}
 
@@ -220,8 +226,10 @@ static int exec_background(struct thread_options *o, struct exec_options *eo)
 		 * at all.
 		 */
 		if (expanded_arguments != NULL) {
-			if (asprintf(&exec_cmd, "%s %s", eo->program, expanded_arguments) < 0)
+			if (asprintf(&exec_cmd, "%s %s", eo->program, expanded_arguments) < 0) {
+				free(expanded_arguments);
 				return -1;
+			}
 		} else {
 			if (asprintf(&exec_cmd, "%s", eo->program) < 0)
 				return -1;
@@ -266,6 +274,11 @@ static int exec_background(struct thread_options *o, struct exec_options *eo)
 		execvp(arguments_array[0], arguments_array);
 	}
 	/* We never reach this place */
+	/* Let's free the malloc'ed structures to make static checkers happy */
+	if (expanded_arguments)
+		free(expanded_arguments);
+	if (arguments_array)
+		free(arguments_array);
 	return 0;
 }
 
