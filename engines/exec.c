@@ -19,61 +19,61 @@ struct exec_options {
 
 static struct fio_option options[] = {
 	{
-	 .name = "program",
-	 .lname = "Program",
-	 .type = FIO_OPT_STR_STORE,
-	 .off1 = offsetof(struct exec_options, program),
-	 .help = "Program to execute",
-	 .category = FIO_OPT_C_ENGINE,
-	 .group = FIO_OPT_G_INVALID,
-	 },
+		.name = "program",
+		.lname = "Program",
+		.type = FIO_OPT_STR_STORE,
+		.off1 = offsetof(struct exec_options, program),
+		.help = "Program to execute",
+		.category = FIO_OPT_C_ENGINE,
+		.group = FIO_OPT_G_INVALID,
+	},
 	{
-	 .name = "arguments",
-	 .lname = "Arguments",
-	 .type = FIO_OPT_STR_STORE,
-	 .off1 = offsetof(struct exec_options, arguments),
-	 .help = "Arguments to pass",
-	 .category = FIO_OPT_C_ENGINE,
-	 .group = FIO_OPT_G_INVALID,
-	 },
+		.name = "arguments",
+		.lname = "Arguments",
+		.type = FIO_OPT_STR_STORE,
+		.off1 = offsetof(struct exec_options, arguments),
+		.help = "Arguments to pass",
+		.category = FIO_OPT_C_ENGINE,
+		.group = FIO_OPT_G_INVALID,
+	},
 	{
-	 .name = "grace_time",
-	 .lname = "Grace time",
-	 .type = FIO_OPT_INT,
-	 .minval = 0,
-	 .def = "1",
-	 .off1 = offsetof(struct exec_options, grace_time),
-	 .help = "Grace time before sending a SIGKILL",
-	 .category = FIO_OPT_C_ENGINE,
-	 .group = FIO_OPT_G_INVALID,
-	 },
+		.name = "grace_time",
+		.lname = "Grace time",
+		.type = FIO_OPT_INT,
+		.minval = 0,
+		.def = "1",
+		.off1 = offsetof(struct exec_options, grace_time),
+		.help = "Grace time before sending a SIGKILL",
+		.category = FIO_OPT_C_ENGINE,
+		.group = FIO_OPT_G_INVALID,
+	},
 	{
-	 .name = "std_redirect",
-	 .lname = "Std redirect",
-	 .type = FIO_OPT_BOOL,
-	 .def = "1",
-	 .off1 = offsetof(struct exec_options, std_redirect),
-	 .help = "Redirect stdout & stderr to files",
-	 .category = FIO_OPT_C_ENGINE,
-	 .group = FIO_OPT_G_INVALID,
-	 },
+		.name = "std_redirect",
+		.lname = "Std redirect",
+		.type = FIO_OPT_BOOL,
+		.def = "1",
+		.off1 = offsetof(struct exec_options, std_redirect),
+		.help = "Redirect stdout & stderr to files",
+		.category = FIO_OPT_C_ENGINE,
+		.group = FIO_OPT_G_INVALID,
+	},
 	{
-	 .name = NULL,
-	 },
+		.name = NULL,
+	},
 };
 
 char *str_replace(char *orig, const char *rep, const char *with)
 {
 	/*
-	   Replace a substring by another.
-
-	   Returns the new string if occurences were found
-	   Returns orig if no occurence is found
+	 * Replace a substring by another.
+	 *
+	 * Returns the new string if occurences were found
+	 * Returns orig if no occurence is found
 	 */
 	char *result, *insert, *tmp;
 	int len_rep, len_with, len_front, count;
 
-	// sanity checks and initialization
+	/* sanity checks and initialization */
 	if (!orig || !rep)
 		return orig;
 
@@ -202,17 +202,23 @@ static int exec_background(struct thread_options *o, struct exec_options *eo)
 	/* We are in the worker (child side of the fork) */
 	if (pid == 0) {
 		if (eo->std_redirect) {
-			dup2(outfd, 1);	// replace stdout by the output file we create
-			dup2(errfd, 2);	// replace stderr by the output file we create
+			/* replace stdout by the output file we create */
+			dup2(outfd, 1);
+			/* replace stderr by the output file we create */
+			dup2(errfd, 2);
 			close(outfd);
 			close(errfd);
 			free(outfilename);
 			free(errfilename);
 		}
 
-		/* Let's split the command line into a null terminated array to be passed to the exec'd program
-		   But don't asprintf expanded_arguments if NULL as it would be converted
-		   to a '(null)' argument, while we want no arguments at all. */
+		/*
+		 * Let's split the command line into a null terminated array to
+		 * be passed to the exec'd program.
+		 * But don't asprintf expanded_arguments if NULL as it would be
+		 * converted to a '(null)' argument, while we want no arguments
+		 * at all.
+		 */
 		if (expanded_arguments != NULL) {
 			if (asprintf(&exec_cmd, "%s %s", eo->program, expanded_arguments) < 0)
 				return -1;
@@ -221,7 +227,10 @@ static int exec_background(struct thread_options *o, struct exec_options *eo)
 				return -1;
 		}
 
-		/* Let's build an argv array to based on the program name and arguments */
+		/*
+		 * Let's build an argv array to based on the program name and
+		 * arguments
+		 */
 		p = exec_cmd;
 		for (;;) {
 			p += strspn(p, " ");
@@ -250,10 +259,13 @@ static int exec_background(struct thread_options *o, struct exec_options *eo)
 			    (arguments_nb_items + 1) * sizeof(char *));
 		arguments_array[arguments_nb_items] = NULL;
 
-		/* Replace the fio program from the child fork by the target program */
+		/*
+		 * Replace the fio program from the child fork by the target
+		 * program
+		 */
 		execvp(arguments_array[0], arguments_array);
 	}
-	// We never reach this place
+	/* We never reach this place */
 	return 0;
 }
 
@@ -267,13 +279,19 @@ fio_exec_queue(struct thread_data *td, struct io_u fio_unused * io_u)
 	if (eo->pid == -1) {
 		exec_background(o, eo);
 	} else {
-		/* The program is running in background, let's check on a regular basis
-		   if the time is over and if we need to stop the tool */
+		/*
+		 * The program is running in background, let's check on a
+		 * regular basis
+		 * if the time is over and if we need to stop the tool
+		 */
 		usleep(o->thinktime);
 		if (utime_since_now(&td->start) > o->timeout) {
 			/* Let's stop the child */
 			kill(eo->pid, SIGTERM);
-			/* Let's give grace_time (1 sec by default) to the 3rd party tool to stop */
+			/*
+			 * Let's give grace_time (1 sec by default) to the 3rd
+			 * party tool to stop
+			 */
 			sleep(eo->grace_time);
 		}
 	}
@@ -302,7 +320,8 @@ static int fio_exec_init(struct thread_data *td)
 	/* Saving the current thread state */
 	td_previous_state = td->runstate;
 
-	/* Reporting that we are preparing the engine
+	/*
+	 * Reporting that we are preparing the engine
 	 * This is useful as the qsort() calibration takes time
 	 * This prevents the job from starting before init is completed
 	 */
@@ -314,7 +333,8 @@ static int fio_exec_init(struct thread_data *td)
 	o->thinktime_blocks = 1;
 	o->thinktime_blocks_type = THINKTIME_BLOCKS_TYPE_COMPLETE;
 	o->thinktime_spin = 0;
-	o->thinktime = 50000;	/* 50ms pause when waiting for the program to complete */
+	/* 50ms pause when waiting for the program to complete */
+	o->thinktime = 50000;
 
 	o->nr_files = o->open_files = 1;
 
