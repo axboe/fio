@@ -651,7 +651,7 @@ test: fio
 fulltest:
 	sudo modprobe null_blk &&				 	\
 	if [ ! -e /usr/include/libzbc/zbc.h ]; then			\
-	  git clone https://github.com/hgst/libzbc &&		 	\
+	  git clone https://github.com/westerndigitalcorporation/libzbc && \
 	  (cd libzbc &&						 	\
 	   ./autogen.sh &&					 	\
 	   ./configure --prefix=/usr &&				 	\
