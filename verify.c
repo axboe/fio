@@ -1411,7 +1411,6 @@ static void *verify_async_thread(void *data)
 			ret = pthread_cond_wait(&td->verify_cond,
 							&td->io_u_lock);
 			if (ret) {
-				pthread_mutex_unlock(&td->io_u_lock);
 				break;
 			}
 		}
