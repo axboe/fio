@@ -151,7 +151,8 @@ int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 
 	while (!flist_empty(&td->io_log_list)) {
 		int ret;
-		if (td->o.read_iolog_chunked) {
+
+		if (!td->io_log_blktrace && td->o.read_iolog_chunked) {
 			if (td->io_log_checkmark == td->io_log_current) {
 				if (!read_iolog2(td))
 					return 1;
@@ -706,10 +707,13 @@ bool init_iolog(struct thread_data *td)
 		 * Check if it's a blktrace file and load that if possible.
 		 * Otherwise assume it's a normal log file and load that.
 		 */
-		if (is_blktrace(fname, &need_swap))
+		if (is_blktrace(fname, &need_swap)) {
+			td->io_log_blktrace = 1;
 			ret = load_blktrace(td, fname, need_swap);
-		else
+		} else {
+			td->io_log_blktrace = 0;
 			ret = init_iolog_read(td, fname);
+		}
 	} else if (td->o.write_iolog_file)
 		ret = init_iolog_write(td);
 	else
