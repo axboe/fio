@@ -14,7 +14,6 @@
 #include <errno.h>
 #include <sched.h>
 #include <linux/unistd.h>
-#include <linux/raw.h>
 #include <linux/major.h>
 #include <linux/fs.h>
 #include <scsi/sg.h>
@@ -41,7 +40,6 @@
 #define FIO_HAVE_IOSCHED_SWITCH
 #define FIO_HAVE_ODIRECT
 #define FIO_HAVE_HUGETLB
-#define FIO_HAVE_RAWBIND
 #define FIO_HAVE_BLKTRACE
 #define FIO_HAVE_CL_SIZE
 #define FIO_HAVE_CGROUPS
@@ -176,36 +174,6 @@ static inline unsigned long long os_phys_mem(void)
 		return 0;
 
 	return (unsigned long long) pages * (unsigned long long) pagesize;
-}
-
-static inline int fio_lookup_raw(dev_t dev, int *majdev, int *mindev)
-{
-	struct raw_config_request rq;
-	int fd;
-
-	if (major(dev) != RAW_MAJOR)
-		return 1;
-
-	/*
-	 * we should be able to find /dev/rawctl or /dev/raw/rawctl
-	 */
-	fd = open("/dev/rawctl", O_RDONLY);
-	if (fd < 0) {
-		fd = open("/dev/raw/rawctl", O_RDONLY);
-		if (fd < 0)
-			return 1;
-	}
-
-	rq.raw_minor = minor(dev);
-	if (ioctl(fd, RAW_GETBIND, &rq) < 0) {
-		close(fd);
-		return 1;
-	}
-
-	close(fd);
-	*majdev = rq.block_major;
-	*mindev = rq.block_minor;
-	return 0;
 }
 
 #ifdef O_NOATIME

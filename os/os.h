@@ -157,10 +157,6 @@ extern int fio_cpus_split(os_cpu_mask_t *mask, unsigned int cpu);
 #define OS_RAND_MAX			RAND_MAX
 #endif
 
-#ifndef FIO_HAVE_RAWBIND
-#define fio_lookup_raw(dev, majdev, mindev)	1
-#endif
-
 #ifndef FIO_PREFERRED_ENGINE
 #define FIO_PREFERRED_ENGINE	"psync"
 #endif

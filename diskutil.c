@@ -166,14 +166,10 @@ static int get_device_numbers(char *file_name, int *maj, int *min)
 		if (S_ISBLK(st.st_mode)) {
 			majdev = major(st.st_rdev);
 			mindev = minor(st.st_rdev);
-		} else if (S_ISCHR(st.st_mode)) {
-			majdev = major(st.st_rdev);
-			mindev = minor(st.st_rdev);
-			if (fio_lookup_raw(st.st_rdev, &majdev, &mindev))
-				return -1;
-		} else if (S_ISFIFO(st.st_mode))
+		} else if (S_ISCHR(st.st_mode) ||
+			   S_ISFIFO(st.st_mode)) {
 			return -1;
-		else {
+		} else {
 			majdev = major(st.st_dev);
 			mindev = minor(st.st_dev);
 		}

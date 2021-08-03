@@ -1700,9 +1700,7 @@ Sets size to something really large and waits for ENOSPC (no space left on
 device) or EDQUOT (disk quota exceeded)
 as the terminating condition. Only makes sense with sequential
 write. For a read workload, the mount point will be filled first then I/O
-started on the result. This option doesn't make sense if operating on a raw
-device node, since the size of that is already known by the file system.
-Additionally, writing beyond end-of-device will not return ENOSPC there.
+started on the result.
 .SS "I/O engine"
 .TP
 .BI ioengine \fR=\fPstr
