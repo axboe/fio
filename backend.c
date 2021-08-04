@@ -1407,7 +1407,7 @@ static int set_ioscheduler(struct thread_data *td, struct fio_file *file)
 
 	sprintf(tmp2, "[%s]", td->o.ioscheduler);
 	if (!strstr(tmp, tmp2)) {
-		log_err("fio: io scheduler %s not found\n", td->o.ioscheduler);
+		log_err("fio: unable to set io scheduler to %s\n", td->o.ioscheduler);
 		td_verror(td, EINVAL, "iosched_switch");
 		fclose(f);
 		return 1;
