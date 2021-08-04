@@ -1184,11 +1184,12 @@ out:
 	return res;
 }
 
-/* Anything goes as long as it is not a constant. */
+/* Return random zone index for one of the open zones. */
 static uint32_t pick_random_zone_idx(const struct fio_file *f,
 				     const struct io_u *io_u)
 {
-	return io_u->offset * f->zbd_info->num_open_zones / f->real_file_size;
+	return (io_u->offset - f->file_offset) * f->zbd_info->num_open_zones /
+		f->io_size;
 }
 
 /*
