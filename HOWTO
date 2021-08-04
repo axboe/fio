@@ -1055,6 +1055,11 @@ Target file/device
 	number of open zones is defined as the number of zones to which write
 	commands are issued.
 
+.. option:: job_max_open_zones=int
+
+	Limit on the number of simultaneously opened zones per single
+	thread/process.
+
 .. option:: zone_reset_threshold=float
 
 	A number between zero and one that indicates the ratio of logical
