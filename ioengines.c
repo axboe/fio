@@ -692,17 +692,17 @@ int fio_show_ioengine_help(const char *engine)
 	}
 
 	td.o.ioengine = (char *)engine;
-	io_ops = load_ioengine(&td);
+	td.io_ops = load_ioengine(&td);
 
-	if (!io_ops) {
+	if (!td.io_ops) {
 		log_info("IO engine %s not found\n", engine);
 		return 1;
 	}
 
-	if (io_ops->options)
-		ret = show_cmd_help(io_ops->options, sep);
+	if (td.io_ops->options)
+		ret = show_cmd_help(td.io_ops->options, sep);
 	else
-		log_info("IO engine %s has no options\n", io_ops->name);
+		log_info("IO engine %s has no options\n", td.io_ops->name);
 
 	free_ioengine(&td);
 	return ret;
