@@ -766,6 +766,8 @@ starts. The \fBzonecapacity\fR parameter is ignored.
 Zoned block device mode. I/O happens sequentially in each zone, even if random
 I/O has been selected. Random I/O happens across all zones instead of being
 restricted to a single zone.
+Trim is handled using a zone reset operation. Trim only considers non-empty
+sequential write required and sequential write preferred zones.
 .RE
 .RE
 .TP
@@ -1761,10 +1763,9 @@ character devices. This engine supports trim operations. The
 sg engine includes engine specific options.
 .TP
 .B libzbc
-Synchronous I/O engine for SMR hard-disks using the \fBlibzbc\fR
-library. The target can be either an sg character device or
-a block device file. This engine supports the zonemode=zbd zone
-operations.
+Read, write, trim and ZBC/ZAC operations to a zoned block device using
+\fBlibzbc\fR library. The target can be either an SG character device or
+a block device file.
 .TP
 .B null
 Doesn't transfer any data, just pretends to. This is mainly used to

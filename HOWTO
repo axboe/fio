@@ -992,6 +992,9 @@ Target file/device
 				single zone. The :option:`zoneskip` parameter
 				is ignored. :option:`zonerange` and
 				:option:`zonesize` must be identical.
+				Trim is handled using a zone reset operation.
+				Trim only considers non-empty sequential write
+				required and sequential write preferred zones.
 
 .. option:: zonerange=int
 
@@ -1964,6 +1967,11 @@ I/O engine
 			I/O. Requires :option:`filename` option to specify either block or
 			character devices. This engine supports trim operations.
 			The sg engine includes engine specific options.
+
+		**libzbc**
+			Read, write, trim and ZBC/ZAC operations to a zoned
+			block device using libzbc library. The target can be
+			either an SG character device or a block device file.
 
 		**null**
 			Doesn't transfer any data, just pretends to.  This is mainly used to
