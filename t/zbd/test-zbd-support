@@ -1215,6 +1215,32 @@ test57() {
 		>> "${logfile}.${test_number}" 2>&1 || return $?
 }
 
+# Random writes and random trims to sequential write required zones for 30s.
+test58() {
+    local off size bs
+
+    require_seq_zones 128 || return $SKIP_TESTCASE
+
+    size=$((zone_size * 128))
+    bs="$(max $((zone_size / 128)) "$logical_block_size")"
+    prep_write
+    off=$((first_sequential_zone_sector * 512))
+    run_fio --zonemode=zbd --direct=1 --zonesize="${zone_size}" --thread=1 \
+	    --filename="${dev}" --norandommap=1 \
+            --name="precondition"  --rw=write "$(ioengine "psync")" \
+            --offset="${off}" --size=$((zone_size * 16)) --bs="${bs}" \
+	    "${job_var_opts[@]}" \
+	    --name=wjob --wait_for="precondition" --rw=randwrite \
+	    "$(ioengine "libaio")" --iodepth=8 \
+	    --offset="${off}" --size="${size}" --bs="${bs}" \
+	    --time_based --runtime=30s --flow=128 "${job_var_opts[@]}" \
+	    --name=trimjob --wait_for="precondition" --rw=randtrim \
+	    "$(ioengine "psync")" \
+	    --offset="${off}" --size="${size}" --bs="${zone_size}" \
+	    --time_based --runtime=30s --flow=1 "${job_var_opts[@]}" \
+	    >>"${logfile}.${test_number}" 2>&1
+}
+
 SECONDS=0
 tests=()
 dynamic_analyzer=()
