@@ -14,6 +14,7 @@
 #include "fio.h"
 #include "err.h"
 #include "zbd_types.h"
+#include "zbd.h"
 
 struct libzbc_data {
 	struct zbc_device	*zdev;
@@ -63,7 +64,7 @@ static int libzbc_open_dev(struct thread_data *td, struct fio_file *f,
 		return -EINVAL;
 	}
 
-	if (td_write(td)) {
+	if (td_write(td) || td_trim(td)) {
 		if (!read_only)
 			flags |= O_RDWR;
 	} else if (td_read(td)) {
@@ -71,10 +72,6 @@ static int libzbc_open_dev(struct thread_data *td, struct fio_file *f,
 			flags |= O_RDWR;
 		else
 			flags |= O_RDONLY;
-	} else if (td_trim(td)) {
-		td_verror(td, EINVAL, "libzbc does not support trim");
-		log_err("%s: libzbc does not support trim\n", f->file_name);
-		return -EINVAL;
 	}
 
 	if (td->o.oatomic) {
@@ -411,7 +408,11 @@ static enum fio_q_status libzbc_queue(struct thread_data *td, struct io_u *io_u)
 		ret = zbc_flush(ld->zdev);
 		if (ret)
 			log_err("zbc_flush error %zd\n", ret);
-	} else if (io_u->ddir != DDIR_TRIM) {
+	} else if (io_u->ddir == DDIR_TRIM) {
+		ret = zbd_do_io_u_trim(td, io_u);
+		if (!ret)
+			ret = EINVAL;
+	} else {
 		log_err("Unsupported operation %u\n", io_u->ddir);
 		ret = -EINVAL;
 	}
