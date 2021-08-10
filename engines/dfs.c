@@ -49,19 +49,19 @@ struct daos_fio_options {
 static struct fio_option options[] = {
 	{
 		.name		= "pool",
-		.lname		= "pool uuid",
+		.lname		= "pool uuid or label",
 		.type		= FIO_OPT_STR_STORE,
 		.off1		= offsetof(struct daos_fio_options, pool),
-		.help		= "DAOS pool uuid",
+		.help		= "DAOS pool uuid or label",
 		.category	= FIO_OPT_C_ENGINE,
 		.group		= FIO_OPT_G_DFS,
 	},
 	{
 		.name           = "cont",
-		.lname          = "container uuid",
+		.lname          = "container uuid or label",
 		.type           = FIO_OPT_STR_STORE,
 		.off1           = offsetof(struct daos_fio_options, cont),
-		.help           = "DAOS container uuid",
+		.help           = "DAOS container uuid or label",
 		.category	= FIO_OPT_C_ENGINE,
 		.group		= FIO_OPT_G_DFS,
 	},
@@ -103,7 +103,6 @@ static struct fio_option options[] = {
 static int daos_fio_global_init(struct thread_data *td)
 {
 	struct daos_fio_options	*eo = td->eo;
-	uuid_t			pool_uuid, co_uuid;
 	daos_pool_info_t	pool_info;
 	daos_cont_info_t	co_info;
 	int			rc = 0;
@@ -124,6 +123,10 @@ static int daos_fio_global_init(struct thread_data *td)
 		return rc;
 	}
 
+#if !defined(DAOS_API_VERSION_MAJOR) || \
+    (DAOS_API_VERSION_MAJOR == 1 && DAOS_API_VERSION_MINOR < 3)
+	uuid_t pool_uuid, co_uuid;
+
 	rc = uuid_parse(eo->pool, pool_uuid);
 	if (rc) {
 		log_err("Failed to parse 'Pool uuid': %s\n", eo->pool);
@@ -137,6 +140,7 @@ static int daos_fio_global_init(struct thread_data *td)
 		td_verror(td, EINVAL, "uuid_parse(eo->cont)");
 		return EINVAL;
 	}
+#endif
 
 	/* Connect to the DAOS pool */
 #if !defined(DAOS_API_VERSION_MAJOR) || DAOS_API_VERSION_MAJOR < 1
@@ -152,8 +156,11 @@ static int daos_fio_global_init(struct thread_data *td)
 	rc = daos_pool_connect(pool_uuid, NULL, svcl, DAOS_PC_RW,
 			&poh, &pool_info, NULL);
 	d_rank_list_free(svcl);
-#else
+#elif (DAOS_API_VERSION_MAJOR == 1 && DAOS_API_VERSION_MINOR < 3)
 	rc = daos_pool_connect(pool_uuid, NULL, DAOS_PC_RW, &poh, &pool_info,
+			       NULL);
+#else
+	rc = daos_pool_connect(eo->pool, NULL, DAOS_PC_RW, &poh, &pool_info,
 			       NULL);
 #endif
 	if (rc) {
@@ -163,7 +170,12 @@ static int daos_fio_global_init(struct thread_data *td)
 	}
 
 	/* Open the DAOS container */
+#if !defined(DAOS_API_VERSION_MAJOR) || \
+    (DAOS_API_VERSION_MAJOR == 1 && DAOS_API_VERSION_MINOR < 3)
 	rc = daos_cont_open(poh, co_uuid, DAOS_COO_RW, &coh, &co_info, NULL);
+#else
+	rc = daos_cont_open(poh, eo->cont, DAOS_COO_RW, &coh, &co_info, NULL);
+#endif
 	if (rc) {
 		log_err("Failed to open container: %d\n", rc);
 		td_verror(td, rc, "daos_cont_open");
