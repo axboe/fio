@@ -5,7 +5,11 @@
 #include "../arch/arch.h"
 
 struct seqlock {
+#ifdef __cplusplus
+	std::atomic<unsigned int> sequence;
+#else
 	volatile unsigned int sequence;
+#endif
 };
 
 static inline void seqlock_init(struct seqlock *s)
