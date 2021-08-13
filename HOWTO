@@ -2561,11 +2561,11 @@ with the caveat that when used on the command line, they must come after the
 
 .. option:: pool=str : [dfs]
 
-	Specify the UUID of the DAOS pool to connect to.
+	Specify the label or UUID of the DAOS pool to connect to.
 
 .. option:: cont=str : [dfs]
 
-	Specify the UUID of the DAOS container to open.
+	Specify the label or UUID of the DAOS container to open.
 
 .. option:: chunk_size=int : [dfs]
 
