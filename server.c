@@ -2565,6 +2565,7 @@ static int write_pid(pid_t pid, const char *pidfile)
  */
 int fio_start_server(char *pidfile)
 {
+	FILE *file;
 	pid_t pid;
 	int ret;
 
@@ -2597,13 +2598,27 @@ int fio_start_server(char *pidfile)
 	setsid();
 	openlog("fio", LOG_NDELAY|LOG_NOWAIT|LOG_PID, LOG_USER);
 	log_syslog = true;
-	close(STDIN_FILENO);
-	close(STDOUT_FILENO);
-	close(STDERR_FILENO);
+
+	file = freopen("/dev/null", "r", stdin);
+	if (!file)
+		perror("freopen");
+
+	file = freopen("/dev/null", "w", stdout);
+	if (!file)
+		perror("freopen");
+
+	file = freopen("/dev/null", "w", stderr);
+	if (!file)
+		perror("freopen");
+
 	f_out = NULL;
 	f_err = NULL;
 
 	ret = fio_server();
+
+	fclose(stdin);
+	fclose(stdout);
+	fclose(stderr);
 
 	closelog();
 	unlink(pidfile);
