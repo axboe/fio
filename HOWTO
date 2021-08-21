@@ -2600,7 +2600,7 @@ with the caveat that when used on the command line, they must come after the
 
 	Specify the time between the SIGTERM and SIGKILL signals. Default is 1 second.
 
-.. option:: std_redirect=boot : [exec]
+.. option:: std_redirect=bool : [exec]
 
 	If set, stdout and stderr streams are redirected to files named from the job name. Default is true.
 
