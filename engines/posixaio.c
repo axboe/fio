@@ -11,10 +11,32 @@
 #include <fcntl.h>
 
 #include "../fio.h"
+#include "../optgroup.h"
 
 struct posixaio_data {
 	struct io_u **aio_events;
 	unsigned int queued;
+};
+
+struct posixaio_options {
+	void *pad;
+	unsigned int respect_iodepth_batch_complete_max;
+};
+
+static struct fio_option options[] = {
+	{
+		.name	= "posixaio_respect_iodepth_batch_complete_max",
+		.lname	= "Respect iodepth_batch_complete_max",
+		.type	= FIO_OPT_BOOL,
+		.off1	= offsetof(struct posixaio_options, respect_iodepth_batch_complete_max),
+		.help	= "Whether to cap batch completion",
+		.def	= "0",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_POSIXAIO,
+	},
+	{
+		.name	= NULL,
+	},
 };
 
 static unsigned long long ts_utime_since_now(const struct timespec *start)
@@ -61,6 +83,7 @@ static int fio_posixaio_getevents(struct thread_data *td, unsigned int min,
 				  unsigned int max, const struct timespec *t)
 {
 	struct posixaio_data *pd = td->io_ops_data;
+	struct posixaio_options *o = td->eo;
 	os_aiocb_t *suspend_list[SUSPEND_ENTRIES];
 	struct timespec start;
 	int have_timeout = 0;
@@ -105,6 +128,9 @@ restart:
 			io_u->resid = io_u->xfer_buflen - retval;
 		} else
 			io_u->error = err;
+
+		if (o->respect_iodepth_batch_complete_max && r >= max)
+			break;
 	}
 
 	if (r >= min)
@@ -221,6 +247,8 @@ static struct ioengine_ops ioengine = {
 	.open_file	= generic_open_file,
 	.close_file	= generic_close_file,
 	.get_file_size	= generic_get_file_size,
+	.options	= options,
+	.option_struct_size = sizeof(struct posixaio_options),
 };
 
 static void fio_init fio_posixaio_register(void)
