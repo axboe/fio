@@ -738,6 +738,26 @@ fi
 print_config "POSIX AIO fsync" "$posix_aio_fsync"
 
 ##########################################
+# aio_waitcomplete probe
+if test "have_aio_waitcomplete" != "yes" ; then
+  have_aio_waitcomplete="no"
+fi
+cat > $TMPC <<EOF
+#include <aio.h>
+#include <stdlib.h>
+int main(void)
+{
+  struct aiocb *cb;
+  aio_waitcomplete(&cb, NULL);
+  return 0;
+}
+EOF
+if compile_prog "" "" "aio_waitcomplete" ; then
+  have_aio_waitcomplete="yes"
+fi
+print_config "aio_waitcomplete()" "$have_aio_waitcomplete"
+
+##########################################
 # POSIX pshared attribute probe
 if test "$posix_pshared" != "yes" ; then
   posix_pshared="no"
@@ -2857,6 +2877,9 @@ if test "$posix_aio" = "yes" ; then
 fi
 if test "$posix_aio_fsync" = "yes" ; then
   output_sym "CONFIG_POSIXAIO_FSYNC"
+fi
+if test "$have_aio_waitcomplete" = "yes" ; then
+  output_sym "CONFIG_HAVE_AIO_WAITCOMPLETE"
 fi
 if test "$posix_pshared" = "yes" ; then
   output_sym "CONFIG_PSHARED"

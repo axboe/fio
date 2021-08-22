@@ -2650,6 +2650,14 @@ with the caveat that when used on the command line, they must come after the
 	false, effectively behaving as though
 	:option:`iodepth_batch_complete_max` has the same value as
 	:option:`iodepth`.
+	Only applies to wait=aio_suspend, as other options already
+	respect :option:`iodepth_batch_complete_max`.
+
+.. options:: posixaio_wait=str : [posixaio]
+
+	Selects the mechanism used for waiting for I/Os to complete.
+	Default is aio_suspend.  On FreeBSD, aio_waitcomplete may be used.
+
 
 I/O depth
 ~~~~~~~~~

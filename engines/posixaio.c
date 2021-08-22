@@ -13,24 +13,53 @@
 #include "../fio.h"
 #include "../optgroup.h"
 
+enum {
+	FIO_POSIXAIO_SUSPEND,
+	FIO_POSIXAIO_WAITCOMPLETE,
+};
+
 struct posixaio_data {
 	struct io_u **aio_events;
 	unsigned int queued;
+    int (*getevents)(struct thread_data *, unsigned int, unsigned int, const struct timespec *);
 };
 
 struct posixaio_options {
 	void *pad;
 	unsigned int respect_iodepth_batch_complete_max;
+	unsigned int wait;
 };
 
 static struct fio_option options[] = {
 	{
 		.name	= "posixaio_respect_iodepth_batch_complete_max",
-		.lname	= "Respect iodepth_batch_complete_max",
+		.lname	= "Respect iodepth_batch_complete_max for wait=aio_suspend",
 		.type	= FIO_OPT_BOOL,
 		.off1	= offsetof(struct posixaio_options, respect_iodepth_batch_complete_max),
-		.help	= "Whether to cap batch completion",
+		.help	= "Whether to cap batch completion for wait=aio_suspend",
 		.def	= "0",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_POSIXAIO,
+	},
+	{
+		.name	= "posixaio_wait",
+		.lname	= "POSIX AIO wait mechanism",
+		.type	= FIO_OPT_STR,
+		.off1	= offsetof(struct posixaio_options, wait),
+		.help	= "Select mechanism for waiting for I/O completion",
+		.def	= "aio_suspend",
+		.posval = {
+			  { .ival = "aio_suspend",
+			    .oval = FIO_POSIXAIO_SUSPEND,
+			    .help = "Use aio_suspend()",
+			  },
+#ifdef CONFIG_HAVE_AIO_WAITCOMPLETE
+			  { .ival = "aio_waitcomplete",
+			    .oval = FIO_POSIXAIO_WAITCOMPLETE,
+			    .help = "Use aio_waitcomplete()",
+			  },
+#endif
+		},
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_POSIXAIO,
 	},
@@ -77,10 +106,65 @@ static int fio_posixaio_prep(struct thread_data fio_unused *td,
 	return 0;
 }
 
+#ifdef CONFIG_HAVE_AIO_WAITCOMPLETE
+
+static int fio_posixaio_getevents_waitcomplete(struct thread_data *td,
+					       unsigned int min,
+					       unsigned int max,
+					       const struct timespec *t)
+{
+	struct posixaio_data *pd = td->io_ops_data;
+	struct aiocb *aiocb;
+	struct io_u *io_u;
+	ssize_t retval;
+	unsigned int events = 0;
+	struct timespec zero_timeout = {0};
+	struct timespec *timeout;
+
+	do
+	{
+		if (events < min) {
+			/* Wait until the minimum is satisfied. */
+			timeout = (struct timespec *)t;
+		} else {
+			/* Consume as many more as we can without waiting. */
+			timeout = &zero_timeout;
+		}
+
+		retval = aio_waitcomplete(&aiocb, timeout);
+		if (retval < 0) {
+			if (errno == EINTR)
+				continue;
+			if (errno == EAGAIN)
+				break;
+			td_verror(td, errno, "aio_waitcomplete");
+			break;
+		}
+
+		io_u = container_of(aiocb, struct io_u, aiocb);
+		pd->queued--;
+		pd->aio_events[events++] = io_u;
+
+		if (retval >= 0)
+			io_u->resid = io_u->xfer_buflen - retval;
+		else if (errno == ECANCELED)
+			io_u->resid = io_u->xfer_buflen;
+		else
+			io_u->error = errno;
+
+	} while (events < max && pd->queued > 0);
+
+	return events;
+}
+
+#endif
+
 #define SUSPEND_ENTRIES	8
 
-static int fio_posixaio_getevents(struct thread_data *td, unsigned int min,
-				  unsigned int max, const struct timespec *t)
+static int fio_posixaio_getevents_suspend(struct thread_data *td,
+					  unsigned int min,
+					  unsigned int max,
+					  const struct timespec *t)
 {
 	struct posixaio_data *pd = td->io_ops_data;
 	struct posixaio_options *o = td->eo;
@@ -150,6 +234,16 @@ restart:
 	aio_suspend((const os_aiocb_t * const *)suspend_list,
 							suspend_entries, t);
 	goto restart;
+}
+
+static int fio_posixaio_getevents(struct thread_data *td,
+				  unsigned int min,
+				  unsigned int max,
+				  const struct timespec *t)
+{
+	struct posixaio_data *pd = td->io_ops_data;
+
+	return pd->getevents(td, min, max, t);
 }
 
 static struct io_u *fio_posixaio_event(struct thread_data *td, int event)
@@ -223,13 +317,29 @@ static void fio_posixaio_cleanup(struct thread_data *td)
 
 static int fio_posixaio_init(struct thread_data *td)
 {
+	struct posixaio_options *o = td->eo;
 	struct posixaio_data *pd = malloc(sizeof(*pd));
 
 	memset(pd, 0, sizeof(*pd));
 	pd->aio_events = malloc(td->o.iodepth * sizeof(struct io_u *));
 	memset(pd->aio_events, 0, td->o.iodepth * sizeof(struct io_u *));
 
+	switch (o->wait) {
+	case FIO_POSIXAIO_SUSPEND:
+		pd->getevents = fio_posixaio_getevents_suspend;
+		break;
+#ifdef CONFIG_HAVE_AIO_WAITCOMPLETE
+	case FIO_POSIXAIO_WAITCOMPLETE:
+		pd->getevents = fio_posixaio_getevents_waitcomplete;
+		break;
+#endif
+	default:
+		free(pd);
+		return -1;
+	}
+
 	td->io_ops_data = pd;
+
 	return 0;
 }
 
