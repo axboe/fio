@@ -262,8 +262,9 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 				sqe->len = 1;
 			}
 		}
+		sqe->rw_flags = 0;
 		if (!td->o.odirect && o->uncached)
-			sqe->rw_flags = RWF_UNCACHED;
+			sqe->rw_flags |= RWF_UNCACHED;
 		if (o->nowait)
 			sqe->rw_flags |= RWF_NOWAIT;
 		if (ld->ioprio_class_set)
@@ -271,7 +272,6 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 		if (ld->ioprio_set)
 			sqe->ioprio |= td->o.ioprio;
 		sqe->off = io_u->offset;
-		sqe->rw_flags = 0;
 	} else if (ddir_sync(io_u->ddir)) {
 		sqe->ioprio = 0;
 		if (io_u->ddir == DDIR_SYNC_FILE_RANGE) {
