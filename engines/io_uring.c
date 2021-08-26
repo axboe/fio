@@ -234,6 +234,7 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 		sqe->flags = IOSQE_FIXED_FILE;
 	} else {
 		sqe->fd = f->fd;
+		sqe->flags = 0;
 	}
 
 	if (io_u->ddir == DDIR_READ || io_u->ddir == DDIR_WRITE) {
