@@ -384,6 +384,8 @@ static void fio_ioring_prio_prep(struct thread_data *td, struct io_u *io_u)
 	if (rand_between(&td->prio_state, 0, 99) < o->cmdprio_percentage) {
 		ld->sqes[io_u->index].ioprio = IOPRIO_CLASS_RT << IOPRIO_CLASS_SHIFT;
 		io_u->flags |= IO_U_F_PRIORITY;
+	} else {
+		ld->sqes[io_u->index].ioprio = 0;
 	}
 	return;
 }
