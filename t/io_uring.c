@@ -515,6 +515,7 @@ static int setup_ring(struct submitter *s)
 
 static void file_depths(char *buf)
 {
+	bool prev = false;
 	char *p;
 	int i, j;
 
@@ -526,10 +527,11 @@ static void file_depths(char *buf)
 		for (i = 0; i < s->nr_files; i++) {
 			struct file *f = &s->files[i];
 
-			if (i + 1 == s->nr_files)
-				p += sprintf(p, "%d", f->pending_ios);
+			if (prev)
+				p += sprintf(p, " %d", f->pending_ios);
 			else
-				p += sprintf(p, "%d, ", f->pending_ios);
+				p += sprintf(p, "%d ", f->pending_ios);
+			prev = true;
 		}
 	}
 }
