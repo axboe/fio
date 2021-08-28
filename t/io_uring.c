@@ -530,7 +530,7 @@ static void file_depths(char *buf)
 			if (prev)
 				p += sprintf(p, " %d", f->pending_ios);
 			else
-				p += sprintf(p, "%d ", f->pending_ios);
+				p += sprintf(p, "%d", f->pending_ios);
 			prev = true;
 		}
 	}
@@ -708,9 +708,8 @@ int main(int argc, char *argv[])
 		} else
 			rpc = ipc = -1;
 		file_depths(fdepths);
-		printf("IOPS=%lu, IOS/call=%ld/%ld, inflight=%u (%s)\n",
-				this_done - done, rpc, ipc, s->inflight,
-				fdepths);
+		printf("IOPS=%lu, IOS/call=%ld/%ld, inflight=(%s)\n",
+				this_done - done, rpc, ipc, fdepths);
 		done = this_done;
 		calls = this_call;
 		reap = this_reap;
