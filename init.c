@@ -294,6 +294,11 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.val		= 'A' | FIO_CLIENT_FLAG,
 	},
 	{
+		.name		= (char *) "latency-stats",
+		.has_arg	= required_argument,
+		.val		= 'n' | FIO_CLIENT_FLAG,
+	},
+	{
 		.name		= NULL,
 	},
 };
@@ -536,6 +541,8 @@ static void put_job(struct thread_data *td)
 
 	if (td->o.name)
 		free(td->o.name);
+
+	stat_free_lat(&td->ts);
 
 	memset(td, 0, sizeof(*td));
 	segments[cur_segment].nr_threads--;
@@ -1558,6 +1565,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		td->ts.clat_low_prio_stat[i].min_val = ULONG_MAX;
 	}
 	td->ts.sync_stat.min_val = ULONG_MAX;
+	stat_alloc_lat(&td->ts);
 	td->ddir_seq_nr = o->ddir_seq_nr;
 
 	if ((o->stonewall || o->new_group) && prev_group_jobs) {
@@ -2267,6 +2275,7 @@ static void usage(const char *name)
 	printf("  --trigger=cmd\t\tSet this command as local trigger\n");
 	printf("  --trigger-remote=cmd\tSet this command as remote trigger\n");
 	printf("  --aux-path=path\tUse this path for fio state generated files\n");
+	printf("  --latency-stats=nr\tChange default latency stats number\n");
 	printf("\nFio was written by Jens Axboe <axboe@kernel.dk>\n");
 }
 
@@ -2347,6 +2356,10 @@ const struct debug_level debug_levels[] = {
 	{ .name = "zbd",
 	  .help = "Zoned Block Device logging",
 	  .shift = FD_ZBD,
+	},
+	{ .name = "stat",
+	  .help = "Statisitics logging",
+	  .shift = FD_STAT,
 	},
 	{ .name = NULL, },
 };
@@ -2932,10 +2945,16 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			}
 			trigger_timeout /= 1000000;
 			break;
-
 		case 'A':
 			did_arg = true;
 			merge_blktrace_only = true;
+			break;
+		case 'n':
+			if (!stat_set_lat(atoi(optarg))) {
+				log_err("fio: bad latency stats number\n");
+				exit_val = 1;
+				do_exit++;
+			}
 			break;
 		case '?':
 			log_err("%s: unrecognized option '%s'\n", argv[0],

@@ -2150,6 +2150,8 @@ int fio_handle_clients(struct client_ops *ops)
 
 	fio_client_json_fini();
 
+	stat_free_lat(&client_ts);
+
 	free(pfds);
 	return retval || error_clients;
 }

@@ -299,6 +299,10 @@ Command line options
 	Use the directory specified by `path` for generated state files instead
 	of the current working directory.
 
+.. option:: --latency-stats=nr
+
+	Change default latency stats number. The default buckets number is 10.
+
 Any parameters following the options will be assumed to be job files, unless
 they match a job file parameter. Multiple job files can be listed and each job
 file will be regarded as a separate group. Fio will :option:`stonewall`
@@ -4113,13 +4117,20 @@ field was introduced or whether it's specific to some terse version):
 
         <=1, 2, 4, 8, 16, 32, >=64
 
+    I/O latencies nanoseconds::
+
+        <=2, 4, 10, 20, 50, 100, 250, 500, 750, 1000
+        The number of buckets may vary.
+
     I/O latencies microseconds::
 
         <=2, 4, 10, 20, 50, 100, 250, 500, 750, 1000
+        The number of buckets may vary.
 
     I/O latencies milliseconds::
 
         <=2, 4, 10, 20, 50, 100, 250, 500, 750, 1000, 2000, >=2000
+        The number of buckets may vary.
 
     Disk utilization [v3]::
 
@@ -4152,7 +4163,7 @@ minimal output v3, separated by semicolons::
 In client/server mode terse output differs from what appears when jobs are run
 locally. Disk utilization data is omitted from the standard terse output and
 for v3 and later appears on its own separate line at the end of each terse
-reporting cycle.
+reporting cycle. The number of buckets may vary.
 
 
 JSON output
