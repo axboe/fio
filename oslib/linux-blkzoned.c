@@ -169,8 +169,10 @@ int blkzoned_get_max_open_zones(struct thread_data *td, struct fio_file *f,
 		return -EIO;
 
 	max_open_str = blkzoned_get_sysfs_attr(f->file_name, "queue/max_open_zones");
-	if (!max_open_str)
+	if (!max_open_str) {
+		*max_open_zones = 0;
 		return 0;
+	}
 
 	dprint(FD_ZBD, "%s: max open zones supported by device: %s\n",
 	       f->file_name, max_open_str);
