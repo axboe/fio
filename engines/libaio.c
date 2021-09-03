@@ -136,7 +136,7 @@ static void fio_libaio_prio_prep(struct thread_data *td, struct io_u *io_u)
 {
 	struct libaio_options *o = td->eo;
 	if (rand_between(&td->prio_state, 0, 99) < o->cmdprio_percentage) {
-		io_u->iocb.aio_reqprio = IOPRIO_CLASS_RT << IOPRIO_CLASS_SHIFT;
+		io_u->iocb.aio_reqprio = ioprio_value(IOPRIO_CLASS_RT, 0);
 		io_u->iocb.u.c.flags |= IOCB_FLAG_IOPRIO;
 		io_u->flags |= IO_U_F_PRIORITY;
 	}

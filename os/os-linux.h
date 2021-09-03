@@ -118,16 +118,21 @@ enum {
 #define IOPRIO_MIN_PRIO_CLASS	0
 #define IOPRIO_MAX_PRIO_CLASS	3
 
-static inline int ioprio_set(int which, int who, int ioprio_class, int ioprio)
+static inline int ioprio_value(int ioprio_class, int ioprio)
 {
 	/*
 	 * If no class is set, assume BE
 	 */
-	if (!ioprio_class)
-		ioprio_class = IOPRIO_CLASS_BE;
+        if (!ioprio_class)
+                ioprio_class = IOPRIO_CLASS_BE;
 
-	ioprio |= ioprio_class << IOPRIO_CLASS_SHIFT;
-	return syscall(__NR_ioprio_set, which, who, ioprio);
+	return (ioprio_class << IOPRIO_CLASS_SHIFT) | ioprio;
+}
+
+static inline int ioprio_set(int which, int who, int ioprio_class, int ioprio)
+{
+	return syscall(__NR_ioprio_set, which, who,
+		       ioprio_value(ioprio_class, ioprio));
 }
 
 #ifndef CONFIG_HAVE_GETTID
