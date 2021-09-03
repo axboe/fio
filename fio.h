@@ -281,6 +281,11 @@ struct thread_data {
 	int shm_id;
 
 	/*
+	 * Job default IO priority set with prioclass and prio options.
+	 */
+	unsigned int ioprio;
+
+	/*
 	 * IO engine hooks, contains everything needed to submit an io_u
 	 * to any of the available IO engines.
 	 */

@@ -1760,6 +1760,7 @@ static void *thread_main(void *data)
 			td_verror(td, errno, "ioprio_set");
 			goto err;
 		}
+		td->ioprio = ioprio_value(o->ioprio_class, o->ioprio);
 	}
 
 	if (o->cgroup && cgroup_setup(td, cgroup_list, &cgroup_mnt))

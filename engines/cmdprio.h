@@ -129,22 +129,6 @@ static int fio_cmdprio_init(struct thread_data *td, struct cmdprio *cmdprio,
 	/*
 	 * Check for option conflicts
 	 */
-	if (has_cmdprio_percentage &&
-	    (fio_option_is_set(to, ioprio) ||
-	     fio_option_is_set(to, ioprio_class))) {
-		log_err("%s: cmdprio_percentage option and mutually exclusive "
-			"prio or prioclass option is set, exiting\n",
-			to->name);
-		return 1;
-	}
-	if (has_cmdprio_bssplit &&
-	    (fio_option_is_set(to, ioprio) ||
-	     fio_option_is_set(to, ioprio_class))) {
-		log_err("%s: cmdprio_bssplit option and mutually exclusive "
-			"prio or prioclass option is set, exiting\n",
-			to->name);
-		return 1;
-	}
 	if (has_cmdprio_percentage && has_cmdprio_bssplit) {
 		log_err("%s: cmdprio_percentage and cmdprio_bssplit options "
 			"are mutually exclusive\n",
