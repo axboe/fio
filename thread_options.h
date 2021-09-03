@@ -374,6 +374,8 @@ struct thread_options {
 	unsigned int ignore_zone_limits;
 	fio_fp64_t zrt;
 	fio_fp64_t zrf;
+
+	unsigned int log_prio;
 };
 
 #define FIO_TOP_STR_MAX		256
@@ -677,6 +679,8 @@ struct thread_options_pack {
 	uint32_t zone_mode;
 	int32_t max_open_zones;
 	uint32_t ignore_zone_limits;
+
+	uint32_t log_prio;
 } __attribute__((packed));
 
 extern void convert_thread_options_to_cpu(struct thread_options *o, struct thread_options_pack *top);

@@ -215,6 +215,7 @@ static void fio_libaio_prio_prep(struct thread_data *td, struct io_u *io_u)
 		ioprio_value(cmdprio->class[ddir], cmdprio->level[ddir]);
 
 	if (p && rand_between(&td->prio_state, 0, 99) < p) {
+		io_u->ioprio = cmdprio_value;
 		io_u->iocb.aio_reqprio = cmdprio_value;
 		io_u->iocb.u.c.flags |= IOCB_FLAG_IOPRIO;
 		if (!td->ioprio || cmdprio_value < td->ioprio) {
@@ -222,7 +223,7 @@ static void fio_libaio_prio_prep(struct thread_data *td, struct io_u *io_u)
 			 * The async IO priority is higher (has a lower value)
 			 * than the default context priority.
 			 */
-			io_u->flags |= IO_U_F_PRIORITY;
+			io_u->flags |= IO_U_F_HIGH_PRIO;
 		}
 	} else if (td->ioprio && td->ioprio < cmdprio_value) {
 		/*
@@ -230,7 +231,7 @@ static void fio_libaio_prio_prep(struct thread_data *td, struct io_u *io_u)
 		 * and this priority is higher (has a lower value) than the
 		 * async IO priority.
 		 */
-		io_u->flags |= IO_U_F_PRIORITY;
+		io_u->flags |= IO_U_F_HIGH_PRIO;
 	}
 }
 

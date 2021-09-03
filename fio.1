@@ -3266,6 +3266,11 @@ If this is set, the iolog options will include the byte offset for the I/O
 entry as well as the other data values. Defaults to 0 meaning that
 offsets are not present in logs. Also see \fBLOG FILE FORMATS\fR section.
 .TP
+.BI log_prio \fR=\fPbool
+If this is set, the iolog options will include the I/O priority for the I/O
+entry as well as the other data values. Defaults to 0 meaning that
+I/O priorities are not present in logs. Also see \fBLOG FILE FORMATS\fR section.
+.TP
 .BI log_compression \fR=\fPint
 If this is set, fio will compress the I/O logs as it goes, to keep the
 memory footprint lower. When a log reaches the specified size, that chunk is
@@ -4199,8 +4204,14 @@ The entry's `block size' is always in bytes. The `offset' is the position in byt
 from the start of the file for that particular I/O. The logging of the offset can be
 toggled with \fBlog_offset\fR.
 .P
-`Command priority` is 0 for normal priority and 1 for high priority. This is controlled
-by the ioengine specific \fBcmdprio_percentage\fR.
+If \fBlog_prio\fR is not set, the entry's `Command priority` is 1 for an IO executed
+with the highest RT priority class (\fBprioclass\fR=1 or \fBcmdprio_class\fR=1) and 0
+otherwise. This is controlled by the \fBprioclass\fR option and the ioengine specific
+\fBcmdprio_percentage\fR \fBcmdprio_class\fR options. If \fBlog_prio\fR is set, the
+entry's `Command priority` is the priority set for the IO, as a 16-bits hexadecimal
+number with the lowest 13 bits indicating the priority value (\fBprio\fR and
+\fBcmdprio\fR options) and the highest 3 bits indicating the IO priority class
+(\fBprioclass\fR and \fBcmdprio_class\fR options).
 .P
 Fio defaults to logging every individual I/O but when windowed logging is set
 through \fBlog_avg_msec\fR, either the average (by default) or the maximum

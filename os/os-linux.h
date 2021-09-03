@@ -129,6 +129,11 @@ static inline int ioprio_value(int ioprio_class, int ioprio)
 	return (ioprio_class << IOPRIO_CLASS_SHIFT) | ioprio;
 }
 
+static inline bool ioprio_value_is_class_rt(unsigned int priority)
+{
+	return (priority >> IOPRIO_CLASS_SHIFT) == IOPRIO_CLASS_RT;
+}
+
 static inline int ioprio_set(int which, int who, int ioprio_class, int ioprio)
 {
 	return syscall(__NR_ioprio_set, which, who,

@@ -4292,6 +4292,16 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.category = FIO_OPT_C_LOG,
 		.group	= FIO_OPT_G_INVALID,
 	},
+	{
+		.name	= "log_prio",
+		.lname	= "Log priority of IO",
+		.type	= FIO_OPT_BOOL,
+		.off1	= offsetof(struct thread_options, log_prio),
+		.help	= "Include priority value of IO for each log entry",
+		.def	= "0",
+		.category = FIO_OPT_C_LOG,
+		.group	= FIO_OPT_G_INVALID,
+	},
 #ifdef CONFIG_ZLIB
 	{
 		.name	= "log_compression",

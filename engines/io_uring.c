@@ -463,7 +463,7 @@ static void fio_ioring_prio_prep(struct thread_data *td, struct io_u *io_u)
 			 * than the priority set by "prio" and "prioclass"
 			 * options.
 			 */
-			io_u->flags |= IO_U_F_PRIORITY;
+			io_u->flags |= IO_U_F_HIGH_PRIO;
 		}
 	} else {
 		sqe->ioprio = td->ioprio;
@@ -474,9 +474,11 @@ static void fio_ioring_prio_prep(struct thread_data *td, struct io_u *io_u)
 			 * is higher (has a lower value) than the async IO
 			 * priority.
 			 */
-			io_u->flags |= IO_U_F_PRIORITY;
+			io_u->flags |= IO_U_F_HIGH_PRIO;
 		}
 	}
+
+	io_u->ioprio = sqe->ioprio;
 }
 
 static enum fio_q_status fio_ioring_queue(struct thread_data *td,

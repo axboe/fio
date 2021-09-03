@@ -1595,7 +1595,7 @@ again:
 		assert(io_u->flags & IO_U_F_FREE);
 		io_u_clear(td, io_u, IO_U_F_FREE | IO_U_F_NO_FILE_PUT |
 				 IO_U_F_TRIMMED | IO_U_F_BARRIER |
-				 IO_U_F_VER_LIST | IO_U_F_PRIORITY);
+				 IO_U_F_VER_LIST | IO_U_F_HIGH_PRIO);
 
 		io_u->error = 0;
 		io_u->acct_ddir = -1;
@@ -1799,6 +1799,10 @@ struct io_u *get_io_u(struct thread_data *td)
 	io_u->xfer_buf = io_u->buf;
 	io_u->xfer_buflen = io_u->buflen;
 
+	/*
+	 * Remember the issuing context priority. The IO engine may change this.
+	 */
+	io_u->ioprio = td->ioprio;
 out:
 	assert(io_u->file);
 	if (!td_io_prep(td, io_u)) {
@@ -1884,7 +1888,8 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 		unsigned long long tnsec;
 
 		tnsec = ntime_since(&io_u->start_time, &icd->time);
-		add_lat_sample(td, idx, tnsec, bytes, io_u->offset, io_u_is_prio(io_u));
+		add_lat_sample(td, idx, tnsec, bytes, io_u->offset,
+			       io_u->ioprio, io_u_is_high_prio(io_u));
 
 		if (td->flags & TD_F_PROFILE_OPS) {
 			struct prof_io_ops *ops = &td->prof_io_ops;
@@ -1905,7 +1910,8 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 
 	if (ddir_rw(idx)) {
 		if (!td->o.disable_clat) {
-			add_clat_sample(td, idx, llnsec, bytes, io_u->offset, io_u_is_prio(io_u));
+			add_clat_sample(td, idx, llnsec, bytes, io_u->offset,
+					io_u->ioprio, io_u_is_high_prio(io_u));
 			io_u_mark_latency(td, llnsec);
 		}
 
@@ -2162,7 +2168,7 @@ void io_u_queued(struct thread_data *td, struct io_u *io_u)
 			td = td->parent;
 
 		add_slat_sample(td, io_u->ddir, slat_time, io_u->xfer_buflen,
-				io_u->offset, io_u_is_prio(io_u));
+				io_u->offset, io_u->ioprio);
 	}
 }
 

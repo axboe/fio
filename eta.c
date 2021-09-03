@@ -509,7 +509,7 @@ bool calc_thread_status(struct jobs_eta *je, int force)
 		memcpy(&rate_prev_time, &now, sizeof(now));
 		regrow_agg_logs();
 		for_each_rw_ddir(ddir) {
-			add_agg_sample(sample_val(je->rate[ddir]), ddir, 0, 0);
+			add_agg_sample(sample_val(je->rate[ddir]), ddir, 0);
 		}
 	}
 
