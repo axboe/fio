@@ -10,6 +10,8 @@
 
 struct cmdprio {
 	unsigned int percentage[DDIR_RWDIR_CNT];
+	unsigned int class[DDIR_RWDIR_CNT];
+	unsigned int level[DDIR_RWDIR_CNT];
 };
 
 static int fio_cmdprio_init(struct thread_data *td, struct cmdprio *cmdprio,
@@ -19,9 +21,16 @@ static int fio_cmdprio_init(struct thread_data *td, struct cmdprio *cmdprio,
 	bool has_cmdprio_percentage = false;
 	int i;
 
+	/*
+	 * If cmdprio_percentage is set and cmdprio_class is not set,
+	 * default to RT priority class.
+	 */
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
-		if (cmdprio->percentage[i])
+		if (cmdprio->percentage[i]) {
+			if (!cmdprio->class[i])
+				cmdprio->class[i] = IOPRIO_CLASS_RT;
 			has_cmdprio_percentage = true;
+		}
 	}
 
 	/*

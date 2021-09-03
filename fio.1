@@ -1970,6 +1970,24 @@ with the `prio` or `prioclass` options. For this option to be effective,
 NCQ priority must be supported and enabled, and `direct=1' option must be
 used. fio must also be run as the root user.
 .TP
+.BI (io_uring,libaio)cmdprio_class \fR=\fPint[,int]
+Set the I/O priority class to use for I/Os that must be issued with a
+priority when \fBcmdprio_percentage\fR is set. If not specified when
+\fBcmdprio_percentage\fR is set, this defaults to the highest priority
+class. A single value applies to reads and writes. Comma-separated
+values may be specified for reads and writes. See man \fBionice\fR\|(1).
+See also the \fBprioclass\fR option.
+.TP
+.BI (io_uring,libaio)cmdprio \fR=\fPint[,int]
+Set the I/O priority value to use for I/Os that must be issued with a
+priority when \fBcmdprio_percentage\fR is set. If not specified when
+\fBcmdprio_percentage\fR is set, this defaults to 0. Linux limits us to
+a positive value between 0 and 7, with 0 being the highest. A single
+value applies to reads and writes. Comma-separated values may be specified
+for reads and writes. See man \fBionice\fR\|(1). Refer to an appropriate
+manpage for other operating systems since the meaning of priority may differ.
+See also the \fBprio\fR option.
+.TP
 .BI (io_uring)fixedbufs
 If fio is asked to do direct IO, then Linux will map pages for each IO call, and
 release them when IO is done. If this option is set, the pages are pre-mapped
@@ -2693,11 +2711,13 @@ Set the I/O priority value of this job. Linux limits us to a positive value
 between 0 and 7, with 0 being the highest. See man
 \fBionice\fR\|(1). Refer to an appropriate manpage for other operating
 systems since meaning of priority may differ. For per-command priority
-setting, see the I/O engine specific `cmdprio_percentage` option.
+setting, see the I/O engine specific `cmdprio_percentage` and
+`cmdprio` options.
 .TP
 .BI prioclass \fR=\fPint
 Set the I/O priority class. See man \fBionice\fR\|(1). For per-command
-priority setting, see the I/O engine specific `cmdprio_percentage` option.
+priority setting, see the I/O engine specific `cmdprio_percentage` and
+`cmdprio_class` options.
 .TP
 .BI cpus_allowed \fR=\fPstr
 Controls the same options as \fBcpumask\fR, but accepts a textual

@@ -133,10 +133,52 @@ static struct fio_option options[] = {
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_IOURING,
 	},
+	{
+		.name	= "cmdprio_class",
+		.lname	= "Asynchronous I/O priority class",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct ioring_options,
+				   cmdprio.class[DDIR_READ]),
+		.off2	= offsetof(struct ioring_options,
+				   cmdprio.class[DDIR_WRITE]),
+		.help	= "Set asynchronous IO priority class",
+		.minval	= IOPRIO_MIN_PRIO_CLASS + 1,
+		.maxval	= IOPRIO_MAX_PRIO_CLASS,
+		.interval = 1,
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_IOURING,
+	},
+	{
+		.name	= "cmdprio",
+		.lname	= "Asynchronous I/O priority level",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct ioring_options,
+				   cmdprio.level[DDIR_READ]),
+		.off2	= offsetof(struct ioring_options,
+				   cmdprio.level[DDIR_WRITE]),
+		.help	= "Set asynchronous IO priority level",
+		.minval	= IOPRIO_MIN_PRIO,
+		.maxval	= IOPRIO_MAX_PRIO,
+		.interval = 1,
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_IOURING,
+	},
 #else
 	{
 		.name	= "cmdprio_percentage",
 		.lname	= "high priority percentage",
+		.type	= FIO_OPT_UNSUPPORTED,
+		.help	= "Your platform does not support I/O priority classes",
+	},
+	{
+		.name	= "cmdprio_class",
+		.lname	= "Asynchronous I/O priority class",
+		.type	= FIO_OPT_UNSUPPORTED,
+		.help	= "Your platform does not support I/O priority classes",
+	},
+	{
+		.name	= "cmdprio",
+		.lname	= "Asynchronous I/O priority level",
 		.type	= FIO_OPT_UNSUPPORTED,
 		.help	= "Your platform does not support I/O priority classes",
 	},
@@ -389,10 +431,12 @@ static void fio_ioring_prio_prep(struct thread_data *td, struct io_u *io_u)
 	struct ioring_data *ld = td->io_ops_data;
 	struct io_uring_sqe *sqe = &ld->sqes[io_u->index];
 	struct cmdprio *cmdprio = &o->cmdprio;
-	unsigned int p = cmdprio->percentage[io_u->ddir];
+	enum fio_ddir ddir = io_u->ddir;
+	unsigned int p = cmdprio->percentage[ddir];
 
 	if (p && rand_between(&td->prio_state, 0, 99) < p) {
-		sqe->ioprio = ioprio_value(IOPRIO_CLASS_RT, 0);
+		sqe->ioprio =
+			ioprio_value(cmdprio->class[ddir], cmdprio->level[ddir]);
 		io_u->flags |= IO_U_F_PRIORITY;
 	} else {
 		sqe->ioprio = 0;
