@@ -2175,22 +2175,37 @@ with the caveat that when used on the command line, they must come after the
 .. option:: cmdprio_class=int[,int] : [io_uring] [libaio]
 
 	Set the I/O priority class to use for I/Os that must be issued with
-	a priority when :option:`cmdprio_percentage` is set. If not specified
-	when :option:`cmdprio_percentage` is set, this defaults to the highest
-	priority class. A single value applies to reads and writes.
-	Comma-separated values may be specified for reads and writes. See
-	:manpage:`ionice(1)`. See also the :option:`prioclass` option.
+	a priority when :option:`cmdprio_percentage` or
+	:option:`cmdprio_bssplit` is set. If not specified when
+	:option:`cmdprio_percentage` or :option:`cmdprio_bssplit` is set,
+	this defaults to the highest priority class. A single value applies
+	to reads and writes. Comma-separated values may be specified for
+	reads and writes. See :manpage:`ionice(1)`. See also the
+	:option:`prioclass` option.
 
 .. option:: cmdprio=int[,int] : [io_uring] [libaio]
 
 	Set the I/O priority value to use for I/Os that must be issued with
-	a priority when :option:`cmdprio_percentage` is set. If not specified
-	when :option:`cmdprio_percentage` is set, this defaults to 0.
+	a priority when :option:`cmdprio_percentage` or
+	:option:`cmdprio_bssplit` is set. If not specified when
+	:option:`cmdprio_percentage` or :option:`cmdprio_bssplit` is set,
+	this defaults to 0.
 	Linux limits us to a positive value between 0 and 7, with 0 being the
 	highest. A single value applies to reads and writes. Comma-separated
 	values may be specified for reads and writes. See :manpage:`ionice(1)`.
 	Refer to an appropriate manpage for other operating systems since
 	meaning of priority may differ. See also the :option:`prio` option.
+
+.. option:: cmdprio_bssplit=str[,str] : [io_uring] [libaio]
+	To get a finer control over I/O priority, this option allows
+	specifying the percentage of IOs that must have a priority set
+	depending on the block size of the IO. This option is useful only
+	when used together with the :option:`bssplit` option, that is,
+	multiple different block sizes are used for reads and writes.
+	The format for this option is the same as the format of the
+	:option:`bssplit` option, with the exception that values for
+	trim IOs are ignored. This option is mutually exclusive with the
+	:option:`cmdprio_percentage` option.
 
 .. option:: fixedbufs : [io_uring]
 

@@ -75,7 +75,7 @@ struct ioring_data {
 };
 
 struct ioring_options {
-	void *pad;
+	struct thread_data *td;
 	unsigned int hipri;
 	struct cmdprio cmdprio;
 	unsigned int fixedbufs;
@@ -106,6 +106,15 @@ static int fio_ioring_sqpoll_cb(void *data, unsigned long long *val)
 	o->sqpoll_cpu = *val;
 	o->sqpoll_set = 1;
 	return 0;
+}
+
+static int str_cmdprio_bssplit_cb(void *data, const char *input)
+{
+	struct ioring_options *o = data;
+	struct thread_data *td = o->td;
+	struct cmdprio *cmdprio = &o->cmdprio;
+
+	return fio_cmdprio_bssplit_parse(td, input, cmdprio);
 }
 
 static struct fio_option options[] = {
@@ -163,6 +172,16 @@ static struct fio_option options[] = {
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_IOURING,
 	},
+	{
+		.name   = "cmdprio_bssplit",
+		.lname  = "Priority percentage block size split",
+		.type   = FIO_OPT_STR_ULL,
+		.cb     = str_cmdprio_bssplit_cb,
+		.off1   = offsetof(struct ioring_options, cmdprio.bssplit),
+		.help   = "Set priority percentages for different block sizes",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_IOURING,
+	},
 #else
 	{
 		.name	= "cmdprio_percentage",
@@ -179,6 +198,12 @@ static struct fio_option options[] = {
 	{
 		.name	= "cmdprio",
 		.lname	= "Asynchronous I/O priority level",
+		.type	= FIO_OPT_UNSUPPORTED,
+		.help	= "Your platform does not support I/O priority classes",
+	},
+	{
+		.name   = "cmdprio_bssplit",
+		.lname  = "Priority percentage block size split",
 		.type	= FIO_OPT_UNSUPPORTED,
 		.help	= "Your platform does not support I/O priority classes",
 	},
@@ -432,7 +457,7 @@ static void fio_ioring_prio_prep(struct thread_data *td, struct io_u *io_u)
 	struct io_uring_sqe *sqe = &ld->sqes[io_u->index];
 	struct cmdprio *cmdprio = &o->cmdprio;
 	enum fio_ddir ddir = io_u->ddir;
-	unsigned int p = cmdprio->percentage[ddir];
+	unsigned int p = fio_cmdprio_percentage(cmdprio, io_u);
 
 	if (p && rand_between(&td->prio_state, 0, 99) < p) {
 		sqe->ioprio =

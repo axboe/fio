@@ -56,11 +56,20 @@ struct libaio_data {
 };
 
 struct libaio_options {
-	void *pad;
+	struct thread_data *td;
 	unsigned int userspace_reap;
 	struct cmdprio cmdprio;
 	unsigned int nowait;
 };
+
+static int str_cmdprio_bssplit_cb(void *data, const char *input)
+{
+	struct libaio_options *o = data;
+	struct thread_data *td = o->td;
+	struct cmdprio *cmdprio = &o->cmdprio;
+
+	return fio_cmdprio_bssplit_parse(td, input, cmdprio);
+}
 
 static struct fio_option options[] = {
 	{
@@ -117,6 +126,16 @@ static struct fio_option options[] = {
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_LIBAIO,
 	},
+	{
+		.name   = "cmdprio_bssplit",
+		.lname  = "Priority percentage block size split",
+		.type   = FIO_OPT_STR_ULL,
+		.cb     = str_cmdprio_bssplit_cb,
+		.off1   = offsetof(struct libaio_options, cmdprio.bssplit),
+		.help   = "Set priority percentages for different block sizes",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_LIBAIO,
+	},
 #else
 	{
 		.name	= "cmdprio_percentage",
@@ -133,6 +152,12 @@ static struct fio_option options[] = {
 	{
 		.name	= "cmdprio",
 		.lname	= "Asynchronous I/O priority level",
+		.type	= FIO_OPT_UNSUPPORTED,
+		.help	= "Your platform does not support I/O priority classes",
+	},
+	{
+		.name   = "cmdprio_bssplit",
+		.lname  = "Priority percentage block size split",
 		.type	= FIO_OPT_UNSUPPORTED,
 		.help	= "Your platform does not support I/O priority classes",
 	},
@@ -185,7 +210,7 @@ static void fio_libaio_prio_prep(struct thread_data *td, struct io_u *io_u)
 	struct libaio_options *o = td->eo;
 	struct cmdprio *cmdprio = &o->cmdprio;
 	enum fio_ddir ddir = io_u->ddir;
-	unsigned int p = cmdprio->percentage[ddir];
+	unsigned int p = fio_cmdprio_percentage(cmdprio, io_u);
 
 	if (p && rand_between(&td->prio_state, 0, 99) < p) {
 		io_u->iocb.aio_reqprio =

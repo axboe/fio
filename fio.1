@@ -1972,21 +1972,31 @@ used. fio must also be run as the root user.
 .TP
 .BI (io_uring,libaio)cmdprio_class \fR=\fPint[,int]
 Set the I/O priority class to use for I/Os that must be issued with a
-priority when \fBcmdprio_percentage\fR is set. If not specified when
-\fBcmdprio_percentage\fR is set, this defaults to the highest priority
-class. A single value applies to reads and writes. Comma-separated
-values may be specified for reads and writes. See man \fBionice\fR\|(1).
-See also the \fBprioclass\fR option.
+priority when \fBcmdprio_percentage\fR or \fBcmdprio_bssplit\fR is set.
+If not specified when \fBcmdprio_percentage\fR or \fBcmdprio_bssplit\fR
+is set, this defaults to the highest priority class. A single value applies
+to reads and writes. Comma-separated values may be specified for reads and
+writes. See man \fBionice\fR\|(1). See also the \fBprioclass\fR option.
 .TP
 .BI (io_uring,libaio)cmdprio \fR=\fPint[,int]
 Set the I/O priority value to use for I/Os that must be issued with a
-priority when \fBcmdprio_percentage\fR is set. If not specified when
-\fBcmdprio_percentage\fR is set, this defaults to 0. Linux limits us to
-a positive value between 0 and 7, with 0 being the highest. A single
-value applies to reads and writes. Comma-separated values may be specified
-for reads and writes. See man \fBionice\fR\|(1). Refer to an appropriate
-manpage for other operating systems since the meaning of priority may differ.
-See also the \fBprio\fR option.
+priority when \fBcmdprio_percentage\fR or \fBcmdprio_bssplit\fR is set.
+If not specified when \fBcmdprio_percentage\fR or \fBcmdprio_bssplit\fR
+is set, this defaults to 0. Linux limits us to a positive value between
+0 and 7, with 0 being the highest. A single value applies to reads and writes.
+Comma-separated values may be specified for reads and writes. See man
+\fBionice\fR\|(1). Refer to an appropriate manpage for other operating systems
+since the meaning of priority may differ. See also the \fBprio\fR option.
+.TP
+.BI (io_uring,libaio)cmdprio_bssplit \fR=\fPstr[,str]
+To get a finer control over I/O priority, this option allows specifying
+the percentage of IOs that must have a priority set depending on the block
+size of the IO. This option is useful only when used together with the option
+\fBbssplit\fR, that is, multiple different block sizes are used for reads and
+writes. The format for this option is the same as the format of the
+\fBbssplit\fR option, with the exception that values for trim IOs are
+ignored. This option is mutually exclusive with the \fBcmdprio_percentage\fR
+option.
 .TP
 .BI (io_uring)fixedbufs
 If fio is asked to do direct IO, then Linux will map pages for each IO call, and
