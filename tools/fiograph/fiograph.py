@@ -292,9 +292,11 @@ def setup_commandline():
 def main():
     global config_file
     args = setup_commandline()
-    output_file = args.file
     if args.output is None:
+        output_file = args.file
         output_file = output_file.replace('.fio', '')
+    else:
+        output_file = args.output
     config_file = configparser.RawConfigParser(allow_no_value=True)
     config_file.read(args.config)
     fio_to_graphviz(args.file, args.format).render(output_file, view=args.view)
