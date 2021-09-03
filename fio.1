@@ -1962,7 +1962,7 @@ In addition, there are some parameters which are only valid when a specific
 with the caveat that when used on the command line, they must come after the
 \fBioengine\fR that defines them is selected.
 .TP
-.BI (io_uring, libaio)cmdprio_percentage \fR=\fPint
+.BI (io_uring,libaio)cmdprio_percentage \fR=\fPint
 Set the percentage of I/O that will be issued with higher priority by setting
 the priority bit. Non-read I/O is likely unaffected by ``cmdprio_percentage``.
 This option cannot be used with the `prio` or `prioclass` options. For this
@@ -2043,20 +2043,20 @@ Detect when I/O threads are done, then exit.
 .BI (libhdfs)namenode \fR=\fPstr
 The hostname or IP address of a HDFS cluster namenode to contact.
 .TP
-.BI (libhdfs)port
+.BI (libhdfs)port \fR=\fPint
 The listening port of the HFDS cluster namenode.
 .TP
-.BI (netsplice,net)port
+.BI (netsplice,net)port \fR=\fPint
 The TCP or UDP port to bind to or connect to. If this is used with
 \fBnumjobs\fR to spawn multiple instances of the same job type, then
 this will be the starting port number since fio will use a range of
 ports.
 .TP
-.BI (rdma, librpma_*)port
+.BI (rdma,librpma_*)port \fR=\fPint
 The port to use for RDMA-CM communication. This should be the same
 value on the client and the server side.
 .TP
-.BI (netsplice,net, rdma)hostname \fR=\fPstr
+.BI (netsplice,net,rdma)hostname \fR=\fPstr
 The hostname or IP address to use for TCP, UDP or RDMA-CM based I/O.
 If the job is a TCP listener or UDP reader, the hostname is not used
 and must be omitted unless it is a valid UDP multicast address.
