@@ -1,0 +1,17 @@
+; Read a block device file at queue depth 8
+; with 20 % of the IOs using the high priority RT class
+; and the remaining IOs using the idle priority class
+[global]
+filename=/dev/sda
+direct=1
+write_lat_log=prio-run.log
+log_prio=1
+
+[randread]
+rw=randread
+bs=128k
+ioengine=libaio
+iodepth=8
+prioclass=3
+cmdprio_percentage=20
+cmdprio_class=1

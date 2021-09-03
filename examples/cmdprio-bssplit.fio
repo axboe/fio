@@ -1,0 +1,17 @@
+; Randomly read/write a block device file at queue depth 16.
+; 40 % of read IOs are 64kB and 60% are 1MB. 100% of writes are 1MB.
+; 100% of the 64kB reads are executed at the highest priority and
+; all other IOs executed without a priority set.
+[global]
+filename=/dev/sda
+direct=1
+write_lat_log=prio-run.log
+log_prio=1
+
+[randrw]
+rw=randrw
+bssplit=64k/40:1024k/60,1024k/100
+ioengine=libaio
+iodepth=16
+cmdprio_bssplit=64k/100:1024k/0,1024k/0
+cmdprio_class=1
