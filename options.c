@@ -73,13 +73,7 @@ static int bs_cmp(const void *p1, const void *p2)
 	return (int) bsp1->perc - (int) bsp2->perc;
 }
 
-struct split {
-	unsigned int nr;
-	unsigned long long val1[ZONESPLIT_MAX];
-	unsigned long long val2[ZONESPLIT_MAX];
-};
-
-static int split_parse_ddir(struct thread_options *o, struct split *split,
+int split_parse_ddir(struct thread_options *o, struct split *split,
 			    char *str, bool absolute, unsigned int max_splits)
 {
 	unsigned long long perc;
@@ -138,8 +132,8 @@ static int split_parse_ddir(struct thread_options *o, struct split *split,
 	return 0;
 }
 
-static int bssplit_ddir(struct thread_options *o, enum fio_ddir ddir, char *str,
-			bool data)
+static int bssplit_ddir(struct thread_options *o, void *eo,
+			enum fio_ddir ddir, char *str, bool data)
 {
 	unsigned int i, perc, perc_missing;
 	unsigned long long max_bs, min_bs;
@@ -211,10 +205,8 @@ static int bssplit_ddir(struct thread_options *o, enum fio_ddir ddir, char *str,
 	return 0;
 }
 
-typedef int (split_parse_fn)(struct thread_options *, enum fio_ddir, char *, bool);
-
-static int str_split_parse(struct thread_data *td, char *str,
-			   split_parse_fn *fn, bool data)
+int str_split_parse(struct thread_data *td, char *str,
+		    split_parse_fn *fn, void *eo, bool data)
 {
 	char *odir, *ddir;
 	int ret = 0;
@@ -223,37 +215,37 @@ static int str_split_parse(struct thread_data *td, char *str,
 	if (odir) {
 		ddir = strchr(odir + 1, ',');
 		if (ddir) {
-			ret = fn(&td->o, DDIR_TRIM, ddir + 1, data);
+			ret = fn(&td->o, eo, DDIR_TRIM, ddir + 1, data);
 			if (!ret)
 				*ddir = '\0';
 		} else {
 			char *op;
 
 			op = strdup(odir + 1);
-			ret = fn(&td->o, DDIR_TRIM, op, data);
+			ret = fn(&td->o, eo, DDIR_TRIM, op, data);
 
 			free(op);
 		}
 		if (!ret)
-			ret = fn(&td->o, DDIR_WRITE, odir + 1, data);
+			ret = fn(&td->o, eo, DDIR_WRITE, odir + 1, data);
 		if (!ret) {
 			*odir = '\0';
-			ret = fn(&td->o, DDIR_READ, str, data);
+			ret = fn(&td->o, eo, DDIR_READ, str, data);
 		}
 	} else {
 		char *op;
 
 		op = strdup(str);
-		ret = fn(&td->o, DDIR_WRITE, op, data);
+		ret = fn(&td->o, eo, DDIR_WRITE, op, data);
 		free(op);
 
 		if (!ret) {
 			op = strdup(str);
-			ret = fn(&td->o, DDIR_TRIM, op, data);
+			ret = fn(&td->o, eo, DDIR_TRIM, op, data);
 			free(op);
 		}
 		if (!ret)
-			ret = fn(&td->o, DDIR_READ, str, data);
+			ret = fn(&td->o, eo, DDIR_READ, str, data);
 	}
 
 	return ret;
@@ -270,7 +262,7 @@ static int str_bssplit_cb(void *data, const char *input)
 	strip_blank_front(&str);
 	strip_blank_end(str);
 
-	ret = str_split_parse(td, str, bssplit_ddir, false);
+	ret = str_split_parse(td, str, bssplit_ddir, NULL, false);
 
 	if (parse_dryrun()) {
 		int i;
@@ -906,8 +898,8 @@ static int str_sfr_cb(void *data, const char *str)
 }
 #endif
 
-static int zone_split_ddir(struct thread_options *o, enum fio_ddir ddir,
-			   char *str, bool absolute)
+static int zone_split_ddir(struct thread_options *o, void *eo,
+			   enum fio_ddir ddir, char *str, bool absolute)
 {
 	unsigned int i, perc, perc_missing, sperc, sperc_missing;
 	struct split split;
@@ -1012,7 +1004,7 @@ static int parse_zoned_distribution(struct thread_data *td, const char *input,
 	}
 	str += strlen(pre);
 
-	ret = str_split_parse(td, str, zone_split_ddir, absolute);
+	ret = str_split_parse(td, str, zone_split_ddir, NULL, absolute);
 
 	free(p);
 

@@ -44,6 +44,12 @@ enum dedupe_mode {
 #define BSSPLIT_MAX	64
 #define ZONESPLIT_MAX	256
 
+struct split {
+	unsigned int nr;
+	unsigned long long val1[ZONESPLIT_MAX];
+	unsigned long long val2[ZONESPLIT_MAX];
+};
+
 struct bssplit {
 	uint64_t bs;
 	uint32_t perc;
@@ -677,5 +683,14 @@ extern void convert_thread_options_to_cpu(struct thread_options *o, struct threa
 extern void convert_thread_options_to_net(struct thread_options_pack *top, struct thread_options *);
 extern int fio_test_cconv(struct thread_options *);
 extern void options_default_fill(struct thread_options *o);
+
+typedef int (split_parse_fn)(struct thread_options *, void *,
+			     enum fio_ddir, char *, bool);
+
+extern int str_split_parse(struct thread_data *td, char *str,
+			   split_parse_fn *fn, void *eo, bool data);
+
+extern int split_parse_ddir(struct thread_options *o, struct split *split,
+			    char *str, bool absolute, unsigned int max_splits);
 
 #endif
