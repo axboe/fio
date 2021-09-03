@@ -2693,13 +2693,11 @@ Set the I/O priority value of this job. Linux limits us to a positive value
 between 0 and 7, with 0 being the highest. See man
 \fBionice\fR\|(1). Refer to an appropriate manpage for other operating
 systems since meaning of priority may differ. For per-command priority
-setting, see I/O engine specific `cmdprio_percentage` and `hipri_percentage`
-options.
+setting, see the I/O engine specific `cmdprio_percentage` option.
 .TP
 .BI prioclass \fR=\fPint
 Set the I/O priority class. See man \fBionice\fR\|(1). For per-command
-priority setting, see I/O engine specific `cmdprio_percentage` and `hipri_percent`
-options.
+priority setting, see the I/O engine specific `cmdprio_percentage` option.
 .TP
 .BI cpus_allowed \fR=\fPstr
 Controls the same options as \fBcpumask\fR, but accepts a textual

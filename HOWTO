@@ -2974,14 +2974,12 @@ Threads, processes and job synchronization
 	between 0 and 7, with 0 being the highest.  See man
 	:manpage:`ionice(1)`. Refer to an appropriate manpage for other operating
 	systems since meaning of priority may differ. For per-command priority
-	setting, see I/O engine specific `cmdprio_percentage` and `hipri_percentage`
-	options.
+	setting, see I/O engine specific `cmdprio_percentage` option.
 
 .. option:: prioclass=int
 
 	Set the I/O priority class. See man :manpage:`ionice(1)`. For per-command
-	priority setting, see I/O engine specific `cmdprio_percentage` and
-	`hipri_percentage` options.
+	priority setting, see I/O engine specific `cmdprio_percentage` option.
 
 .. option:: cpus_allowed=str
 
