@@ -23,6 +23,7 @@
 
 #include "../lib/types.h"
 #include "../os/linux/io_uring.h"
+#include "cmdprio.h"
 
 struct io_sq_ring {
 	unsigned *head;
@@ -69,12 +70,14 @@ struct ioring_data {
 	int prepped;
 
 	struct ioring_mmap mmap[3];
+
+	bool use_cmdprio;
 };
 
 struct ioring_options {
 	void *pad;
 	unsigned int hipri;
-	unsigned int cmdprio_percentage;
+	struct cmdprio cmdprio;
 	unsigned int fixedbufs;
 	unsigned int registerfiles;
 	unsigned int sqpoll_thread;
@@ -120,8 +123,11 @@ static struct fio_option options[] = {
 		.name	= "cmdprio_percentage",
 		.lname	= "high priority percentage",
 		.type	= FIO_OPT_INT,
-		.off1	= offsetof(struct ioring_options, cmdprio_percentage),
-		.minval	= 1,
+		.off1	= offsetof(struct ioring_options,
+				   cmdprio.percentage[DDIR_READ]),
+		.off2	= offsetof(struct ioring_options,
+				   cmdprio.percentage[DDIR_WRITE]),
+		.minval	= 0,
 		.maxval	= 100,
 		.help	= "Send high priority I/O this percentage of the time",
 		.category = FIO_OPT_C_ENGINE,
@@ -381,13 +387,16 @@ static void fio_ioring_prio_prep(struct thread_data *td, struct io_u *io_u)
 {
 	struct ioring_options *o = td->eo;
 	struct ioring_data *ld = td->io_ops_data;
-	if (rand_between(&td->prio_state, 0, 99) < o->cmdprio_percentage) {
-		ld->sqes[io_u->index].ioprio = ioprio_value(IOPRIO_CLASS_RT, 0);
+	struct io_uring_sqe *sqe = &ld->sqes[io_u->index];
+	struct cmdprio *cmdprio = &o->cmdprio;
+	unsigned int p = cmdprio->percentage[io_u->ddir];
+
+	if (p && rand_between(&td->prio_state, 0, 99) < p) {
+		sqe->ioprio = ioprio_value(IOPRIO_CLASS_RT, 0);
 		io_u->flags |= IO_U_F_PRIORITY;
 	} else {
-		ld->sqes[io_u->index].ioprio = 0;
+		sqe->ioprio = 0;
 	}
-	return;
 }
 
 static enum fio_q_status fio_ioring_queue(struct thread_data *td,
@@ -395,7 +404,6 @@ static enum fio_q_status fio_ioring_queue(struct thread_data *td,
 {
 	struct ioring_data *ld = td->io_ops_data;
 	struct io_sq_ring *ring = &ld->sq_ring;
-	struct ioring_options *o = td->eo;
 	unsigned tail, next_tail;
 
 	fio_ro_check(td, io_u);
@@ -418,7 +426,7 @@ static enum fio_q_status fio_ioring_queue(struct thread_data *td,
 	if (next_tail == atomic_load_acquire(ring->head))
 		return FIO_Q_BUSY;
 
-	if (o->cmdprio_percentage)
+	if (ld->use_cmdprio)
 		fio_ioring_prio_prep(td, io_u);
 	ring->array[tail & ld->sq_ring_mask] = io_u->index;
 	atomic_store_release(ring->tail, next_tail);
@@ -729,7 +737,8 @@ static int fio_ioring_init(struct thread_data *td)
 {
 	struct ioring_options *o = td->eo;
 	struct ioring_data *ld;
-	struct thread_options *to = &td->o;
+	struct cmdprio *cmdprio = &o->cmdprio;
+	int ret;
 
 	/* sqthread submission requires registered files */
 	if (o->sqpoll_thread)
@@ -753,14 +762,9 @@ static int fio_ioring_init(struct thread_data *td)
 
 	td->io_ops_data = ld;
 
-	/*
-	 * Check for option conflicts
-	 */
-	if ((fio_option_is_set(to, ioprio) || fio_option_is_set(to, ioprio_class)) &&
-			o->cmdprio_percentage != 0) {
-		log_err("%s: cmdprio_percentage option and mutually exclusive "
-				"prio or prioclass option is set, exiting\n", to->name);
-		td_verror(td, EINVAL, "fio_io_uring_init");
+	ret = fio_cmdprio_init(td, cmdprio, &ld->use_cmdprio);
+	if (ret) {
+		td_verror(td, EINVAL, "fio_ioring_init");
 		return 1;
 	}
 

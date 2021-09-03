@@ -2163,14 +2163,14 @@ In addition, there are some parameters which are only valid when a specific
 with the caveat that when used on the command line, they must come after the
 :option:`ioengine` that defines them is selected.
 
-.. option:: cmdprio_percentage=int : [io_uring] [libaio]
+.. option:: cmdprio_percentage=int[,int] : [io_uring] [libaio]
 
-    Set the percentage of I/O that will be issued with higher priority by setting
-    the priority bit. Non-read I/O is likely unaffected by ``cmdprio_percentage``.
-    This option cannot be used with the `prio` or `prioclass` options. For this
-    option to set the priority bit properly, NCQ priority must be supported and
-    enabled and :option:`direct`\=1 option must be used. fio must also be run as
-    the root user.
+    Set the percentage of I/O that will be issued with the highest priority.
+    Default: 0. A single value applies to reads and writes. Comma-separated
+    values may be specified for reads and writes. This option cannot be used
+    with the :option:`prio` or :option:`prioclass` options. For this option
+    to be effective, NCQ priority must be supported and enabled, and `direct=1'
+    option must be used. fio must also be run as the root user.
 
 .. option:: fixedbufs : [io_uring]
 

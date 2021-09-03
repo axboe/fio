@@ -15,6 +15,7 @@
 #include "../lib/pow2.h"
 #include "../optgroup.h"
 #include "../lib/memalign.h"
+#include "cmdprio.h"
 
 /* Should be defined in newest aio_abi.h */
 #ifndef IOCB_FLAG_IOPRIO
@@ -50,12 +51,14 @@ struct libaio_data {
 	unsigned int queued;
 	unsigned int head;
 	unsigned int tail;
+
+	bool use_cmdprio;
 };
 
 struct libaio_options {
 	void *pad;
 	unsigned int userspace_reap;
-	unsigned int cmdprio_percentage;
+	struct cmdprio cmdprio;
 	unsigned int nowait;
 };
 
@@ -74,8 +77,11 @@ static struct fio_option options[] = {
 		.name	= "cmdprio_percentage",
 		.lname	= "high priority percentage",
 		.type	= FIO_OPT_INT,
-		.off1	= offsetof(struct libaio_options, cmdprio_percentage),
-		.minval	= 1,
+		.off1	= offsetof(struct libaio_options,
+				   cmdprio.percentage[DDIR_READ]),
+		.off2	= offsetof(struct libaio_options,
+				   cmdprio.percentage[DDIR_WRITE]),
+		.minval	= 0,
 		.maxval	= 100,
 		.help	= "Send high priority I/O this percentage of the time",
 		.category = FIO_OPT_C_ENGINE,
@@ -135,12 +141,14 @@ static int fio_libaio_prep(struct thread_data *td, struct io_u *io_u)
 static void fio_libaio_prio_prep(struct thread_data *td, struct io_u *io_u)
 {
 	struct libaio_options *o = td->eo;
-	if (rand_between(&td->prio_state, 0, 99) < o->cmdprio_percentage) {
+	struct cmdprio *cmdprio = &o->cmdprio;
+	unsigned int p = cmdprio->percentage[io_u->ddir];
+
+	if (p && rand_between(&td->prio_state, 0, 99) < p) {
 		io_u->iocb.aio_reqprio = ioprio_value(IOPRIO_CLASS_RT, 0);
 		io_u->iocb.u.c.flags |= IOCB_FLAG_IOPRIO;
 		io_u->flags |= IO_U_F_PRIORITY;
 	}
-	return;
 }
 
 static struct io_u *fio_libaio_event(struct thread_data *td, int event)
@@ -246,7 +254,6 @@ static enum fio_q_status fio_libaio_queue(struct thread_data *td,
 					  struct io_u *io_u)
 {
 	struct libaio_data *ld = td->io_ops_data;
-	struct libaio_options *o = td->eo;
 
 	fio_ro_check(td, io_u);
 
@@ -277,7 +284,7 @@ static enum fio_q_status fio_libaio_queue(struct thread_data *td,
 		return FIO_Q_COMPLETED;
 	}
 
-	if (o->cmdprio_percentage)
+	if (ld->use_cmdprio)
 		fio_libaio_prio_prep(td, io_u);
 
 	ld->iocbs[ld->head] = &io_u->iocb;
@@ -420,8 +427,9 @@ static int fio_libaio_post_init(struct thread_data *td)
 static int fio_libaio_init(struct thread_data *td)
 {
 	struct libaio_data *ld;
-	struct thread_options *to = &td->o;
 	struct libaio_options *o = td->eo;
+	struct cmdprio *cmdprio = &o->cmdprio;
+	int ret;
 
 	ld = calloc(1, sizeof(*ld));
 
@@ -432,16 +440,13 @@ static int fio_libaio_init(struct thread_data *td)
 	ld->io_us = calloc(ld->entries, sizeof(struct io_u *));
 
 	td->io_ops_data = ld;
-	/*
-	 * Check for option conflicts
-	 */
-	if ((fio_option_is_set(to, ioprio) || fio_option_is_set(to, ioprio_class)) &&
-			o->cmdprio_percentage != 0) {
-		log_err("%s: cmdprio_percentage option and mutually exclusive "
-				"prio or prioclass option is set, exiting\n", to->name);
+
+	ret = fio_cmdprio_init(td, cmdprio, &ld->use_cmdprio);
+	if (ret) {
 		td_verror(td, EINVAL, "fio_libaio_init");
 		return 1;
 	}
+
 	return 0;
 }
 
