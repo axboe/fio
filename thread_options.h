@@ -191,10 +191,6 @@ struct thread_options {
 
 	unsigned int hugepage_size;
 	unsigned long long rw_min_bs;
-	unsigned int thinktime;
-	unsigned int thinktime_spin;
-	unsigned int thinktime_blocks;
-	unsigned int thinktime_blocks_type;
 	unsigned int fsync_blocks;
 	unsigned int fdatasync_blocks;
 	unsigned int barrier_blocks;
@@ -302,6 +298,12 @@ struct thread_options {
 	 */
 	char *exec_prerun;
 	char *exec_postrun;
+
+	unsigned int thinktime;
+	unsigned int thinktime_spin;
+	unsigned int thinktime_blocks;
+	unsigned int thinktime_blocks_type;
+	unsigned int thinktime_iotime;
 
 	uint64_t rate[DDIR_RWDIR_CNT];
 	uint64_t ratemin[DDIR_RWDIR_CNT];
@@ -504,10 +506,6 @@ struct thread_options_pack {
 
 	uint32_t hugepage_size;
 	uint64_t rw_min_bs;
-	uint32_t thinktime;
-	uint32_t thinktime_spin;
-	uint32_t thinktime_blocks;
-	uint32_t thinktime_blocks_type;
 	uint32_t fsync_blocks;
 	uint32_t fdatasync_blocks;
 	uint32_t barrier_blocks;
@@ -612,6 +610,12 @@ struct thread_options_pack {
 	uint8_t exec_prerun[FIO_TOP_STR_MAX];
 	uint8_t exec_postrun[FIO_TOP_STR_MAX];
 
+	uint32_t thinktime;
+	uint32_t thinktime_spin;
+	uint32_t thinktime_blocks;
+	uint32_t thinktime_blocks_type;
+	uint32_t thinktime_iotime;
+
 	uint64_t rate[DDIR_RWDIR_CNT];
 	uint64_t ratemin[DDIR_RWDIR_CNT];
 	uint32_t ratecycle;
@@ -651,7 +655,6 @@ struct thread_options_pack {
 	uint64_t latency_target;
 	uint64_t latency_window;
 	uint64_t max_latency[DDIR_RWDIR_CNT];
-	uint32_t pad5;
 	fio_fp64_t latency_percentile;
 	uint32_t latency_run;
 

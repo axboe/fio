@@ -2499,7 +2499,7 @@ problem). Note that this option cannot reliably be used with async IO engines.
 Stall the job for the specified period of time after an I/O has completed before issuing the
 next. May be used to simulate processing being done by an application.
 When the unit is omitted, the value is interpreted in microseconds. See
-\fBthinktime_blocks\fR and \fBthinktime_spin\fR.
+\fBthinktime_blocks\fR, \fBthinktime_iotime\fR and \fBthinktime_spin\fR.
 .TP
 .BI thinktime_spin \fR=\fPtime
 Only valid if \fBthinktime\fR is set - pretend to spend CPU time doing
@@ -2520,6 +2520,17 @@ Only valid if \fBthinktime\fR is set - control how \fBthinktime_blocks\fR trigge
 The default is `complete', which triggers \fBthinktime\fR when fio completes
 \fBthinktime_blocks\fR blocks. If this is set to `issue', then the trigger happens
 at the issue side.
+.TP
+.BI thinktime_iotime \fR=\fPtime
+Only valid if \fBthinktime\fR is set - control \fBthinktime\fR interval by time.
+The \fBthinktime\fR stall is repeated after IOs are executed for
+\fBthinktime_iotime\fR. For example, `\-\-thinktime_iotime=9s \-\-thinktime=1s'
+repeat 10-second cycle with IOs for 9 seconds and stall for 1 second. When the
+unit is omitted, \fBthinktime_iotime\fR is interpreted as a number of seconds.
+If this option is used together with \fBthinktime_blocks\fR, the \fBthinktime\fR
+stall is repeated after \fBthinktime_iotime\fR or after \fBthinktime_blocks\fR
+IOs, whichever happens first.
+
 .TP
 .BI rate \fR=\fPint[,int][,int]
 Cap the bandwidth used by this job. The number is in bytes/sec, the normal

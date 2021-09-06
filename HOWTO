@@ -2745,7 +2745,7 @@ I/O rate
 	Stall the job for the specified period of time after an I/O has completed before issuing the
 	next. May be used to simulate processing being done by an application.
 	When the unit is omitted, the value is interpreted in microseconds.  See
-	:option:`thinktime_blocks` and :option:`thinktime_spin`.
+	:option:`thinktime_blocks`, :option:`thinktime_iotime` and :option:`thinktime_spin`.
 
 .. option:: thinktime_spin=time
 
@@ -2769,6 +2769,18 @@ I/O rate
 	triggers. The default is `complete`, which triggers thinktime when fio completes
 	:option:`thinktime_blocks` blocks. If this is set to `issue`, then the trigger happens
 	at the issue side.
+
+.. option:: thinktime_iotime=time
+
+	Only valid if :option:`thinktime` is set - control :option:`thinktime`
+	interval by time. The :option:`thinktime` stall is repeated after IOs
+	are executed for :option:`thinktime_iotime`. For example,
+	``--thinktime_iotime=9s --thinktime=1s`` repeat 10-second cycle with IOs
+	for 9 seconds and stall for 1 second. When the unit is omitted,
+	:option:`thinktime_iotime` is interpreted as a number of seconds. If
+	this option is used together with :option:`thinktime_blocks`, the
+	:option:`thinktime` stall is repeated after :option:`thinktime_iotime`
+	or after :option:`thinktime_blocks` IOs, whichever happens first.
 
 .. option:: rate=int[,int][,int]
 
