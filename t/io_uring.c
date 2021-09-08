@@ -468,6 +468,13 @@ static int setup_ring(struct submitter *s)
 	io_uring_probe(fd);
 
 	if (fixedbufs) {
+		struct rlimit rlim;
+
+		rlim.rlim_cur = RLIM_INFINITY;
+		rlim.rlim_max = RLIM_INFINITY;
+		/* ignore potential error, not needed on newer kernels */
+		setrlimit(RLIMIT_MEMLOCK, &rlim);
+
 		ret = io_uring_register_buffers(s);
 		if (ret < 0) {
 			perror("io_uring_register_buffers");
@@ -644,17 +651,6 @@ int main(int argc, char *argv[])
 		i++;
 		if (++j >= nthreads)
 			j = 0;
-	}
-
-	if (fixedbufs) {
-		struct rlimit rlim;
-
-		rlim.rlim_cur = RLIM_INFINITY;
-		rlim.rlim_max = RLIM_INFINITY;
-		if (setrlimit(RLIMIT_MEMLOCK, &rlim) < 0) {
-			perror("setrlimit");
-			return 1;
-		}
 	}
 
 	arm_sig_int();
