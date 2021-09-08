@@ -598,6 +598,10 @@ int main(int argc, char *argv[])
 			break;
 		case 'n':
 			nthreads = atoi(optarg);
+			if (!nthreads) {
+				printf("Threads must be non-zero\n");
+				usage(argv[0], 1);
+			}
 			break;
 		case 'h':
 		case '?':
@@ -623,7 +627,7 @@ int main(int argc, char *argv[])
 	i = optind;
 	nfiles = argc - i;
 	if (!nfiles) {
-		printf("no files specified\n");
+		printf("No files specified\n");
 		usage(argv[0], 1);
 	}
 	threads_per_f = nthreads / nfiles;
