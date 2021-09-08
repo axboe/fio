@@ -1857,7 +1857,7 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 				       f->file_name);
 				goto eof;
 			}
-			zone_idx_b = zbd_zone_nr(f, zb);
+			zbd_zone_nr(f, zb);
 		}
 		/* Check whether the zone reset threshold has been exceeded */
 		if (td->o.zrf.u.f) {
