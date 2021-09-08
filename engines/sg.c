@@ -471,10 +471,9 @@ static enum fio_q_status fio_sgio_rw_doio(struct thread_data *td,
 			if (__io_u == io_u)
 				break;
 
-			if (io_u_sync_complete(td, __io_u)) {
-				ret = -1;
+			if (io_u_sync_complete(td, __io_u))
 				break;
-			}
+
 		} while (1);
 
 		return FIO_Q_COMPLETED;
