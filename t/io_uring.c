@@ -539,12 +539,16 @@ static void file_depths(char *buf)
 static void usage(char *argv)
 {
 	printf("%s [options] -- [filenames]\n"
-		" -d <int> : IO Depth, default %d\n"
-		" -s <int> : Batch submit, default %d\n"
-		" -c <int> : Batch complete, default %d\n"
-		" -b <int> : Block size, default %d\n"
-		" -p <bool> : Polled IO, default %d\n",
-		argv, DEPTH, BATCH_SUBMIT, BATCH_COMPLETE, BS, polled);
+		" -d <int>  : IO Depth, default %d\n"
+		" -s <int>  : Batch submit, default %d\n"
+		" -c <int>  : Batch complete, default %d\n"
+		" -b <int>  : Block size, default %d\n"
+		" -p <bool> : Polled IO, default %d\n"
+		" -B <bool> : Fixed buffers, default %d\n"
+		" -F <bool> : Register files, default %d\n"
+		" -n <int>  : Number of threads, default %d\n",
+		argv, DEPTH, BATCH_SUBMIT, BATCH_COMPLETE, BS, polled,
+		fixedbufs, register_files, nthreads);
 	exit(0);
 }
 
@@ -609,7 +613,6 @@ int main(int argc, char *argv[])
 
 	j = 0;
 	i = optind;
-	printf("i %d, argc %d\n", i, argc);
 	while (!do_nop && i < argc) {
 		struct file *f;
 
