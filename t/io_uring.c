@@ -543,7 +543,7 @@ static void file_depths(char *buf)
 	}
 }
 
-static void usage(char *argv)
+static void usage(char *argv, int status)
 {
 	printf("%s [options] -- [filenames]\n"
 		" -d <int>  : IO Depth, default %d\n"
@@ -556,14 +556,15 @@ static void usage(char *argv)
 		" -n <int>  : Number of threads, default %d\n",
 		argv, DEPTH, BATCH_SUBMIT, BATCH_COMPLETE, BS, polled,
 		fixedbufs, register_files, nthreads);
-	exit(0);
+	exit(status);
 }
 
 int main(int argc, char *argv[])
 {
 	struct submitter *s;
 	unsigned long done, calls, reap;
-	int err, i, j, flags, fd, opt;
+	int err, i, j, flags, fd, opt, threads_per_f, threads_rem = 0, nfiles;
+	struct file f;
 	char *fdepths;
 	void *ret;
 
@@ -601,7 +602,7 @@ int main(int argc, char *argv[])
 		case 'h':
 		case '?':
 		default:
-			usage(argv[0]);
+			usage(argv[0], 0);
 			break;
 		}
 	}
@@ -620,37 +621,57 @@ int main(int argc, char *argv[])
 
 	j = 0;
 	i = optind;
+	nfiles = argc - i;
+	if (!nfiles) {
+		printf("no files specified\n");
+		usage(argv[0], 1);
+	}
+	threads_per_f = nthreads / nfiles;
+	/* make sure each thread gets assigned files */
+	if (threads_per_f == 0) {
+		threads_per_f = 1;
+	} else {
+		threads_rem = nthreads - threads_per_f * nfiles;
+	}
 	while (!do_nop && i < argc) {
-		struct file *f;
+		int k, limit;
 
-		s = get_submitter(j);
-		if (s->nr_files == MAX_FDS) {
-			printf("Max number of files (%d) reached\n", MAX_FDS);
-			break;
-		}
+		memset(&f, 0, sizeof(f));
+
 		fd = open(argv[i], flags);
 		if (fd < 0) {
 			perror("open");
 			return 1;
 		}
-
-		f = &s->files[s->nr_files];
-		f->real_fd = fd;
-		if (get_file_size(f)) {
+		f.real_fd = fd;
+		if (get_file_size(&f)) {
 			printf("failed getting size of device/file\n");
 			return 1;
 		}
-		if (f->max_blocks <= 1) {
+		if (f.max_blocks <= 1) {
 			printf("Zero file/device size?\n");
 			return 1;
 		}
-		f->max_blocks--;
+		f.max_blocks--;
 
-		printf("Added file %s (submitter %d)\n", argv[i], s->index);
-		s->nr_files++;
+		limit = threads_per_f;
+		limit += threads_rem > 0 ? 1 : 0;
+		for (k = 0; k < limit; k++) {
+			s = get_submitter((j + k) % nthreads);
+
+			if (s->nr_files == MAX_FDS) {
+				printf("Max number of files (%d) reached\n", MAX_FDS);
+				break;
+			}
+
+			memcpy(&s->files[s->nr_files], &f, sizeof(f));
+
+			printf("Added file %s (submitter %d)\n", argv[i], s->index);
+			s->nr_files++;
+		}
+		threads_rem--;
 		i++;
-		if (++j >= nthreads)
-			j = 0;
+		j += limit;
 	}
 
 	arm_sig_int();
