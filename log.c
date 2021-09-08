@@ -62,7 +62,7 @@ void log_prevalist(int type, const char *fmt, va_list args)
 	free(buf1);
 	if (len < 0)
 		return;
-	len = log_info_buf(buf2, len);
+	log_info_buf(buf2, len);
 	free(buf2);
 }
 #endif

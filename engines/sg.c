@@ -471,10 +471,9 @@ static enum fio_q_status fio_sgio_rw_doio(struct thread_data *td,
 			if (__io_u == io_u)
 				break;
 
-			if (io_u_sync_complete(td, __io_u)) {
-				ret = -1;
+			if (io_u_sync_complete(td, __io_u))
 				break;
-			}
+
 		} while (1);
 
 		return FIO_Q_COMPLETED;
@@ -982,7 +981,7 @@ static int fio_sgio_open(struct thread_data *td, struct fio_file *f)
 
 	if (sd && !sd->type_checked && fio_sgio_type_check(td, f)) {
 		ret = generic_close_file(td, f);
-		return 1;
+		return ret;
 	}
 
 	return 0;

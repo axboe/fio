@@ -1024,7 +1024,6 @@ int longest_existing_path(char *path) {
 	while (!done) {
 		buf_pos = strrchr(buf, FIO_OS_PATH_SEPARATOR);
 		if (!buf_pos) {
-			done = true;
 			offset = 0;
 			break;
 		}
