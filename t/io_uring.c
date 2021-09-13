@@ -626,16 +626,18 @@ int main(int argc, char *argv[])
 	j = 0;
 	i = optind;
 	nfiles = argc - i;
-	if (!nfiles) {
-		printf("No files specified\n");
-		usage(argv[0], 1);
-	}
-	threads_per_f = nthreads / nfiles;
-	/* make sure each thread gets assigned files */
-	if (threads_per_f == 0) {
-		threads_per_f = 1;
-	} else {
-		threads_rem = nthreads - threads_per_f * nfiles;
+	if (!do_nop) {
+		if (!nfiles) {
+			printf("No files specified\n");
+			usage(argv[0], 1);
+		}
+		threads_per_f = nthreads / nfiles;
+		/* make sure each thread gets assigned files */
+		if (threads_per_f == 0) {
+			threads_per_f = 1;
+		} else {
+			threads_rem = nthreads - threads_per_f * nfiles;
+		}
 	}
 	while (!do_nop && i < argc) {
 		int k, limit;
