@@ -554,9 +554,10 @@ static void usage(char *argv, int status)
 		" -B <bool> : Fixed buffers, default %d\n"
 		" -F <bool> : Register files, default %d\n"
 		" -n <int>  : Number of threads, default %d\n"
+		" -O <bool> : Use O_DIRECT, default %d\n"
 		" -N <bool> : Perform just no-op requests, default %d\n",
 		argv, DEPTH, BATCH_SUBMIT, BATCH_COMPLETE, BS, polled,
-		fixedbufs, register_files, nthreads, do_nop);
+		fixedbufs, register_files, nthreads, !buffered, do_nop);
 	exit(status);
 }
 
@@ -572,7 +573,7 @@ int main(int argc, char *argv[])
 	if (!do_nop && argc < 2)
 		usage(argv[0], 1);
 
-	while ((opt = getopt(argc, argv, "d:s:c:b:p:B:F:n:N:h?")) != -1) {
+	while ((opt = getopt(argc, argv, "d:s:c:b:p:B:F:n:N:O:h?")) != -1) {
 		switch (opt) {
 		case 'd':
 			depth = atoi(optarg);
@@ -604,6 +605,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'N':
 			do_nop = !!atoi(optarg);
+			break;
+		case 'O':
+			buffered = !atoi(optarg);
 			break;
 		case 'h':
 		case '?':
