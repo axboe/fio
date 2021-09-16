@@ -727,6 +727,7 @@ int main(int argc, char *argv[])
 		unsigned long this_reap = 0;
 		unsigned long this_call = 0;
 		unsigned long rpc = 0, ipc = 0;
+		unsigned long iops;
 
 		sleep(1);
 		for (j = 0; j < nthreads; j++) {
@@ -740,8 +741,9 @@ int main(int argc, char *argv[])
 		} else
 			rpc = ipc = -1;
 		file_depths(fdepths);
-		printf("IOPS=%lu, IOS/call=%ld/%ld, inflight=(%s)\n",
-				this_done - done, rpc, ipc, fdepths);
+		iops = this_done - done;
+		printf("IOPS=%lu, BW=%luMiB/s, IOS/call=%ld/%ld, inflight=(%s)\n",
+				iops, iops * (1048576 / bs), rpc, ipc, fdepths);
 		done = this_done;
 		calls = this_call;
 		reap = this_reap;
