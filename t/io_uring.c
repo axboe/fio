@@ -617,6 +617,11 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	if (batch_complete > depth)
+		batch_complete = depth;
+	if (batch_submit > depth)
+		batch_submit = depth;
+
 	submitter = calloc(nthreads, sizeof(*submitter) +
 				depth * sizeof(struct iovec));
 	for (j = 0; j < nthreads; j++) {
