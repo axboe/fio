@@ -751,8 +751,10 @@ int main(int argc, char *argv[])
 			bw = iops * (bs / 1048576);
 		else
 			bw = iops / (1048576 / bs);
-		printf("IOPS=%lu, BW=%luMiB/s, IOS/call=%ld/%ld, inflight=(%s)\n",
-				iops, bw, rpc, ipc, fdepths);
+		printf("IOPS=%lu, ", iops);
+		if (!do_nop)
+			printf("BW=%luMiB/s, ", bw);
+		printf("IOS/call=%ld/%ld, inflight=(%s)\n", rpc, ipc, fdepths);
 		done = this_done;
 		calls = this_call;
 		reap = this_reap;
