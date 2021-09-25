@@ -803,8 +803,8 @@ static void usage(char *argv, int status)
 		" -F <bool> : Register files, default %d\n"
 		" -n <int>  : Number of threads, default %d\n"
 		" -O <bool> : Use O_DIRECT, default %d\n"
-		" -N <bool> : Perform just no-op requests, default %d"
-		" -t <bool> : Track IO latencies, default %d"
+		" -N <bool> : Perform just no-op requests, default %d\n"
+		" -t <bool> : Track IO latencies, default %d\n"
 		" -T <int>  : TSC rate in HZ\n",
 		argv, DEPTH, BATCH_SUBMIT, BATCH_COMPLETE, BS, polled,
 		fixedbufs, register_files, nthreads, !buffered, do_nop, stats);
