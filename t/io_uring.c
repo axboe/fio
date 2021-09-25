@@ -484,6 +484,7 @@ static int reap_events(struct submitter *s)
 	struct io_cq_ring *ring = &s->cq_ring;
 	struct io_uring_cqe *cqe;
 	unsigned head, reaped = 0;
+	int last_idx = -1, stat_nr = 0;
 
 	head = *ring->head;
 	do {
@@ -508,11 +509,22 @@ static int reap_events(struct submitter *s)
 		if (stats) {
 			int clock_index = cqe->user_data >> 32;
 
+			if (last_idx != clock_index) {
+				if (last_idx != -1) {
+					add_stat(s, last_idx, stat_nr);
+					stat_nr = 0;
+				}
+				last_idx = clock_index;
+			}
+			stat_nr++;
 			add_stat(s, clock_index, 1);
 		}
 		reaped++;
 		head++;
 	} while (1);
+
+	if (stat_nr)
+		add_stat(s, last_idx, stat_nr);
 
 	if (reaped) {
 		s->inflight -= reaped;
