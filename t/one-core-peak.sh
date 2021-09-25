@@ -5,6 +5,10 @@ first_cores=""
 taskset_cores=""
 first_cores_count=0
 nb_threads=4 #default from the benchmark
+drives=""
+
+# Default options
+latency_cmdline=""
 
 fatal() {
   echo "$@"
@@ -57,8 +61,37 @@ detect_first_core() {
   taskset_cores=$(echo "${first_cores}" | tr ' ' ',')
 }
 
+usage() {
+  echo "usage: [options] block_device [other_block_devices]
+
+   -h         : print help
+   -l         : enable latency reporting
+
+   example:
+      t/one-core-peak.sh /dev/nvme0n1
+      t/one-core-peak.sh -l /dev/nvme0n1 /dev/nvme1n1
+  "
+  exit 0
+}
+
 check_args() {
-  [ $1 -eq 0 ] && fatal "Missing drive(s) as argument"
+  local OPTIND h option
+  while getopts "hl" option; do
+    case "${option}" in
+        h) # Show help
+            usage
+            ;;
+        l) # Report latency
+            latency_cmdline="1"
+            ;;
+        *)
+            fatal "Unsupported ${option} option"
+            ;;
+    esac
+  done
+  shift $((OPTIND-1))
+  [ $# -eq 0 ] && fatal "Missing drive(s) as argument"
+  drives="$@"
 }
 
 check_drive_exists() {
@@ -72,7 +105,7 @@ is_nvme() {
 
 check_poll_queue() {
   # Print a warning if the nvme poll queues aren't enabled
-  is_nvme ${args} || return
+  is_nvme ${drives} || return
   poll_queue=$(cat /sys/module/nvme/parameters/poll_queues)
   [ ${poll_queue} -eq 0 ] && hint "For better performance, you should enable nvme poll queues by setting nvme.poll_queues=32 on the kernel commande line"
 }
@@ -161,23 +194,29 @@ show_device() {
 }
 
 show_system() {
-CPU_MODEL=$(grep -m1 "model name" /proc/cpuinfo | awk '{print substr($0, index($0,$4))}')
-KERNEL=$(uname -r)
-info "system" "CPU: ${CPU_MODEL}"
-info "system" "MEMORY: ${MEMORY_SPEED}"
-info "system" "KERNEL: ${KERNEL}"
-MEMORY_SPEED=$(dmidecode -t 17 -q | grep -m 1 "Configured Memory Speed: [0-9]" | awk '{print substr($0, index($0,$4))}')
+  CPU_MODEL=$(grep -m1 "model name" /proc/cpuinfo | awk '{print substr($0, index($0,$4))}')
+  MEMORY_SPEED=$(dmidecode -t 17 -q | grep -m 1 "Configured Memory Speed: [0-9]" | awk '{print substr($0, index($0,$4))}')
+  KERNEL=$(uname -r)
+  info "system" "CPU: ${CPU_MODEL}"
+  info "system" "MEMORY: ${MEMORY_SPEED}"
+  info "system" "KERNEL: ${KERNEL}"
+  tsc=$(journalctl -k | grep 'tsc: Refined TSC clocksource calibration:' | awk '{print $11'})
+  if [ -n "${tsc}" ]; then
+    info "system" "TSC: ${tsc} Mhz"
+    tsc=$(echo ${tsc} | tr -d '.')
+    [ -n "${latency_cmdline}" ] && latency_cmdline="-t1 -T${tsc}000"
+  fi
 }
 
 ### MAIN
-check_args $#
+check_args ${args}
 check_root
 check_binary t/io_uring lscpu grep taskset cpupower awk tr xargs dmidecode
 detect_first_core
 
 info "##################################################"
 show_system
-for drive in ${args}; do
+for drive in ${drives}; do
   check_drive_exists ${drive}
   check_io_scheduler ${drive}
   check_sysblock_value ${drive} "queue/iostats" 0 # Ensure iostats are disabled
@@ -187,13 +226,13 @@ for drive in ${args}; do
 done
 
 check_poll_queue
-compute_nb_threads ${args}
+compute_nb_threads ${drives}
 check_scaling_governor
 check_idle_governor
 
 info "##################################################"
 echo
 
-cmdline="taskset -c ${taskset_cores} t/io_uring -b512 -d128 -c32 -s32 -p1 -F1 -B1 -n${nb_threads} ${args}"
+cmdline="taskset -c ${taskset_cores} t/io_uring -b512 -d128 -c32 -s32 -p1 -F1 -B1 -n${nb_threads} ${latency_cmdline} ${drives}"
 info "io_uring" "Running ${cmdline}"
 ${cmdline}
