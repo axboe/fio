@@ -162,11 +162,11 @@ show_device() {
 
 show_system() {
 CPU_MODEL=$(grep -m1 "model name" /proc/cpuinfo | awk '{print substr($0, index($0,$4))}')
-MEMORY_SPEED=$(dmidecode -t 17 -q |grep -m 1 "Configured Memory Speed: " | awk '{print substr($0, index($0,$4))}')
 KERNEL=$(uname -r)
 info "system" "CPU: ${CPU_MODEL}"
 info "system" "MEMORY: ${MEMORY_SPEED}"
 info "system" "KERNEL: ${KERNEL}"
+MEMORY_SPEED=$(dmidecode -t 17 -q | grep -m 1 "Configured Memory Speed: [0-9]" | awk '{print substr($0, index($0,$4))}')
 }
 
 ### MAIN
