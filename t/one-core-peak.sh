@@ -75,7 +75,7 @@ usage() {
 }
 
 check_args() {
-  local OPTIND h option
+  local OPTIND option
   while getopts "hl" option; do
     case "${option}" in
         h) # Show help
@@ -91,7 +91,7 @@ check_args() {
   done
   shift $((OPTIND-1))
   [ $# -eq 0 ] && fatal "Missing drive(s) as argument"
-  drives="$@"
+  drives="$*"
 }
 
 check_drive_exists() {
@@ -200,7 +200,7 @@ show_system() {
   info "system" "CPU: ${CPU_MODEL}"
   info "system" "MEMORY: ${MEMORY_SPEED}"
   info "system" "KERNEL: ${KERNEL}"
-  tsc=$(journalctl -k | grep 'tsc: Refined TSC clocksource calibration:' | awk '{print $11'})
+  tsc=$(journalctl -k | grep 'tsc: Refined TSC clocksource calibration:' | awk '{print $11}')
   if [ -n "${tsc}" ]; then
     info "system" "TSC: ${tsc} Mhz"
     tsc=$(echo ${tsc} | tr -d '.')
