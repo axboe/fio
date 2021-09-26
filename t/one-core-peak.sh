@@ -75,7 +75,7 @@ usage() {
 }
 
 check_args() {
-  local OPTIND h option
+  local OPTIND option
   while getopts "hl" option; do
     case "${option}" in
         h) # Show help
@@ -91,7 +91,7 @@ check_args() {
   done
   shift $((OPTIND-1))
   [ $# -eq 0 ] && fatal "Missing drive(s) as argument"
-  drives="$@"
+  drives="$*"
 }
 
 check_drive_exists() {
@@ -174,6 +174,7 @@ check_idle_governor() {
 }
 
 show_nvme() {
+  device="$1"
   device_name=$(block_dev_name $1)
   device_dir="/sys/block/${device_name}/device/"
   pci_addr=$(cat ${device_dir}/address)
@@ -186,11 +187,34 @@ show_nvme() {
   fw=$(cat ${device_dir}/firmware_rev | xargs) #xargs for trimming spaces
   serial=$(cat ${device_dir}/serial | xargs) #xargs for trimming spaces
   info ${device_name} "MODEL=${model} FW=${fw} serial=${serial} PCI=${pci_addr}@${link_speed} IRQ=${irq} NUMA=${numa} CPUS=${cpus} "
+  NCQA=$(nvme get-feature -H -f 0x7 ${device} |grep NCQA |cut -d ':' -f 2 | xargs)
+  NSQA=$(nvme get-feature -H -f 0x7 ${device} |grep NSQA |cut -d ':' -f 2 | xargs)
+  power_state=$(nvme get-feature -H -f 0x2 ${device} | grep PS |cut -d ":" -f 2 | xargs)
+  apste=$(nvme get-feature -H -f 0xc ${device} | grep APSTE |cut -d ":" -f 2 | xargs)
+  temp=$(nvme smart-log ${device} |grep 'temperature' |cut -d ':' -f 2 |xargs)
+  info ${device_name} "Temp:${temp}, Autonomous Power State Transition:${apste}, PowerState:${power_state}, Completion Queues:${NCQA}, Submission Queues:${NSQA}"
 }
 
 show_device() {
   device_name=$(block_dev_name $1)
   is_nvme $1 && show_nvme $1
+}
+
+show_kernel_config_item() {
+  config_item="CONFIG_$1"
+  config_file="/boot/config-$(uname -r)"
+  if [ ! -f "${config_file}" ]; then
+    config_file='/proc/config.gz'
+    if [ ! -f "${config_file}" ]; then
+      return
+    fi
+  fi
+  status=$(zgrep ${config_item}= ${config_file})
+  if [ -z "${status}" ]; then
+    echo "${config_item}=N"
+  else
+    echo "${config_item}=$(echo ${status} | cut -d '=' -f 2)"
+  fi
 }
 
 show_system() {
@@ -200,7 +224,10 @@ show_system() {
   info "system" "CPU: ${CPU_MODEL}"
   info "system" "MEMORY: ${MEMORY_SPEED}"
   info "system" "KERNEL: ${KERNEL}"
-  tsc=$(journalctl -k | grep 'tsc: Refined TSC clocksource calibration:' | awk '{print $11'})
+  for config_item in BLK_CGROUP_IOCOST HZ; do
+    info "system" "KERNEL: $(show_kernel_config_item ${config_item})"
+  done
+  tsc=$(journalctl -k | grep 'tsc: Refined TSC clocksource calibration:' | awk '{print $11}')
   if [ -n "${tsc}" ]; then
     info "system" "TSC: ${tsc} Mhz"
     tsc=$(echo ${tsc} | tr -d '.')
@@ -211,7 +238,7 @@ show_system() {
 ### MAIN
 check_args ${args}
 check_root
-check_binary t/io_uring lscpu grep taskset cpupower awk tr xargs dmidecode
+check_binary t/io_uring lscpu grep taskset cpupower awk tr xargs dmidecode nvme
 detect_first_core
 
 info "##################################################"
