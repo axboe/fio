@@ -193,6 +193,23 @@ show_device() {
   is_nvme $1 && show_nvme $1
 }
 
+show_kernel_config_item() {
+  config_item="CONFIG_$1"
+  config_file="/boot/config-$(uname -r)"
+  if [ ! -f "${config_file}" ]; then
+    config_file='/proc/config.gz'
+    if [ ! -f "${config_file}" ]; then
+      return
+    fi
+  fi
+  status=$(zgrep ${config_item}= ${config_file})
+  if [ -z "${status}" ]; then
+    echo "${config_item}=N"
+  else
+    echo "${config_item}=$(echo ${status} | cut -d '=' -f 2)"
+  fi
+}
+
 show_system() {
   CPU_MODEL=$(grep -m1 "model name" /proc/cpuinfo | awk '{print substr($0, index($0,$4))}')
   MEMORY_SPEED=$(dmidecode -t 17 -q | grep -m 1 "Configured Memory Speed: [0-9]" | awk '{print substr($0, index($0,$4))}')
@@ -200,6 +217,9 @@ show_system() {
   info "system" "CPU: ${CPU_MODEL}"
   info "system" "MEMORY: ${MEMORY_SPEED}"
   info "system" "KERNEL: ${KERNEL}"
+  for config_item in BLK_CGROUP_IOCOST HZ; do
+    info "system" "KERNEL: $(show_kernel_config_item ${config_item})"
+  done
   tsc=$(journalctl -k | grep 'tsc: Refined TSC clocksource calibration:' | awk '{print $11}')
   if [ -n "${tsc}" ]; then
     info "system" "TSC: ${tsc} Mhz"
