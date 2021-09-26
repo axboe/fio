@@ -4,7 +4,7 @@ args=$*
 first_cores=""
 taskset_cores=""
 first_cores_count=0
-nb_threads=4 #default from the benchmark
+nb_threads=1
 drives=""
 
 # Default options
@@ -39,11 +39,22 @@ check_binary() {
   done
 }
 
-
 detect_first_core() {
+  cpu_to_search="0"
+  if [ "${#drives[@]}" -eq 1 ]; then
+    device_name=$(block_dev_name ${drives[0]})
+    device_dir="/sys/block/${device_name}/device/"
+    pci_addr=$(cat ${device_dir}/address)
+    pci_dir="/sys/bus/pci/devices/${pci_addr}/"
+    cpu_to_search=$(cat ${pci_dir}/local_cpulist | cut -d"," -f 1 | cut -d"-" -f 1)
+  else
+    hint 'Passed multiple devices. Running on the first core.'
+  fi
+  core_to_run=$(lscpu  --all -pSOCKET,CORE,CPU | grep ",$cpu_to_search\$" | cut -d"," -f1-2)
+
   # Detect which logical cpus belongs to the first physical core
   # If Hyperthreading is enabled, two cores are returned
-  cpus=$(lscpu  --all -pSOCKET,CORE,CPU |grep "0,0")
+  cpus=$(lscpu  --all -pSOCKET,CORE,CPU | grep "$core_to_run")
   for cpu in ${cpus}; do
     IFS=','
     # shellcheck disable=SC2206
