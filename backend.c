@@ -1920,12 +1920,12 @@ static void *thread_main(void *data)
 		if (td->error || td->terminate)
 			break;
 
+		clear_io_state(td, 0);
+		
 		if (!o->do_verify ||
 		    o->verify == VERIFY_NONE ||
 		    td_ioengine_flagged(td, FIO_UNIDIR))
 			continue;
-
-		clear_io_state(td, 0);
 
 		fio_gettime(&td->start, NULL);
 
