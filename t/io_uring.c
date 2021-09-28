@@ -684,6 +684,11 @@ static void arm_sig_int(void)
 	act.sa_handler = sig_int;
 	act.sa_flags = SA_RESTART;
 	sigaction(SIGINT, &act, NULL);
+
+	/* Windows uses SIGBREAK as a quit signal from other applications */
+#ifdef WIN32
+	sigaction(SIGBREAK, &act, NULL);
+#endif
 }
 
 static int setup_ring(struct submitter *s)

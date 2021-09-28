@@ -2457,6 +2457,11 @@ static void set_sig_handlers(void)
 	};
 
 	sigaction(SIGINT, &act, NULL);
+
+	/* Windows uses SIGBREAK as a quit signal from other applications */
+#ifdef WIN32
+	sigaction(SIGBREAK, &act, NULL);
+#endif
 }
 
 void fio_server_destroy_sk_key(void)
