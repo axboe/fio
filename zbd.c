@@ -1204,6 +1204,19 @@ static uint32_t pick_random_zone_idx(const struct fio_file *f,
 		f->io_size;
 }
 
+static bool any_io_in_flight(void)
+{
+	struct thread_data *td;
+	int i;
+
+	for_each_td(td, i) {
+		if (td->io_u_in_flight)
+			return true;
+	}
+
+	return false;
+}
+
 /*
  * Modify the offset of an I/O unit that does not refer to an open zone such
  * that it refers to an open zone. Close an open zone and open a new zone if
@@ -1223,6 +1236,8 @@ static struct fio_zone_info *zbd_convert_to_open_zone(struct thread_data *td,
 	uint32_t zone_idx, new_zone_idx;
 	int i;
 	bool wait_zone_close;
+	bool in_flight;
+	bool should_retry = true;
 
 	assert(is_valid_offset(f, io_u->offset));
 
@@ -1337,6 +1352,7 @@ open_other_zone:
 		io_u_quiesce(td);
 	}
 
+retry:
 	/* Zone 'z' is full, so try to open a new zone. */
 	for (i = f->io_size / zbdi->zone_size; i > 0; i--) {
 		zone_idx++;
@@ -1376,6 +1392,24 @@ open_other_zone:
 			goto out;
 		pthread_mutex_lock(&zbdi->mutex);
 	}
+
+	/*
+	 * When any I/O is in-flight or when all I/Os in-flight get completed,
+	 * the I/Os might have closed zones then retry the steps to open a zone.
+	 * Before retry, call io_u_quiesce() to complete in-flight writes.
+	 */
+	in_flight = any_io_in_flight();
+	if (in_flight || should_retry) {
+		dprint(FD_ZBD, "%s(%s): wait zone close and retry open zones\n",
+		       __func__, f->file_name);
+		pthread_mutex_unlock(&zbdi->mutex);
+		zone_unlock(z);
+		io_u_quiesce(td);
+		zone_lock(td, f, z);
+		should_retry = in_flight;
+		goto retry;
+	}
+
 	pthread_mutex_unlock(&zbdi->mutex);
 	zone_unlock(z);
 	dprint(FD_ZBD, "%s(%s): did not open another zone\n", __func__,
