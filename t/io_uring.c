@@ -110,6 +110,8 @@ static int nthreads = 1;
 static int stats = 0;		/* generate IO stats */
 static unsigned long tsc_rate;
 
+#define TSC_RATE_FILE	"tsc-rate"
+
 static int vectored = 1;
 
 static float plist[] = { 1.0, 5.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0,
@@ -816,6 +818,50 @@ static void usage(char *argv, int status)
 	exit(status);
 }
 
+static void read_tsc_rate(void)
+{
+	char buffer[32];
+	int fd, ret;
+
+	if (tsc_rate)
+		return;
+
+	fd = open(TSC_RATE_FILE, O_RDONLY);
+	if (fd < 0)
+		return;
+
+	ret = read(fd, buffer, sizeof(buffer));
+	if (ret < 0) {
+		close(fd);
+		return;
+	}
+
+	tsc_rate = strtoul(buffer, NULL, 10);
+	printf("Using TSC rate %luHz\n", tsc_rate);
+	close(fd);
+}
+
+static void write_tsc_rate(void)
+{
+	char buffer[32];
+	struct stat sb;
+	int fd, ret;
+
+	if (!stat(TSC_RATE_FILE, &sb))
+		return;
+
+	fd = open(TSC_RATE_FILE, O_WRONLY | O_CREAT, 0644);
+	if (fd < 0)
+		return;
+
+	memset(buffer, 0, sizeof(buffer));
+	sprintf(buffer, "%lu", tsc_rate);
+	ret = write(fd, buffer, strlen(buffer));
+	if (ret < 0)
+		perror("write");
+	close(fd);
+}
+
 int main(int argc, char *argv[])
 {
 	struct submitter *s;
@@ -881,6 +927,7 @@ int main(int argc, char *argv[])
 			return 1;
 #endif
 			tsc_rate = strtoul(optarg, NULL, 10);
+			write_tsc_rate();
 			break;
 		case 'h':
 		case '?':
@@ -889,6 +936,9 @@ int main(int argc, char *argv[])
 			break;
 		}
 	}
+
+	if (stats)
+		read_tsc_rate();
 
 	if (batch_complete > depth)
 		batch_complete = depth;
