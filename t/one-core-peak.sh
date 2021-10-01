@@ -192,18 +192,21 @@ show_nvme() {
   pci_dir="/sys/bus/pci/devices/${pci_addr}/"
   link_speed=$(cat ${pci_dir}/current_link_speed)
   irq=$(cat ${pci_dir}/irq)
-  numa=$(cat ${pci_dir}/numa_node)
+  numa=$([ -f ${pci_dir}/numa_node ] && cat ${pci_dir}/numa_node || echo "off")
   cpus=$(cat ${pci_dir}/local_cpulist)
   model=$(cat ${device_dir}/model | xargs) #xargs for trimming spaces
   fw=$(cat ${device_dir}/firmware_rev | xargs) #xargs for trimming spaces
   serial=$(cat ${device_dir}/serial | xargs) #xargs for trimming spaces
   info ${device_name} "MODEL=${model} FW=${fw} serial=${serial} PCI=${pci_addr}@${link_speed} IRQ=${irq} NUMA=${numa} CPUS=${cpus} "
-  NCQA=$(nvme get-feature -H -f 0x7 ${device} |grep NCQA |cut -d ':' -f 2 | xargs)
-  NSQA=$(nvme get-feature -H -f 0x7 ${device} |grep NSQA |cut -d ':' -f 2 | xargs)
-  power_state=$(nvme get-feature -H -f 0x2 ${device} | grep PS |cut -d ":" -f 2 | xargs)
-  apste=$(nvme get-feature -H -f 0xc ${device} | grep APSTE |cut -d ":" -f 2 | xargs)
-  temp=$(nvme smart-log ${device} |grep 'temperature' |cut -d ':' -f 2 |xargs)
-  info ${device_name} "Temp:${temp}, Autonomous Power State Transition:${apste}, PowerState:${power_state}, Completion Queues:${NCQA}, Submission Queues:${NSQA}"
+  which nvme &> /dev/null
+  if [ $? -eq 0 ]; then
+    NCQA=$(nvme get-feature -H -f 0x7 ${device} |grep NCQA |cut -d ':' -f 2 | xargs)
+    NSQA=$(nvme get-feature -H -f 0x7 ${device} |grep NSQA |cut -d ':' -f 2 | xargs)
+    power_state=$(nvme get-feature -H -f 0x2 ${device} | grep PS |cut -d ":" -f 2 | xargs)
+    apste=$(nvme get-feature -H -f 0xc ${device} | grep APSTE |cut -d ":" -f 2 | xargs)
+    temp=$(nvme smart-log ${device} |grep 'temperature' |cut -d ':' -f 2 |xargs)
+    info ${device_name} "Temp:${temp}, Autonomous Power State Transition:${apste}, PowerState:${power_state}, Completion Queues:${NCQA}, Submission Queues:${NSQA}"
+  fi
 }
 
 show_device() {
@@ -249,7 +252,7 @@ show_system() {
 ### MAIN
 check_args ${args}
 check_root
-check_binary t/io_uring lscpu grep taskset cpupower awk tr xargs dmidecode nvme
+check_binary t/io_uring lscpu grep taskset cpupower awk tr xargs dmidecode
 detect_first_core
 
 info "##################################################"
