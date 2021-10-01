@@ -192,7 +192,7 @@ show_nvme() {
   pci_dir="/sys/bus/pci/devices/${pci_addr}/"
   link_speed=$(cat ${pci_dir}/current_link_speed)
   irq=$(cat ${pci_dir}/irq)
-  numa=$(cat ${pci_dir}/numa_node)
+  numa=$([ -f ${pci_dir}/numa_node ] && cat ${pci_dir}/numa_node || echo "off")
   cpus=$(cat ${pci_dir}/local_cpulist)
   model=$(cat ${device_dir}/model | xargs) #xargs for trimming spaces
   fw=$(cat ${device_dir}/firmware_rev | xargs) #xargs for trimming spaces
