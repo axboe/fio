@@ -115,7 +115,7 @@ static unsigned long tsc_rate;
 static int vectored = 1;
 
 static float plist[] = { 1.0, 5.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0,
-			80.0, 90.0, 95.0, 99.9, 99.5, 99.9, 99.95, 99.99 };
+			80.0, 90.0, 95.0, 99.0, 99.5, 99.9, 99.95, 99.99 };
 static int plist_len = 17;
 
 static unsigned long cycles_to_nsec(unsigned long cycles)
