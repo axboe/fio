@@ -104,7 +104,7 @@ static void reset_io_counters(struct thread_data *td, int all)
 	/*
 	 * reset file done count if we are to start over
 	 */
-	if (td->o.time_based || td->o.loops || td->o.do_verify)
+	if (td->o.time_based || td->loops > 1 || td->o.do_verify)
 		td->nr_done_files = 0;
 }
 
