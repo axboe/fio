@@ -701,23 +701,21 @@ static void *submitter_aio_fn(void *data)
 		}
 		prepped = 0;
 
-		if (to_wait) {
+		while (to_wait) {
 			int r;
 
-			do {
-				s->calls++;
-				r = io_getevents(s->aio_ctx, to_wait, to_wait, events, NULL);
-				if (r < 0) {
-					perror("io_getevents");
-					break;
-				} else if (r != to_wait) {
-					printf("r=%d, wait=%d\n", r, to_wait);
-					break;
-				}
-				r = reap_events_aio(s, events, r);
-				s->reaps += r;
-				to_wait -= r;
-			} while (to_wait);
+			s->calls++;
+			r = io_getevents(s->aio_ctx, to_wait, to_wait, events, NULL);
+			if (r < 0) {
+				perror("io_getevents");
+				break;
+			} else if (r != to_wait) {
+				printf("r=%d, wait=%d\n", r, to_wait);
+				break;
+			}
+			r = reap_events_aio(s, events, r);
+			s->reaps += r;
+			to_wait -= r;
 		}
 	} while (!s->finish);
 
