@@ -102,6 +102,7 @@ struct submitter {
 
 static struct submitter *submitter;
 static volatile int finish;
+static int stats_running;
 
 static int depth = DEPTH;
 static int batch_submit = BATCH_SUBMIT;
@@ -442,7 +443,7 @@ static void init_io(struct submitter *s, unsigned index)
 	sqe->ioprio = 0;
 	sqe->off = offset;
 	sqe->user_data = (unsigned long) f->fileno;
-	if (stats)
+	if (stats && stats_running)
 		sqe->user_data |= ((unsigned long)s->clock_index << 32);
 }
 
@@ -527,8 +528,8 @@ static int reap_events_uring(struct submitter *s)
 					stat_nr = 0;
 				}
 				last_idx = clock_index;
-			}
-			stat_nr++;
+			} else if (clock_index)
+				stat_nr++;
 		}
 		reaped++;
 		head++;
@@ -559,7 +560,7 @@ static int submitter_init(struct submitter *s)
 	if (stats) {
 		nr_batch = roundup_pow2(depth / batch_submit);
 		s->clock_batch = calloc(nr_batch, sizeof(unsigned long));
-		s->clock_index = 0;
+		s->clock_index = 1;
 
 		s->plat = calloc(PLAT_NR, sizeof(unsigned long));
 	} else {
@@ -602,7 +603,7 @@ static int prep_more_ios_aio(struct submitter *s, int max_ios, struct iocb *iocb
 				s->iovecs[index].iov_len, offset);
 
 		data = f->fileno;
-		if (stats)
+		if (stats && stats_running)
 			data |= ((unsigned long) s->clock_index << 32);
 		iocb->data = (void *) (uintptr_t) data;
 		index++;
@@ -633,8 +634,8 @@ static int reap_events_aio(struct submitter *s, struct io_event *events, int evs
 					stat_nr = 0;
 				}
 				last_idx = clock_index;
-			}
-			stat_nr++;
+			} else if (clock_index)
+				stat_nr++;
 		}
 		reaped++;
 		evs--;
@@ -1281,6 +1282,11 @@ int main(int argc, char *argv[])
 		/* don't print partial run, if interrupted by signal */
 		if (finish)
 			break;
+
+		/* one second in to the run, enable stats */
+		if (stats)
+			stats_running = 1;
+
 		for (j = 0; j < nthreads; j++) {
 			this_done += s->done;
 			this_call += s->calls;
