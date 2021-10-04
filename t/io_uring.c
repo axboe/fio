@@ -1277,6 +1277,10 @@ int main(int argc, char *argv[])
 		unsigned long iops, bw;
 
 		sleep(1);
+
+		/* don't print partial run, if interrupted by signal */
+		if (finish)
+			break;
 		for (j = 0; j < nthreads; j++) {
 			this_done += s->done;
 			this_call += s->calls;
