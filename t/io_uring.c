@@ -7,6 +7,10 @@
 #include <inttypes.h>
 #include <math.h>
 
+#ifdef CONFIG_LIBAIO
+#include <libaio.h>
+#endif
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
@@ -86,6 +90,10 @@ struct submitter {
 	int clock_index;
 	unsigned long *plat;
 
+#ifdef CONFIG_LIBAIO
+	io_context_t aio_ctx;
+#endif
+
 	struct file files[MAX_FDS];
 	unsigned nr_files;
 	unsigned cur_file;
@@ -108,6 +116,8 @@ static int sq_thread_cpu = -1;	/* pin above thread to this CPU */
 static int do_nop = 0;		/* no-op SQ ring commands */
 static int nthreads = 1;
 static int stats = 0;		/* generate IO stats */
+static int aio = 0;		/* use libaio */
+
 static unsigned long tsc_rate;
 
 #define TSC_RATE_FILE	"tsc-rate"
@@ -436,7 +446,7 @@ static void init_io(struct submitter *s, unsigned index)
 		sqe->user_data |= ((unsigned long)s->clock_index << 32);
 }
 
-static int prep_more_ios(struct submitter *s, int max_ios)
+static int prep_more_ios_uring(struct submitter *s, int max_ios)
 {
 	struct io_sq_ring *ring = &s->sq_ring;
 	unsigned index, tail, next_tail, prepped = 0;
@@ -481,7 +491,7 @@ static int get_file_size(struct file *f)
 	return -1;
 }
 
-static int reap_events(struct submitter *s)
+static int reap_events_uring(struct submitter *s)
 {
 	struct io_cq_ring *ring = &s->cq_ring;
 	struct io_uring_cqe *cqe;
@@ -534,11 +544,9 @@ static int reap_events(struct submitter *s)
 	return reaped;
 }
 
-static void *submitter_fn(void *data)
+static int submitter_init(struct submitter *s)
 {
-	struct submitter *s = data;
-	struct io_sq_ring *ring = &s->sq_ring;
-	int i, ret, prepped, nr_batch;
+	int i, nr_batch;
 
 	s->tid = gettid();
 	printf("submitter=%d\n", s->tid);
@@ -560,6 +568,172 @@ static void *submitter_fn(void *data)
 		nr_batch = 0;
 	}
 
+	return nr_batch;
+}
+
+#ifdef CONFIG_LIBAIO
+static int prep_more_ios_aio(struct submitter *s, int max_ios, struct iocb *iocbs)
+{
+	unsigned long offset, data;
+	struct file *f;
+	unsigned index;
+	long r;
+
+	index = 0;
+	while (index < max_ios) {
+		struct iocb *iocb = &iocbs[index];
+
+		if (s->nr_files == 1) {
+			f = &s->files[0];
+		} else {
+			f = &s->files[s->cur_file];
+			if (f->pending_ios >= file_depth(s)) {
+				s->cur_file++;
+				if (s->cur_file == s->nr_files)
+					s->cur_file = 0;
+				f = &s->files[s->cur_file];
+			}
+		}
+		f->pending_ios++;
+
+		r = lrand48();
+		offset = (r % (f->max_blocks - 1)) * bs;
+		io_prep_pread(iocb, f->real_fd, s->iovecs[index].iov_base,
+				s->iovecs[index].iov_len, offset);
+
+		data = f->fileno;
+		if (stats)
+			data |= ((unsigned long) s->clock_index << 32);
+		iocb->data = (void *) (uintptr_t) data;
+		index++;
+	}
+	return index;
+}
+
+static int reap_events_aio(struct submitter *s, struct io_event *events, int evs)
+{
+	int last_idx = -1, stat_nr = 0;
+	int reaped = 0;
+
+	while (evs) {
+		unsigned long data = (uintptr_t) events[reaped].data;
+		struct file *f = &s->files[data & 0xffffffff];
+
+		f->pending_ios--;
+		if (events[reaped].res != bs) {
+			printf("io: unexpected ret=%ld\n", events[reaped].res);
+			return -1;
+		}
+		if (stats) {
+			int clock_index = data >> 32;
+
+			if (last_idx != clock_index) {
+				if (last_idx != -1) {
+					add_stat(s, last_idx, stat_nr);
+					stat_nr = 0;
+				}
+				last_idx = clock_index;
+			}
+			stat_nr++;
+		}
+		reaped++;
+		evs--;
+	}
+
+	if (stat_nr)
+		add_stat(s, last_idx, stat_nr);
+
+	s->inflight -= reaped;
+	s->done += reaped;
+	return reaped;
+}
+
+static void *submitter_aio_fn(void *data)
+{
+	struct submitter *s = data;
+	int i, ret, prepped, nr_batch;
+	struct iocb **iocbsptr;
+	struct iocb *iocbs;
+	struct io_event *events;
+
+	nr_batch = submitter_init(s);
+
+	iocbsptr = calloc(depth, sizeof(struct iocb *));
+	iocbs = calloc(depth, sizeof(struct iocb));
+	events = calloc(depth, sizeof(struct io_event));
+
+	for (i = 0; i < depth; i++)
+		iocbsptr[i] = &iocbs[i];
+
+	prepped = 0;
+	do {
+		int to_wait, to_submit, to_prep;
+
+		if (!prepped && s->inflight < depth) {
+			to_prep = min(depth - s->inflight, batch_submit);
+			prepped = prep_more_ios_aio(s, to_prep, iocbs);
+#ifdef ARCH_HAVE_CPU_CLOCK
+			if (prepped && stats) {
+				s->clock_batch[s->clock_index] = get_cpu_clock();
+				s->clock_index = (s->clock_index + 1) & (nr_batch - 1);
+			}
+#endif
+		}
+		s->inflight += prepped;
+		to_submit = prepped;
+
+		if (to_submit && (s->inflight + to_submit <= depth))
+			to_wait = 0;
+		else
+			to_wait = min(s->inflight + to_submit, batch_complete);
+
+		ret = io_submit(s->aio_ctx, to_submit, iocbsptr);
+		s->calls++;
+		if (ret < 0) {
+			perror("io_submit");
+			break;
+		} else if (ret != to_submit) {
+			printf("submitted %d, wanted %d\n", ret, to_submit);
+			break;
+		}
+		prepped = 0;
+
+		if (to_wait) {
+			int r;
+
+			do {
+				s->calls++;
+				r = io_getevents(s->aio_ctx, to_wait, to_wait, events, NULL);
+				if (r < 0) {
+					perror("io_getevents");
+					break;
+				} else if (r != to_wait) {
+					printf("r=%d, wait=%d\n", r, to_wait);
+					break;
+				}
+				r = reap_events_aio(s, events, r);
+				s->reaps += r;
+				to_wait -= r;
+			} while (to_wait);
+		}
+	} while (!s->finish);
+
+	free(iocbsptr);
+	free(iocbs);
+	free(events);
+	finish = 1;
+	return NULL;
+}
+#endif
+
+static void *submitter_uring_fn(void *data)
+{
+	struct submitter *s = data;
+	struct io_sq_ring *ring = &s->sq_ring;
+	int ret, prepped, nr_batch;
+
+	nr_batch = submitter_init(s);
+
 	prepped = 0;
 	do {
 		int to_wait, to_submit, this_reap, to_prep;
@@ -567,7 +741,7 @@ static void *submitter_fn(void *data)
 
 		if (!prepped && s->inflight < depth) {
 			to_prep = min(depth - s->inflight, batch_submit);
-			prepped = prep_more_ios(s, to_prep);
+			prepped = prep_more_ios_uring(s, to_prep);
 #ifdef ARCH_HAVE_CPU_CLOCK
 			if (prepped && stats) {
 				s->clock_batch[s->clock_index] = get_cpu_clock();
@@ -612,7 +786,8 @@ submit:
 		this_reap = 0;
 		do {
 			int r;
-			r = reap_events(s);
+
+			r = reap_events_uring(s);
 			if (r == -1) {
 				s->finish = 1;
 				break;
@@ -689,6 +864,34 @@ static void arm_sig_int(void)
 	/* Windows uses SIGBREAK as a quit signal from other applications */
 #ifdef WIN32
 	sigaction(SIGBREAK, &act, NULL);
+#endif
+}
+
+static int setup_aio(struct submitter *s)
+{
+#ifdef CONFIG_LIBAIO
+	if (polled) {
+		fprintf(stderr, "aio does not support polled IO\n");
+		polled = 0;
+	}
+	if (sq_thread_poll) {
+		fprintf(stderr, "aio does not support SQPOLL IO\n");
+		sq_thread_poll = 0;
+	}
+	if (do_nop) {
+		fprintf(stderr, "aio does not support polled IO\n");
+		do_nop = 0;
+	}
+	if (fixedbufs || register_files) {
+		fprintf(stderr, "aio does not support registered files or buffers\n");
+		fixedbufs = register_files = 0;
+	}
+
+	return io_queue_init(depth, &s->aio_ctx);
+#else
+	fprintf(stderr, "Legacy AIO not available on this system/build\n");
+	errno = EINVAL;
+	return -1;
 #endif
 }
 
@@ -811,9 +1014,10 @@ static void usage(char *argv, int status)
 		" -O <bool> : Use O_DIRECT, default %d\n"
 		" -N <bool> : Perform just no-op requests, default %d\n"
 		" -t <bool> : Track IO latencies, default %d\n"
-		" -T <int>  : TSC rate in HZ\n",
+		" -T <int>  : TSC rate in HZ\n"
+		" -a <bool> : Use legacy aio, default %d\n",
 		argv, DEPTH, BATCH_SUBMIT, BATCH_COMPLETE, BS, polled,
-		fixedbufs, register_files, nthreads, !buffered, do_nop, stats);
+		fixedbufs, register_files, nthreads, !buffered, do_nop, stats, aio);
 	exit(status);
 }
 
@@ -873,8 +1077,11 @@ int main(int argc, char *argv[])
 	if (!do_nop && argc < 2)
 		usage(argv[0], 1);
 
-	while ((opt = getopt(argc, argv, "d:s:c:b:p:B:F:n:N:O:t:T:h?")) != -1) {
+	while ((opt = getopt(argc, argv, "d:s:c:b:p:B:F:n:N:O:t:T:a:h?")) != -1) {
 		switch (opt) {
+		case 'a':
+			aio = !!atoi(optarg);
+			break;
 		case 'd':
 			depth = atoi(optarg);
 			break;
@@ -1032,19 +1239,32 @@ int main(int argc, char *argv[])
 	for (j = 0; j < nthreads; j++) {
 		s = get_submitter(j);
 
-		err = setup_ring(s);
+		if (!aio)
+			err = setup_ring(s);
+		else
+			err = setup_aio(s);
 		if (err) {
 			printf("ring setup failed: %s, %d\n", strerror(errno), err);
 			return 1;
 		}
 	}
 	s = get_submitter(0);
-	printf("polled=%d, fixedbufs=%d, register_files=%d, buffered=%d", polled, fixedbufs, register_files, buffered);
-	printf(" QD=%d, sq_ring=%d, cq_ring=%d\n", depth, *s->sq_ring.ring_entries, *s->cq_ring.ring_entries);
+	printf("polled=%d, fixedbufs=%d, register_files=%d, buffered=%d, QD=%d\n", polled, fixedbufs, register_files, buffered, depth);
+	if (!aio)
+		printf("Engine=io_uring, sq_ring=%d, cq_ring=%d\n", *s->sq_ring.ring_entries, *s->cq_ring.ring_entries);
+#ifdef CONFIG_LIBAIO
+	else
+		printf("Engine=aio, ctx=%p\n", &s->aio_ctx);
+#endif
 
 	for (j = 0; j < nthreads; j++) {
 		s = get_submitter(j);
-		pthread_create(&s->thread, NULL, submitter_fn, s);
+		if (!aio)
+			pthread_create(&s->thread, NULL, submitter_uring_fn, s);
+#ifdef CONFIG_LIBAIO
+		else
+			pthread_create(&s->thread, NULL, submitter_aio_fn, s);
+#endif
 	}
 
 	fdepths = malloc(8 * s->nr_files * nthreads);
