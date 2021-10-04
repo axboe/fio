@@ -309,10 +309,12 @@ static void add_stat(struct submitter *s, int clock_index, int nr)
 	unsigned long cycles;
 	unsigned int pidx;
 
-	cycles = get_cpu_clock();
-	cycles -= s->clock_batch[clock_index];
-	pidx = plat_val_to_idx(cycles);
-	s->plat[pidx] += nr;
+	if (!s->finish && clock_index) {
+		cycles = get_cpu_clock();
+		cycles -= s->clock_batch[clock_index];
+		pidx = plat_val_to_idx(cycles);
+		s->plat[pidx] += nr;
+	}
 #endif
 }
 
