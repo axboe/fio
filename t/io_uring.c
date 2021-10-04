@@ -519,7 +519,6 @@ static int reap_events(struct submitter *s)
 				last_idx = clock_index;
 			}
 			stat_nr++;
-			add_stat(s, clock_index, 1);
 		}
 		reaped++;
 		head++;
