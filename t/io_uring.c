@@ -552,7 +552,7 @@ static int submitter_init(struct submitter *s)
 	int i, nr_batch;
 
 	s->tid = gettid();
-	printf("submitter=%d\n", s->tid);
+	printf("submitter=%d, tid=%d\n", s->index, s->tid);
 
 	srand48(pthread_self());
 
