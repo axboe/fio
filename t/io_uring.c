@@ -951,7 +951,6 @@ static int setup_ring(struct submitter *s)
 	ptr = mmap(0, p.sq_off.array + p.sq_entries * sizeof(__u32),
 			PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, fd,
 			IORING_OFF_SQ_RING);
-	printf("sq_ring ptr = 0x%p\n", ptr);
 	sring->head = ptr + p.sq_off.head;
 	sring->tail = ptr + p.sq_off.tail;
 	sring->ring_mask = ptr + p.sq_off.ring_mask;
@@ -963,12 +962,10 @@ static int setup_ring(struct submitter *s)
 	s->sqes = mmap(0, p.sq_entries * sizeof(struct io_uring_sqe),
 			PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, fd,
 			IORING_OFF_SQES);
-	printf("sqes ptr    = 0x%p\n", s->sqes);
 
 	ptr = mmap(0, p.cq_off.cqes + p.cq_entries * sizeof(struct io_uring_cqe),
 			PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, fd,
 			IORING_OFF_CQ_RING);
-	printf("cq_ring ptr = 0x%p\n", ptr);
 	cring->head = ptr + p.cq_off.head;
 	cring->tail = ptr + p.cq_off.tail;
 	cring->ring_mask = ptr + p.cq_off.ring_mask;
@@ -1253,10 +1250,8 @@ int main(int argc, char *argv[])
 	printf("polled=%d, fixedbufs=%d, register_files=%d, buffered=%d, QD=%d\n", polled, fixedbufs, register_files, buffered, depth);
 	if (!aio)
 		printf("Engine=io_uring, sq_ring=%d, cq_ring=%d\n", *s->sq_ring.ring_entries, *s->cq_ring.ring_entries);
-#ifdef CONFIG_LIBAIO
 	else
-		printf("Engine=aio, ctx=%p\n", &s->aio_ctx);
-#endif
+		printf("Engine=aio\n");
 
 	for (j = 0; j < nthreads; j++) {
 		s = get_submitter(j);
