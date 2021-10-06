@@ -238,7 +238,7 @@ show_system() {
   info "system" "CPU: ${CPU_MODEL}"
   info "system" "MEMORY: ${MEMORY_SPEED}"
   info "system" "KERNEL: ${KERNEL}"
-  for config_item in BLK_CGROUP_IOCOST HZ; do
+  for config_item in BLK_CGROUP HZ; do
     info "system" "KERNEL: $(show_kernel_config_item ${config_item})"
   done
   tsc=$(journalctl -k | grep 'tsc: Refined TSC clocksource calibration:' | awk '{print $11}')
