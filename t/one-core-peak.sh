@@ -241,6 +241,7 @@ show_system() {
   for config_item in BLK_CGROUP BLK_WBT_MQ HZ; do
     info "system" "KERNEL: $(show_kernel_config_item ${config_item})"
   done
+  info "system" "KERNEL: $(cat /proc/cmdline)"
   tsc=$(journalctl -k | grep 'tsc: Refined TSC clocksource calibration:' | awk '{print $11}')
   if [ -n "${tsc}" ]; then
     info "system" "TSC: ${tsc} Mhz"
