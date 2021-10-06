@@ -152,7 +152,7 @@ check_sysblock_value() {
   sys_block_dir=$(get_sys_block_dir ${device_name})
   target_file="${sys_block_dir}/$2"
   value=$3
-  [ -f "${target_file}" ] || fatal "Cannot find ${target_file} for ${device_name}"
+  [ -f "${target_file}" ] || return
   content=$(cat ${target_file})
   if [ "${content}" != "${value}" ]; then
     info "${device_name}" "${target_file} set to ${value}."
@@ -238,7 +238,7 @@ show_system() {
   info "system" "CPU: ${CPU_MODEL}"
   info "system" "MEMORY: ${MEMORY_SPEED}"
   info "system" "KERNEL: ${KERNEL}"
-  for config_item in BLK_CGROUP HZ; do
+  for config_item in BLK_CGROUP BLK_WBT_MQ HZ; do
     info "system" "KERNEL: $(show_kernel_config_item ${config_item})"
   done
   tsc=$(journalctl -k | grep 'tsc: Refined TSC clocksource calibration:' | awk '{print $11}')
@@ -263,6 +263,7 @@ for drive in ${drives}; do
   check_sysblock_value ${drive} "queue/iostats" 0 # Ensure iostats are disabled
   check_sysblock_value ${drive} "queue/nomerges" 2 # Ensure merge are disabled
   check_sysblock_value ${drive} "queue/io_poll" 1 # Ensure io_poll is enabled
+  check_sysblock_value ${drive} "queue/wbt_lat_usec" 0 # Disabling wbt lat
   show_device ${drive}
 done
 
