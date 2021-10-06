@@ -238,7 +238,7 @@ show_system() {
   info "system" "CPU: ${CPU_MODEL}"
   info "system" "MEMORY: ${MEMORY_SPEED}"
   info "system" "KERNEL: ${KERNEL}"
-  for config_item in BLK_CGROUP BLK_WBT_MQ HZ; do
+  for config_item in BLK_CGROUP BLK_WBT_MQ HZ RETPOLINE PAGE_TABLE_ISOLATION; do
     info "system" "KERNEL: $(show_kernel_config_item ${config_item})"
   done
   info "system" "KERNEL: $(cat /proc/cmdline)"
