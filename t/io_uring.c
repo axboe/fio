@@ -118,6 +118,7 @@ static int do_nop = 0;		/* no-op SQ ring commands */
 static int nthreads = 1;
 static int stats = 0;		/* generate IO stats */
 static int aio = 0;		/* use libaio */
+static int runtime = 0;	/* runtime */
 
 static unsigned long tsc_rate;
 
@@ -841,16 +842,20 @@ static struct submitter *get_submitter(int offset)
 	return ret;
 }
 
-static void sig_int(int sig)
+static void do_finish(const char *reason)
 {
 	int j;
-
-	printf("Exiting on signal %d\n", sig);
+	printf("Exiting on %s\n", reason);
 	for (j = 0; j < nthreads; j++) {
 		struct submitter *s = get_submitter(j);
 		s->finish = 1;
 	}
 	finish = 1;
+}
+
+static void sig_int(int sig)
+{
+	do_finish("signal");
 }
 
 static void arm_sig_int(void)
@@ -1000,6 +1005,8 @@ static void file_depths(char *buf)
 
 static void usage(char *argv, int status)
 {
+	char runtime_str[16];
+	snprintf(runtime_str, sizeof(runtime_str), "%d", runtime);
 	printf("%s [options] -- [filenames]\n"
 		" -d <int>  : IO Depth, default %d\n"
 		" -s <int>  : Batch submit, default %d\n"
@@ -1013,9 +1020,11 @@ static void usage(char *argv, int status)
 		" -N <bool> : Perform just no-op requests, default %d\n"
 		" -t <bool> : Track IO latencies, default %d\n"
 		" -T <int>  : TSC rate in HZ\n"
-		" -a <bool> : Use legacy aio, default %d\n",
+		" -a <bool> : Use legacy aio, default %d\n"
+		" -r <int>  : Runtime in seconds, default %s\n",
 		argv, DEPTH, BATCH_SUBMIT, BATCH_COMPLETE, BS, polled,
-		fixedbufs, register_files, nthreads, !buffered, do_nop, stats, aio);
+		fixedbufs, register_files, nthreads, !buffered, do_nop, stats, aio,
+		runtime == 0 ? "unlimited" : runtime_str);
 	exit(status);
 }
 
@@ -1075,7 +1084,7 @@ int main(int argc, char *argv[])
 	if (!do_nop && argc < 2)
 		usage(argv[0], 1);
 
-	while ((opt = getopt(argc, argv, "d:s:c:b:p:B:F:n:N:O:t:T:a:h?")) != -1) {
+	while ((opt = getopt(argc, argv, "d:s:c:b:p:B:F:n:N:O:t:T:a:r:h?")) != -1) {
 		switch (opt) {
 		case 'a':
 			aio = !!atoi(optarg);
@@ -1132,6 +1141,9 @@ int main(int argc, char *argv[])
 #endif
 			tsc_rate = strtoul(optarg, NULL, 10);
 			write_tsc_rate();
+			break;
+		case 'r':
+			runtime = atoi(optarg);
 			break;
 		case 'h':
 		case '?':
@@ -1273,6 +1285,8 @@ int main(int argc, char *argv[])
 		unsigned long iops, bw;
 
 		sleep(1);
+		if (runtime && !--runtime)
+			do_finish("timeout");
 
 		/* don't print partial run, if interrupted by signal */
 		if (finish)
