@@ -531,8 +531,8 @@ static int reap_events_uring(struct submitter *s)
 					stat_nr = 0;
 				}
 				last_idx = clock_index;
-			} else if (clock_index)
-				stat_nr++;
+			}
+			stat_nr++;
 		}
 		reaped++;
 		head++;
@@ -562,6 +562,8 @@ static int submitter_init(struct submitter *s)
 
 	if (stats) {
 		nr_batch = roundup_pow2(depth / batch_submit);
+		if (nr_batch < 2)
+			nr_batch = 2;
 		s->clock_batch = calloc(nr_batch, sizeof(unsigned long));
 		s->clock_index = 1;
 
@@ -637,8 +639,8 @@ static int reap_events_aio(struct submitter *s, struct io_event *events, int evs
 					stat_nr = 0;
 				}
 				last_idx = clock_index;
-			} else if (clock_index)
-				stat_nr++;
+			}
+			stat_nr++;
 		}
 		reaped++;
 		evs--;
