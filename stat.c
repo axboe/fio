@@ -17,7 +17,11 @@
 #include "zbd.h"
 #include "oslib/asprintf.h"
 
+#ifdef WIN32
+#define LOG_MSEC_SLACK	2
+#else
 #define LOG_MSEC_SLACK	1
+#endif
 
 struct fio_sem *stat_sem;
 

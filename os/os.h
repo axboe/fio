@@ -412,4 +412,13 @@ static inline bool os_cpu_has(cpu_features feature)
 # define fio_mkdir(path, mode)	mkdir(path, mode)
 #endif
 
+#ifdef _SC_CLK_TCK
+static inline void os_clk_tck(long *clk_tck)
+{
+	*clk_tck = sysconf(_SC_CLK_TCK);
+}
+#else
+extern void os_clk_tck(long *clk_tck);
+#endif
+
 #endif /* FIO_OS_H */
