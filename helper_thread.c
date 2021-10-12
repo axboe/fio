@@ -9,6 +9,10 @@
 #define DRD_IGNORE_VAR(x) do { } while (0)
 #endif
 
+#ifdef WIN32
+#include "os/os-windows.h"
+#endif
+
 #include "fio.h"
 #include "smalloc.h"
 #include "helper_thread.h"
@@ -283,19 +287,12 @@ static void *helper_thread_main(void *data)
 		}
 	};
 	struct timespec ts;
-	int clk_tck, ret = 0;
+	long clk_tck;
+	int ret = 0;
 
-#ifdef _SC_CLK_TCK
-	clk_tck = sysconf(_SC_CLK_TCK);
-#else
-	/*
-	 * The timer frequence is variable on Windows. Instead of trying to
-	 * query it, use 64 Hz, the clock frequency lower bound. See also
-	 * https://carpediemsystems.co.uk/2019/07/18/windows-system-timer-granularity/.
-	 */
-	clk_tck = 64;
-#endif
-	dprint(FD_HELPERTHREAD, "clk_tck = %d\n", clk_tck);
+	os_clk_tck(&clk_tck);
+
+	dprint(FD_HELPERTHREAD, "clk_tck = %ld\n", clk_tck);
 	assert(clk_tck > 0);
 	sleep_accuracy_ms = (1000 + clk_tck - 1) / clk_tck;
 
