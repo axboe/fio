@@ -153,10 +153,9 @@ check_sysblock_value() {
   target_file="${sys_block_dir}/$2"
   value=$3
   [ -f "${target_file}" ] || return
-  content=$(cat ${target_file})
+  content=$(cat ${target_file} 2>/dev/null)
   if [ "${content}" != "${value}" ]; then
-    info "${device_name}" "${target_file} set to ${value}."
-    echo ${value} > ${target_file} 2>/dev/null || hint "${device_name}: Cannot set ${value} on ${target_file}"
+    echo ${value} > ${target_file} 2>/dev/null && info "${device_name}" "${target_file} set to ${value}." || hint "${device_name}: Cannot set ${value} on ${target_file}"
   fi
 }
 
