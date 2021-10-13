@@ -968,7 +968,7 @@ static int zbd_reset_zones(struct thread_data *td, struct fio_file *f,
 			   struct fio_zone_info *const ze)
 {
 	struct fio_zone_info *z;
-	const uint32_t min_bs = td->o.min_bs[DDIR_WRITE];
+	const uint64_t min_bs = td->o.min_bs[DDIR_WRITE];
 	int res = 0;
 
 	assert(min_bs);
@@ -1141,7 +1141,7 @@ static bool is_zone_open(const struct thread_data *td, const struct fio_file *f,
 static bool zbd_open_zone(struct thread_data *td, const struct fio_file *f,
 			  uint32_t zone_idx)
 {
-	const uint32_t min_bs = td->o.min_bs[DDIR_WRITE];
+	const uint64_t min_bs = td->o.min_bs[DDIR_WRITE];
 	struct zoned_block_device_info *zbdi = f->zbd_info;
 	struct fio_zone_info *z = get_zone(f, zone_idx);
 	bool res = true;
@@ -1224,7 +1224,7 @@ static bool any_io_in_flight(void)
 static struct fio_zone_info *zbd_convert_to_open_zone(struct thread_data *td,
 						      struct io_u *io_u)
 {
-	const uint32_t min_bs = td->o.min_bs[io_u->ddir];
+	const uint64_t min_bs = td->o.min_bs[io_u->ddir];
 	struct fio_file *f = io_u->file;
 	struct zoned_block_device_info *zbdi = f->zbd_info;
 	struct fio_zone_info *z;
@@ -1427,7 +1427,7 @@ static struct fio_zone_info *zbd_replay_write_order(struct thread_data *td,
 						    struct fio_zone_info *z)
 {
 	const struct fio_file *f = io_u->file;
-	const uint32_t min_bs = td->o.min_bs[DDIR_WRITE];
+	const uint64_t min_bs = td->o.min_bs[DDIR_WRITE];
 
 	if (!zbd_open_zone(td, f, zbd_zone_nr(f, z))) {
 		zone_unlock(z);
@@ -1436,7 +1436,7 @@ static struct fio_zone_info *zbd_replay_write_order(struct thread_data *td,
 	}
 
 	if (z->verify_block * min_bs >= z->capacity) {
-		log_err("%s: %d * %d >= %"PRIu64"\n", f->file_name, z->verify_block,
+		log_err("%s: %d * %"PRIu64" >= %"PRIu64"\n", f->file_name, z->verify_block,
 			min_bs, z->capacity);
 		/*
 		 * If the assertion below fails during a test run, adding
@@ -1463,7 +1463,7 @@ static struct fio_zone_info *zbd_replay_write_order(struct thread_data *td,
  * pointer, hold the mutex for the zone.
  */
 static struct fio_zone_info *
-zbd_find_zone(struct thread_data *td, struct io_u *io_u, uint32_t min_bytes,
+zbd_find_zone(struct thread_data *td, struct io_u *io_u, uint64_t min_bytes,
 	      struct fio_zone_info *zb, struct fio_zone_info *zl)
 {
 	struct fio_file *f = io_u->file;
@@ -1495,7 +1495,7 @@ zbd_find_zone(struct thread_data *td, struct io_u *io_u, uint32_t min_bytes,
 				zone_unlock(z2);
 		}
 	}
-	dprint(FD_ZBD, "%s: no zone has %d bytes of readable data\n",
+	dprint(FD_ZBD, "%s: no zone has %"PRIu64" bytes of readable data\n",
 	       f->file_name, min_bytes);
 	return NULL;
 }
@@ -1754,7 +1754,7 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 	uint32_t zone_idx_b;
 	struct fio_zone_info *zb, *zl, *orig_zb;
 	uint32_t orig_len = io_u->buflen;
-	uint32_t min_bs = td->o.min_bs[io_u->ddir];
+	uint64_t min_bs = td->o.min_bs[io_u->ddir];
 	uint64_t new_len;
 	int64_t range;
 
@@ -1780,7 +1780,7 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 
 		if (io_u->offset + min_bs > (zb + 1)->start) {
 			dprint(FD_IO,
-			       "%s: off=%llu + min_bs=%u > next zone %"PRIu64"\n",
+			       "%s: off=%llu + min_bs=%"PRIu64" > next zone %"PRIu64"\n",
 			       f->file_name, io_u->offset,
 			       min_bs, (zb + 1)->start);
 			io_u->offset = zb->start + (zb + 1)->start - io_u->offset;
@@ -1911,7 +1911,7 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 
 			if (zb->capacity < min_bs) {
 				td_verror(td, EINVAL, "ZCAP is less min_bs");
-				log_err("zone capacity %"PRIu64" smaller than minimum block size %d\n",
+				log_err("zone capacity %"PRIu64" smaller than minimum block size %"PRIu64"\n",
 					zb->capacity, min_bs);
 				goto eof;
 			}
@@ -1942,7 +1942,7 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 			goto accept;
 		}
 		td_verror(td, EIO, "zone remainder too small");
-		log_err("zone remainder %lld smaller than min block size %d\n",
+		log_err("zone remainder %lld smaller than min block size %"PRIu64"\n",
 			(zbd_zone_capacity_end(zb) - io_u->offset), min_bs);
 		goto eof;
 	case DDIR_TRIM:
