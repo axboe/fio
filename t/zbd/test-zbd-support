@@ -12,6 +12,7 @@ usage() {
 	echo -e "\t-v Run fio with valgrind --read-var-info option"
 	echo -e "\t-l Test with libzbc ioengine"
 	echo -e "\t-r Reset all zones before test start"
+	echo -e "\t-w Reset all zones before executing each write test case"
 	echo -e "\t-o <max_open_zones> Run fio with max_open_zones limit"
 	echo -e "\t-t <test #> Run only a single test case with specified number"
 	echo -e "\t-q Quit the test run after any failed test"
@@ -182,13 +183,14 @@ run_fio_on_seq() {
     run_one_fio_job "${opts[@]}" "$@"
 }
 
-# Prepare for write test by resetting zones. When max_open_zones option is
-# specified, reset all zones of the test target to ensure that zones out of the
-# test target range do not have open zones. This allows the write test to the
-# target range to be able to open zones up to max_open_zones.
+# Prepare for write test by resetting zones. When reset_before_write or
+# max_open_zones option is specified, reset all zones of the test target to
+# ensure that zones out of the test target range do not have open zones. This
+# allows the write test to the target range to be able to open zones up to
+# max_open_zones limit specified as the option or obtained from sysfs.
 prep_write() {
-	[[ -n "${max_open_zones_opt}" && -n "${is_zbd}" ]] &&
-		reset_zone "${dev}" -1
+	[[ -n "${reset_before_write}" || -n "${max_open_zones_opt}" ]] &&
+		[[ -n "${is_zbd}" ]] && reset_zone "${dev}" -1
 }
 
 SKIP_TESTCASE=255
@@ -1247,6 +1249,7 @@ SECONDS=0
 tests=()
 dynamic_analyzer=()
 reset_all_zones=
+reset_before_write=
 use_libzbc=
 zbd_debug=
 max_open_zones_opt=
@@ -1261,6 +1264,7 @@ while [ "${1#-}" != "$1" ]; do
 	shift;;
     -l) use_libzbc=1; shift;;
     -r) reset_all_zones=1; shift;;
+    -w) reset_before_write=1; shift;;
     -t) tests+=("$2"); shift; shift;;
     -o) max_open_zones_opt="${2}"; shift; shift;;
     -v) dynamic_analyzer=(valgrind "--read-var-info=yes");
