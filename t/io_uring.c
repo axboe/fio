@@ -1361,7 +1361,7 @@ int main(int argc, char *argv[])
 		if (iops > 100000)
 			printf("IOPS=%luK, ", iops / 1000);
 		else
-			printf("IOPS=%luK, ", iops);
+			printf("IOPS=%lu, ", iops);
 		if (!do_nop)
 			printf("BW=%luMiB/s, ", bw);
 		printf("IOS/call=%ld/%ld, inflight=(%s)\n", rpc, ipc, fdepths);
