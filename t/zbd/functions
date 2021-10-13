@@ -64,6 +64,32 @@ check_blkzone() {
 	fi
 }
 
+# Check zone capacity of each zone and report block size aligned to the zone
+# capacities. If zone capacity is same as zone size for zones, report zone size.
+zone_cap_bs() {
+	local dev="${1}"
+	local zone_size="${2}"
+	local sed_str='s/.*len \([0-9A-Za-z]*\), cap \([0-9A-Za-z]*\).*/\1 \2/p'
+	local cap bs="$zone_size"
+
+	# When blkzone is not available or blkzone does not report capacity,
+	# assume that zone capacity is same as zone size for all zones.
+	if [ -z "${blkzone}" ] || ! blkzone_reports_capacity "${dev}"; then
+		echo "$zone_size"
+		return
+	fi
+
+	while read -r -a line; do
+		((line[0] == line[1])) && continue
+		cap=$((line[1] * 512))
+		while ((bs > 512 && cap % bs)); do
+			bs=$((bs / 2))
+		done
+	done < <(blkzone report "${dev}" | sed -n "${sed_str}")
+
+	echo "$bs"
+}
+
 # Reports the starting sector and length of the first sequential zone of device
 # $1.
 first_sequential_zone() {
