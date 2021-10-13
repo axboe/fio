@@ -137,7 +137,8 @@ struct io_uring_map_buffers {
 	__s32	fd;
 	__u32	buf_start;
 	__u32	buf_end;
-	__u32	dir;
+	__u32	flags;
+	__u64	rsvd[2];
 };
 #endif
 
@@ -334,9 +335,7 @@ static int io_uring_map_buffers(struct submitter *s)
 {
 	struct io_uring_map_buffers map = {
 		.fd		= s->files[0].real_fd,
-		.buf_start	= 0,
 		.buf_end	= depth,
-		.dir		= 0,
 	};
 
 	if (do_nop)
