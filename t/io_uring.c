@@ -103,6 +103,7 @@ struct submitter {
 static struct submitter *submitter;
 static volatile int finish;
 static int stats_running;
+static unsigned long max_iops;
 
 static int depth = DEPTH;
 static int batch_submit = BATCH_SUBMIT;
@@ -882,6 +883,10 @@ static void do_finish(const char *reason)
 		struct submitter *s = get_submitter(j);
 		s->finish = 1;
 	}
+	if (max_iops > 100000)
+		printf("Maxiumum IOPS=%luK\n", max_iops / 1000);
+	else if (max_iops)
+		printf("Maxiumum IOPS=%lu\n", max_iops);
 	finish = 1;
 }
 
@@ -1362,6 +1367,7 @@ int main(int argc, char *argv[])
 			printf("IOPS=%luK, ", iops / 1000);
 		else
 			printf("IOPS=%lu, ", iops);
+		max_iops = max(max_iops, iops);
 		if (!do_nop)
 			printf("BW=%luMiB/s, ", bw);
 		printf("IOS/call=%ld/%ld, inflight=(%s)\n", rpc, ipc, fdepths);
