@@ -884,9 +884,9 @@ static void do_finish(const char *reason)
 		s->finish = 1;
 	}
 	if (max_iops > 100000)
-		printf("Maxiumum IOPS=%luK\n", max_iops / 1000);
+		printf("Maximum IOPS=%luK\n", max_iops / 1000);
 	else if (max_iops)
-		printf("Maxiumum IOPS=%lu\n", max_iops);
+		printf("Maximum IOPS=%lu\n", max_iops);
 	finish = 1;
 }
 
