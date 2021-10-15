@@ -1348,6 +1348,7 @@ int main(int argc, char *argv[])
 			stats_running = 1;
 
 		for (j = 0; j < nthreads; j++) {
+			s = get_submitter(j);
 			this_done += s->done;
 			this_call += s->calls;
 			this_reap += s->reaps;
