@@ -297,10 +297,9 @@ static int _curl_trace(CURL *handle, curl_infotype type,
 	switch (type) {
 	case CURLINFO_TEXT:
 		fprintf(stderr, "== Info: %s", data);
-		/* fall through */
+		fallthrough;
 	default:
 	case CURLINFO_SSL_DATA_OUT:
-		/* fall through */
 	case CURLINFO_SSL_DATA_IN:
 		return 0;
 
