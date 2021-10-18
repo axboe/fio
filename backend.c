@@ -836,7 +836,7 @@ static long long usec_for_io(struct thread_data *td, enum fio_ddir ddir)
 	if (td->o.rate_process == RATE_PROCESS_POISSON) {
 		uint64_t val, iops;
 
-		iops = bps / td->o.bs[ddir];
+		iops = bps / td->o.min_bs[ddir];
 		val = (int64_t) (1000000 / iops) *
 				-logf(__rand_0_1(&td->poisson_state[ddir]));
 		if (val) {
