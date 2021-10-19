@@ -5015,6 +5015,16 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group  = FIO_OPT_G_RUNTIME,
 	},
 	{
+		.name	= "low_memory",
+		.lname	= "Low memory mode",
+		.type	= FIO_OPT_BOOL,
+		.off1	= offsetof(struct thread_options, low_memory),
+		.def	= "0",
+		.help	= "Make an effort to conserve memory",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_MEMORY,
+	},
+	{
 		.name = NULL,
 	},
 };

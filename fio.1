@@ -1654,6 +1654,9 @@ preferred way to set this to avoid setting a non-pow-2 bad value.
 .BI lockmem \fR=\fPint
 Pin the specified amount of memory with \fBmlock\fR\|(2). Can be used to
 simulate a smaller amount of memory. The amount specified is per worker.
+.TP
+.BI low_memory \fR=\fPbool
+Hints fio to reduce memory usage.
 .SS "I/O size"
 .TP
 .BI size \fR=\fPint[%|z]

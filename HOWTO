@@ -1845,6 +1845,9 @@ Buffers and memory
 	Pin the specified amount of memory with :manpage:`mlock(2)`. Can be used to
 	simulate a smaller amount of memory.  The amount specified is per worker.
 
+.. option:: low_memory=bool
+
+	Hints fio to reduce memory usage.
 
 I/O size
 ~~~~~~~~

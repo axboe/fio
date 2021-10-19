@@ -201,6 +201,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->bs_unaligned = le32_to_cpu(top->bs_unaligned);
 	o->fsync_on_close = le32_to_cpu(top->fsync_on_close);
 	o->bs_is_seq_rand = le32_to_cpu(top->bs_is_seq_rand);
+	o->low_memory = le32_to_cpu(top->low_memory);
 	o->random_distribution = le32_to_cpu(top->random_distribution);
 	o->exitall_error = le32_to_cpu(top->exitall_error);
 	o->zipf_theta.u.f = fio_uint64_to_double(le64_to_cpu(top->zipf_theta.u.i));
@@ -428,6 +429,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->bs_unaligned = cpu_to_le32(o->bs_unaligned);
 	top->fsync_on_close = cpu_to_le32(o->fsync_on_close);
 	top->bs_is_seq_rand = cpu_to_le32(o->bs_is_seq_rand);
+	top->low_memory = cpu_to_le32(o->low_memory);
 	top->random_distribution = cpu_to_le32(o->random_distribution);
 	top->exitall_error = cpu_to_le32(o->exitall_error);
 	top->zipf_theta.u.i = __cpu_to_le64(fio_double_to_uint64(o->zipf_theta.u.f));

@@ -2,7 +2,8 @@
 
 int init_dedupe_working_set_seeds(struct thread_data *td)
 {
-	unsigned long long i;
+	unsigned long long i, j;
+	unsigned long long low_memory_increment = td->o.low_memory ? LOW_MEMORY_DEDUPE_WORKSET_RATIO : 1;
 	struct frand_state dedupe_working_set_state = {0};
 
 	if (!td->o.dedupe_percentage || !(td->o.dedupe_mode == DEDUPE_MODE_WORKING_SET))
@@ -13,14 +14,15 @@ int init_dedupe_working_set_seeds(struct thread_data *td)
 	 * Dedupe-ed pages will be generated using those seeds.
 	 */
 	td->num_unique_pages = (td->o.size * (unsigned long long)td->o.dedupe_working_set_percentage / 100) / td->o.min_bs[DDIR_WRITE];
-	td->dedupe_working_set_states = malloc(sizeof(struct frand_state) * td->num_unique_pages);
+	td->dedupe_working_set_states = malloc(sizeof(struct frand_state) *
+			((td->num_unique_pages / low_memory_increment) + 1));
 	if (!td->dedupe_working_set_states) {
 		log_err("fio: could not allocate dedupe working set\n");
 		return 1;
 	}
 	frand_copy(&dedupe_working_set_state, &td->buf_state);
-	for (i = 0; i < td->num_unique_pages; i++) {
-		frand_copy(&td->dedupe_working_set_states[i], &dedupe_working_set_state);
+	for (i = 0, j = 0; i < td->num_unique_pages; i+= low_memory_increment, j++) {
+		frand_copy(&td->dedupe_working_set_states[j], &dedupe_working_set_state);
 		__get_next_seed(&dedupe_working_set_state);
 	}
 

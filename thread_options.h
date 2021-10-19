@@ -171,6 +171,7 @@ struct thread_options {
 	unsigned int bs_unaligned;
 	unsigned int fsync_on_close;
 	unsigned int bs_is_seq_rand;
+	unsigned int low_memory;
 
 	unsigned int verify_only;
 
@@ -486,6 +487,8 @@ struct thread_options_pack {
 	uint32_t bs_unaligned;
 	uint32_t fsync_on_close;
 	uint32_t bs_is_seq_rand;
+	uint32_t low_memory;
+	uint32_t pad5;
 
 	uint32_t random_distribution;
 	uint32_t exitall_error;

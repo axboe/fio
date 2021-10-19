@@ -11,6 +11,7 @@
 #include "lib/pow2.h"
 #include "minmax.h"
 #include "zbd.h"
+#include "dedupe.h"
 
 struct io_completion_data {
 	int nr;				/* input */
@@ -2179,6 +2180,7 @@ static struct frand_state *get_buf_state(struct thread_data *td)
 {
 	unsigned int v;
 	unsigned long long i;
+	unsigned long long j;
 
 	if (!td->o.dedupe_percentage)
 		return &td->buf_state;
@@ -2202,7 +2204,19 @@ static struct frand_state *get_buf_state(struct thread_data *td)
 			return &td->buf_state_ret;
 		case DEDUPE_MODE_WORKING_SET:
 			i = rand_between(&td->dedupe_working_set_index_state, 0, td->num_unique_pages - 1);
-			frand_copy(&td->buf_state_ret, &td->dedupe_working_set_states[i]);
+			if (td->o.low_memory) {
+				/*
+				 * Low memory mode: recalculate seed from closest existing.
+				 * We keep enough not to loop so much, but still reduce memory
+				 * usage significantly
+				 */
+				frand_copy(&td->buf_state_ret, &td->dedupe_working_set_states[i / LOW_MEMORY_DEDUPE_WORKSET_RATIO]);
+				for (j = 0; j < i % LOW_MEMORY_DEDUPE_WORKSET_RATIO; j++)
+					__get_next_seed(&td->buf_state_ret);
+			}
+			else {
+				frand_copy(&td->buf_state_ret, &td->dedupe_working_set_states[i]);
+			}
 			return &td->buf_state_ret;
 		default:
 			log_err("unexpected dedupe mode %u\n", td->o.dedupe_mode);
