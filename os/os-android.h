@@ -309,4 +309,8 @@ static inline int fio_set_sched_idle(void)
 }
 #endif
 
+#ifndef RWF_UNCACHED
+#define RWF_UNCACHED	0x00000040
+#endif
+
 #endif
