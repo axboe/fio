@@ -1,6 +1,3 @@
-- Mixed buffers of dedupe-able and compressible data.
-  Major usecase in performance benchmarking of storage subsystems.
-
 - Shifted dedup-able data.
   Allow for dedup buffer generation to shift contents by random number
   of sectors (fill the gaps with uncompressible data). Some storage
