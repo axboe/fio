@@ -199,12 +199,18 @@ show_nvme() {
   info ${device_name} "MODEL=${model} FW=${fw} serial=${serial} PCI=${pci_addr}@${link_speed} IRQ=${irq} NUMA=${numa} CPUS=${cpus} "
   which nvme &> /dev/null
   if [ $? -eq 0 ]; then
-    NCQA=$(nvme get-feature -H -f 0x7 ${device} |grep NCQA |cut -d ':' -f 2 | xargs)
-    NSQA=$(nvme get-feature -H -f 0x7 ${device} |grep NSQA |cut -d ':' -f 2 | xargs)
-    power_state=$(nvme get-feature -H -f 0x2 ${device} | grep PS |cut -d ":" -f 2 | xargs)
-    apste=$(nvme get-feature -H -f 0xc ${device} | grep APSTE |cut -d ":" -f 2 | xargs)
-    temp=$(nvme smart-log ${device} |grep 'temperature' |cut -d ':' -f 2 |xargs)
-    info ${device_name} "Temp:${temp}, Autonomous Power State Transition:${apste}, PowerState:${power_state}, Completion Queues:${NCQA}, Submission Queues:${NSQA}"
+    status=""
+    NCQA=$(nvme get-feature -H -f 0x7 ${device} 2>&1 |grep NCQA |cut -d ':' -f 2 | xargs)
+    [ -n "${NCQA}" ] && status="${status}Completion Queues:${NCQA}, "
+    NSQA=$(nvme get-feature -H -f 0x7 ${device} 2>&1 |grep NSQA |cut -d ':' -f 2 | xargs)
+    [ -n "${NSQA}" ] && status="${status}Submission Queues:${NSQA}, "
+    power_state=$(nvme get-feature -H -f 0x2 ${device} 2>&1 | grep PS |cut -d ":" -f 2 | xargs)
+    [ -n "${power_state}" ] && status="${status}PowerState:${power_state}, "
+    apste=$(nvme get-feature -H -f 0xc ${device} 2>&1 | grep APSTE |cut -d ":" -f 2 | xargs)
+    [ -n "${apste}" ] && status="${status} Autonomous Power State Transition:${apste}, "
+    temp=$(nvme smart-log ${device} 2>&1 |grep 'temperature' |cut -d ':' -f 2 |xargs)
+    [ -n "${temp}" ] && status="${status}Temp:${temp}"
+    info ${device_name} "${status}"
   fi
 }
 
@@ -241,6 +247,7 @@ show_system() {
     info "system" "KERNEL: $(show_kernel_config_item ${config_item})"
   done
   info "system" "KERNEL: $(cat /proc/cmdline)"
+  info "system" "SElinux: $(getenforce)"
   tsc=$(journalctl -k | grep 'tsc: Refined TSC clocksource calibration:' | awk '{print $11}')
   if [ -n "${tsc}" ]; then
     info "system" "TSC: ${tsc} Mhz"
