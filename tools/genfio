@@ -22,7 +22,8 @@
 BLK_SIZE=
 BLOCK_SIZE=4k
 SEQ=-1
-TEMPLATE=/tmp/template.fio
+TEMPLATE=$(mktemp "${TMPDIR:-${TEMP:-/tmp}}/template.fio.XXXXXX") || exit $?
+trap 'rm -f "$TEMPLATE"' EXIT
 OUTFILE=
 DISKS=
 PRINTABLE_DISKS=
