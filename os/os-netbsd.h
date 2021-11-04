@@ -13,7 +13,7 @@
 #include <sys/endian.h>
 #include <sys/sysctl.h>
 
-/* XXX hack to avoid confilcts between rbtree.h and <sys/rbtree.h> */
+/* XXX hack to avoid conflicts between rbtree.h and <sys/rbtree.h> */
 #undef rb_node
 #undef rb_left
 #undef rb_right

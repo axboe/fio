@@ -2,7 +2,7 @@
 #
 # steadystate_tests.py
 #
-# Test option parsing and functonality for fio's steady state detection feature.
+# Test option parsing and functionality for fio's steady state detection feature.
 #
 # steadystate_tests.py --read file-for-read-testing --write file-for-write-testing ./fio
 #

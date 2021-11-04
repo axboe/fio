@@ -20,7 +20,7 @@ thread
 # (https://pmem.io/rpma/documentation/basic-direct-write-to-pmem.html)
 direct_write_to_pmem=0
 
-numjobs=1 # number of expected incomming connections
+numjobs=1 # number of expected incoming connections
 size=100MiB # size of workspace for a single connection
 filename=malloc # device dax or an existing fsdax file or "malloc" for allocation from DRAM
 # filename=/dev/dax1.0

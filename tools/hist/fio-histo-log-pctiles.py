@@ -748,7 +748,7 @@ if unittest2_imported:
     def test_e2_get_pctiles_highest_pct(self):
         fio_v3_bucket_count = 29 * 64
         with open(self.fn, 'w') as f:
-            # make a empty fio v3 histogram
+            # make an empty fio v3 histogram
             buckets = [ 0 for j in range(0, fio_v3_bucket_count) ]
             # add one I/O request to last bucket
             buckets[-1] = 1

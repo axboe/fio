@@ -211,7 +211,7 @@ static const char *parse_number(const char *beg, char *out,
  * This function tries to find formats, e.g.:
  *   %o - offset of the block
  *
- * In case of successfull parsing it fills the format param
+ * In case of successful parsing it fills the format param
  * with proper offset and the size of the expected value, which
  * should be pasted into buffer using the format 'func' callback.
  *
@@ -267,7 +267,7 @@ static const char *parse_format(const char *in, char *out, unsigned int parsed,
  * @fmt_desc - array of pattern format descriptors [input]
  * @fmt - array of pattern formats [output]
  * @fmt_sz - pointer where the size of pattern formats array stored [input],
- *           after successfull parsing this pointer will contain the number
+ *           after successful parsing this pointer will contain the number
  *           of parsed formats if any [output].
  *
  * strings:
@@ -275,7 +275,7 @@ static const char *parse_format(const char *in, char *out, unsigned int parsed,
  *   NOTE: there is no way to escape quote, so "123\"abc" does not work.
  *
  * numbers:
- *   hexidecimal - sequence of hex bytes starting from 0x or 0X prefix,
+ *   hexadecimal - sequence of hex bytes starting from 0x or 0X prefix,
  *                 e.g. 0xff12ceff1100ff
  *   decimal     - decimal number in range [INT_MIN, INT_MAX]
  *

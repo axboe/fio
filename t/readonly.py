@@ -6,7 +6,7 @@
 #
 # readonly.py
 #
-# Do some basic tests of the --readonly paramter
+# Do some basic tests of the --readonly parameter
 #
 # USAGE
 # python readonly.py [-f fio-executable]

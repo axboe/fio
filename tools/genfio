@@ -48,7 +48,7 @@ show_help() {
 					one test after another then one disk after another
 					Disabled by default
 -p				: Run parallel test
-					one test after anoter but all disks at the same time
+					one test after another but all disks at the same time
 					Enabled by default
 -D iodepth			: Run with the specified iodepth
 					Default is $IODEPTH

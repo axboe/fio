@@ -20,7 +20,7 @@ DESCRIPTION
                     	The resulting graph helps at understanding trends.
 
  Grouped 2D graph   
-	All files are plotted in a single image to ease the comparaison. The same rendering options as per the individual 2D graph are used :
+	All files are plotted in a single image to ease the comparison. The same rendering options as per the individual 2D graph are used :
          - raw
          - smooth
          - trend

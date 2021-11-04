@@ -1194,7 +1194,7 @@ static int check_set_rlimits(struct thread_data *td)
 
 static int compat_options(struct thread_data *td)
 {
-	// The original RDMA engine had an ugly / seperator
+	// The original RDMA engine had an ugly / separator
 	// on the filename for it's options. This function
 	// retains backwards compatibility with it. Note we do not
 	// support setting the bindname option is this legacy mode.

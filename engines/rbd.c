@@ -173,7 +173,7 @@ static int _fio_rbd_connect(struct thread_data *td)
 		char *client_name = NULL; 
 
 		/*
-		 * If we specify cluser name, the rados_create2
+		 * If we specify cluster name, the rados_create2
 		 * will not assume 'client.'. name is considered
 		 * as a full type.id namestr
 		 */
@@ -633,7 +633,7 @@ static int fio_rbd_setup(struct thread_data *td)
 
 	/* taken from "net" engine. Pretend we deal with files,
 	 * even if we do not have any ideas about files.
-	 * The size of the RBD is set instead of a artificial file.
+	 * The size of the RBD is set instead of an artificial file.
 	 */
 	if (!td->files_index) {
 		add_file(td, td->o.filename ? : "rbd", 0, 0);

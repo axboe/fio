@@ -1165,7 +1165,7 @@ HANDLE windows_handle_connection(HANDLE hjob, int sk)
 		ret = pi.hProcess;
 
 	/* duplicate socket and write the protocol_info to pipe so child can
-	 * duplicate the communciation socket */
+	 * duplicate the communication socket */
 	if (WSADuplicateSocket(sk, GetProcessId(pi.hProcess), &protocol_info)) {
 		log_err("WSADuplicateSocket failed (%lu).\n", GetLastError());
 		ret = INVALID_HANDLE_VALUE;

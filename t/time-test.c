@@ -67,7 +67,7 @@
  *	accuracy because the (ticks * clock_mult) product used for final
  *	fractional chunk
  *
- *  iv) 64-bit arithmetic with the clock ticks to nsec conversion occuring in
+ *  iv) 64-bit arithmetic with the clock ticks to nsec conversion occurring in
  *	two stages. This is carried out using locks to update the number of
  *	large time chunks (MAX_CLOCK_SEC_2STAGE) that have elapsed.
  *

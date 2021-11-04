@@ -29,7 +29,7 @@ rw=randtrim
 numjobs=2
 filename=fragmented_file
 
-## Mesure IO performance on fragmented file
+## Measure IO performance on fragmented file
 [sequential aio-dio write]
 stonewall
 ioengine=libaio

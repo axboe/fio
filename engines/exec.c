@@ -67,8 +67,8 @@ char *str_replace(char *orig, const char *rep, const char *with)
 	/*
 	 * Replace a substring by another.
 	 *
-	 * Returns the new string if occurences were found
-	 * Returns orig if no occurence is found
+	 * Returns the new string if occurrences were found
+	 * Returns orig if no occurrence is found
 	 */
 	char *result, *insert, *tmp;
 	int len_rep, len_with, len_front, count;

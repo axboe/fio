@@ -3,7 +3,7 @@
 #
 # sgunmap-test.py
 #
-# Limited functonality test for trim workloads using fio's sg ioengine
+# Limited functionality test for trim workloads using fio's sg ioengine
 # This checks only the three sets of reported iodepths
 #
 # !!!WARNING!!!

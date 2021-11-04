@@ -377,7 +377,7 @@ void show_group_stats(struct group_run_stats *rs, struct buf_output *out)
 		free(maxalt);
 	}
 
-	/* Need to aggregate statisitics to show mixed values */
+	/* Need to aggregate statistics to show mixed values */
 	if (rs->unified_rw_rep == UNIFIED_BOTH)
 		show_mixed_group_stats(rs, out);
 }
