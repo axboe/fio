@@ -12,7 +12,7 @@ WORKDIR=$(pwd)
 #    /bin/sh: 1: clang: not found
 # if CC is not set to the full path of clang.
 #
-export CC=$(which $CC)
+export CC=$(type -P $CC)
 
 # Install PMDK libraries, because PMDK's libpmem
 # is a dependency of the librpma fio engine.
