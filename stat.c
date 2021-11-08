@@ -483,22 +483,13 @@ static void show_mixed_ddir_status(struct group_run_stats *rs, struct thread_sta
 	struct thread_stat *ts_lcl;
 
 	int i2p;
-	int ddir = 0, i;
+	int ddir = 0;
 
 	/* Handle aggregation of Reads (ddir = 0), Writes (ddir = 1), and Trims (ddir = 2) */
 	ts_lcl = malloc(sizeof(struct thread_stat));
 	memset((void *)ts_lcl, 0, sizeof(struct thread_stat));
 	ts_lcl->unified_rw_rep = UNIFIED_MIXED;               /* calculate mixed stats  */
-	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
-		ts_lcl->clat_stat[i].min_val = ULONG_MAX;
-		ts_lcl->slat_stat[i].min_val = ULONG_MAX;
-		ts_lcl->lat_stat[i].min_val = ULONG_MAX;
-		ts_lcl->bw_stat[i].min_val = ULONG_MAX;
-		ts_lcl->iops_stat[i].min_val = ULONG_MAX;
-		ts_lcl->clat_high_prio_stat[i].min_val = ULONG_MAX;
-		ts_lcl->clat_low_prio_stat[i].min_val = ULONG_MAX;
-	}
-	ts_lcl->sync_stat.min_val = ULONG_MAX;
+	init_thread_stat_min_vals(ts_lcl);
 
 	sum_thread_stats(ts_lcl, ts, 1);
 
@@ -1466,22 +1457,12 @@ static void show_mixed_ddir_status_terse(struct thread_stat *ts,
 				   int ver, struct buf_output *out)
 {
 	struct thread_stat *ts_lcl;
-	int i;
 
 	/* Handle aggregation of Reads (ddir = 0), Writes (ddir = 1), and Trims (ddir = 2) */
 	ts_lcl = malloc(sizeof(struct thread_stat));
 	memset((void *)ts_lcl, 0, sizeof(struct thread_stat));
 	ts_lcl->unified_rw_rep = UNIFIED_MIXED;               /* calculate mixed stats  */
-	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
-		ts_lcl->clat_stat[i].min_val = ULONG_MAX;
-		ts_lcl->slat_stat[i].min_val = ULONG_MAX;
-		ts_lcl->lat_stat[i].min_val = ULONG_MAX;
-		ts_lcl->bw_stat[i].min_val = ULONG_MAX;
-		ts_lcl->iops_stat[i].min_val = ULONG_MAX;
-		ts_lcl->clat_high_prio_stat[i].min_val = ULONG_MAX;
-		ts_lcl->clat_low_prio_stat[i].min_val = ULONG_MAX;
-	}
-	ts_lcl->sync_stat.min_val = ULONG_MAX;
+	init_thread_stat_min_vals(ts_lcl);
 	ts_lcl->lat_percentiles = ts->lat_percentiles;
 	ts_lcl->clat_percentiles = ts->clat_percentiles;
 	ts_lcl->slat_percentiles = ts->slat_percentiles;
@@ -1668,22 +1649,12 @@ static void add_mixed_ddir_status_json(struct thread_stat *ts,
 		struct group_run_stats *rs, struct json_object *parent)
 {
 	struct thread_stat *ts_lcl;
-	int i;
 
 	/* Handle aggregation of Reads (ddir = 0), Writes (ddir = 1), and Trims (ddir = 2) */
 	ts_lcl = malloc(sizeof(struct thread_stat));
 	memset((void *)ts_lcl, 0, sizeof(struct thread_stat));
 	ts_lcl->unified_rw_rep = UNIFIED_MIXED;               /* calculate mixed stats  */
-	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
-		ts_lcl->clat_stat[i].min_val = ULONG_MAX;
-		ts_lcl->slat_stat[i].min_val = ULONG_MAX;
-		ts_lcl->lat_stat[i].min_val = ULONG_MAX;
-		ts_lcl->bw_stat[i].min_val = ULONG_MAX;
-		ts_lcl->iops_stat[i].min_val = ULONG_MAX;
-		ts_lcl->clat_high_prio_stat[i].min_val = ULONG_MAX;
-		ts_lcl->clat_low_prio_stat[i].min_val = ULONG_MAX;
-	}
-	ts_lcl->sync_stat.min_val = ULONG_MAX;
+	init_thread_stat_min_vals(ts_lcl);
 	ts_lcl->lat_percentiles = ts->lat_percentiles;
 	ts_lcl->clat_percentiles = ts->clat_percentiles;
 	ts_lcl->slat_percentiles = ts->slat_percentiles;
@@ -2270,22 +2241,27 @@ void init_group_run_stat(struct group_run_stats *gs)
 		gs->min_bw[i] = gs->min_run[i] = ~0UL;
 }
 
+void init_thread_stat_min_vals(struct thread_stat *ts)
+{
+	int i;
+
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
+		ts->clat_stat[i].min_val = ULONG_MAX;
+		ts->slat_stat[i].min_val = ULONG_MAX;
+		ts->lat_stat[i].min_val = ULONG_MAX;
+		ts->bw_stat[i].min_val = ULONG_MAX;
+		ts->iops_stat[i].min_val = ULONG_MAX;
+		ts->clat_high_prio_stat[i].min_val = ULONG_MAX;
+		ts->clat_low_prio_stat[i].min_val = ULONG_MAX;
+	}
+	ts->sync_stat.min_val = ULONG_MAX;
+}
+
 void init_thread_stat(struct thread_stat *ts)
 {
-	int j;
-
 	memset(ts, 0, sizeof(*ts));
 
-	for (j = 0; j < DDIR_RWDIR_CNT; j++) {
-		ts->lat_stat[j].min_val = -1UL;
-		ts->clat_stat[j].min_val = -1UL;
-		ts->slat_stat[j].min_val = -1UL;
-		ts->bw_stat[j].min_val = -1UL;
-		ts->iops_stat[j].min_val = -1UL;
-		ts->clat_high_prio_stat[j].min_val = -1UL;
-		ts->clat_low_prio_stat[j].min_val = -1UL;
-	}
-	ts->sync_stat.min_val = -1UL;
+	init_thread_stat_min_vals(ts);
 	ts->groupid = -1;
 }
 
