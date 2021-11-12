@@ -338,6 +338,18 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 			sqe->rw_flags |= RWF_UNCACHED;
 		if (o->nowait)
 			sqe->rw_flags |= RWF_NOWAIT;
+
+		/*
+		 * Since io_uring can have a submission context (sqthread_poll)
+		 * that is different from the process context, we cannot rely on
+		 * the IO priority set by ioprio_set() (option prio/prioclass)
+		 * to be inherited.
+		 * td->ioprio will have the value of the "default prio", so set
+		 * this unconditionally. This value might get overridden by
+		 * fio_ioring_prio_prep() if the option cmdprio_percentage or
+		 * cmdprio_bssplit is used.
+		 */
+		sqe->ioprio = td->ioprio;
 		sqe->off = io_u->offset;
 	} else if (ddir_sync(io_u->ddir)) {
 		sqe->ioprio = 0;
@@ -456,29 +468,25 @@ static void fio_ioring_prio_prep(struct thread_data *td, struct io_u *io_u)
 		ioprio_value(cmdprio->class[ddir], cmdprio->level[ddir]);
 
 	if (p && rand_between(&td->prio_state, 0, 99) < p) {
+		io_u->ioprio = cmdprio_value;
 		sqe->ioprio = cmdprio_value;
 		if (!td->ioprio || cmdprio_value < td->ioprio) {
 			/*
 			 * The async IO priority is higher (has a lower value)
-			 * than the priority set by "prio" and "prioclass"
-			 * options.
+			 * than the default priority (which is either 0 or the
+			 * value set by "prio" and "prioclass" options).
 			 */
 			io_u->flags |= IO_U_F_HIGH_PRIO;
 		}
-	} else {
-		sqe->ioprio = td->ioprio;
-		if (cmdprio_value && td->ioprio && td->ioprio < cmdprio_value) {
-			/*
-			 * The IO will be executed with the priority set by
-			 * "prio" and "prioclass" options, and this priority
-			 * is higher (has a lower value) than the async IO
-			 * priority.
-			 */
-			io_u->flags |= IO_U_F_HIGH_PRIO;
-		}
+	} else if (td->ioprio && td->ioprio < cmdprio_value) {
+		/*
+		 * The IO will be executed with the default priority (which is
+		 * either 0 or the value set by "prio" and "prioclass options),
+		 * and this priority is higher (has a lower value) than the
+		 * async IO priority.
+		 */
+		io_u->flags |= IO_U_F_HIGH_PRIO;
 	}
-
-	io_u->ioprio = sqe->ioprio;
 }
 
 static enum fio_q_status fio_ioring_queue(struct thread_data *td,
@@ -820,7 +828,6 @@ static int fio_ioring_init(struct thread_data *td)
 	struct ioring_options *o = td->eo;
 	struct ioring_data *ld;
 	struct cmdprio *cmdprio = &o->cmdprio;
-	bool has_cmdprio = false;
 	int ret;
 
 	/* sqthread submission requires registered files */
@@ -845,21 +852,11 @@ static int fio_ioring_init(struct thread_data *td)
 
 	td->io_ops_data = ld;
 
-	ret = fio_cmdprio_init(td, cmdprio, &has_cmdprio);
+	ret = fio_cmdprio_init(td, cmdprio, &ld->use_cmdprio);
 	if (ret) {
 		td_verror(td, EINVAL, "fio_ioring_init");
 		return 1;
 	}
-
-	/*
-	 * Since io_uring can have a submission context (sqthread_poll) that is
-	 * different from the process context, we cannot rely on the the IO
-	 * priority set by ioprio_set() (option prio/prioclass) to be inherited.
-	 * Therefore, we set the sqe->ioprio field when prio/prioclass is used.
-	 */
-	ld->use_cmdprio = has_cmdprio ||
-		fio_option_is_set(&td->o, ioprio_class) ||
-		fio_option_is_set(&td->o, ioprio);
 
 	return 0;
 }
