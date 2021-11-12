@@ -205,7 +205,7 @@ static int fio_libaio_prep(struct thread_data *td, struct io_u *io_u)
 	return 0;
 }
 
-static void fio_libaio_prio_prep(struct thread_data *td, struct io_u *io_u)
+static void fio_libaio_cmdprio_prep(struct thread_data *td, struct io_u *io_u)
 {
 	struct libaio_options *o = td->eo;
 	struct cmdprio *cmdprio = &o->cmdprio;
@@ -369,7 +369,7 @@ static enum fio_q_status fio_libaio_queue(struct thread_data *td,
 	}
 
 	if (ld->use_cmdprio)
-		fio_libaio_prio_prep(td, io_u);
+		fio_libaio_cmdprio_prep(td, io_u);
 
 	ld->iocbs[ld->head] = &io_u->iocb;
 	ld->io_us[ld->head] = io_u;

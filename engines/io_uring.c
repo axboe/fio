@@ -346,7 +346,7 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 		 * to be inherited.
 		 * td->ioprio will have the value of the "default prio", so set
 		 * this unconditionally. This value might get overridden by
-		 * fio_ioring_prio_prep() if the option cmdprio_percentage or
+		 * fio_ioring_cmdprio_prep() if the option cmdprio_percentage or
 		 * cmdprio_bssplit is used.
 		 */
 		sqe->ioprio = td->ioprio;
@@ -456,7 +456,7 @@ static int fio_ioring_getevents(struct thread_data *td, unsigned int min,
 	return r < 0 ? r : events;
 }
 
-static void fio_ioring_prio_prep(struct thread_data *td, struct io_u *io_u)
+static void fio_ioring_cmdprio_prep(struct thread_data *td, struct io_u *io_u)
 {
 	struct ioring_options *o = td->eo;
 	struct ioring_data *ld = td->io_ops_data;
@@ -517,7 +517,8 @@ static enum fio_q_status fio_ioring_queue(struct thread_data *td,
 		return FIO_Q_BUSY;
 
 	if (ld->use_cmdprio)
-		fio_ioring_prio_prep(td, io_u);
+		fio_ioring_cmdprio_prep(td, io_u);
+
 	ring->array[tail & ld->sq_ring_mask] = io_u->index;
 	atomic_store_release(ring->tail, next_tail);
 
