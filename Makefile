@@ -98,6 +98,7 @@ else ifdef CONFIG_32BIT
 endif
 ifdef CONFIG_LIBAIO
   libaio_SRCS = engines/libaio.c
+  cmdprio_SRCS = engines/cmdprio.c
   libaio_LIBS = -laio
   ENGINES += libaio
 endif
@@ -225,6 +226,7 @@ endif
 ifeq ($(CONFIG_TARGET_OS), Linux)
   SOURCE += diskutil.c fifo.c blktrace.c cgroup.c trim.c engines/sg.c \
 		oslib/linux-dev-lookup.c engines/io_uring.c
+  cmdprio_SRCS = engines/cmdprio.c
 ifdef CONFIG_HAS_BLKZONED
   SOURCE += oslib/linux-blkzoned.c
 endif
@@ -279,6 +281,10 @@ ifneq (,$(findstring CYGWIN,$(CONFIG_TARGET_OS)))
   WINDOWS_OBJS = os/windows/cpu-affinity.o os/windows/posix.o os/windows/dlls.o lib/hweight.o
   LIBS	 += -lpthread -lpsapi -lws2_32 -lssp
   FIO_CFLAGS += -DPSAPI_VERSION=1 -Ios/windows/posix/include -Wno-format
+endif
+
+ifdef cmdprio_SRCS
+  SOURCE += $(cmdprio_SRCS)
 endif
 
 ifdef CONFIG_DYNAMIC_ENGINES
