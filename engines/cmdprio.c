@@ -67,7 +67,7 @@ int fio_cmdprio_bssplit_parse(struct thread_data *td, const char *input,
 	return ret;
 }
 
-int fio_cmdprio_percentage(struct cmdprio *cmdprio, struct io_u *io_u)
+static int fio_cmdprio_percentage(struct cmdprio *cmdprio, struct io_u *io_u)
 {
 	enum fio_ddir ddir = io_u->ddir;
 	unsigned int p = cmdprio->percentage[ddir];
@@ -87,6 +87,51 @@ int fio_cmdprio_percentage(struct cmdprio *cmdprio, struct io_u *io_u)
 	}
 
 	return 0;
+}
+
+/**
+ * fio_cmdprio_set_ioprio - Set an io_u ioprio according to cmdprio options
+ *
+ * Generates a random percentage value to determine if an io_u ioprio needs
+ * to be set. If the random percentage value is within the user specified
+ * percentage of I/Os that should use a cmdprio priority value (rather than
+ * the default priority), then this function updates the io_u with an ioprio
+ * value as defined by the cmdprio/cmdprio_class or cmdprio_bssplit options.
+ *
+ * Return true if the io_u ioprio was changed and false otherwise.
+ */
+bool fio_cmdprio_set_ioprio(struct thread_data *td, struct cmdprio *cmdprio,
+			    struct io_u *io_u)
+{
+	enum fio_ddir ddir = io_u->ddir;
+	unsigned int p = fio_cmdprio_percentage(cmdprio, io_u);
+	unsigned int cmdprio_value =
+		ioprio_value(cmdprio->class[ddir], cmdprio->level[ddir]);
+
+	if (p && rand_between(&td->prio_state, 0, 99) < p) {
+		io_u->ioprio = cmdprio_value;
+		if (!td->ioprio || cmdprio_value < td->ioprio) {
+			/*
+			 * The async IO priority is higher (has a lower value)
+			 * than the default priority (which is either 0 or the
+			 * value set by "prio" and "prioclass" options).
+			 */
+			io_u->flags |= IO_U_F_HIGH_PRIO;
+		}
+		return true;
+	}
+
+	if (td->ioprio && td->ioprio < cmdprio_value) {
+		/*
+		 * The IO will be executed with the default priority (which is
+		 * either 0 or the value set by "prio" and "prioclass options),
+		 * and this priority is higher (has a lower value) than the
+		 * async IO priority.
+		 */
+		io_u->flags |= IO_U_F_HIGH_PRIO;
+	}
+
+	return false;
 }
 
 int fio_cmdprio_init(struct thread_data *td, struct cmdprio *cmdprio,

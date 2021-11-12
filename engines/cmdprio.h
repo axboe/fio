@@ -22,7 +22,8 @@ struct cmdprio {
 int fio_cmdprio_bssplit_parse(struct thread_data *td, const char *input,
 			      struct cmdprio *cmdprio);
 
-int fio_cmdprio_percentage(struct cmdprio *cmdprio, struct io_u *io_u);
+bool fio_cmdprio_set_ioprio(struct thread_data *td, struct cmdprio *cmdprio,
+			    struct io_u *io_u);
 
 int fio_cmdprio_init(struct thread_data *td, struct cmdprio *cmdprio,
 		     bool *has_cmdprio);

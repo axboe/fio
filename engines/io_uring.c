@@ -456,37 +456,15 @@ static int fio_ioring_getevents(struct thread_data *td, unsigned int min,
 	return r < 0 ? r : events;
 }
 
-static void fio_ioring_cmdprio_prep(struct thread_data *td, struct io_u *io_u)
+static inline void fio_ioring_cmdprio_prep(struct thread_data *td,
+					   struct io_u *io_u)
 {
-	struct ioring_options *o = td->eo;
 	struct ioring_data *ld = td->io_ops_data;
-	struct io_uring_sqe *sqe = &ld->sqes[io_u->index];
+	struct ioring_options *o = td->eo;
 	struct cmdprio *cmdprio = &o->cmdprio;
-	enum fio_ddir ddir = io_u->ddir;
-	unsigned int p = fio_cmdprio_percentage(cmdprio, io_u);
-	unsigned int cmdprio_value =
-		ioprio_value(cmdprio->class[ddir], cmdprio->level[ddir]);
 
-	if (p && rand_between(&td->prio_state, 0, 99) < p) {
-		io_u->ioprio = cmdprio_value;
-		sqe->ioprio = cmdprio_value;
-		if (!td->ioprio || cmdprio_value < td->ioprio) {
-			/*
-			 * The async IO priority is higher (has a lower value)
-			 * than the default priority (which is either 0 or the
-			 * value set by "prio" and "prioclass" options).
-			 */
-			io_u->flags |= IO_U_F_HIGH_PRIO;
-		}
-	} else if (td->ioprio && td->ioprio < cmdprio_value) {
-		/*
-		 * The IO will be executed with the default priority (which is
-		 * either 0 or the value set by "prio" and "prioclass options),
-		 * and this priority is higher (has a lower value) than the
-		 * async IO priority.
-		 */
-		io_u->flags |= IO_U_F_HIGH_PRIO;
-	}
+	if (fio_cmdprio_set_ioprio(td, cmdprio, io_u))
+		ld->sqes[io_u->index].ioprio = io_u->ioprio;
 }
 
 static enum fio_q_status fio_ioring_queue(struct thread_data *td,

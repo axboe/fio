@@ -205,33 +205,15 @@ static int fio_libaio_prep(struct thread_data *td, struct io_u *io_u)
 	return 0;
 }
 
-static void fio_libaio_cmdprio_prep(struct thread_data *td, struct io_u *io_u)
+static inline void fio_libaio_cmdprio_prep(struct thread_data *td,
+					   struct io_u *io_u)
 {
 	struct libaio_options *o = td->eo;
 	struct cmdprio *cmdprio = &o->cmdprio;
-	enum fio_ddir ddir = io_u->ddir;
-	unsigned int p = fio_cmdprio_percentage(cmdprio, io_u);
-	unsigned int cmdprio_value =
-		ioprio_value(cmdprio->class[ddir], cmdprio->level[ddir]);
 
-	if (p && rand_between(&td->prio_state, 0, 99) < p) {
-		io_u->ioprio = cmdprio_value;
-		io_u->iocb.aio_reqprio = cmdprio_value;
+	if (fio_cmdprio_set_ioprio(td, cmdprio, io_u)) {
+		io_u->iocb.aio_reqprio = io_u->ioprio;
 		io_u->iocb.u.c.flags |= IOCB_FLAG_IOPRIO;
-		if (!td->ioprio || cmdprio_value < td->ioprio) {
-			/*
-			 * The async IO priority is higher (has a lower value)
-			 * than the default context priority.
-			 */
-			io_u->flags |= IO_U_F_HIGH_PRIO;
-		}
-	} else if (td->ioprio && td->ioprio < cmdprio_value) {
-		/*
-		 * The IO will be executed with the default context priority,
-		 * and this priority is higher (has a lower value) than the
-		 * async IO priority.
-		 */
-		io_u->flags |= IO_U_F_HIGH_PRIO;
 	}
 }
 
