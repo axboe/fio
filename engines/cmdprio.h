@@ -17,21 +17,26 @@ enum {
 	CMDPRIO_MODE_BSSPLIT,
 };
 
-struct cmdprio {
+struct cmdprio_options {
 	unsigned int percentage[CMDPRIO_RWDIR_CNT];
 	unsigned int class[CMDPRIO_RWDIR_CNT];
 	unsigned int level[CMDPRIO_RWDIR_CNT];
+	char *bssplit_str;
+};
+
+struct cmdprio {
+	struct cmdprio_options *options;
 	unsigned int bssplit_nr[CMDPRIO_RWDIR_CNT];
 	struct bssplit *bssplit[CMDPRIO_RWDIR_CNT];
 	unsigned int mode;
 };
 
-int fio_cmdprio_bssplit_parse(struct thread_data *td, const char *input,
-			      struct cmdprio *cmdprio);
-
 bool fio_cmdprio_set_ioprio(struct thread_data *td, struct cmdprio *cmdprio,
 			    struct io_u *io_u);
 
-int fio_cmdprio_init(struct thread_data *td, struct cmdprio *cmdprio);
+void fio_cmdprio_cleanup(struct cmdprio *cmdprio);
+
+int fio_cmdprio_init(struct thread_data *td, struct cmdprio *cmdprio,
+		     struct cmdprio_options *options);
 
 #endif

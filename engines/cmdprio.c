@@ -46,22 +46,15 @@ int fio_cmdprio_bssplit_parse(struct thread_data *td, const char *input,
 			      struct cmdprio *cmdprio)
 {
 	char *str, *p;
-	int i, ret = 0;
+	int ret = 0;
 
 	p = str = strdup(input);
 
 	strip_blank_front(&str);
 	strip_blank_end(str);
 
-	ret = str_split_parse(td, str, fio_cmdprio_bssplit_ddir, cmdprio, false);
-
-	if (parse_dryrun()) {
-		for (i = 0; i < CMDPRIO_RWDIR_CNT; i++) {
-			free(cmdprio->bssplit[i]);
-			cmdprio->bssplit[i] = NULL;
-			cmdprio->bssplit_nr[i] = 0;
-		}
-	}
+	ret = str_split_parse(td, str, fio_cmdprio_bssplit_ddir, cmdprio,
+			      false);
 
 	free(p);
 	return ret;
@@ -70,11 +63,12 @@ int fio_cmdprio_bssplit_parse(struct thread_data *td, const char *input,
 static int fio_cmdprio_percentage(struct cmdprio *cmdprio, struct io_u *io_u)
 {
 	enum fio_ddir ddir = io_u->ddir;
+	struct cmdprio_options *options = cmdprio->options;
 	int i;
 
 	switch (cmdprio->mode) {
 	case CMDPRIO_MODE_PERC:
-		return cmdprio->percentage[ddir];
+		return options->percentage[ddir];
 	case CMDPRIO_MODE_BSSPLIT:
 		for (i = 0; i < cmdprio->bssplit_nr[ddir]; i++) {
 			if (cmdprio->bssplit[ddir][i].bs == io_u->buflen)
@@ -107,9 +101,10 @@ bool fio_cmdprio_set_ioprio(struct thread_data *td, struct cmdprio *cmdprio,
 			    struct io_u *io_u)
 {
 	enum fio_ddir ddir = io_u->ddir;
+	struct cmdprio_options *options = cmdprio->options;
 	unsigned int p;
 	unsigned int cmdprio_value =
-		ioprio_value(cmdprio->class[ddir], cmdprio->level[ddir]);
+		ioprio_value(options->class[ddir], options->level[ddir]);
 
 	p = fio_cmdprio_percentage(cmdprio, io_u);
 	if (p && rand_between(&td->prio_state, 0, 99) < p) {
@@ -138,28 +133,89 @@ bool fio_cmdprio_set_ioprio(struct thread_data *td, struct cmdprio *cmdprio,
 	return false;
 }
 
-int fio_cmdprio_init(struct thread_data *td, struct cmdprio *cmdprio)
+static int fio_cmdprio_parse_and_gen_bssplit(struct thread_data *td,
+					     struct cmdprio *cmdprio)
 {
-	struct thread_options *to = &td->o;
-	bool has_cmdprio_percentage = false;
-	bool has_cmdprio_bssplit = false;
-	int i;
+	struct cmdprio_options *options = cmdprio->options;
+	int ret;
+
+	ret = fio_cmdprio_bssplit_parse(td, options->bssplit_str, cmdprio);
+	if (ret)
+		goto err;
+
+	return 0;
+
+err:
+	fio_cmdprio_cleanup(cmdprio);
+
+	return ret;
+}
+
+static int fio_cmdprio_parse_and_gen(struct thread_data *td,
+				     struct cmdprio *cmdprio)
+{
+	struct cmdprio_options *options = cmdprio->options;
+	int i, ret;
+
+	switch (cmdprio->mode) {
+	case CMDPRIO_MODE_BSSPLIT:
+		ret = fio_cmdprio_parse_and_gen_bssplit(td, cmdprio);
+		break;
+	case CMDPRIO_MODE_PERC:
+		ret = 0;
+		break;
+	default:
+		assert(0);
+		return 1;
+	}
 
 	/*
 	 * If cmdprio_percentage/cmdprio_bssplit is set and cmdprio_class
 	 * is not set, default to RT priority class.
 	 */
 	for (i = 0; i < CMDPRIO_RWDIR_CNT; i++) {
-		if (cmdprio->percentage[i]) {
-			if (!cmdprio->class[i])
-				cmdprio->class[i] = IOPRIO_CLASS_RT;
+		if (options->percentage[i] || cmdprio->bssplit_nr[i]) {
+			if (!options->class[i])
+				options->class[i] = IOPRIO_CLASS_RT;
+		}
+	}
+
+	return ret;
+}
+
+void fio_cmdprio_cleanup(struct cmdprio *cmdprio)
+{
+	int ddir;
+
+	for (ddir = 0; ddir < CMDPRIO_RWDIR_CNT; ddir++) {
+		free(cmdprio->bssplit[ddir]);
+		cmdprio->bssplit[ddir] = NULL;
+		cmdprio->bssplit_nr[ddir] = 0;
+	}
+
+	/*
+	 * options points to a cmdprio_options struct that is part of td->eo.
+	 * td->eo itself will be freed by free_ioengine().
+	 */
+	cmdprio->options = NULL;
+}
+
+int fio_cmdprio_init(struct thread_data *td, struct cmdprio *cmdprio,
+		     struct cmdprio_options *options)
+{
+	struct thread_options *to = &td->o;
+	bool has_cmdprio_percentage = false;
+	bool has_cmdprio_bssplit = false;
+	int i;
+
+	cmdprio->options = options;
+
+	if (options->bssplit_str && strlen(options->bssplit_str))
+		has_cmdprio_bssplit = true;
+
+	for (i = 0; i < CMDPRIO_RWDIR_CNT; i++) {
+		if (options->percentage[i])
 			has_cmdprio_percentage = true;
-		}
-		if (cmdprio->bssplit_nr[i]) {
-			if (!cmdprio->class[i])
-				cmdprio->class[i] = IOPRIO_CLASS_RT;
-			has_cmdprio_bssplit = true;
-		}
 	}
 
 	/*
@@ -179,5 +235,9 @@ int fio_cmdprio_init(struct thread_data *td, struct cmdprio *cmdprio)
 	else
 		cmdprio->mode = CMDPRIO_MODE_NONE;
 
-	return 0;
+	/* Nothing left to do if cmdprio is not used */
+	if (cmdprio->mode == CMDPRIO_MODE_NONE)
+		return 0;
+
+	return fio_cmdprio_parse_and_gen(td, cmdprio);
 }
