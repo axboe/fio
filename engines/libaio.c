@@ -51,8 +51,6 @@ struct libaio_data {
 	unsigned int queued;
 	unsigned int head;
 	unsigned int tail;
-
-	bool use_cmdprio;
 };
 
 struct libaio_options {
@@ -320,6 +318,7 @@ static enum fio_q_status fio_libaio_queue(struct thread_data *td,
 					  struct io_u *io_u)
 {
 	struct libaio_data *ld = td->io_ops_data;
+	struct libaio_options *o = td->eo;
 
 	fio_ro_check(td, io_u);
 
@@ -350,7 +349,7 @@ static enum fio_q_status fio_libaio_queue(struct thread_data *td,
 		return FIO_Q_COMPLETED;
 	}
 
-	if (ld->use_cmdprio)
+	if (o->cmdprio.mode != CMDPRIO_MODE_NONE)
 		fio_libaio_cmdprio_prep(td, io_u);
 
 	ld->iocbs[ld->head] = &io_u->iocb;
@@ -507,7 +506,7 @@ static int fio_libaio_init(struct thread_data *td)
 
 	td->io_ops_data = ld;
 
-	ret = fio_cmdprio_init(td, cmdprio, &ld->use_cmdprio);
+	ret = fio_cmdprio_init(td, cmdprio);
 	if (ret) {
 		td_verror(td, EINVAL, "fio_libaio_init");
 		return 1;

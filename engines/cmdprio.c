@@ -70,20 +70,23 @@ int fio_cmdprio_bssplit_parse(struct thread_data *td, const char *input,
 static int fio_cmdprio_percentage(struct cmdprio *cmdprio, struct io_u *io_u)
 {
 	enum fio_ddir ddir = io_u->ddir;
-	unsigned int p = cmdprio->percentage[ddir];
 	int i;
 
-	/*
-	 * If cmdprio_percentage option was specified, then use that
-	 * percentage. Otherwise, use cmdprio_bssplit percentages depending
-	 * on the IO size.
-	 */
-	if (p)
-		return p;
-
-	for (i = 0; i < cmdprio->bssplit_nr[ddir]; i++) {
-		if (cmdprio->bssplit[ddir][i].bs == io_u->buflen)
-			return cmdprio->bssplit[ddir][i].perc;
+	switch (cmdprio->mode) {
+	case CMDPRIO_MODE_PERC:
+		return cmdprio->percentage[ddir];
+	case CMDPRIO_MODE_BSSPLIT:
+		for (i = 0; i < cmdprio->bssplit_nr[ddir]; i++) {
+			if (cmdprio->bssplit[ddir][i].bs == io_u->buflen)
+				return cmdprio->bssplit[ddir][i].perc;
+		}
+		break;
+	default:
+		/*
+		 * An I/O engine should never call this function if cmdprio
+		 * is not is use.
+		 */
+		assert(0);
 	}
 
 	return 0;
@@ -104,10 +107,11 @@ bool fio_cmdprio_set_ioprio(struct thread_data *td, struct cmdprio *cmdprio,
 			    struct io_u *io_u)
 {
 	enum fio_ddir ddir = io_u->ddir;
-	unsigned int p = fio_cmdprio_percentage(cmdprio, io_u);
+	unsigned int p;
 	unsigned int cmdprio_value =
 		ioprio_value(cmdprio->class[ddir], cmdprio->level[ddir]);
 
+	p = fio_cmdprio_percentage(cmdprio, io_u);
 	if (p && rand_between(&td->prio_state, 0, 99) < p) {
 		io_u->ioprio = cmdprio_value;
 		if (!td->ioprio || cmdprio_value < td->ioprio) {
@@ -134,8 +138,7 @@ bool fio_cmdprio_set_ioprio(struct thread_data *td, struct cmdprio *cmdprio,
 	return false;
 }
 
-int fio_cmdprio_init(struct thread_data *td, struct cmdprio *cmdprio,
-		     bool *has_cmdprio)
+int fio_cmdprio_init(struct thread_data *td, struct cmdprio *cmdprio)
 {
 	struct thread_options *to = &td->o;
 	bool has_cmdprio_percentage = false;
@@ -169,7 +172,12 @@ int fio_cmdprio_init(struct thread_data *td, struct cmdprio *cmdprio,
 		return 1;
 	}
 
-	*has_cmdprio = has_cmdprio_percentage || has_cmdprio_bssplit;
+	if (has_cmdprio_bssplit)
+		cmdprio->mode = CMDPRIO_MODE_BSSPLIT;
+	else if (has_cmdprio_percentage)
+		cmdprio->mode = CMDPRIO_MODE_PERC;
+	else
+		cmdprio->mode = CMDPRIO_MODE_NONE;
 
 	return 0;
 }

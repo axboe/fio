@@ -11,12 +11,19 @@
 /* read and writes only, no trim */
 #define CMDPRIO_RWDIR_CNT 2
 
+enum {
+	CMDPRIO_MODE_NONE,
+	CMDPRIO_MODE_PERC,
+	CMDPRIO_MODE_BSSPLIT,
+};
+
 struct cmdprio {
 	unsigned int percentage[CMDPRIO_RWDIR_CNT];
 	unsigned int class[CMDPRIO_RWDIR_CNT];
 	unsigned int level[CMDPRIO_RWDIR_CNT];
 	unsigned int bssplit_nr[CMDPRIO_RWDIR_CNT];
 	struct bssplit *bssplit[CMDPRIO_RWDIR_CNT];
+	unsigned int mode;
 };
 
 int fio_cmdprio_bssplit_parse(struct thread_data *td, const char *input,
@@ -25,7 +32,6 @@ int fio_cmdprio_bssplit_parse(struct thread_data *td, const char *input,
 bool fio_cmdprio_set_ioprio(struct thread_data *td, struct cmdprio *cmdprio,
 			    struct io_u *io_u);
 
-int fio_cmdprio_init(struct thread_data *td, struct cmdprio *cmdprio,
-		     bool *has_cmdprio);
+int fio_cmdprio_init(struct thread_data *td, struct cmdprio *cmdprio);
 
 #endif

@@ -68,8 +68,6 @@ struct ioring_data {
 	int prepped;
 
 	struct ioring_mmap mmap[3];
-
-	bool use_cmdprio;
 };
 
 struct ioring_options {
@@ -472,6 +470,7 @@ static enum fio_q_status fio_ioring_queue(struct thread_data *td,
 {
 	struct ioring_data *ld = td->io_ops_data;
 	struct io_sq_ring *ring = &ld->sq_ring;
+	struct ioring_options *o = td->eo;
 	unsigned tail, next_tail;
 
 	fio_ro_check(td, io_u);
@@ -494,7 +493,7 @@ static enum fio_q_status fio_ioring_queue(struct thread_data *td,
 	if (next_tail == atomic_load_acquire(ring->head))
 		return FIO_Q_BUSY;
 
-	if (ld->use_cmdprio)
+	if (o->cmdprio.mode != CMDPRIO_MODE_NONE)
 		fio_ioring_cmdprio_prep(td, io_u);
 
 	ring->array[tail & ld->sq_ring_mask] = io_u->index;
@@ -831,7 +830,7 @@ static int fio_ioring_init(struct thread_data *td)
 
 	td->io_ops_data = ld;
 
-	ret = fio_cmdprio_init(td, cmdprio, &ld->use_cmdprio);
+	ret = fio_cmdprio_init(td, cmdprio);
 	if (ret) {
 		td_verror(td, EINVAL, "fio_ioring_init");
 		return 1;
