@@ -8,12 +8,15 @@
 
 #include "../fio.h"
 
+/* read and writes only, no trim */
+#define CMDPRIO_RWDIR_CNT 2
+
 struct cmdprio {
-	unsigned int percentage[DDIR_RWDIR_CNT];
-	unsigned int class[DDIR_RWDIR_CNT];
-	unsigned int level[DDIR_RWDIR_CNT];
-	unsigned int bssplit_nr[DDIR_RWDIR_CNT];
-	struct bssplit *bssplit[DDIR_RWDIR_CNT];
+	unsigned int percentage[CMDPRIO_RWDIR_CNT];
+	unsigned int class[CMDPRIO_RWDIR_CNT];
+	unsigned int level[CMDPRIO_RWDIR_CNT];
+	unsigned int bssplit_nr[CMDPRIO_RWDIR_CNT];
+	struct bssplit *bssplit[CMDPRIO_RWDIR_CNT];
 };
 
 int fio_cmdprio_bssplit_parse(struct thread_data *td, const char *input,

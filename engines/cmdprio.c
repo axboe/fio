@@ -56,7 +56,7 @@ int fio_cmdprio_bssplit_parse(struct thread_data *td, const char *input,
 	ret = str_split_parse(td, str, fio_cmdprio_bssplit_ddir, cmdprio, false);
 
 	if (parse_dryrun()) {
-		for (i = 0; i < DDIR_RWDIR_CNT; i++) {
+		for (i = 0; i < CMDPRIO_RWDIR_CNT; i++) {
 			free(cmdprio->bssplit[i]);
 			cmdprio->bssplit[i] = NULL;
 			cmdprio->bssplit_nr[i] = 0;
@@ -101,7 +101,7 @@ int fio_cmdprio_init(struct thread_data *td, struct cmdprio *cmdprio,
 	 * If cmdprio_percentage/cmdprio_bssplit is set and cmdprio_class
 	 * is not set, default to RT priority class.
 	 */
-	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
+	for (i = 0; i < CMDPRIO_RWDIR_CNT; i++) {
 		if (cmdprio->percentage[i]) {
 			if (!cmdprio->class[i])
 				cmdprio->class[i] = IOPRIO_CLASS_RT;
