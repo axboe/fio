@@ -2321,6 +2321,10 @@ Buffer (NDOB) bit set. No data will be transferred to the device with
 this bit set. Data written will be a pre-determined pattern such as
 all zeroes.
 .TP
+.B write_stream
+Issue WRITE STREAM(16) commands. Use the stream_id option to specify
+the stream identifier.
+.TP
 .B verify_bytchk_00
 Issue VERIFY commands with BYTCHK set to 00. This directs the device to carry
 out a medium verification with no data comparison.
@@ -2338,6 +2342,11 @@ total amount of data compared with this command. However, only one block
 WRITE SAME command except that data is compared instead of written.
 .RE
 .RE
+.TP
+.BI (sg)stream_id \fR=\fPint
+Set the stream identifier for WRITE STREAM commands. If this is set to 0 (which is not
+a valid stream identifier) fio will open a stream and then close it when done. Default
+is 0.
 .TP
 .BI (nbd)uri \fR=\fPstr
 Specify the NBD URI of the server to test.
