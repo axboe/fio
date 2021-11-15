@@ -66,8 +66,11 @@
 
 enum {
 	FIO_SG_WRITE		= 1,
-	FIO_SG_WRITE_VERIFY	= 2,
-	FIO_SG_WRITE_SAME	= 3
+	FIO_SG_WRITE_VERIFY,
+	FIO_SG_WRITE_SAME,
+	FIO_SG_VERIFY_BYTCHK_00,
+	FIO_SG_VERIFY_BYTCHK_01,
+	FIO_SG_VERIFY_BYTCHK_11,
 };
 
 struct sg_options {
@@ -127,6 +130,18 @@ static struct fio_option options[] = {
 			  { .ival = "same",
 			    .oval = FIO_SG_WRITE_SAME,
 			    .help = "Issue SCSI WRITE SAME commands",
+			  },
+			  { .ival = "verify_bytchk_00",
+			    .oval = FIO_SG_VERIFY_BYTCHK_00,
+			    .help = "Issue SCSI VERIFY commands with BYTCHK set to 00",
+			  },
+			  { .ival = "verify_bytchk_01",
+			    .oval = FIO_SG_VERIFY_BYTCHK_01,
+			    .help = "Issue SCSI VERIFY commands with BYTCHK set to 01",
+			  },
+			  { .ival = "verify_bytchk_11",
+			    .oval = FIO_SG_VERIFY_BYTCHK_11,
+			    .help = "Issue SCSI VERIFY commands with BYTCHK set to 11",
 			  },
 		},
 		.category = FIO_OPT_C_ENGINE,
@@ -575,6 +590,28 @@ static int fio_sgio_prep(struct thread_data *td, struct io_u *io_u)
 				hdr->cmdp[0] = 0x41; // write same(10)
 			else
 				hdr->cmdp[0] = 0x93; // write same(16)
+			break;
+		case FIO_SG_VERIFY_BYTCHK_00:
+			if (lba < MAX_10B_LBA)
+				hdr->cmdp[0] = 0x2f; // VERIFY(10)
+			else
+				hdr->cmdp[0] = 0x8f; // VERIFY(16)
+			hdr->dxfer_len = 0;
+			break;
+		case FIO_SG_VERIFY_BYTCHK_01:
+			if (lba < MAX_10B_LBA)
+				hdr->cmdp[0] = 0x2f; // VERIFY(10)
+			else
+				hdr->cmdp[0] = 0x8f; // VERIFY(16)
+			hdr->cmdp[1] |= 0x02;		// BYTCHK = 01b
+			break;
+		case FIO_SG_VERIFY_BYTCHK_11:
+			if (lba < MAX_10B_LBA)
+				hdr->cmdp[0] = 0x2f; // VERIFY(10)
+			else
+				hdr->cmdp[0] = 0x8f; // VERIFY(16)
+			hdr->cmdp[1] |= 0x06;		// BYTCHK = 11b
+			hdr->dxfer_len = sd->bs;
 			break;
 		};
 

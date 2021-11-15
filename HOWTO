@@ -2511,6 +2511,20 @@ with the caveat that when used on the command line, they must come after the
 		for each command but only the first 512 bytes will be used and
 		transferred to the device. The writefua option is ignored with this
 		selection.
+	**verify_bytchk_00**
+		Issue VERIFY commands with BYTCHK set to 00. This directs the
+		device to carry out a medium verification with no data comparison.
+	**verify_bytchk_01**
+		Issue VERIFY commands with BYTCHK set to 01. This directs the device to
+		compare the data on the device with the data transferred to the device.
+	**verify_bytchk_11**
+		Issue VERIFY commands with BYTCHK set to 11. This transfers a
+		single block to the device and compares the contents of this block with the
+		data on the device beginning at the specified offset. fio's block size
+		parameter specifies the total amount of data compared with this command.
+		However, only one block (sector) worth of data is transferred to the device.
+		This is similar to the WRITE SAME command except that data is compared instead
+		of written.
 
 .. option:: hipri : [sg]
 
