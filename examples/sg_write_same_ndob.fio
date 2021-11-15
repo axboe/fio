@@ -1,0 +1,44 @@
+#
+# **********************************
+# * !!THIS IS A DESTRUCTIVE TEST!! *
+# * IF NOT CHANGED THIS TEST WILL  *
+# * DESTROY DATA ON /dev/sdb       *
+# **********************************
+#
+# Test WRITE SAME commands with the NDOB flag set
+# issued via the sg ioengine
+# All of the jobs below should complete without error
+# except the last one
+#
+# job			description
+# precon		Precondition the device by writing 20 blocks with a
+# 			known pattern
+# write_same_ndob	Write 19 sectors of all zeroes with the NDOB flag set
+# verify-pass		Verify 19 blocks of all zeroes
+# verify-fail		Verify 20 blocks of all zeroes. This should fail.
+#
+
+[global]
+filename=/dev/sdb
+buffer_pattern=0x01
+ioengine=sg
+rw=write
+bs=512
+stonewall
+
+[precon]
+number_ios=20
+
+[write_same_ndob]
+sg_write_mode=write_same_ndob
+number_ios=19
+
+[verify-pass]
+sg_write_mode=verify_bytchk_01
+buffer_pattern=0x00
+number_ios=19
+
+[verify-fail]
+sg_write_mode=verify_bytchk_01
+buffer_pattern=0x00
+number_ios=20

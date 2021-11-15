@@ -68,6 +68,7 @@ enum {
 	FIO_SG_WRITE		= 1,
 	FIO_SG_WRITE_VERIFY,
 	FIO_SG_WRITE_SAME,
+	FIO_SG_WRITE_SAME_NDOB,
 	FIO_SG_VERIFY_BYTCHK_00,
 	FIO_SG_VERIFY_BYTCHK_01,
 	FIO_SG_VERIFY_BYTCHK_11,
@@ -130,6 +131,10 @@ static struct fio_option options[] = {
 			  { .ival = "same",
 			    .oval = FIO_SG_WRITE_SAME,
 			    .help = "Issue SCSI WRITE SAME commands",
+			  },
+			  { .ival = "write_same_ndob",
+			    .oval = FIO_SG_WRITE_SAME_NDOB,
+			    .help = "Issue SCSI WRITE SAME(16) commands with NDOB flag set",
 			  },
 			  { .ival = "verify_bytchk_00",
 			    .oval = FIO_SG_VERIFY_BYTCHK_00,
@@ -517,9 +522,9 @@ static enum fio_q_status fio_sgio_doio(struct thread_data *td,
 }
 
 static void fio_sgio_rw_lba(struct sg_io_hdr *hdr, unsigned long long lba,
-			    unsigned long long nr_blocks)
+			    unsigned long long nr_blocks, bool override16)
 {
-	if (lba < MAX_10B_LBA) {
+	if (lba < MAX_10B_LBA && !override16) {
 		sgio_set_be32((uint32_t) lba, &hdr->cmdp[2]);
 		sgio_set_be16((uint16_t) nr_blocks, &hdr->cmdp[7]);
 	} else {
@@ -560,7 +565,7 @@ static int fio_sgio_prep(struct thread_data *td, struct io_u *io_u)
 		if (o->readfua)
 			hdr->cmdp[1] |= 0x08;
 
-		fio_sgio_rw_lba(hdr, lba, nr_blocks);
+		fio_sgio_rw_lba(hdr, lba, nr_blocks, false);
 
 	} else if (io_u->ddir == DDIR_WRITE) {
 		sgio_hdr_init(sd, hdr, io_u, 1);
@@ -591,6 +596,11 @@ static int fio_sgio_prep(struct thread_data *td, struct io_u *io_u)
 			else
 				hdr->cmdp[0] = 0x93; // write same(16)
 			break;
+		case FIO_SG_WRITE_SAME_NDOB:
+			hdr->cmdp[0] = 0x93; // write same(16)
+			hdr->cmdp[1] |= 0x1; // no data output buffer
+			hdr->dxfer_len = 0;
+			break;
 		case FIO_SG_VERIFY_BYTCHK_00:
 			if (lba < MAX_10B_LBA)
 				hdr->cmdp[0] = 0x2f; // VERIFY(10)
@@ -615,7 +625,8 @@ static int fio_sgio_prep(struct thread_data *td, struct io_u *io_u)
 			break;
 		};
 
-		fio_sgio_rw_lba(hdr, lba, nr_blocks);
+		fio_sgio_rw_lba(hdr, lba, nr_blocks,
+			o->write_mode == FIO_SG_WRITE_SAME_NDOB);
 
 	} else if (io_u->ddir == DDIR_TRIM) {
 		struct sgio_trim *st;

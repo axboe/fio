@@ -2511,6 +2511,11 @@ with the caveat that when used on the command line, they must come after the
 		for each command but only the first 512 bytes will be used and
 		transferred to the device. The writefua option is ignored with this
 		selection.
+	**write_same_ndob**
+		Issue WRITE SAME(16) commands as above but with the No Data Output
+		Buffer (NDOB) bit set. No data will be transferred to the device with
+		this bit set. Data written will be a pre-determined pattern such as
+		all zeroes.
 	**verify_bytchk_00**
 		Issue VERIFY commands with BYTCHK set to 00. This directs the
 		device to carry out a medium verification with no data comparison.
