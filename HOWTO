@@ -2496,11 +2496,13 @@ with the caveat that when used on the command line, they must come after the
 
 	**write**
 		This is the default where write opcodes are issued as usual.
-	**verify**
+	**write_and_verify**
 		Issue WRITE AND VERIFY commands. The BYTCHK bit is set to 0. This
 		directs the device to carry out a medium verification with no data
 		comparison. The writefua option is ignored with this selection.
-	**same**
+	**verify**
+		This option is deprecated. Use write_and_verify instead.
+	**write_same**
 		Issue WRITE SAME commands. This transfers a single block to the device
 		and writes this same block of data to a contiguous sequence of LBAs
 		beginning at the specified offset. fio's block size parameter specifies
@@ -2511,6 +2513,8 @@ with the caveat that when used on the command line, they must come after the
 		for each command but only the first 512 bytes will be used and
 		transferred to the device. The writefua option is ignored with this
 		selection.
+	**same**
+		This option is deprecated. Use write_same instead.
 	**write_same_ndob**
 		Issue WRITE SAME(16) commands as above but with the No Data Output
 		Buffer (NDOB) bit set. No data will be transferred to the device with

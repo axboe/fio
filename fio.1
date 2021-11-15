@@ -2292,12 +2292,15 @@ values:
 .B write (default)
 Write opcodes are issued as usual
 .TP
-.B verify
+.B write_and_verify
 Issue WRITE AND VERIFY commands. The BYTCHK bit is set to 00b. This directs the
 device to carry out a medium verification with no data comparison for the data
 that was written. The writefua option is ignored with this selection.
 .TP
-.B same
+.B verify
+This option is deprecated. Use write_and_verify instead.
+.TP
+.B write_same
 Issue WRITE SAME commands. This transfers a single block to the device
 and writes this same block of data to a contiguous sequence of LBAs
 beginning at the specified offset. fio's block size parameter
@@ -2308,6 +2311,9 @@ blocksize=8k will write 16 sectors with each command. fio will still
 generate 8k of data for each command butonly the first 512 bytes will
 be used and transferred to the device. The writefua option is ignored
 with this selection.
+.TP
+.B same
+This option is deprecated. Use write_same instead.
 .TP
 .B write_same_ndob
 Issue WRITE SAME(16) commands as above but with the No Data Output
