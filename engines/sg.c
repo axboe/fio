@@ -217,6 +217,11 @@ struct sgio_data {
 #endif
 };
 
+static inline uint16_t sgio_get_be16(uint8_t *buf)
+{
+	return be16_to_cpu(*((uint16_t *) buf));
+}
+
 static inline uint32_t sgio_get_be32(uint8_t *buf)
 {
 	return be32_to_cpu(*((uint32_t *) buf));
@@ -632,7 +637,7 @@ static int fio_sgio_prep(struct thread_data *td, struct io_u *io_u)
 			if (o->writefua)
 				hdr->cmdp[1] |= 0x08;
 			sgio_set_be64(lba, &hdr->cmdp[2]);
-			sgio_set_be16(o->stream_id, &hdr->cmdp[10]);
+			sgio_set_be16((uint16_t) io_u->file->engine_pos, &hdr->cmdp[10]);
 			sgio_set_be16((uint16_t) nr_blocks, &hdr->cmdp[12]);
 			break;
 		case FIO_SG_VERIFY_BYTCHK_00:
@@ -1053,9 +1058,60 @@ static int fio_sgio_type_check(struct thread_data *td, struct fio_file *f)
 	return 0;
 }
 
+static int fio_sgio_stream_control(struct fio_file *f, bool open_stream, uint16_t *stream_id)
+{
+	struct sg_io_hdr hdr;
+	unsigned char cmd[16];
+	unsigned char sb[64];
+	unsigned char buf[8];
+	int ret;
+
+	memset(&hdr, 0, sizeof(hdr));
+	memset(cmd, 0, sizeof(cmd));
+	memset(sb, 0, sizeof(sb));
+	memset(buf, 0, sizeof(buf));
+
+	hdr.interface_id = 'S';
+	hdr.cmdp = cmd;
+	hdr.cmd_len = 16;
+	hdr.sbp = sb;
+	hdr.mx_sb_len = sizeof(sb);
+	hdr.timeout = SCSI_TIMEOUT_MS;
+	hdr.cmdp[0] = 0x9e;
+	hdr.dxfer_direction = SG_DXFER_FROM_DEV;
+	hdr.dxferp = buf;
+	hdr.dxfer_len = sizeof(buf);
+	sgio_set_be32(sizeof(buf), &hdr.cmdp[10]);
+
+	if (open_stream)
+		hdr.cmdp[1] = 0x34;
+	else {
+		hdr.cmdp[1] = 0x54;
+		sgio_set_be16(*stream_id, &hdr.cmdp[4]);
+	}
+
+	ret = ioctl(f->fd, SG_IO, &hdr);
+
+	if (ret < 0)
+		return ret;
+
+	if (hdr.info & SG_INFO_CHECK)
+		return 1;
+
+	if (open_stream) {
+		*stream_id = sgio_get_be16(&buf[4]);
+		dprint(FD_FILE, "sgio_stream_control: opened stream %u\n", (unsigned int) *stream_id);
+		assert(*stream_id != 0);
+	} else
+		dprint(FD_FILE, "sgio_stream_control: closed stream %u\n", (unsigned int) *stream_id);
+
+	return 0;
+}
+
 static int fio_sgio_open(struct thread_data *td, struct fio_file *f)
 {
 	struct sgio_data *sd = td->io_ops_data;
+	struct sg_options *o = td->eo;
 	int ret;
 
 	ret = generic_open_file(td, f);
@@ -1067,7 +1123,31 @@ static int fio_sgio_open(struct thread_data *td, struct fio_file *f)
 		return ret;
 	}
 
+	if (o->write_mode == FIO_SG_WRITE_STREAM) {
+		if (o->stream_id)
+			f->engine_pos = o->stream_id;
+		else {
+			ret = fio_sgio_stream_control(f, true, (uint16_t *) &f->engine_pos);
+			if (ret)
+				return ret;
+		}
+	}
+
 	return 0;
+}
+
+int fio_sgio_close(struct thread_data *td, struct fio_file *f)
+{
+	struct sg_options *o = td->eo;
+	int ret;
+
+	if (!o->stream_id && o->write_mode == FIO_SG_WRITE_STREAM) {
+		ret = fio_sgio_stream_control(f, false, (uint16_t *) &f->engine_pos);
+		if (ret)
+			return ret;
+	}
+
+	return generic_close_file(td, f);
 }
 
 /*
@@ -1344,7 +1424,7 @@ static struct ioengine_ops ioengine = {
 	.event		= fio_sgio_event,
 	.cleanup	= fio_sgio_cleanup,
 	.open_file	= fio_sgio_open,
-	.close_file	= generic_close_file,
+	.close_file	= fio_sgio_close,
 	.get_file_size	= fio_sgio_get_file_size,
 	.flags		= FIO_SYNCIO | FIO_RAWIO,
 	.options	= options,
