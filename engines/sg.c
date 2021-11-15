@@ -69,6 +69,7 @@ enum {
 	FIO_SG_WRITE_VERIFY,
 	FIO_SG_WRITE_SAME,
 	FIO_SG_WRITE_SAME_NDOB,
+	FIO_SG_WRITE_STREAM,
 	FIO_SG_VERIFY_BYTCHK_00,
 	FIO_SG_VERIFY_BYTCHK_01,
 	FIO_SG_VERIFY_BYTCHK_11,
@@ -80,6 +81,7 @@ struct sg_options {
 	unsigned int readfua;
 	unsigned int writefua;
 	unsigned int write_mode;
+	uint16_t stream_id;
 };
 
 static struct fio_option options[] = {
@@ -158,7 +160,21 @@ static struct fio_option options[] = {
 			    .oval = FIO_SG_VERIFY_BYTCHK_11,
 			    .help = "Issue SCSI VERIFY commands with BYTCHK set to 11",
 			  },
+			  { .ival = "write_stream",
+			    .oval = FIO_SG_WRITE_STREAM,
+			    .help = "Issue SCSI WRITE STREAM(16) commands",
+			  },
 		},
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_SG,
+	},
+	{
+		.name	= "stream_id",
+		.lname	= "stream id for WRITE STREAM(16) commands",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct sg_options, stream_id),
+		.help	= "Stream ID for WRITE STREAM(16) commands",
+		.def	= "0",
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_SG,
 	},
@@ -611,6 +627,14 @@ static int fio_sgio_prep(struct thread_data *td, struct io_u *io_u)
 			hdr->cmdp[1] |= 0x1; // no data output buffer
 			hdr->dxfer_len = 0;
 			break;
+		case FIO_SG_WRITE_STREAM:
+			hdr->cmdp[0] = 0x9a; // write stream (16)
+			if (o->writefua)
+				hdr->cmdp[1] |= 0x08;
+			sgio_set_be64(lba, &hdr->cmdp[2]);
+			sgio_set_be16(o->stream_id, &hdr->cmdp[10]);
+			sgio_set_be16((uint16_t) nr_blocks, &hdr->cmdp[12]);
+			break;
 		case FIO_SG_VERIFY_BYTCHK_00:
 			if (lba < MAX_10B_LBA)
 				hdr->cmdp[0] = 0x2f; // VERIFY(10)
@@ -635,8 +659,9 @@ static int fio_sgio_prep(struct thread_data *td, struct io_u *io_u)
 			break;
 		};
 
-		fio_sgio_rw_lba(hdr, lba, nr_blocks,
-			o->write_mode == FIO_SG_WRITE_SAME_NDOB);
+		if (o->write_mode != FIO_SG_WRITE_STREAM)
+			fio_sgio_rw_lba(hdr, lba, nr_blocks,
+				o->write_mode == FIO_SG_WRITE_SAME_NDOB);
 
 	} else if (io_u->ddir == DDIR_TRIM) {
 		struct sgio_trim *st;
