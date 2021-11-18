@@ -3537,6 +3537,18 @@ Measurements and reporting
 	:option:`write_bw_log` for details about the filename format and `Log
 	File Formats`_ for how data is structured within the file.
 
+.. option:: log_entries=int
+
+	By default, fio will log an entry in the iops, latency, or bw log for
+	every I/O that completes. The initial number of I/O log entries is 1024.
+	When the log entries are all used, new log entries are dynamically
+	allocated.  This dynamic log entry allocation may negatively impact
+	time-related statistics such as I/O tail latencies (e.g. 99.9th percentile
+	completion latency). This option allows specifying a larger initial
+	number of log entries to avoid run-time allocations of new log entries,
+	resulting in more precise time-related I/O statistics.
+	Also see :option:`log_avg_msec`. Defaults to 1024.
+
 .. option:: log_avg_msec=int
 
 	By default, fio will log an entry in the iops, latency, or bw log for every

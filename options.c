@@ -4245,6 +4245,18 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_INVALID,
 	},
 	{
+		.name	= "log_entries",
+		.lname	= "Log entries",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct thread_options, log_entries),
+		.help	= "Initial number of entries in a job IO log",
+		.def	= __fio_stringify(DEF_LOG_ENTRIES),
+		.minval	= DEF_LOG_ENTRIES,
+		.maxval	= MAX_LOG_ENTRIES,
+		.category = FIO_OPT_C_LOG,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
 		.name	= "log_avg_msec",
 		.lname	= "Log averaging (msec)",
 		.type	= FIO_OPT_INT,

@@ -377,6 +377,7 @@ struct thread_options {
 	fio_fp64_t zrt;
 	fio_fp64_t zrf;
 
+	unsigned int log_entries;
 	unsigned int log_prio;
 };
 
@@ -683,6 +684,7 @@ struct thread_options_pack {
 	int32_t max_open_zones;
 	uint32_t ignore_zone_limits;
 
+	uint32_t log_entries;
 	uint32_t log_prio;
 } __attribute__((packed));
 

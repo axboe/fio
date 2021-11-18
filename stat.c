@@ -2688,27 +2688,25 @@ static inline void add_stat_sample(struct io_stat *is, unsigned long long data)
  */
 static struct io_logs *get_new_log(struct io_log *iolog)
 {
-	size_t new_size, new_samples;
+	size_t new_samples;
 	struct io_logs *cur_log;
 
 	/*
 	 * Cap the size at MAX_LOG_ENTRIES, so we don't keep doubling
 	 * forever
 	 */
-	if (!iolog->cur_log_max)
-		new_samples = DEF_LOG_ENTRIES;
-	else {
+	if (!iolog->cur_log_max) {
+		new_samples = iolog->td->o.log_entries;
+	} else {
 		new_samples = iolog->cur_log_max * 2;
 		if (new_samples > MAX_LOG_ENTRIES)
 			new_samples = MAX_LOG_ENTRIES;
 	}
 
-	new_size = new_samples * log_entry_sz(iolog);
-
 	cur_log = smalloc(sizeof(*cur_log));
 	if (cur_log) {
 		INIT_FLIST_HEAD(&cur_log->list);
-		cur_log->log = malloc(new_size);
+		cur_log->log = calloc(new_samples, log_entry_sz(iolog));
 		if (cur_log->log) {
 			cur_log->nr_samples = 0;
 			cur_log->max_samples = new_samples;

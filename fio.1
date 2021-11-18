@@ -3243,6 +3243,17 @@ logging (see \fBlog_avg_msec\fR) has been enabled. See
 \fBwrite_bw_log\fR for details about the filename format and \fBLOG
 FILE FORMATS\fR for how data is structured within the file.
 .TP
+.BI log_entries \fR=\fPint
+By default, fio will log an entry in the iops, latency, or bw log for
+every I/O that completes. The initial number of I/O log entries is 1024.
+When the log entries are all used, new log entries are dynamically
+allocated.  This dynamic log entry allocation may negatively impact
+time-related statistics such as I/O tail latencies (e.g. 99.9th percentile
+completion latency). This option allows specifying a larger initial
+number of log entries to avoid run-time allocation of new log entries,
+resulting in more precise time-related I/O statistics.
+Also see \fBlog_avg_msec\fR as well. Defaults to 1024.
+.TP
 .BI log_avg_msec \fR=\fPint
 By default, fio will log an entry in the iops, latency, or bw log for every
 I/O that completes. When writing to the disk log, that can quickly grow to a
