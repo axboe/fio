@@ -162,6 +162,7 @@ static inline uint64_t __get_next_seed(struct frand_state *fs)
 
 extern void init_rand(struct frand_state *, bool);
 extern void init_rand_seed(struct frand_state *, uint64_t seed, bool);
+void __init_rand64(struct taus258_state *state, uint64_t seed);
 extern void __fill_random_buf(void *buf, unsigned int len, uint64_t seed);
 extern uint64_t fill_random_buf(struct frand_state *, void *buf, unsigned int len);
 extern void __fill_random_buf_percentage(uint64_t, void *, unsigned int, unsigned int, unsigned int, char *, unsigned int);

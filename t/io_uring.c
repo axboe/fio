@@ -28,6 +28,7 @@
 #include "../arch/arch.h"
 #include "../lib/types.h"
 #include "../lib/roundup.h"
+#include "../lib/rand.h"
 #include "../minmax.h"
 #include "../os/linux/io_uring.h"
 
@@ -85,6 +86,8 @@ struct submitter {
 	volatile int finish;
 
 	__s32 *fds;
+
+	struct taus258_state rand_state;
 
 	unsigned long *clock_batch;
 	int clock_index;
@@ -448,7 +451,7 @@ static void init_io(struct submitter *s, unsigned index)
 	}
 	f->pending_ios++;
 
-	r = lrand48();
+	r = __rand64(&s->rand_state);
 	offset = (r % (f->max_blocks - 1)) * bs;
 
 	if (register_files) {
@@ -586,6 +589,7 @@ static int submitter_init(struct submitter *s)
 	s->tid = gettid();
 	printf("submitter=%d, tid=%d\n", s->index, s->tid);
 
+	__init_rand64(&s->rand_state, pthread_self());
 	srand48(pthread_self());
 
 	for (i = 0; i < MAX_FDS; i++)
