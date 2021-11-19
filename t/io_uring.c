@@ -60,6 +60,8 @@ static unsigned sq_ring_mask, cq_ring_mask;
 
 struct file {
 	unsigned long max_blocks;
+	unsigned long max_size;
+	unsigned long cur_off;
 	unsigned pending_ios;
 	int real_fd;
 	int fixed_fd;
@@ -123,7 +125,8 @@ static int do_nop = 0;		/* no-op SQ ring commands */
 static int nthreads = 1;
 static int stats = 0;		/* generate IO stats */
 static int aio = 0;		/* use libaio */
-static int runtime = 0;	/* runtime */
+static int runtime = 0;		/* runtime */
+static int random_io = 1;	/* random or sequential IO */
 
 static unsigned long tsc_rate;
 
@@ -451,8 +454,15 @@ static void init_io(struct submitter *s, unsigned index)
 	}
 	f->pending_ios++;
 
-	r = __rand64(&s->rand_state);
-	offset = (r % (f->max_blocks - 1)) * bs;
+	if (random_io) {
+		r = __rand64(&s->rand_state);
+		offset = (r % (f->max_blocks - 1)) * bs;
+	} else {
+		offset = f->cur_off;
+		f->cur_off += bs;
+		if (f->cur_off + bs > f->max_size)
+			f->cur_off = 0;
+	}
 
 	if (register_files) {
 		sqe->flags = IOSQE_FIXED_FILE;
@@ -520,9 +530,11 @@ static int get_file_size(struct file *f)
 			return -1;
 
 		f->max_blocks = bytes / bs;
+		f->max_size = bytes;
 		return 0;
 	} else if (S_ISREG(st.st_mode)) {
 		f->max_blocks = st.st_size / bs;
+		f->max_size = st.st_size;
 		return 0;
 	}
 
@@ -1070,11 +1082,12 @@ static void usage(char *argv, int status)
 		" -N <bool> : Perform just no-op requests, default %d\n"
 		" -t <bool> : Track IO latencies, default %d\n"
 		" -T <int>  : TSC rate in HZ\n"
-		" -a <bool> : Use legacy aio, default %d\n"
-		" -r <int>  : Runtime in seconds, default %s\n",
+		" -r <int>  : Runtime in seconds, default %s\n"
+		" -R <bool> : Use random IO, default %d\n"
+		" -a <bool> : Use legacy aio, default %d\n",
 		argv, DEPTH, BATCH_SUBMIT, BATCH_COMPLETE, BS, polled,
 		fixedbufs, dma_map, register_files, nthreads, !buffered, do_nop,
-		stats, aio, runtime == 0 ? "unlimited" : runtime_str);
+		stats, runtime == 0 ? "unlimited" : runtime_str, aio, random_io);
 	exit(status);
 }
 
@@ -1134,7 +1147,7 @@ int main(int argc, char *argv[])
 	if (!do_nop && argc < 2)
 		usage(argv[0], 1);
 
-	while ((opt = getopt(argc, argv, "d:s:c:b:p:B:F:n:N:O:t:T:a:r:D:h?")) != -1) {
+	while ((opt = getopt(argc, argv, "d:s:c:b:p:B:F:n:N:O:t:T:a:r:D:R:h?")) != -1) {
 		switch (opt) {
 		case 'a':
 			aio = !!atoi(optarg);
@@ -1197,6 +1210,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'D':
 			dma_map = !!atoi(optarg);
+			break;
+		case 'R':
+			random_io = !!atoi(optarg);
 			break;
 		case 'h':
 		case '?':
