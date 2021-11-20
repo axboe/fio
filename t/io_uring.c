@@ -384,6 +384,13 @@ static int io_uring_register_files(struct submitter *s)
 
 static int io_uring_setup(unsigned entries, struct io_uring_params *p)
 {
+	/*
+	 * Clamp CQ ring size at our SQ ring size, we don't need more entries
+	 * than that.
+	 */
+	p->flags |= IORING_SETUP_CQSIZE;
+	p->cq_entries = entries;
+
 	return syscall(__NR_io_uring_setup, entries, p);
 }
 

@@ -692,6 +692,13 @@ static int fio_ioring_queue_init(struct thread_data *td)
 		}
 	}
 
+	/*
+	 * Clamp CQ ring size at our SQ ring size, we don't need more entries
+	 * than that.
+	 */
+	p.flags |= IORING_SETUP_CQSIZE;
+	p.cq_entries = depth;
+
 	ret = syscall(__NR_io_uring_setup, depth, &p);
 	if (ret < 0)
 		return ret;
