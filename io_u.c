@@ -2230,27 +2230,30 @@ void fill_io_buffer(struct thread_data *td, void *buf, unsigned long long min_wr
 
 	if (o->compress_percentage || o->dedupe_percentage) {
 		unsigned int perc = td->o.compress_percentage;
-		struct frand_state *rs;
+		struct frand_state *rs = NULL;
 		unsigned long long left = max_bs;
 		unsigned long long this_write;
 
 		do {
-			rs = get_buf_state(td);
+			/*
+			 * Buffers are either entirely dedupe-able or not.
+			 * If we choose to dedup, the buffer should undergo
+			 * the same manipulation as the original write. Which
+			 * means we should retrack the steps we took for compression
+			 * as well.
+			 */
+			if (!rs)
+				rs = get_buf_state(td);
 
 			min_write = min(min_write, left);
 
-			if (perc) {
-				this_write = min_not_zero(min_write,
-							(unsigned long long) td->o.compress_chunk);
+			this_write = min_not_zero(min_write,
+						(unsigned long long) td->o.compress_chunk);
 
-				fill_random_buf_percentage(rs, buf, perc,
-					this_write, this_write,
-					o->buffer_pattern,
-					o->buffer_pattern_bytes);
-			} else {
-				fill_random_buf(rs, buf, min_write);
-				this_write = min_write;
-			}
+			fill_random_buf_percentage(rs, buf, perc,
+				this_write, this_write,
+				o->buffer_pattern,
+				o->buffer_pattern_bytes);
 
 			buf += this_write;
 			left -= this_write;
