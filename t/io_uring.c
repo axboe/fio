@@ -192,7 +192,7 @@ unsigned int calc_clat_percentiles(unsigned long *io_u_plat, unsigned long nr,
 	unsigned long *ovals = NULL;
 	bool is_last;
 
-	*minv = -1ULL;
+	*minv = -1UL;
 	*maxv = 0;
 
 	ovals = malloc(len * sizeof(*ovals));
@@ -498,7 +498,7 @@ static void init_io(struct submitter *s, unsigned index)
 	sqe->off = offset;
 	sqe->user_data = (unsigned long) f->fileno;
 	if (stats && stats_running)
-		sqe->user_data |= ((unsigned long)s->clock_index << 32);
+		sqe->user_data |= ((uint64_t)s->clock_index << 32);
 }
 
 static int prep_more_ios_uring(struct submitter *s, int max_ios)
