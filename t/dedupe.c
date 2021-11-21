@@ -94,8 +94,9 @@ static uint64_t get_size(struct fio_file *f, struct stat *sb)
 			return 0;
 		}
 		ret = bytes;
-	} else
+	} else {
 		ret = sb->st_size;
+	}
 
 	return (ret & ~((uint64_t)blocksize - 1));
 }
@@ -127,9 +128,9 @@ static int __read_block(int fd, void *buf, off_t offset, size_t count)
 	if (ret < 0) {
 		perror("pread");
 		return 1;
-	} else if (!ret)
+	} else if (!ret) {
 		return 1;
-	else if (ret != count) {
+	} else if (ret != count) {
 		log_err("dedupe: short read on block\n");
 		return 1;
 	}
@@ -142,7 +143,8 @@ static int read_block(int fd, void *buf, off_t offset)
 	return __read_block(fd, buf, offset, blocksize);
 }
 
-static void account_unique_capacity(uint64_t offset, uint64_t *unique_capacity, struct zlib_ctrl *zc)
+static void account_unique_capacity(uint64_t offset, uint64_t *unique_capacity,
+				    struct zlib_ctrl *zc)
 {
 	z_stream *stream = &zc->stream;
 	unsigned int compressed_len;
@@ -166,7 +168,6 @@ static void account_unique_capacity(uint64_t offset, uint64_t *unique_capacity, 
 				(float)compressed_len / (float)blocksize);
 
 	*unique_capacity += compressed_len;
-
 	deflateReset(stream);
 }
 
@@ -217,13 +218,15 @@ static struct chunk *alloc_chunk(void)
 	if (collision_check || dump_output) {
 		c = malloc(sizeof(struct chunk) + sizeof(struct flist_head));
 		INIT_FLIST_HEAD(&c->extent_list[0]);
-	} else
+	} else {
 		c = malloc(sizeof(struct chunk));
+	}
 
 	return c;
 }
 
-static void insert_chunk(struct item *i, uint64_t *unique_capacity, struct zlib_ctrl *zc)
+static void insert_chunk(struct item *i, uint64_t *unique_capacity,
+			 struct zlib_ctrl *zc)
 {
 	struct fio_rb_node **p, *parent;
 	struct chunk *c;
@@ -236,11 +239,11 @@ static void insert_chunk(struct item *i, uint64_t *unique_capacity, struct zlib_
 
 		c = rb_entry(parent, struct chunk, rb_node);
 		diff = memcmp(i->hash, c->hash, sizeof(i->hash));
-		if (diff < 0)
+		if (diff < 0) {
 			p = &(*p)->rb_left;
-		else if (diff > 0)
+		} else if (diff > 0) {
 			p = &(*p)->rb_right;
-		else {
+		} else {
 			int ret;
 
 			if (!collision_check)
@@ -270,7 +273,8 @@ add:
 }
 
 static void insert_chunks(struct item *items, unsigned int nitems,
-			  uint64_t *ndupes, uint64_t *unique_capacity, struct zlib_ctrl *zc)
+			  uint64_t *ndupes, uint64_t *unique_capacity,
+			  struct zlib_ctrl *zc)
 {
 	int i;
 
@@ -319,7 +323,8 @@ static int do_work(struct worker_thread *thread, void *buf)
 
 	offset = thread->cur_offset;
 
-	nblocks = read_blocks(thread->fd, buf, offset, min(thread->size, (uint64_t)chunk_size));
+	nblocks = read_blocks(thread->fd, buf, offset,
+				min(thread->size, (uint64_t) chunk_size));
 	if (!nblocks)
 		return 1;
 
@@ -345,6 +350,8 @@ static int do_work(struct worker_thread *thread, void *buf)
 
 static void thread_init_zlib_control(struct worker_thread *thread)
 {
+	size_t sz;
+
 	z_stream *stream = &thread->zc.stream;
 	stream->zalloc = Z_NULL;
 	stream->zfree = Z_NULL;
@@ -354,7 +361,8 @@ static void thread_init_zlib_control(struct worker_thread *thread)
 		return;
 
 	thread->zc.buf_in = fio_memalign(blocksize, blocksize, false);
-	thread->zc.buf_out = fio_memalign(blocksize, deflateBound(stream, blocksize), false);
+	sz = deflateBound(stream, blocksize);
+	thread->zc.buf_out = fio_memalign(blocksize, sz, false);
 }
 
 static void *thread_fn(void *data)
@@ -363,7 +371,6 @@ static void *thread_fn(void *data)
 	void *buf;
 
 	buf = fio_memalign(blocksize, chunk_size, false);
-
 	thread_init_zlib_control(thread);
 
 	do {
@@ -417,15 +424,17 @@ static void show_progress(struct worker_thread *threads, unsigned long total)
 			printf("%3.2f%% done (%luKiB/sec)\r", perc, this_items);
 			last_nitems = nitems;
 			fio_gettime(&last_tv, NULL);
-		} else
+		} else {
 			printf("%3.2f%% done\r", perc);
+		}
 		fflush(stdout);
 		usleep(250000);
 	};
 }
 
 static int run_dedupe_threads(struct fio_file *f, uint64_t dev_size,
-			      uint64_t *nextents, uint64_t *nchunks, uint64_t *unique_capacity)
+			      uint64_t *nextents, uint64_t *nchunks,
+			      uint64_t *unique_capacity)
 {
 	struct worker_thread *threads;
 	unsigned long nitems, total_items;
@@ -508,9 +517,11 @@ static int dedupe_check(const char *filename, uint64_t *nextents,
 		bloom = bloom_new(bloom_entries);
 	}
 
-	printf("Will check <%s>, size <%llu>, using %u threads\n", filename, (unsigned long long) dev_size, num_threads);
+	printf("Will check <%s>, size <%llu>, using %u threads\n", filename,
+				(unsigned long long) dev_size, num_threads);
 
-	return run_dedupe_threads(&file, dev_size, nextents, nchunks, unique_capacity);
+	return run_dedupe_threads(&file, dev_size, nextents, nchunks,
+					unique_capacity);
 err:
 	if (file.fd != -1)
 		close(file.fd);
@@ -523,7 +534,8 @@ static void show_chunk(struct chunk *c)
 	struct flist_head *n;
 	struct extent *e;
 
-	printf("c hash %8x %8x %8x %8x, count %lu\n", c->hash[0], c->hash[1], c->hash[2], c->hash[3], (unsigned long) c->count);
+	printf("c hash %8x %8x %8x %8x, count %lu\n", c->hash[0], c->hash[1],
+			c->hash[2], c->hash[3], (unsigned long) c->count);
 	flist_for_each(n, &c->extent_list[0]) {
 		e = flist_entry(n, struct extent, list);
 		printf("\toffset %llu\n", (unsigned long long) e->offset);
@@ -542,17 +554,18 @@ static uint64_t bytes_to_human_readable_unit(uint64_t n, const char **unit_out)
 	}
 
 	*unit_out = capacity_unit[i];
-
 	return n;
 }
 
-static void show_stat(uint64_t nextents, uint64_t nchunks, uint64_t ndupextents, uint64_t unique_capacity)
+static void show_stat(uint64_t nextents, uint64_t nchunks, uint64_t ndupextents,
+		      uint64_t unique_capacity)
 {
 	double perc, ratio;
 	const char *unit;
 	uint64_t uc_human;
 
-	printf("Extents=%lu, Unique extents=%lu", (unsigned long) nextents, (unsigned long) nchunks);
+	printf("Extents=%lu, Unique extents=%lu", (unsigned long) nextents,
+						(unsigned long) nchunks);
 	if (!bloom)
 		printf(" Duplicated extents=%lu", (unsigned long) ndupextents);
 	printf("\n");
@@ -560,11 +573,14 @@ static void show_stat(uint64_t nextents, uint64_t nchunks, uint64_t ndupextents,
 	if (nchunks) {
 		ratio = (double) nextents / (double) nchunks;
 		printf("De-dupe ratio: 1:%3.2f\n", ratio - 1.0);
-	} else
+	} else {
 		printf("De-dupe ratio: 1:infinite\n");
+	}
 
-	if (ndupextents)
-		printf("De-dupe working set at least: %3.2f%%\n", 100.0 * (double) ndupextents / (double) nextents);
+	if (ndupextents) {
+		printf("De-dupe working set at least: %3.2f%%\n",
+			100.0 * (double) ndupextents / (double) nextents);
+	}
 
 	perc = 1.00 - ((double) nchunks / (double) nextents);
 	perc *= 100.0;
