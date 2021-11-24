@@ -477,13 +477,17 @@ static int check_int(const char *p, int *val)
 
 static size_t opt_len(const char *str)
 {
+	char delimiter[] = {',', ':'};
 	char *postfix;
+	unsigned int i;
 
-	postfix = strchr(str, ':');
-	if (!postfix)
-		return strlen(str);
+	for (i = 0; i < FIO_ARRAY_SIZE(delimiter); i++) {
+		postfix = strchr(str, delimiter[i]);
+		if (postfix)
+			return (int)(postfix - str);
+	}
 
-	return (int)(postfix - str);
+	return strlen(str);
 }
 
 static int str_match_len(const struct value_pair *vp, const char *str)
