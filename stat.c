@@ -3089,6 +3089,15 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 
 	add_stat_sample(&ts->clat_stat[ddir], nsec);
 
+	/*
+	 * When lat_percentiles=1 (default 0), the reported high/low priority
+	 * percentiles and stats are used for describing total latency values,
+	 * even though the variable names themselves start with clat_.
+	 *
+	 * Because of the above definition, add a prio stat sample only when
+	 * lat_percentiles=0. add_lat_sample() will add the prio stat sample
+	 * when lat_percentiles=1.
+	 */
 	if (!ts->lat_percentiles) {
 		if (high_prio)
 			add_stat_sample(&ts->clat_high_prio_stat[ddir], nsec);
@@ -3101,6 +3110,11 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 			       offset, ioprio);
 
 	if (ts->clat_percentiles) {
+		/*
+		 * Because of the above definition, add a prio lat percentile
+		 * sample only when lat_percentiles=0. add_lat_sample() will add
+		 * the prio lat percentile sample when lat_percentiles=1.
+		 */
 		if (ts->lat_percentiles)
 			add_lat_percentile_sample_noprio(ts, nsec, ddir, FIO_CLAT);
 		else
@@ -3194,6 +3208,16 @@ void add_lat_sample(struct thread_data *td, enum fio_ddir ddir,
 		add_log_sample(td, td->lat_log, sample_val(nsec), ddir, bs,
 			       offset, ioprio);
 
+	/*
+	 * When lat_percentiles=1 (default 0), the reported high/low priority
+	 * percentiles and stats are used for describing total latency values,
+	 * even though the variable names themselves start with clat_.
+	 *
+	 * Because of the above definition, add a prio stat and prio lat
+	 * percentile sample only when lat_percentiles=1. add_clat_sample() will
+	 * add the prio stat and prio lat percentile sample when
+	 * lat_percentiles=0.
+	 */
 	if (ts->lat_percentiles) {
 		add_lat_percentile_sample(ts, nsec, ddir, high_prio, FIO_LAT);
 		if (high_prio)
