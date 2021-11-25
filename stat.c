@@ -3052,8 +3052,9 @@ void add_sync_clat_sample(struct thread_stat *ts, unsigned long long nsec)
 	add_stat_sample(&ts->sync_stat, nsec);
 }
 
-static void add_lat_percentile_sample_noprio(struct thread_stat *ts,
-				unsigned long long nsec, enum fio_ddir ddir, enum fio_lat lat)
+static void add_lat_percentile_sample(struct thread_stat *ts,
+				      unsigned long long nsec,
+				      enum fio_ddir ddir, enum fio_lat lat)
 {
 	unsigned int idx = plat_val_to_idx(nsec);
 	assert(idx < FIO_IO_U_PLAT_NR);
@@ -3068,7 +3069,7 @@ static void add_lat_percentile_prio_sample(struct thread_stat *ts,
 {
 	unsigned int idx = plat_val_to_idx(nsec);
 
-	add_lat_percentile_sample_noprio(ts, nsec, ddir, lat);
+	add_lat_percentile_sample(ts, nsec, ddir, lat);
 
 	if (!high_prio)
 		ts->io_u_plat_low_prio[ddir][idx]++;
@@ -3117,7 +3118,7 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 		 * the prio lat percentile sample when lat_percentiles=1.
 		 */
 		if (ts->lat_percentiles)
-			add_lat_percentile_sample_noprio(ts, nsec, ddir, FIO_CLAT);
+			add_lat_percentile_sample(ts, nsec, ddir, FIO_CLAT);
 		else
 			add_lat_percentile_prio_sample(ts, nsec, ddir, high_prio,
 						       FIO_CLAT);
@@ -3185,7 +3186,7 @@ void add_slat_sample(struct thread_data *td, enum fio_ddir ddir,
 			       offset, ioprio);
 
 	if (ts->slat_percentiles)
-		add_lat_percentile_sample_noprio(ts, nsec, ddir, FIO_SLAT);
+		add_lat_percentile_sample(ts, nsec, ddir, FIO_SLAT);
 
 	if (needs_lock)
 		__td_io_u_unlock(td);
