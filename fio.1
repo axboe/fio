@@ -1967,7 +1967,10 @@ Set the percentage of I/O that will be issued with the highest priority.
 Default: 0. A single value applies to reads and writes. Comma-separated
 values may be specified for reads and writes. For this option to be effective,
 NCQ priority must be supported and enabled, and `direct=1' option must be
-used. fio must also be run as the root user.
+used. fio must also be run as the root user. Unlike slat/clat/lat stats, which
+can be tracked and reported independently, per priority stats only track and
+report a single type of latency. By default, completion latency (clat) will be
+reported, if \fBlat_percentiles\fR is set, total latency (lat) will be reported.
 .TP
 .BI (io_uring,libaio)cmdprio_class \fR=\fPint[,int]
 Set the I/O priority class to use for I/Os that must be issued with a

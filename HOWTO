@@ -2169,7 +2169,11 @@ with the caveat that when used on the command line, they must come after the
     Default: 0. A single value applies to reads and writes. Comma-separated
     values may be specified for reads and writes. For this option to be
     effective, NCQ priority must be supported and enabled, and `direct=1'
-    option must be used. fio must also be run as the root user.
+    option must be used. fio must also be run as the root user. Unlike
+    slat/clat/lat stats, which can be tracked and reported independently, per
+    priority stats only track and report a single type of latency. By default,
+    completion latency (clat) will be reported, if :option:`lat_percentiles` is
+    set, total latency (lat) will be reported.
 
 .. option:: cmdprio_class=int[,int] : [io_uring] [libaio]
 
