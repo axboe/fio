@@ -3052,9 +3052,10 @@ void add_sync_clat_sample(struct thread_stat *ts, unsigned long long nsec)
 	add_stat_sample(&ts->sync_stat, nsec);
 }
 
-static void add_lat_percentile_sample(struct thread_stat *ts,
-				      unsigned long long nsec,
-				      enum fio_ddir ddir, enum fio_lat lat)
+static inline void add_lat_percentile_sample(struct thread_stat *ts,
+					     unsigned long long nsec,
+					     enum fio_ddir ddir,
+					     enum fio_lat lat)
 {
 	unsigned int idx = plat_val_to_idx(nsec);
 	assert(idx < FIO_IO_U_PLAT_NR);
@@ -3062,10 +3063,10 @@ static void add_lat_percentile_sample(struct thread_stat *ts,
 	ts->io_u_plat[lat][ddir][idx]++;
 }
 
-static void add_lat_percentile_prio_sample(struct thread_stat *ts,
-					   unsigned long long nsec,
-					   enum fio_ddir ddir,
-					   bool high_prio)
+static inline void add_lat_percentile_prio_sample(struct thread_stat *ts,
+						  unsigned long long nsec,
+						  enum fio_ddir ddir,
+						  bool high_prio)
 {
 	unsigned int idx = plat_val_to_idx(nsec);
 
