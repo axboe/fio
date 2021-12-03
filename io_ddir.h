@@ -24,7 +24,7 @@ static inline const char *io_ddir_name(enum fio_ddir ddir)
 					"datasync", "sync_file_range",
 					"wait", };
 
-	if (ddir < DDIR_LAST)
+	if (ddir >= 0 && ddir < DDIR_LAST)
 		return name[ddir];
 
 	return "invalid";
