@@ -20,6 +20,9 @@
 
 #ifdef ARCH_HAVE_CRC_CRYPTO
 #include <sys/auxv.h>
+#ifndef HWCAP_PMULL
+#define HWCAP_PMULL             (1 << 4)
+#endif /* HWCAP_PMULL */
 #ifndef HWCAP_CRC32
 #define HWCAP_CRC32             (1 << 7)
 #endif /* HWCAP_CRC32 */
@@ -405,7 +408,8 @@ static inline bool os_cpu_has(cpu_features feature)
 #ifdef ARCH_HAVE_CRC_CRYPTO
 	case CPU_ARM64_CRC32C:
 		hwcap = getauxval(AT_HWCAP);
-		have_feature = (hwcap & HWCAP_CRC32) != 0;
+		have_feature = (hwcap & (HWCAP_PMULL | HWCAP_CRC32)) ==
+			       (HWCAP_PMULL | HWCAP_CRC32);
 		break;
 #endif
 	default:
