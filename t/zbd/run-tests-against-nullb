@@ -19,7 +19,6 @@ usage()
 	echo -e "\t-L List the device layouts for every section without running"
 	echo -e "\t   tests."
 	echo -e "\t-s <#section> Only run the section with the given number."
-	echo -e "\t-l Use libzbc ioengine to run the tests."
 	echo -e "\t-t <#test> Only run the test with the given number in every section."
 	echo -e "\t-o <max_open_zones> Specify MaxOpen value, (${set_max_open} by default)."
 	echo -e "\t-n <#number of runs> Set the number of times to run the entire suite "
@@ -239,7 +238,6 @@ dev_size=1024
 dev_blocksize=4096
 set_max_open=8
 zbd_test_opts=()
-libzbc=0
 num_of_runs=1
 test_case=0
 quit_on_err=0
@@ -250,7 +248,6 @@ while (($#)); do
 		-o) set_max_open="${2}"; shift; shift;;
 		-L) list_only=1; shift;;
 		-r) cleanup_nullb; exit 0;;
-		-l) libzbc=1; shift;;
 		-n) num_of_runs="${2}"; shift; shift;;
 		-t) test_case="${2}"; shift; shift;;
 		-q) quit_on_err=1; shift;;
@@ -311,17 +308,6 @@ while ((run_nr <= $num_of_runs)); do
 			exit 1
 		fi
 		show_nullb_config
-		if ((libzbc)); then
-			if ((zone_capacity < zone_size)); then
-				echo "libzbc doesn't support zone capacity, skipping section $(printf "%02d" $section_number)"
-				continue
-			fi
-			if ((conv_pcnt == 100)); then
-				echo "libzbc only supports zoned devices, skipping section $(printf "%02d" $section_number)"
-				continue
-			fi
-			zbd_test_opts+=("-l")
-		fi
 		cd "${scriptdir}"
 		((intr)) && exit 1
 		((list_only)) && continue
