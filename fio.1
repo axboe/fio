@@ -1122,7 +1122,7 @@ see \fBend_fsync\fR and \fBfsync_on_close\fR.
 .TP
 .BI fdatasync \fR=\fPint
 Like \fBfsync\fR but uses \fBfdatasync\fR\|(2) to only sync data and
-not metadata blocks. In Windows, FreeBSD, DragonFlyBSD or OSX there is no
+not metadata blocks. In Windows, DragonFlyBSD or OSX there is no
 \fBfdatasync\fR\|(2) so this falls back to using \fBfsync\fR\|(2).
 Defaults to 0, which means fio does not periodically issue and wait for a
 data-only sync to complete.
