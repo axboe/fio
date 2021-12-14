@@ -400,11 +400,11 @@ static int zbd_get_max_open_zones(struct thread_data *td, struct fio_file *f,
  * to be exceeded.
  */
 static bool zbd_open_zone(struct thread_data *td, const struct fio_file *f,
-			  uint32_t zone_idx)
+			  struct fio_zone_info *z)
 {
 	const uint64_t min_bs = td->o.min_bs[DDIR_WRITE];
 	struct zoned_block_device_info *zbdi = f->zbd_info;
-	struct fio_zone_info *z = get_zone(f, zone_idx);
+	uint32_t zone_idx = zbd_zone_nr(f, z);
 	bool res = true;
 
 	if (z->cond == ZBD_ZONE_COND_OFFLINE)
@@ -446,7 +446,7 @@ static bool zbd_open_zone(struct thread_data *td, const struct fio_file *f,
 	if (zbdi->num_open_zones >= zbdi->max_open_zones)
 		goto out;
 
-	dprint(FD_ZBD, "%s: opening zone %d\n",
+	dprint(FD_ZBD, "%s: opening zone %u\n",
 	       f->file_name, zone_idx);
 
 	zbdi->open_zones[zbdi->num_open_zones++] = zone_idx;
@@ -1087,7 +1087,7 @@ int zbd_setup_files(struct thread_data *td)
 			if (z->cond != ZBD_ZONE_COND_IMP_OPEN &&
 			    z->cond != ZBD_ZONE_COND_EXP_OPEN)
 				continue;
-			if (zbd_open_zone(td, f, zi))
+			if (zbd_open_zone(td, f, z))
 				continue;
 			/*
 			 * If the number of open zones exceeds specified limits,
@@ -1409,7 +1409,7 @@ retry:
 		zone_lock(td, f, z);
 		if (z->open)
 			continue;
-		if (zbd_open_zone(td, f, zone_idx))
+		if (zbd_open_zone(td, f, z))
 			goto out;
 	}
 
@@ -1478,7 +1478,7 @@ static struct fio_zone_info *zbd_replay_write_order(struct thread_data *td,
 	const struct fio_file *f = io_u->file;
 	const uint64_t min_bs = td->o.min_bs[DDIR_WRITE];
 
-	if (!zbd_open_zone(td, f, zbd_zone_nr(f, z))) {
+	if (!zbd_open_zone(td, f, z)) {
 		zone_unlock(z);
 		z = zbd_convert_to_open_zone(td, io_u);
 		assert(z);
@@ -1947,7 +1947,7 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 			goto eof;
 		}
 
-		if (!zbd_open_zone(td, f, zone_idx_b)) {
+		if (!zbd_open_zone(td, f, zb)) {
 			zone_unlock(zb);
 			zb = zbd_convert_to_open_zone(td, io_u);
 			if (!zb) {
