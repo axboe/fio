@@ -22,6 +22,112 @@
 #include "pshared.h"
 #include "zbd.h"
 
+static bool is_valid_offset(const struct fio_file *f, uint64_t offset)
+{
+	return (uint64_t)(offset - f->file_offset) < f->io_size;
+}
+
+static inline unsigned int zbd_zone_nr(const struct fio_file *f,
+				       struct fio_zone_info *zone)
+{
+	return zone - f->zbd_info->zone_info;
+}
+
+/**
+ * zbd_zone_idx - convert an offset into a zone number
+ * @f: file pointer.
+ * @offset: offset in bytes. If this offset is in the first zone_size bytes
+ *	    past the disk size then the index of the sentinel is returned.
+ */
+static uint32_t zbd_zone_idx(const struct fio_file *f, uint64_t offset)
+{
+	uint32_t zone_idx;
+
+	if (f->zbd_info->zone_size_log2 > 0)
+		zone_idx = offset >> f->zbd_info->zone_size_log2;
+	else
+		zone_idx = offset / f->zbd_info->zone_size;
+
+	return min(zone_idx, f->zbd_info->nr_zones);
+}
+
+/**
+ * zbd_zone_end - Return zone end location
+ * @z: zone info pointer.
+ */
+static inline uint64_t zbd_zone_end(const struct fio_zone_info *z)
+{
+	return (z+1)->start;
+}
+
+/**
+ * zbd_zone_capacity_end - Return zone capacity limit end location
+ * @z: zone info pointer.
+ */
+static inline uint64_t zbd_zone_capacity_end(const struct fio_zone_info *z)
+{
+	return z->start + z->capacity;
+}
+
+/**
+ * zbd_zone_full - verify whether a minimum number of bytes remain in a zone
+ * @f: file pointer.
+ * @z: zone info pointer.
+ * @required: minimum number of bytes that must remain in a zone.
+ *
+ * The caller must hold z->mutex.
+ */
+static bool zbd_zone_full(const struct fio_file *f, struct fio_zone_info *z,
+			  uint64_t required)
+{
+	assert((required & 511) == 0);
+
+	return z->has_wp &&
+		z->wp + required > zbd_zone_capacity_end(z);
+}
+
+static void zone_lock(struct thread_data *td, const struct fio_file *f,
+		      struct fio_zone_info *z)
+{
+	struct zoned_block_device_info *zbd = f->zbd_info;
+	uint32_t nz = z - zbd->zone_info;
+
+	/* A thread should never lock zones outside its working area. */
+	assert(f->min_zone <= nz && nz < f->max_zone);
+
+	assert(z->has_wp);
+
+	/*
+	 * Lock the io_u target zone. The zone will be unlocked if io_u offset
+	 * is changed or when io_u completes and zbd_put_io() executed.
+	 * To avoid multiple jobs doing asynchronous I/Os from deadlocking each
+	 * other waiting for zone locks when building an io_u batch, first
+	 * only trylock the zone. If the zone is already locked by another job,
+	 * process the currently queued I/Os so that I/O progress is made and
+	 * zones unlocked.
+	 */
+	if (pthread_mutex_trylock(&z->mutex) != 0) {
+		if (!td_ioengine_flagged(td, FIO_SYNCIO))
+			io_u_quiesce(td);
+		pthread_mutex_lock(&z->mutex);
+	}
+}
+
+static inline void zone_unlock(struct fio_zone_info *z)
+{
+	int ret;
+
+	assert(z->has_wp);
+	ret = pthread_mutex_unlock(&z->mutex);
+	assert(!ret);
+}
+
+static inline struct fio_zone_info *get_zone(const struct fio_file *f,
+					     unsigned int zone_nr)
+{
+	return &f->zbd_info->zone_info[zone_nr];
+}
+
 /**
  * zbd_get_zoned_model - Get a device zoned model
  * @td: FIO thread data
@@ -124,6 +230,126 @@ static int zbd_reset_wp(struct thread_data *td, struct fio_file *f,
 }
 
 /**
+ * zbd_reset_zone - reset the write pointer of a single zone
+ * @td: FIO thread data.
+ * @f: FIO file associated with the disk for which to reset a write pointer.
+ * @z: Zone to reset.
+ *
+ * Returns 0 upon success and a negative error code upon failure.
+ *
+ * The caller must hold z->mutex.
+ */
+static int zbd_reset_zone(struct thread_data *td, struct fio_file *f,
+			  struct fio_zone_info *z)
+{
+	uint64_t offset = z->start;
+	uint64_t length = (z+1)->start - offset;
+	uint64_t data_in_zone = z->wp - z->start;
+	int ret = 0;
+
+	if (!data_in_zone)
+		return 0;
+
+	assert(is_valid_offset(f, offset + length - 1));
+
+	dprint(FD_ZBD, "%s: resetting wp of zone %u.\n", f->file_name,
+		zbd_zone_nr(f, z));
+	switch (f->zbd_info->model) {
+	case ZBD_HOST_AWARE:
+	case ZBD_HOST_MANAGED:
+		ret = zbd_reset_wp(td, f, offset, length);
+		if (ret < 0)
+			return ret;
+		break;
+	default:
+		break;
+	}
+
+	pthread_mutex_lock(&f->zbd_info->mutex);
+	f->zbd_info->sectors_with_data -= data_in_zone;
+	f->zbd_info->wp_sectors_with_data -= data_in_zone;
+	pthread_mutex_unlock(&f->zbd_info->mutex);
+	z->wp = z->start;
+	z->verify_block = 0;
+
+	td->ts.nr_zone_resets++;
+
+	return ret;
+}
+
+/**
+ * zbd_close_zone - Remove a zone from the open zones array.
+ * @td: FIO thread data.
+ * @f: FIO file associated with the disk for which to reset a write pointer.
+ * @zone_idx: Index of the zone to remove.
+ *
+ * The caller must hold f->zbd_info->mutex.
+ */
+static void zbd_close_zone(struct thread_data *td, const struct fio_file *f,
+			   unsigned int zone_idx)
+{
+	uint32_t open_zone_idx = 0;
+
+	for (; open_zone_idx < f->zbd_info->num_open_zones; open_zone_idx++) {
+		if (f->zbd_info->open_zones[open_zone_idx] == zone_idx)
+			break;
+	}
+	if (open_zone_idx == f->zbd_info->num_open_zones)
+		return;
+
+	dprint(FD_ZBD, "%s: closing zone %d\n", f->file_name, zone_idx);
+	memmove(f->zbd_info->open_zones + open_zone_idx,
+		f->zbd_info->open_zones + open_zone_idx + 1,
+		(ZBD_MAX_OPEN_ZONES - (open_zone_idx + 1)) *
+		sizeof(f->zbd_info->open_zones[0]));
+	f->zbd_info->num_open_zones--;
+	td->num_open_zones--;
+	get_zone(f, zone_idx)->open = 0;
+}
+
+/**
+ * zbd_reset_zones - Reset a range of zones.
+ * @td: fio thread data.
+ * @f: fio file for which to reset zones
+ * @zb: first zone to reset.
+ * @ze: first zone not to reset.
+ *
+ * Returns 0 upon success and 1 upon failure.
+ */
+static int zbd_reset_zones(struct thread_data *td, struct fio_file *f,
+			   struct fio_zone_info *const zb,
+			   struct fio_zone_info *const ze)
+{
+	struct fio_zone_info *z;
+	const uint64_t min_bs = td->o.min_bs[DDIR_WRITE];
+	int res = 0;
+
+	assert(min_bs);
+
+	dprint(FD_ZBD, "%s: examining zones %u .. %u\n", f->file_name,
+		zbd_zone_nr(f, zb), zbd_zone_nr(f, ze));
+	for (z = zb; z < ze; z++) {
+		uint32_t nz = zbd_zone_nr(f, z);
+
+		if (!z->has_wp)
+			continue;
+		zone_lock(td, f, z);
+		pthread_mutex_lock(&f->zbd_info->mutex);
+		zbd_close_zone(td, f, nz);
+		pthread_mutex_unlock(&f->zbd_info->mutex);
+		if (z->wp != z->start) {
+			dprint(FD_ZBD, "%s: resetting zone %u\n",
+			       f->file_name, zbd_zone_nr(f, z));
+			if (zbd_reset_zone(td, f, z) < 0)
+				res = 1;
+		}
+		zone_unlock(z);
+	}
+
+	return res;
+}
+
+/**
  * zbd_get_max_open_zones - Get the maximum number of open zones
  * @td: FIO thread data
  * @f: FIO file for which to get max open zones
@@ -152,103 +378,99 @@ static int zbd_get_max_open_zones(struct thread_data *td, struct fio_file *f,
 }
 
 /**
- * zbd_zone_idx - convert an offset into a zone number
- * @f: file pointer.
- * @offset: offset in bytes. If this offset is in the first zone_size bytes
- *	    past the disk size then the index of the sentinel is returned.
- */
-static uint32_t zbd_zone_idx(const struct fio_file *f, uint64_t offset)
-{
-	uint32_t zone_idx;
-
-	if (f->zbd_info->zone_size_log2 > 0)
-		zone_idx = offset >> f->zbd_info->zone_size_log2;
-	else
-		zone_idx = offset / f->zbd_info->zone_size;
-
-	return min(zone_idx, f->zbd_info->nr_zones);
-}
-
-/**
- * zbd_zone_end - Return zone end location
- * @z: zone info pointer.
- */
-static inline uint64_t zbd_zone_end(const struct fio_zone_info *z)
-{
-	return (z+1)->start;
-}
-
-/**
- * zbd_zone_capacity_end - Return zone capacity limit end location
- * @z: zone info pointer.
- */
-static inline uint64_t zbd_zone_capacity_end(const struct fio_zone_info *z)
-{
-	return z->start + z->capacity;
-}
-
-/**
- * zbd_zone_full - verify whether a minimum number of bytes remain in a zone
- * @f: file pointer.
- * @z: zone info pointer.
- * @required: minimum number of bytes that must remain in a zone.
+ * is_zone_open - Test if a zone is already in the array of open zones.
+ * @td: fio thread data.
+ * @f: fio file for which to test zones.
+ * @zone_idx: Index of the zone to check.
  *
- * The caller must hold z->mutex.
+ * The caller must hold f->zbd_info->mutex.
  */
-static bool zbd_zone_full(const struct fio_file *f, struct fio_zone_info *z,
-			  uint64_t required)
+static bool is_zone_open(const struct thread_data *td, const struct fio_file *f,
+			 unsigned int zone_idx)
 {
-	assert((required & 511) == 0);
-
-	return z->has_wp &&
-		z->wp + required > zbd_zone_capacity_end(z);
-}
-
-static void zone_lock(struct thread_data *td, const struct fio_file *f,
-		      struct fio_zone_info *z)
-{
-	struct zoned_block_device_info *zbd = f->zbd_info;
-	uint32_t nz = z - zbd->zone_info;
-
-	/* A thread should never lock zones outside its working area. */
-	assert(f->min_zone <= nz && nz < f->max_zone);
-
-	assert(z->has_wp);
+	struct zoned_block_device_info *zbdi = f->zbd_info;
+	int i;
 
 	/*
-	 * Lock the io_u target zone. The zone will be unlocked if io_u offset
-	 * is changed or when io_u completes and zbd_put_io() executed.
-	 * To avoid multiple jobs doing asynchronous I/Os from deadlocking each
-	 * other waiting for zone locks when building an io_u batch, first
-	 * only trylock the zone. If the zone is already locked by another job,
-	 * process the currently queued I/Os so that I/O progress is made and
-	 * zones unlocked.
+	 * This function should never be called when zbdi->max_open_zones == 0.
 	 */
-	if (pthread_mutex_trylock(&z->mutex) != 0) {
-		if (!td_ioengine_flagged(td, FIO_SYNCIO))
-			io_u_quiesce(td);
-		pthread_mutex_lock(&z->mutex);
+	assert(zbdi->max_open_zones);
+	assert(td->o.job_max_open_zones == 0 ||
+	       td->num_open_zones <= td->o.job_max_open_zones);
+	assert(td->o.job_max_open_zones <= zbdi->max_open_zones);
+	assert(zbdi->num_open_zones <= zbdi->max_open_zones);
+
+	for (i = 0; i < zbdi->num_open_zones; i++)
+		if (zbdi->open_zones[i] == zone_idx)
+			return true;
+
+	return false;
+}
+
+/**
+ * zbd_open_zone - Add a zone to the array of open zones.
+ * @td: fio thread data.
+ * @f: fio file that has the open zones to add.
+ * @zone_idx: Index of the zone to add.
+ *
+ * Open a ZBD zone if it is not already open. Returns true if either the zone
+ * was already open or if the zone was successfully added to the array of open
+ * zones without exceeding the maximum number of open zones. Returns false if
+ * the zone was not already open and opening the zone would cause the zone limit
+ * to be exceeded.
+ */
+static bool zbd_open_zone(struct thread_data *td, const struct fio_file *f,
+			  uint32_t zone_idx)
+{
+	const uint64_t min_bs = td->o.min_bs[DDIR_WRITE];
+	struct zoned_block_device_info *zbdi = f->zbd_info;
+	struct fio_zone_info *z = get_zone(f, zone_idx);
+	bool res = true;
+
+	if (z->cond == ZBD_ZONE_COND_OFFLINE)
+		return false;
+
+	/*
+	 * Skip full zones with data verification enabled because resetting a
+	 * zone causes data loss and hence causes verification to fail.
+	 */
+	if (td->o.verify != VERIFY_NONE && zbd_zone_full(f, z, min_bs))
+		return false;
+
+	/*
+	 * zbdi->max_open_zones == 0 means that there is no limit on the maximum
+	 * number of open zones. In this case, do no track open zones in
+	 * zbdi->open_zones array.
+	 */
+	if (!zbdi->max_open_zones)
+		return true;
+
+	pthread_mutex_lock(&zbdi->mutex);
+	if (is_zone_open(td, f, zone_idx)) {
+		/*
+		 * If the zone is already open and going to be full by writes
+		 * in-flight, handle it as a full zone instead of an open zone.
+		 */
+		if (z->wp >= zbd_zone_capacity_end(z))
+			res = false;
+		goto out;
 	}
-}
+	res = false;
+	/* Zero means no limit */
+	if (td->o.job_max_open_zones > 0 &&
+	    td->num_open_zones >= td->o.job_max_open_zones)
+		goto out;
+	if (zbdi->num_open_zones >= zbdi->max_open_zones)
+		goto out;
+	dprint(FD_ZBD, "%s: opening zone %d\n", f->file_name, zone_idx);
+	zbdi->open_zones[zbdi->num_open_zones++] = zone_idx;
+	td->num_open_zones++;
+	z->open = 1;
+	res = true;
 
-static inline void zone_unlock(struct fio_zone_info *z)
-{
-	int ret;
-
-	assert(z->has_wp);
-	ret = pthread_mutex_unlock(&z->mutex);
-	assert(!ret);
-}
-
-static bool is_valid_offset(const struct fio_file *f, uint64_t offset)
-{
-	return (uint64_t)(offset - f->file_offset) < f->io_size;
-}
-
-static inline struct fio_zone_info *get_zone(const struct fio_file *f,
-					     unsigned int zone_nr)
-{
-	return &f->zbd_info->zone_info[zone_nr];
+out:
+	pthread_mutex_unlock(&zbdi->mutex);
+	return res;
 }
 
 /* Verify whether direct I/O is used for all host-managed zoned drives. */
@@ -751,11 +973,6 @@ static int zbd_init_zone_info(struct thread_data *td, struct fio_file *file)
 	return ret;
 }
 
-static bool zbd_open_zone(struct thread_data *td, const struct fio_file *f,
-			  uint32_t zone_idx);
-static int zbd_reset_zone(struct thread_data *td, struct fio_file *f,
-			  struct fio_zone_info *z);
-
 int zbd_init_files(struct thread_data *td)
 {
 	struct fio_file *f;
@@ -879,123 +1096,6 @@ int zbd_setup_files(struct thread_data *td)
 	return 0;
 }
 
-static inline unsigned int zbd_zone_nr(const struct fio_file *f,
-				       struct fio_zone_info *zone)
-{
-	return zone - f->zbd_info->zone_info;
-}
-
-/**
- * zbd_reset_zone - reset the write pointer of a single zone
- * @td: FIO thread data.
- * @f: FIO file associated with the disk for which to reset a write pointer.
- * @z: Zone to reset.
- *
- * Returns 0 upon success and a negative error code upon failure.
- *
- * The caller must hold z->mutex.
- */
-static int zbd_reset_zone(struct thread_data *td, struct fio_file *f,
-			  struct fio_zone_info *z)
-{
-	uint64_t offset = z->start;
-	uint64_t length = (z+1)->start - offset;
-	uint64_t data_in_zone = z->wp - z->start;
-	int ret = 0;
-
-	if (!data_in_zone)
-		return 0;
-
-	assert(is_valid_offset(f, offset + length - 1));
-
-	dprint(FD_ZBD, "%s: resetting wp of zone %u.\n", f->file_name,
-		zbd_zone_nr(f, z));
-	switch (f->zbd_info->model) {
-	case ZBD_HOST_AWARE:
-	case ZBD_HOST_MANAGED:
-		ret = zbd_reset_wp(td, f, offset, length);
-		if (ret < 0)
-			return ret;
-		break;
-	default:
-		break;
-	}
-
-	pthread_mutex_lock(&f->zbd_info->mutex);
-	f->zbd_info->sectors_with_data -= data_in_zone;
-	f->zbd_info->wp_sectors_with_data -= data_in_zone;
-	pthread_mutex_unlock(&f->zbd_info->mutex);
-	z->wp = z->start;
-	z->verify_block = 0;
-
-	td->ts.nr_zone_resets++;
-
-	return ret;
-}
-
-/* The caller must hold f->zbd_info->mutex */
-static void zbd_close_zone(struct thread_data *td, const struct fio_file *f,
-			   unsigned int zone_idx)
-{
-	uint32_t open_zone_idx = 0;
-
-	for (; open_zone_idx < f->zbd_info->num_open_zones; open_zone_idx++) {
-		if (f->zbd_info->open_zones[open_zone_idx] == zone_idx)
-			break;
-	}
-	if (open_zone_idx == f->zbd_info->num_open_zones)
-		return;
-
-	dprint(FD_ZBD, "%s: closing zone %d\n", f->file_name, zone_idx);
-	memmove(f->zbd_info->open_zones + open_zone_idx,
-		f->zbd_info->open_zones + open_zone_idx + 1,
-		(ZBD_MAX_OPEN_ZONES - (open_zone_idx + 1)) *
-		sizeof(f->zbd_info->open_zones[0]));
-	f->zbd_info->num_open_zones--;
-	td->num_open_zones--;
-	get_zone(f, zone_idx)->open = 0;
-}
-
-/*
- * Reset a range of zones. Returns 0 upon success and 1 upon failure.
- * @td: fio thread data.
- * @f: fio file for which to reset zones
- * @zb: first zone to reset.
- * @ze: first zone not to reset.
- */
-static int zbd_reset_zones(struct thread_data *td, struct fio_file *f,
-			   struct fio_zone_info *const zb,
-			   struct fio_zone_info *const ze)
-{
-	struct fio_zone_info *z;
-	const uint64_t min_bs = td->o.min_bs[DDIR_WRITE];
-	int res = 0;
-
-	assert(min_bs);
-
-	dprint(FD_ZBD, "%s: examining zones %u .. %u\n", f->file_name,
-		zbd_zone_nr(f, zb), zbd_zone_nr(f, ze));
-	for (z = zb; z < ze; z++) {
-		uint32_t nz = zbd_zone_nr(f, z);
-
-		if (!z->has_wp)
-			continue;
-		zone_lock(td, f, z);
-		pthread_mutex_lock(&f->zbd_info->mutex);
-		zbd_close_zone(td, f, nz);
-		pthread_mutex_unlock(&f->zbd_info->mutex);
-		if (z->wp != z->start) {
-			dprint(FD_ZBD, "%s: resetting zone %u\n",
-			       f->file_name, zbd_zone_nr(f, z));
-			if (zbd_reset_zone(td, f, z) < 0)
-				res = 1;
-		}
-		zone_unlock(z);
-	}
-
-	return res;
-}
-
 /*
  * Reset zbd_info.write_cnt, the counter that counts down towards the next
  * zone reset.
@@ -1110,86 +1210,6 @@ void zbd_file_reset(struct thread_data *td, struct fio_file *f)
 	if (td->o.verify != VERIFY_NONE && td->runstate != TD_VERIFYING)
 		zbd_reset_zones(td, f, zb, ze);
 	zbd_reset_write_cnt(td, f);
-}
-
-/* The caller must hold f->zbd_info->mutex. */
-static bool is_zone_open(const struct thread_data *td, const struct fio_file *f,
-			 unsigned int zone_idx)
-{
-	struct zoned_block_device_info *zbdi = f->zbd_info;
-	int i;
-
-	/* This function should never be called when zbdi->max_open_zones == 0 */
-	assert(zbdi->max_open_zones);
-	assert(td->o.job_max_open_zones == 0 || td->num_open_zones <= td->o.job_max_open_zones);
-	assert(td->o.job_max_open_zones <= zbdi->max_open_zones);
-	assert(zbdi->num_open_zones <= zbdi->max_open_zones);
-
-	for (i = 0; i < zbdi->num_open_zones; i++)
-		if (zbdi->open_zones[i] == zone_idx)
-			return true;
-
-	return false;
-}
-
-/*
- * Open a ZBD zone if it was not yet open. Returns true if either the zone was
- * already open or if opening a new zone is allowed. Returns false if the zone
- * was not yet open and opening a new zone would cause the zone limit to be
- * exceeded.
- */
-static bool zbd_open_zone(struct thread_data *td, const struct fio_file *f,
-			  uint32_t zone_idx)
-{
-	const uint64_t min_bs = td->o.min_bs[DDIR_WRITE];
-	struct zoned_block_device_info *zbdi = f->zbd_info;
-	struct fio_zone_info *z = get_zone(f, zone_idx);
-	bool res = true;
-
-	if (z->cond == ZBD_ZONE_COND_OFFLINE)
-		return false;
-
-	/*
-	 * Skip full zones with data verification enabled because resetting a
-	 * zone causes data loss and hence causes verification to fail.
-	 */
-	if (td->o.verify != VERIFY_NONE && zbd_zone_full(f, z, min_bs))
-		return false;
-
-	/*
-	 * zbdi->max_open_zones == 0 means that there is no limit on the maximum
-	 * number of open zones. In this case, do no track open zones in
-	 * zbdi->open_zones array.
-	 */
-	if (!zbdi->max_open_zones)
-		return true;
-
-	pthread_mutex_lock(&zbdi->mutex);
-	if (is_zone_open(td, f, zone_idx)) {
-		/*
-		 * If the zone is already open and going to be full by writes
-		 * in-flight, handle it as a full zone instead of an open zone.
-		 */
-		if (z->wp >= zbd_zone_capacity_end(z))
-			res = false;
-		goto out;
-	}
-	res = false;
-	/* Zero means no limit */
-	if (td->o.job_max_open_zones > 0 &&
-	    td->num_open_zones >= td->o.job_max_open_zones)
-		goto out;
-	if (zbdi->num_open_zones >= zbdi->max_open_zones)
-		goto out;
-	dprint(FD_ZBD, "%s: opening zone %d\n", f->file_name, zone_idx);
-	zbdi->open_zones[zbdi->num_open_zones++] = zone_idx;
-	td->num_open_zones++;
-	z->open = 1;
-	res = true;
-
-out:
-	pthread_mutex_unlock(&zbdi->mutex);
-	return res;
 }
 
 /* Return random zone index for one of the open zones. */
