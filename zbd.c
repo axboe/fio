@@ -483,78 +483,94 @@ static bool zbd_is_seq_job(struct fio_file *f)
 }
 
 /*
+ * Verify whether the file offset and size parameters are aligned with zone
+ * boundaries. If the file offset is not aligned, align it down to the start of
+ * the zone containing the start offset and align up the file io_size parameter.
+ */
+static bool zbd_zone_align_file_sizes(struct thread_data *td,
+				      struct fio_file *f)
+{
+	const struct fio_zone_info *z;
+	uint64_t new_offset, new_end;
+	uint32_t zone_idx;
+
+	if (!f->zbd_info)
+		return true;
+	if (f->file_offset >= f->real_file_size)
+		return true;
+	if (!zbd_is_seq_job(f))
+		return true;
+
+	if (!td->o.zone_size) {
+		td->o.zone_size = f->zbd_info->zone_size;
+		if (!td->o.zone_size) {
+			log_err("%s: invalid 0 zone size\n",
+				f->file_name);
+			return false;
+		}
+	} else if (td->o.zone_size != f->zbd_info->zone_size) {
+		log_err("%s: zonesize %llu does not match the device zone size %"PRIu64".\n",
+			f->file_name, td->o.zone_size,
+			f->zbd_info->zone_size);
+		return false;
+	}
+
+	if (td->o.zone_skip % td->o.zone_size) {
+		log_err("%s: zoneskip %llu is not a multiple of the device zone size %llu.\n",
+			f->file_name, td->o.zone_skip,
+			td->o.zone_size);
+		return false;
+	}
+
+	zone_idx = zbd_zone_idx(f, f->file_offset);
+	z = get_zone(f, zone_idx);
+	if ((f->file_offset != z->start) &&
+	    (td->o.td_ddir != TD_DDIR_READ)) {
+		new_offset = zbd_zone_end(z);
+		if (new_offset >= f->file_offset + f->io_size) {
+			log_info("%s: io_size must be at least one zone\n",
+				 f->file_name);
+			return false;
+		}
+		log_info("%s: rounded up offset from %"PRIu64" to %"PRIu64"\n",
+			 f->file_name, f->file_offset,
+			 new_offset);
+		f->io_size -= (new_offset - f->file_offset);
+		f->file_offset = new_offset;
+	}
+
+	zone_idx = zbd_zone_idx(f, f->file_offset + f->io_size);
+	z = get_zone(f, zone_idx);
+	new_end = z->start;
+	if ((td->o.td_ddir != TD_DDIR_READ) &&
+	    (f->file_offset + f->io_size != new_end)) {
+		if (new_end <= f->file_offset) {
+			log_info("%s: io_size must be at least one zone\n",
+				 f->file_name);
+			return false;
+		}
+		log_info("%s: rounded down io_size from %"PRIu64" to %"PRIu64"\n",
+			 f->file_name, f->io_size,
+			 new_end - f->file_offset);
+		f->io_size = new_end - f->file_offset;
+	}
+
+	return true;
+}
+
+/*
  * Verify whether offset and size parameters are aligned with zone boundaries.
  */
 static bool zbd_verify_sizes(void)
 {
-	const struct fio_zone_info *z;
 	struct thread_data *td;
 	struct fio_file *f;
-	uint64_t new_offset, new_end;
-	uint32_t zone_idx;
 	int i, j;
 
 	for_each_td(td, i) {
 		for_each_file(td, f, j) {
-			if (!f->zbd_info)
-				continue;
-			if (f->file_offset >= f->real_file_size)
-				continue;
-			if (!zbd_is_seq_job(f))
-				continue;
-
-			if (!td->o.zone_size) {
-				td->o.zone_size = f->zbd_info->zone_size;
-				if (!td->o.zone_size) {
-					log_err("%s: invalid 0 zone size\n",
-						f->file_name);
-					return false;
-				}
-			} else if (td->o.zone_size != f->zbd_info->zone_size) {
-				log_err("%s: job parameter zonesize %llu does not match disk zone size %"PRIu64".\n",
-					f->file_name, td->o.zone_size,
-					f->zbd_info->zone_size);
+			if (!zbd_zone_align_file_sizes(td, f))
 				return false;
-			}
-
-			if (td->o.zone_skip % td->o.zone_size) {
-				log_err("%s: zoneskip %llu is not a multiple of the device zone size %llu.\n",
-					f->file_name, td->o.zone_skip,
-					td->o.zone_size);
-				return false;
-			}
-
-			zone_idx = zbd_zone_idx(f, f->file_offset);
-			z = get_zone(f, zone_idx);
-			if ((f->file_offset != z->start) &&
-			    (td->o.td_ddir != TD_DDIR_READ)) {
-				new_offset = zbd_zone_end(z);
-				if (new_offset >= f->file_offset + f->io_size) {
-					log_info("%s: io_size must be at least one zone\n",
-						 f->file_name);
-					return false;
-				}
-				log_info("%s: rounded up offset from %"PRIu64" to %"PRIu64"\n",
-					 f->file_name, f->file_offset,
-					 new_offset);
-				f->io_size -= (new_offset - f->file_offset);
-				f->file_offset = new_offset;
-			}
-			zone_idx = zbd_zone_idx(f, f->file_offset + f->io_size);
-			z = get_zone(f, zone_idx);
-			new_end = z->start;
-			if ((td->o.td_ddir != TD_DDIR_READ) &&
-			    (f->file_offset + f->io_size != new_end)) {
-				if (new_end <= f->file_offset) {
-					log_info("%s: io_size must be at least one zone\n",
-						 f->file_name);
-					return false;
-				}
-				log_info("%s: rounded down io_size from %"PRIu64" to %"PRIu64"\n",
-					 f->file_name, f->io_size,
-					 new_end - f->file_offset);
-				f->io_size = new_end - f->file_offset;
-			}
 		}
 	}
 
