@@ -72,9 +72,11 @@ zone_cap_bs() {
 	local sed_str='s/.*len \([0-9A-Za-z]*\), cap \([0-9A-Za-z]*\).*/\1 \2/p'
 	local cap bs="$zone_size"
 
-	# When blkzone is not available or blkzone does not report capacity,
+	# When blkzone command is neither available nor relevant to the
+	# test device, or when blkzone command does not report capacity,
 	# assume that zone capacity is same as zone size for all zones.
-	if [ -z "${blkzone}" ] || ! blkzone_reports_capacity "${dev}"; then
+	if [ -z "${blkzone}" ] || [ -z "$is_zbd" ] || [ -c "$dev" ] ||
+		   ! blkzone_reports_capacity "${dev}"; then
 		echo "$zone_size"
 		return
 	fi
