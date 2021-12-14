@@ -123,10 +123,10 @@ static inline void zone_unlock(struct fio_zone_info *z)
 	assert(!ret);
 }
 
-static inline struct fio_zone_info *get_zone(const struct fio_file *f,
-					     unsigned int zone_nr)
+static inline struct fio_zone_info *zbd_get_zone(const struct fio_file *f,
+						 unsigned int zone_idx)
 {
-	return &f->zbd_info->zone_info[zone_nr];
+	return &f->zbd_info->zone_info[zone_idx];
 }
 
 /**
@@ -297,7 +297,7 @@ static void zbd_close_zone(struct thread_data *td, const struct fio_file *f,
 		return;
 
 	for (ozi = 0; ozi < f->zbd_info->num_open_zones; ozi++) {
-		if (get_zone(f, f->zbd_info->open_zones[ozi]) == z)
+		if (zbd_get_zone(f, f->zbd_info->open_zones[ozi]) == z)
 			break;
 	}
 	if (ozi == f->zbd_info->num_open_zones)
@@ -494,7 +494,7 @@ static bool zbd_is_seq_job(struct fio_file *f)
 	zone_idx_e =
 		zbd_offset_to_zone_idx(f, f->file_offset + f->io_size - 1);
 	for (zone_idx = zone_idx_b; zone_idx <= zone_idx_e; zone_idx++)
-		if (get_zone(f, zone_idx)->has_wp)
+		if (zbd_get_zone(f, zone_idx)->has_wp)
 			return true;
 
 	return false;
@@ -541,7 +541,7 @@ static bool zbd_zone_align_file_sizes(struct thread_data *td,
 	}
 
 	zone_idx = zbd_offset_to_zone_idx(f, f->file_offset);
-	z = get_zone(f, zone_idx);
+	z = zbd_get_zone(f, zone_idx);
 	if ((f->file_offset != z->start) &&
 	    (td->o.td_ddir != TD_DDIR_READ)) {
 		new_offset = zbd_zone_end(z);
@@ -558,7 +558,7 @@ static bool zbd_zone_align_file_sizes(struct thread_data *td,
 	}
 
 	zone_idx = zbd_offset_to_zone_idx(f, f->file_offset + f->io_size);
-	z = get_zone(f, zone_idx);
+	z = zbd_get_zone(f, zone_idx);
 	new_end = z->start;
 	if ((td->o.td_ddir != TD_DDIR_READ) &&
 	    (f->file_offset + f->io_size != new_end)) {
@@ -1156,8 +1156,8 @@ static uint64_t zbd_process_swd(struct thread_data *td,
 	uint64_t swd = 0;
 	uint64_t wp_swd = 0;
 
-	zb = get_zone(f, f->min_zone);
-	ze = get_zone(f, f->max_zone);
+	zb = zbd_get_zone(f, f->min_zone);
+	ze = zbd_get_zone(f, f->max_zone);
 	for (z = zb; z < ze; z++) {
 		if (z->has_wp) {
 			zone_lock(td, f, z);
@@ -1209,8 +1209,8 @@ void zbd_file_reset(struct thread_data *td, struct fio_file *f)
 	if (!f->zbd_info || !td_write(td))
 		return;
 
-	zb = get_zone(f, f->min_zone);
-	ze = get_zone(f, f->max_zone);
+	zb = zbd_get_zone(f, f->min_zone);
+	ze = zbd_get_zone(f, f->max_zone);
 	swd = zbd_process_swd(td, f, SET_SWD);
 
 	dprint(FD_ZBD, "%s(%s): swd = %" PRIu64 "\n",
@@ -1298,7 +1298,7 @@ static struct fio_zone_info *zbd_convert_to_open_zone(struct thread_data *td,
 	for (;;) {
 		uint32_t tmp_idx;
 
-		z = get_zone(f, zone_idx);
+		z = zbd_get_zone(f, zone_idx);
 		if (z->has_wp)
 			zone_lock(td, f, z);
 
@@ -1404,7 +1404,7 @@ retry:
 		if (!is_valid_offset(f, z->start)) {
 			/* Wrap-around. */
 			zone_idx = f->min_zone;
-			z = get_zone(f, zone_idx);
+			z = zbd_get_zone(f, zone_idx);
 		}
 		assert(is_valid_offset(f, z->start));
 		if (!z->has_wp)
@@ -1427,7 +1427,7 @@ retry:
 		pthread_mutex_unlock(&zbdi->mutex);
 		zone_unlock(z);
 
-		z = get_zone(f, zone_idx);
+		z = zbd_get_zone(f, zone_idx);
 
 		zone_lock(td, f, z);
 		if (z->wp + min_bs <= zbd_zone_capacity_end(z))
@@ -1522,7 +1522,7 @@ zbd_find_zone(struct thread_data *td, struct io_u *io_u, uint64_t min_bytes,
 {
 	struct fio_file *f = io_u->file;
 	struct fio_zone_info *z1, *z2;
-	const struct fio_zone_info *const zf = get_zone(f, f->min_zone);
+	const struct fio_zone_info *const zf = zbd_get_zone(f, f->min_zone);
 
 	/*
 	 * Skip to the next non-empty zone in case of sequential I/O and to
@@ -1602,7 +1602,7 @@ static void zbd_queue_io(struct thread_data *td, struct io_u *io_u, int q,
 
 	zone_idx = zbd_offset_to_zone_idx(f, io_u->offset);
 	assert(zone_idx < zbd_info->nr_zones);
-	z = get_zone(f, zone_idx);
+	z = zbd_get_zone(f, zone_idx);
 
 	assert(z->has_wp);
 
@@ -1660,7 +1660,7 @@ static void zbd_put_io(struct thread_data *td, const struct io_u *io_u)
 
 	zone_idx = zbd_offset_to_zone_idx(f, io_u->offset);
 	assert(zone_idx < zbd_info->nr_zones);
-	z = get_zone(f, zone_idx);
+	z = zbd_get_zone(f, zone_idx);
 
 	assert(z->has_wp);
 
@@ -1715,7 +1715,7 @@ void setup_zbd_zone_mode(struct thread_data *td, struct io_u *io_u)
 	assert(f->zbd_info);
 
 	zone_idx = zbd_offset_to_zone_idx(f, f->last_pos[ddir]);
-	z = get_zone(f, zone_idx);
+	z = zbd_get_zone(f, zone_idx);
 
 	/*
 	 * When the zone capacity is smaller than the zone size and the I/O is
@@ -1823,7 +1823,7 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 	assert(io_u->buflen);
 
 	zone_idx_b = zbd_offset_to_zone_idx(f, io_u->offset);
-	zb = get_zone(f, zone_idx_b);
+	zb = zbd_get_zone(f, zone_idx_b);
 	orig_zb = zb;
 
 	if (!zb->has_wp) {
@@ -1886,7 +1886,7 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 		if (range < min_bs ||
 		    ((!td_random(td)) && (io_u->offset + min_bs > zb->wp))) {
 			zone_unlock(zb);
-			zl = get_zone(f, f->max_zone);
+			zl = zbd_get_zone(f, f->max_zone);
 			zb = zbd_find_zone(td, io_u, min_bs, zb, zl);
 			if (!zb) {
 				dprint(FD_ZBD,
@@ -2030,7 +2030,7 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 
 		/* Find out a non-empty zone to trim */
 		zone_unlock(zb);
-		zl = get_zone(f, f->max_zone);
+		zl = zbd_get_zone(f, f->max_zone);
 		zb = zbd_find_zone(td, io_u, 1, zb, zl);
 		if (zb) {
 			io_u->offset = zb->start;
@@ -2106,7 +2106,7 @@ int zbd_do_io_u_trim(const struct thread_data *td, struct io_u *io_u)
 	int ret;
 
 	zone_idx = zbd_offset_to_zone_idx(f, io_u->offset);
-	z = get_zone(f, zone_idx);
+	z = zbd_get_zone(f, zone_idx);
 
 	if (!z->has_wp)
 		return 0;
