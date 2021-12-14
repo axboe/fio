@@ -378,36 +378,6 @@ static int zbd_get_max_open_zones(struct thread_data *td, struct fio_file *f,
 }
 
 /**
- * is_zone_open - Test if a zone is already in the array of open zones.
- * @td: fio thread data.
- * @f: fio file for which to test zones.
- * @zone_idx: Index of the zone to check.
- *
- * The caller must hold f->zbd_info->mutex.
- */
-static bool is_zone_open(const struct thread_data *td, const struct fio_file *f,
-			 unsigned int zone_idx)
-{
-	struct zoned_block_device_info *zbdi = f->zbd_info;
-	int i;
-
-	/*
-	 * This function should never be called when zbdi->max_open_zones == 0.
-	 */
-	assert(zbdi->max_open_zones);
-	assert(td->o.job_max_open_zones == 0 ||
-	       td->num_open_zones <= td->o.job_max_open_zones);
-	assert(td->o.job_max_open_zones <= zbdi->max_open_zones);
-	assert(zbdi->num_open_zones <= zbdi->max_open_zones);
-
-	for (i = 0; i < zbdi->num_open_zones; i++)
-		if (zbdi->open_zones[i] == zone_idx)
-			return true;
-
-	return false;
-}
-
-/**
  * zbd_open_zone - Add a zone to the array of open zones.
  * @td: fio thread data.
  * @f: fio file that has the open zones to add.
@@ -446,10 +416,12 @@ static bool zbd_open_zone(struct thread_data *td, const struct fio_file *f,
 		return true;
 
 	pthread_mutex_lock(&zbdi->mutex);
-	if (is_zone_open(td, f, zone_idx)) {
+
+	if (z->open) {
 		/*
-		 * If the zone is already open and going to be full by writes
-		 * in-flight, handle it as a full zone instead of an open zone.
+		 * If the zone is going to be completely filled by writes
+		 * already in-flight, handle it as a full zone instead of an
+		 * open zone.
 		 */
 		if (z->wp >= zbd_zone_capacity_end(z))
 			res = false;
