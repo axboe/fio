@@ -22,7 +22,7 @@ jobs:
           os: ubuntu-20.04
           cc: clang
         - build: macos
-          os: macos-10.15
+          os: macos-11
 
     env:
       CI_TARGET_ARCH: ${{ matrix.arch }}
