@@ -27,8 +27,8 @@
  * @td: FIO thread data
  * @f: FIO file for which to get model information
  */
-int zbd_get_zoned_model(struct thread_data *td, struct fio_file *f,
-			enum zbd_zoned_model *model)
+static int zbd_get_zoned_model(struct thread_data *td, struct fio_file *f,
+			       enum zbd_zoned_model *model)
 {
 	int ret;
 
@@ -71,9 +71,9 @@ int zbd_get_zoned_model(struct thread_data *td, struct fio_file *f,
  * upon failure. If the zone report is empty, always assume an error (device
  * problem) and return -EIO.
  */
-int zbd_report_zones(struct thread_data *td, struct fio_file *f,
-		     uint64_t offset, struct zbd_zone *zones,
-		     unsigned int nr_zones)
+static int zbd_report_zones(struct thread_data *td, struct fio_file *f,
+			    uint64_t offset, struct zbd_zone *zones,
+			    unsigned int nr_zones)
 {
 	int ret;
 
@@ -105,8 +105,8 @@ int zbd_report_zones(struct thread_data *td, struct fio_file *f,
  * Reset the write pointer of all zones in the range @offset...@offset+@length.
  * Returns 0 upon success and a negative error code upon failure.
  */
-int zbd_reset_wp(struct thread_data *td, struct fio_file *f,
-		 uint64_t offset, uint64_t length)
+static int zbd_reset_wp(struct thread_data *td, struct fio_file *f,
+			uint64_t offset, uint64_t length)
 {
 	int ret;
 
@@ -133,8 +133,8 @@ int zbd_reset_wp(struct thread_data *td, struct fio_file *f,
  *
  * Returns 0 upon success and a negative error code upon failure.
  */
-int zbd_get_max_open_zones(struct thread_data *td, struct fio_file *f,
-			   unsigned int *max_open_zones)
+static int zbd_get_max_open_zones(struct thread_data *td, struct fio_file *f,
+				  unsigned int *max_open_zones)
 {
 	int ret;
 
