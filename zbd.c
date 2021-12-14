@@ -129,6 +129,12 @@ static inline struct fio_zone_info *zbd_get_zone(const struct fio_file *f,
 	return &f->zbd_info->zone_info[zone_idx];
 }
 
+static inline struct fio_zone_info *
+zbd_offset_to_zone(const struct fio_file *f,  uint64_t offset)
+{
+	return zbd_get_zone(f, zbd_offset_to_zone_idx(f, offset));
+}
+
 /**
  * zbd_get_zoned_model - Get a device zoned model
  * @td: FIO thread data
@@ -510,7 +516,6 @@ static bool zbd_zone_align_file_sizes(struct thread_data *td,
 {
 	const struct fio_zone_info *z;
 	uint64_t new_offset, new_end;
-	uint32_t zone_idx;
 
 	if (!f->zbd_info)
 		return true;
@@ -540,8 +545,7 @@ static bool zbd_zone_align_file_sizes(struct thread_data *td,
 		return false;
 	}
 
-	zone_idx = zbd_offset_to_zone_idx(f, f->file_offset);
-	z = zbd_get_zone(f, zone_idx);
+	z = zbd_offset_to_zone(f, f->file_offset);
 	if ((f->file_offset != z->start) &&
 	    (td->o.td_ddir != TD_DDIR_READ)) {
 		new_offset = zbd_zone_end(z);
@@ -557,8 +561,7 @@ static bool zbd_zone_align_file_sizes(struct thread_data *td,
 		f->file_offset = new_offset;
 	}
 
-	zone_idx = zbd_offset_to_zone_idx(f, f->file_offset + f->io_size);
-	z = zbd_get_zone(f, zone_idx);
+	z = zbd_offset_to_zone(f, f->file_offset + f->io_size);
 	new_end = z->start;
 	if ((td->o.td_ddir != TD_DDIR_READ) &&
 	    (f->file_offset + f->io_size != new_end)) {
@@ -1595,15 +1598,11 @@ static void zbd_queue_io(struct thread_data *td, struct io_u *io_u, int q,
 	const struct fio_file *f = io_u->file;
 	struct zoned_block_device_info *zbd_info = f->zbd_info;
 	struct fio_zone_info *z;
-	uint32_t zone_idx;
 	uint64_t zone_end;
 
 	assert(zbd_info);
 
-	zone_idx = zbd_offset_to_zone_idx(f, io_u->offset);
-	assert(zone_idx < zbd_info->nr_zones);
-	z = zbd_get_zone(f, zone_idx);
-
+	z = zbd_offset_to_zone(f, io_u->offset);
 	assert(z->has_wp);
 
 	if (!success)
@@ -1611,7 +1610,7 @@ static void zbd_queue_io(struct thread_data *td, struct io_u *io_u, int q,
 
 	dprint(FD_ZBD,
 	       "%s: queued I/O (%lld, %llu) for zone %u\n",
-	       f->file_name, io_u->offset, io_u->buflen, zone_idx);
+	       f->file_name, io_u->offset, io_u->buflen, zbd_zone_idx(f, z));
 
 	switch (io_u->ddir) {
 	case DDIR_WRITE:
@@ -1654,19 +1653,15 @@ static void zbd_put_io(struct thread_data *td, const struct io_u *io_u)
 	const struct fio_file *f = io_u->file;
 	struct zoned_block_device_info *zbd_info = f->zbd_info;
 	struct fio_zone_info *z;
-	uint32_t zone_idx;
 
 	assert(zbd_info);
 
-	zone_idx = zbd_offset_to_zone_idx(f, io_u->offset);
-	assert(zone_idx < zbd_info->nr_zones);
-	z = zbd_get_zone(f, zone_idx);
-
+	z = zbd_offset_to_zone(f, io_u->offset);
 	assert(z->has_wp);
 
 	dprint(FD_ZBD,
 	       "%s: terminate I/O (%lld, %llu) for zone %u\n",
-	       f->file_name, io_u->offset, io_u->buflen, zone_idx);
+	       f->file_name, io_u->offset, io_u->buflen, zbd_zone_idx(f, z));
 
 	zbd_end_zone_io(td, io_u, z);
 
@@ -1708,14 +1703,12 @@ void setup_zbd_zone_mode(struct thread_data *td, struct io_u *io_u)
 	struct fio_file *f = io_u->file;
 	enum fio_ddir ddir = io_u->ddir;
 	struct fio_zone_info *z;
-	uint32_t zone_idx;
 
 	assert(td->o.zone_mode == ZONE_MODE_ZBD);
 	assert(td->o.zone_size);
 	assert(f->zbd_info);
 
-	zone_idx = zbd_offset_to_zone_idx(f, f->last_pos[ddir]);
-	z = zbd_get_zone(f, zone_idx);
+	z = zbd_offset_to_zone(f, f->last_pos[ddir]);
 
 	/*
 	 * When the zone capacity is smaller than the zone size and the I/O is
@@ -1729,7 +1722,7 @@ void setup_zbd_zone_mode(struct thread_data *td, struct io_u *io_u)
 		       "%s: Jump from zone capacity limit to zone end:"
 		       " (%"PRIu64" -> %"PRIu64") for zone %u (%"PRIu64")\n",
 		       f->file_name, f->last_pos[ddir],
-		       zbd_zone_end(z), zone_idx, z->capacity);
+		       zbd_zone_end(z), zbd_zone_idx(f, z), z->capacity);
 		td->io_skip_bytes += zbd_zone_end(z) - f->last_pos[ddir];
 		f->last_pos[ddir] = zbd_zone_end(z);
 	}
@@ -1810,7 +1803,6 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
 	struct zoned_block_device_info *zbdi = f->zbd_info;
-	uint32_t zone_idx_b;
 	struct fio_zone_info *zb, *zl, *orig_zb;
 	uint32_t orig_len = io_u->buflen;
 	uint64_t min_bs = td->o.min_bs[io_u->ddir];
@@ -1822,8 +1814,7 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 	assert(is_valid_offset(f, io_u->offset));
 	assert(io_u->buflen);
 
-	zone_idx_b = zbd_offset_to_zone_idx(f, io_u->offset);
-	zb = zbd_get_zone(f, zone_idx_b);
+	zb = zbd_offset_to_zone(f, io_u->offset);
 	orig_zb = zb;
 
 	if (!zb->has_wp) {
@@ -2102,12 +2093,9 @@ int zbd_do_io_u_trim(const struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
 	struct fio_zone_info *z;
-	uint32_t zone_idx;
 	int ret;
 
-	zone_idx = zbd_offset_to_zone_idx(f, io_u->offset);
-	z = zbd_get_zone(f, zone_idx);
-
+	z = zbd_offset_to_zone(f, io_u->offset);
 	if (!z->has_wp)
 		return 0;
 
