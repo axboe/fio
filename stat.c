@@ -2854,7 +2854,7 @@ static void __add_log_sample(struct io_log *iolog, union io_sample_data data,
 		s = get_sample(iolog, cur_log, cur_log->nr_samples);
 
 		s->data = data;
-		s->time = t + (iolog->td ? iolog->td->unix_epoch : 0);
+		s->time = t + (iolog->td ? iolog->td->alternate_epoch : 0);
 		io_sample_set_ddir(iolog, s, ddir);
 		s->bs = bs;
 		s->priority = priority;

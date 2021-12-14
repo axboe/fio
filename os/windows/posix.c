@@ -537,16 +537,21 @@ int fcntl(int fildes, int cmd, ...)
 return 0;
 }
 
+#ifndef CLOCK_MONOTONIC_RAW
+#define CLOCK_MONOTONIC_RAW 4
+#endif
+
 /*
  * Get the value of a local clock source.
- * This implementation supports 2 clocks: CLOCK_MONOTONIC provides high-accuracy
- * relative time, while CLOCK_REALTIME provides a low-accuracy wall time.
+ * This implementation supports 3 clocks: CLOCK_MONOTONIC/CLOCK_MONOTONIC_RAW
+ * provide high-accuracy relative time, while CLOCK_REALTIME provides a
+ * low-accuracy wall time.
  */
 int clock_gettime(clockid_t clock_id, struct timespec *tp)
 {
 	int rc = 0;
 
-	if (clock_id == CLOCK_MONOTONIC) {
+	if (clock_id == CLOCK_MONOTONIC || clock_id == CLOCK_MONOTONIC_RAW) {
 		static LARGE_INTEGER freq = {{0,0}};
 		LARGE_INTEGER counts;
 		uint64_t t;

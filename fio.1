@@ -3323,6 +3323,17 @@ If set, fio will log Unix timestamps to the log files produced by enabling
 write_type_log for each log type, instead of the default zero-based
 timestamps.
 .TP
+.BI log_alternate_epoch \fR=\fPbool
+If set, fio will log timestamps based on the epoch used by the clock specified
+in the \fBlog_alternate_epoch_clock_id\fR option, to the log files produced by
+enabling write_type_log for each log type, instead of the default zero-based
+timestamps.
+.TP
+.BI log_alternate_epoch_clock_id \fR=\fPint
+Specifies the clock_id to be used by clock_gettime to obtain the alternate epoch
+if either \fBBlog_unix_epoch\fR or \fBlog_alternate_epoch\fR are true. Otherwise has no
+effect. Default value is 0, or CLOCK_REALTIME.
+.TP
 .BI block_error_percentiles \fR=\fPbool
 If set, record errors in trim block-sized units from writes and trims and
 output a histogram of how many trims it took to get to errors, and what kind
