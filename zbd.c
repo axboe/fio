@@ -288,28 +288,31 @@ static int zbd_reset_zone(struct thread_data *td, struct fio_file *f,
  * The caller must hold f->zbd_info->mutex.
  */
 static void zbd_close_zone(struct thread_data *td, const struct fio_file *f,
-			   unsigned int zone_idx)
+			   struct fio_zone_info *z)
 {
-	uint32_t open_zone_idx = 0;
+	uint32_t ozi;
 
-	for (; open_zone_idx < f->zbd_info->num_open_zones; open_zone_idx++) {
-		if (f->zbd_info->open_zones[open_zone_idx] == zone_idx)
-			break;
-	}
-	if (open_zone_idx == f->zbd_info->num_open_zones)
+	if (!z->open)
 		return;
 
-	dprint(FD_ZBD, "%s: closing zone %d\n",
-	       f->file_name, zone_idx);
+	for (ozi = 0; ozi < f->zbd_info->num_open_zones; ozi++) {
+		if (get_zone(f, f->zbd_info->open_zones[ozi]) == z)
+			break;
+	}
+	if (ozi == f->zbd_info->num_open_zones)
+		return;
 
-	memmove(f->zbd_info->open_zones + open_zone_idx,
-		f->zbd_info->open_zones + open_zone_idx + 1,
-		(ZBD_MAX_OPEN_ZONES - (open_zone_idx + 1)) *
+	dprint(FD_ZBD, "%s: closing zone %u\n",
+	       f->file_name, zbd_zone_nr(f, z));
+
+	memmove(f->zbd_info->open_zones + ozi,
+		f->zbd_info->open_zones + ozi + 1,
+		(ZBD_MAX_OPEN_ZONES - (ozi + 1)) *
 		sizeof(f->zbd_info->open_zones[0]));
 
 	f->zbd_info->num_open_zones--;
 	td->num_open_zones--;
-	get_zone(f, zone_idx)->open = 0;
+	z->open = 0;
 }
 
 /**
@@ -335,14 +338,12 @@ static int zbd_reset_zones(struct thread_data *td, struct fio_file *f,
 	       f->file_name, zbd_zone_nr(f, zb), zbd_zone_nr(f, ze));
 
 	for (z = zb; z < ze; z++) {
-		uint32_t nz = zbd_zone_nr(f, z);
-
 		if (!z->has_wp)
 			continue;
 
 		zone_lock(td, f, z);
 		pthread_mutex_lock(&f->zbd_info->mutex);
-		zbd_close_zone(td, f, nz);
+		zbd_close_zone(td, f, z);
 		pthread_mutex_unlock(&f->zbd_info->mutex);
 
 		if (z->wp != z->start) {
@@ -1571,7 +1572,7 @@ static void zbd_end_zone_io(struct thread_data *td, const struct io_u *io_u,
 	if (io_u->ddir == DDIR_WRITE &&
 	    io_u->offset + io_u->buflen >= zbd_zone_capacity_end(z)) {
 		pthread_mutex_lock(&f->zbd_info->mutex);
-		zbd_close_zone(td, f, zbd_zone_nr(f, z));
+		zbd_close_zone(td, f, z);
 		pthread_mutex_unlock(&f->zbd_info->mutex);
 	}
 }
