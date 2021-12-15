@@ -2130,6 +2130,8 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src,
 {
 	int k, l, m;
 
+	sum_stat(&dst->sync_stat, &src->sync_stat, first, false);
+
 	for (l = 0; l < DDIR_RWDIR_CNT; l++) {
 		if (!(dst->unified_rw_rep == UNIFIED_MIXED)) {
 			sum_stat(&dst->clat_stat[l], &src->clat_stat[l], first, false);
@@ -2166,7 +2168,6 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src,
 		}
 	}
 
-	sum_stat(&dst->sync_stat, &src->sync_stat, first, false);
 	dst->usr_time += src->usr_time;
 	dst->sys_time += src->sys_time;
 	dst->ctx += src->ctx;
