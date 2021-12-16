@@ -284,9 +284,10 @@ static int fio_client_dec_jobs_eta(struct client_eta *eta, client_eta_op eta_fn)
 static void fio_drain_client_text(struct fio_client *client)
 {
 	do {
-		struct fio_net_cmd *cmd;
+		struct fio_net_cmd *cmd = NULL;
 
-		cmd = fio_net_recv_cmd(client->fd, false);
+		if (fio_server_poll_fd(client->fd, POLLIN, 0))
+			cmd = fio_net_recv_cmd(client->fd, false);
 		if (!cmd)
 			break;
 

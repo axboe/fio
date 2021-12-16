@@ -250,6 +250,27 @@ static int fio_send_data(int sk, const void *p, unsigned int len)
 	return fio_sendv_data(sk, &iov, 1);
 }
 
+bool fio_server_poll_fd(int fd, short events, int timeout) {
+	struct pollfd pfd = {
+		.fd	= fd,
+		.events	= events,
+	};
+	int ret;
+
+	ret = poll(&pfd, 1, timeout);
+	if (ret < 0) {
+		if (errno == EINTR)
+			return false;
+		log_err("fio: poll: %s\n", strerror(errno));
+		return false;
+	} else if (!ret) {
+		return false;
+	}
+	if (pfd.revents & events)
+		return true;
+	return false;
+}
+
 static int fio_recv_data(int sk, void *buf, unsigned int len, bool wait)
 {
 	int flags;
@@ -1238,7 +1259,8 @@ static int handle_connection(struct sk_out *sk_out)
 		if (ret < 0)
 			break;
 
-		cmd = fio_net_recv_cmd(sk_out->sk, true);
+		if (pfd.revents & POLLIN)
+			cmd = fio_net_recv_cmd(sk_out->sk, true);
 		if (!cmd) {
 			ret = -1;
 			break;
