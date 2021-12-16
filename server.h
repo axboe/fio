@@ -15,6 +15,9 @@ struct sk_out {
 	unsigned int refs;	/* frees sk_out when it drops to zero.
 				 * protected by below ->lock */
 
+#ifdef WIN32
+	HANDLE hProcess;		/* process handle of handle_connection_process*/
+#endif
 	int sk;			/* socket fd to talk to client */
 	struct fio_sem lock;	/* protects ref and below list */
 	struct flist_head list;	/* list of pending transmit work */
@@ -212,6 +215,7 @@ extern int fio_server_text_output(int, const char *, size_t);
 extern int fio_net_send_cmd(int, uint16_t, const void *, off_t, uint64_t *, struct flist_head *);
 extern int fio_net_send_simple_cmd(int, uint16_t, uint64_t, struct flist_head *);
 extern void fio_server_set_arg(const char *);
+extern void fio_server_internal_set(const char *);
 extern int fio_server_parse_string(const char *, char **, bool *, int *, struct in_addr *, struct in6_addr *, int *);
 extern int fio_server_parse_host(const char *, int, struct in_addr *, struct in6_addr *);
 extern const char *fio_server_op(unsigned int);

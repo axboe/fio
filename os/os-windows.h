@@ -110,6 +110,8 @@ int nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
 ssize_t pread(int fildes, void *buf, size_t nbyte, off_t offset);
 ssize_t pwrite(int fildes, const void *buf, size_t nbyte,
 		off_t offset);
+HANDLE windows_handle_connection(HANDLE hjob, int sk);
+HANDLE windows_create_job(void);
 
 static inline int blockdev_size(struct fio_file *f, unsigned long long *bytes)
 {

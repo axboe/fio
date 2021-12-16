@@ -224,6 +224,13 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.has_arg	= optional_argument,
 		.val		= 'S',
 	},
+#ifdef WIN32
+	{
+		.name		= (char *) "server-internal",
+		.has_arg	= required_argument,
+		.val		= 'N',
+	},
+#endif
 	{	.name		= (char *) "daemonize",
 		.has_arg	= required_argument,
 		.val		= 'D',
@@ -2789,6 +2796,12 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			exit_val = 1;
 #endif
 			break;
+#ifdef WIN32
+		case 'N':
+			did_arg = true;
+			fio_server_internal_set(optarg);
+			break;
+#endif
 		case 'D':
 			if (pid_file)
 				free(pid_file);
