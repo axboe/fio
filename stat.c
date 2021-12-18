@@ -289,9 +289,10 @@ void show_mixed_group_stats(struct group_run_stats *rs, struct buf_output *out)
 {
 	char *io, *agg, *min, *max;
 	char *ioalt, *aggalt, *minalt, *maxalt;
-	uint64_t io_mix = 0, agg_mix = 0, min_mix = -1, max_mix = 0, min_run = -1, max_run = 0;
-	int i;
+	uint64_t io_mix = 0, agg_mix = 0, min_mix = -1, max_mix = 0;
+	uint64_t min_run = -1, max_run = 0;
 	const int i2p = is_power_of_2(rs->kb_base);
+	int i;
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		if (!rs->max_run[i])
@@ -363,9 +364,9 @@ void show_group_stats(struct group_run_stats *rs, struct buf_output *out)
 		free(minalt);
 		free(maxalt);
 	}
-	
+
 	/* Need to aggregate statisitics to show mixed values */
-	if (rs->unified_rw_rep == UNIFIED_BOTH) 
+	if (rs->unified_rw_rep == UNIFIED_BOTH)
 		show_mixed_group_stats(rs, out);
 }
 
@@ -473,30 +474,35 @@ static double convert_agg_kbytes_percent(struct group_run_stats *rs, int ddir, i
 	return p_of_agg;
 }
 
-static void show_mixed_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
-			     struct buf_output *out)
+static void show_mixed_ddir_status(struct group_run_stats *rs,
+				   struct thread_stat *ts,
+				   struct buf_output *out)
 {
 	unsigned long runt;
 	unsigned long long min, max, bw, iops;
 	double mean, dev;
 	char *io_p, *bw_p, *bw_p_alt, *iops_p, *post_st = NULL;
 	struct thread_stat *ts_lcl;
-
 	int i2p;
 	int ddir = 0;
 
-	/* Handle aggregation of Reads (ddir = 0), Writes (ddir = 1), and Trims (ddir = 2) */
+	/*
+	 * Handle aggregation of Reads (ddir = 0), Writes (ddir = 1), and
+	 * Trims (ddir = 2) */
 	ts_lcl = malloc(sizeof(struct thread_stat));
 	memset((void *)ts_lcl, 0, sizeof(struct thread_stat));
-	ts_lcl->unified_rw_rep = UNIFIED_MIXED;               /* calculate mixed stats  */
+	/* calculate mixed stats  */
+	ts_lcl->unified_rw_rep = UNIFIED_MIXED;
 	init_thread_stat_min_vals(ts_lcl);
 
 	sum_thread_stats(ts_lcl, ts, 1);
 
 	assert(ddir_rw(ddir));
 
-	if (!ts_lcl->runtime[ddir])
+	if (!ts_lcl->runtime[ddir]) {
+		free(ts_lcl);
 		return;
+	}
 
 	i2p = is_power_of_2(rs->kb_base);
 	runt = ts_lcl->runtime[ddir];
@@ -560,10 +566,9 @@ static void show_mixed_ddir_status(struct group_run_stats *rs, struct thread_sta
 		else
 			samples = ts_lcl->clat_stat[ddir].samples;
 
-		/* Only print this if some high and low priority stats were collected */
+		/* Only print if high and low priority stats were collected */
 		if (ts_lcl->clat_high_prio_stat[ddir].samples > 0 &&
-				ts_lcl->clat_low_prio_stat[ddir].samples > 0)
-		{
+				ts_lcl->clat_low_prio_stat[ddir].samples > 0) {
 			sprintf(prio_name, "high prio (%.2f%%) %s",
 					100. * (double) ts_lcl->clat_high_prio_stat[ddir].samples / (double) samples,
 					name);
@@ -1222,9 +1227,8 @@ void show_disk_util(int terse, struct json_object *parent,
 	if (!is_running_backend())
 		return;
 
-	if (flist_empty(&disk_list)) {
+	if (flist_empty(&disk_list))
 		return;
-	}
 
 	if ((output_format & FIO_OUTPUT_JSON) && parent)
 		do_json = true;
@@ -1234,9 +1238,9 @@ void show_disk_util(int terse, struct json_object *parent,
 	if (!terse && !do_json)
 		log_buf(out, "\nDisk stats (read/write):\n");
 
-	if (do_json)
+	if (do_json) {
 		json_object_add_disk_utils(parent, &disk_list);
-	else if (output_format & ~(FIO_OUTPUT_JSON | FIO_OUTPUT_JSON_PLUS)) {
+	} else if (output_format & ~(FIO_OUTPUT_JSON | FIO_OUTPUT_JSON_PLUS)) {
 		flist_for_each(entry, &disk_list) {
 			du = flist_entry(entry, struct disk_util, list);
 
@@ -1396,19 +1400,20 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 	else
 		log_buf(out, ";%llu;%llu;%f;%f", 0ULL, 0ULL, 0.0, 0.0);
 
-	if (ts->lat_percentiles)
+	if (ts->lat_percentiles) {
 		len = calc_clat_percentiles(ts->io_u_plat[FIO_LAT][ddir],
 					ts->lat_stat[ddir].samples,
 					ts->percentile_list, &ovals, &maxv,
 					&minv);
-	else if (ts->clat_percentiles)
+	} else if (ts->clat_percentiles) {
 		len = calc_clat_percentiles(ts->io_u_plat[FIO_CLAT][ddir],
 					ts->clat_stat[ddir].samples,
 					ts->percentile_list, &ovals, &maxv,
 					&minv);
-	else
+	} else {
 		len = 0;
-	
+	}
+
 	for (i = 0; i < FIO_IO_U_LIST_MAX_LEN; i++) {
 		if (i >= len) {
 			log_buf(out, ";0%%=0");
@@ -1435,8 +1440,9 @@ static void show_ddir_status_terse(struct thread_stat *ts,
 		}
 
 		log_buf(out, ";%llu;%llu;%f%%;%f;%f", min, max, p_of_agg, mean, dev);
-	} else
+	} else {
 		log_buf(out, ";%llu;%llu;%f%%;%f;%f", 0ULL, 0ULL, 0.0, 0.0, 0.0);
+	}
 
 	if (ver == 5) {
 		if (bw_stat)
@@ -1458,15 +1464,19 @@ static void show_mixed_ddir_status_terse(struct thread_stat *ts,
 {
 	struct thread_stat *ts_lcl;
 
-	/* Handle aggregation of Reads (ddir = 0), Writes (ddir = 1), and Trims (ddir = 2) */
+	/*
+	 * Handle aggregation of Reads (ddir = 0), Writes (ddir = 1), and
+	 * Trims (ddir = 2)
+	 */
 	ts_lcl = malloc(sizeof(struct thread_stat));
 	memset((void *)ts_lcl, 0, sizeof(struct thread_stat));
-	ts_lcl->unified_rw_rep = UNIFIED_MIXED;               /* calculate mixed stats  */
+	/* calculate mixed stats  */
+	ts_lcl->unified_rw_rep = UNIFIED_MIXED;
 	init_thread_stat_min_vals(ts_lcl);
 	ts_lcl->lat_percentiles = ts->lat_percentiles;
 	ts_lcl->clat_percentiles = ts->clat_percentiles;
 	ts_lcl->slat_percentiles = ts->slat_percentiles;
-	ts_lcl->percentile_precision = ts->percentile_precision;		
+	ts_lcl->percentile_precision = ts->percentile_precision;
 	memcpy(ts_lcl->percentile_list, ts->percentile_list, sizeof(ts->percentile_list));
 	
 	sum_thread_stats(ts_lcl, ts, 1);
@@ -1476,8 +1486,10 @@ static void show_mixed_ddir_status_terse(struct thread_stat *ts,
 	free(ts_lcl);
 }
 
-static struct json_object *add_ddir_lat_json(struct thread_stat *ts, uint32_t percentiles,
-		struct io_stat *lat_stat, uint64_t *io_u_plat)
+static struct json_object *add_ddir_lat_json(struct thread_stat *ts,
+					     uint32_t percentiles,
+					     struct io_stat *lat_stat,
+					     uint64_t *io_u_plat)
 {
 	char buf[120];
 	double mean, dev;
@@ -1650,15 +1662,19 @@ static void add_mixed_ddir_status_json(struct thread_stat *ts,
 {
 	struct thread_stat *ts_lcl;
 
-	/* Handle aggregation of Reads (ddir = 0), Writes (ddir = 1), and Trims (ddir = 2) */
+	/*
+	 * Handle aggregation of Reads (ddir = 0), Writes (ddir = 1), and
+	 * Trims (ddir = 2)
+	 */
 	ts_lcl = malloc(sizeof(struct thread_stat));
 	memset((void *)ts_lcl, 0, sizeof(struct thread_stat));
-	ts_lcl->unified_rw_rep = UNIFIED_MIXED;               /* calculate mixed stats  */
+	/* calculate mixed stats  */
+	ts_lcl->unified_rw_rep = UNIFIED_MIXED;
 	init_thread_stat_min_vals(ts_lcl);
 	ts_lcl->lat_percentiles = ts->lat_percentiles;
 	ts_lcl->clat_percentiles = ts->clat_percentiles;
 	ts_lcl->slat_percentiles = ts->slat_percentiles;
-	ts_lcl->percentile_precision = ts->percentile_precision;		
+	ts_lcl->percentile_precision = ts->percentile_precision;
 	memcpy(ts_lcl->percentile_list, ts->percentile_list, sizeof(ts->percentile_list));
 
 	sum_thread_stats(ts_lcl, ts, 1);
@@ -2133,7 +2149,7 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src,
 	sum_stat(&dst->sync_stat, &src->sync_stat, first, false);
 
 	for (l = 0; l < DDIR_RWDIR_CNT; l++) {
-		if (!(dst->unified_rw_rep == UNIFIED_MIXED)) {
+		if (dst->unified_rw_rep != UNIFIED_MIXED) {
 			sum_stat(&dst->clat_stat[l], &src->clat_stat[l], first, false);
 			sum_stat(&dst->clat_high_prio_stat[l], &src->clat_high_prio_stat[l], first, false);
 			sum_stat(&dst->clat_low_prio_stat[l], &src->clat_low_prio_stat[l], first, false);
@@ -2188,7 +2204,7 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src,
 		dst->io_u_lat_m[k] += src->io_u_lat_m[k];
 
 	for (k = 0; k < DDIR_RWDIR_CNT; k++) {
-		if (!(dst->unified_rw_rep == UNIFIED_MIXED)) {
+		if (dst->unified_rw_rep != UNIFIED_MIXED) {
 			dst->total_io_u[k] += src->total_io_u[k];
 			dst->short_io_u[k] += src->short_io_u[k];
 			dst->drop_io_u[k] += src->drop_io_u[k];
@@ -2204,7 +2220,7 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src,
 	for (k = 0; k < FIO_LAT_CNT; k++)
 		for (l = 0; l < DDIR_RWDIR_CNT; l++)
 			for (m = 0; m < FIO_IO_U_PLAT_NR; m++)
-				if (!(dst->unified_rw_rep == UNIFIED_MIXED))
+				if (dst->unified_rw_rep != UNIFIED_MIXED)
 					dst->io_u_plat[k][l][m] += src->io_u_plat[k][l][m];
 				else
 					dst->io_u_plat[k][0][m] += src->io_u_plat[k][l][m];
@@ -2214,7 +2230,7 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src,
 
 	for (k = 0; k < DDIR_RWDIR_CNT; k++) {
 		for (m = 0; m < FIO_IO_U_PLAT_NR; m++) {
-			if (!(dst->unified_rw_rep == UNIFIED_MIXED)) {
+			if (dst->unified_rw_rep != UNIFIED_MIXED) {
 				dst->io_u_plat_high_prio[k][m] += src->io_u_plat_high_prio[k][m];
 				dst->io_u_plat_low_prio[k][m] += src->io_u_plat_low_prio[k][m];
 			} else {
