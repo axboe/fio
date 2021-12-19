@@ -14,6 +14,7 @@ jobs:
         - linux-gcc
         - linux-clang
         - macos
+        - linux-i686-gcc
         include:
         - build: linux-gcc
           os: ubuntu-20.04
@@ -23,6 +24,9 @@ jobs:
           cc: clang
         - build: macos
           os: macos-11
+        - build: linux-i686-gcc
+          os: ubuntu-20.04
+          arch: i686
 
     env:
       CI_TARGET_ARCH: ${{ matrix.arch }}
