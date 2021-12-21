@@ -634,7 +634,8 @@ static int submitter_init(struct submitter *s)
 #ifdef CONFIG_LIBAIO
 static int prep_more_ios_aio(struct submitter *s, int max_ios, struct iocb *iocbs)
 {
-	unsigned long offset, data;
+	uint64_t data;
+	long long offset;
 	struct file *f;
 	unsigned index;
 	long r;
@@ -663,7 +664,7 @@ static int prep_more_ios_aio(struct submitter *s, int max_ios, struct iocb *iocb
 
 		data = f->fileno;
 		if (stats && stats_running)
-			data |= ((unsigned long) s->clock_index << 32);
+			data |= (((uint64_t) s->clock_index) << 32);
 		iocb->data = (void *) (uintptr_t) data;
 		index++;
 	}
@@ -676,7 +677,7 @@ static int reap_events_aio(struct submitter *s, struct io_event *events, int evs
 	int reaped = 0;
 
 	while (evs) {
-		unsigned long data = (uintptr_t) events[reaped].data;
+		uint64_t data = (uintptr_t) events[reaped].data;
 		struct file *f = &s->files[data & 0xffffffff];
 
 		f->pending_ios--;
