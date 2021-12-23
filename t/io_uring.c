@@ -1095,7 +1095,7 @@ static void usage(char *argv, int status)
 		" -a <bool> : Use legacy aio, default %d\n",
 		argv, DEPTH, BATCH_SUBMIT, BATCH_COMPLETE, BS, polled,
 		fixedbufs, dma_map, register_files, nthreads, !buffered, do_nop,
-		stats, runtime == 0 ? "unlimited" : runtime_str, aio, random_io);
+		stats, runtime == 0 ? "unlimited" : runtime_str, random_io, aio);
 	exit(status);
 }
 
