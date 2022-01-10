@@ -699,9 +699,15 @@ static int fio_ioring_queue_init(struct thread_data *td)
 	p.flags |= IORING_SETUP_CQSIZE;
 	p.cq_entries = depth;
 
+retry:
 	ret = syscall(__NR_io_uring_setup, depth, &p);
-	if (ret < 0)
+	if (ret < 0) {
+		if (errno == EINVAL && p.flags & IORING_SETUP_CQSIZE) {
+			p.flags &= ~IORING_SETUP_CQSIZE;
+			goto retry;
+		}
 		return ret;
+	}
 
 	ld->ring_fd = ret;
 
