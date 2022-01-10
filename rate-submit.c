@@ -195,7 +195,7 @@ static void io_workqueue_exit_worker_fn(struct submit_worker *sw,
 	struct thread_data *td = sw->priv;
 
 	(*sum_cnt)++;
-	sum_thread_stats(&sw->wq->td->ts, &td->ts, *sum_cnt == 1);
+	sum_thread_stats(&sw->wq->td->ts, &td->ts);
 
 	fio_options_free(td);
 	close_and_free_files(td);

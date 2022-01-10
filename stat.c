@@ -495,7 +495,7 @@ static void show_mixed_ddir_status(struct group_run_stats *rs,
 	ts_lcl->unified_rw_rep = UNIFIED_MIXED;
 	init_thread_stat_min_vals(ts_lcl);
 
-	sum_thread_stats(ts_lcl, ts, 1);
+	sum_thread_stats(ts_lcl, ts);
 
 	assert(ddir_rw(ddir));
 
@@ -1479,7 +1479,7 @@ static void show_mixed_ddir_status_terse(struct thread_stat *ts,
 	ts_lcl->percentile_precision = ts->percentile_precision;
 	memcpy(ts_lcl->percentile_list, ts->percentile_list, sizeof(ts->percentile_list));
 	
-	sum_thread_stats(ts_lcl, ts, 1);
+	sum_thread_stats(ts_lcl, ts);
 
 	/* add the aggregated stats to json parent */
 	show_ddir_status_terse(ts_lcl, rs, DDIR_READ, ver, out);
@@ -1677,7 +1677,7 @@ static void add_mixed_ddir_status_json(struct thread_stat *ts,
 	ts_lcl->percentile_precision = ts->percentile_precision;
 	memcpy(ts_lcl->percentile_list, ts->percentile_list, sizeof(ts->percentile_list));
 
-	sum_thread_stats(ts_lcl, ts, 1);
+	sum_thread_stats(ts_lcl, ts);
 
 	/* add the aggregated stats to json parent */
 	add_ddir_status_json(ts_lcl, rs, DDIR_READ, parent);
@@ -2089,9 +2089,10 @@ static void __sum_stat(struct io_stat *dst, struct io_stat *src, bool first)
  * numbers. For group_reporting, we should just add those up, not make
  * them the mean of everything.
  */
-static void sum_stat(struct io_stat *dst, struct io_stat *src, bool first,
-		     bool pure_sum)
+static void sum_stat(struct io_stat *dst, struct io_stat *src, bool pure_sum)
 {
+	bool first = dst->samples == 0;
+
 	if (src->samples == 0)
 		return;
 
@@ -2141,49 +2142,41 @@ void sum_group_stats(struct group_run_stats *dst, struct group_run_stats *src)
 		dst->sig_figs = src->sig_figs;
 }
 
-void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src,
-		      bool first)
+void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src)
 {
 	int k, l, m;
 
-	sum_stat(&dst->sync_stat, &src->sync_stat, first, false);
-
 	for (l = 0; l < DDIR_RWDIR_CNT; l++) {
 		if (dst->unified_rw_rep != UNIFIED_MIXED) {
-			sum_stat(&dst->clat_stat[l], &src->clat_stat[l], first, false);
-			sum_stat(&dst->clat_high_prio_stat[l], &src->clat_high_prio_stat[l], first, false);
-			sum_stat(&dst->clat_low_prio_stat[l], &src->clat_low_prio_stat[l], first, false);
-			sum_stat(&dst->slat_stat[l], &src->slat_stat[l], first, false);
-			sum_stat(&dst->lat_stat[l], &src->lat_stat[l], first, false);
-			sum_stat(&dst->bw_stat[l], &src->bw_stat[l], first, true);
-			sum_stat(&dst->iops_stat[l], &src->iops_stat[l], first, true);
+			sum_stat(&dst->clat_stat[l], &src->clat_stat[l], false);
+			sum_stat(&dst->clat_high_prio_stat[l], &src->clat_high_prio_stat[l], false);
+			sum_stat(&dst->clat_low_prio_stat[l], &src->clat_low_prio_stat[l], false);
+			sum_stat(&dst->slat_stat[l], &src->slat_stat[l], false);
+			sum_stat(&dst->lat_stat[l], &src->lat_stat[l], false);
+			sum_stat(&dst->bw_stat[l], &src->bw_stat[l], true);
+			sum_stat(&dst->iops_stat[l], &src->iops_stat[l], true);
 
 			dst->io_bytes[l] += src->io_bytes[l];
 
 			if (dst->runtime[l] < src->runtime[l])
 				dst->runtime[l] = src->runtime[l];
 		} else {
-			sum_stat(&dst->clat_stat[0], &src->clat_stat[l], first, false);
-			sum_stat(&dst->clat_high_prio_stat[0], &src->clat_high_prio_stat[l], first, false);
-			sum_stat(&dst->clat_low_prio_stat[0], &src->clat_low_prio_stat[l], first, false);
-			sum_stat(&dst->slat_stat[0], &src->slat_stat[l], first, false);
-			sum_stat(&dst->lat_stat[0], &src->lat_stat[l], first, false);
-			sum_stat(&dst->bw_stat[0], &src->bw_stat[l], first, true);
-			sum_stat(&dst->iops_stat[0], &src->iops_stat[l], first, true);
+			sum_stat(&dst->clat_stat[0], &src->clat_stat[l], false);
+			sum_stat(&dst->clat_high_prio_stat[0], &src->clat_high_prio_stat[l], false);
+			sum_stat(&dst->clat_low_prio_stat[0], &src->clat_low_prio_stat[l], false);
+			sum_stat(&dst->slat_stat[0], &src->slat_stat[l], false);
+			sum_stat(&dst->lat_stat[0], &src->lat_stat[l], false);
+			sum_stat(&dst->bw_stat[0], &src->bw_stat[l], true);
+			sum_stat(&dst->iops_stat[0], &src->iops_stat[l], true);
 
 			dst->io_bytes[0] += src->io_bytes[l];
 
 			if (dst->runtime[0] < src->runtime[l])
 				dst->runtime[0] = src->runtime[l];
-
-			/*
-			 * We're summing to the same destination, so override
-			 * 'first' after the first iteration of the loop
-			 */
-			first = false;
 		}
 	}
 
+	sum_stat(&dst->sync_stat, &src->sync_stat, false);
 	dst->usr_time += src->usr_time;
 	dst->sys_time += src->sys_time;
 	dst->ctx += src->ctx;
@@ -2417,7 +2410,7 @@ void __show_run_stats(void)
 		for (k = 0; k < ts->nr_block_infos; k++)
 			ts->block_infos[k] = td->ts.block_infos[k];
 
-		sum_thread_stats(ts, &td->ts, idx == 1);
+		sum_thread_stats(ts, &td->ts);
 
 		if (td->o.ss_dur) {
 			ts->ss_state = td->ss.state;
