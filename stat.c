@@ -462,6 +462,35 @@ static void display_lat(const char *name, unsigned long long min,
 	free(maxp);
 }
 
+static struct thread_stat *gen_mixed_ddir_stats_from_ts(struct thread_stat *ts)
+{
+	struct thread_stat *ts_lcl;
+
+	/*
+	 * Handle aggregation of Reads (ddir = 0), Writes (ddir = 1), and
+	 * Trims (ddir = 2)
+	 */
+	ts_lcl = malloc(sizeof(struct thread_stat));
+	if (!ts_lcl) {
+		log_err("fio: failed to allocate local thread stat\n");
+		return NULL;
+	}
+
+	init_thread_stat(ts_lcl);
+
+	/* calculate mixed stats  */
+	ts_lcl->unified_rw_rep = UNIFIED_MIXED;
+	ts_lcl->lat_percentiles = ts->lat_percentiles;
+	ts_lcl->clat_percentiles = ts->clat_percentiles;
+	ts_lcl->slat_percentiles = ts->slat_percentiles;
+	ts_lcl->percentile_precision = ts->percentile_precision;
+	memcpy(ts_lcl->percentile_list, ts->percentile_list, sizeof(ts->percentile_list));
+
+	sum_thread_stats(ts_lcl, ts);
+
+	return ts_lcl;
+}
+
 static double convert_agg_kbytes_percent(struct group_run_stats *rs, int ddir, int mean)
 {
 	double p_of_agg = 100.0;
@@ -644,26 +673,11 @@ static void show_mixed_ddir_status(struct group_run_stats *rs,
 				   struct thread_stat *ts,
 				   struct buf_output *out)
 {
-	struct thread_stat *ts_lcl;
+	struct thread_stat *ts_lcl = gen_mixed_ddir_stats_from_ts(ts);
 
-	/*
-	 * Handle aggregation of Reads (ddir = 0), Writes (ddir = 1), and
-	 * Trims (ddir = 2)
-	 */
-	ts_lcl = malloc(sizeof(struct thread_stat));
-	memset((void *)ts_lcl, 0, sizeof(struct thread_stat));
-	/* calculate mixed stats  */
-	ts_lcl->unified_rw_rep = UNIFIED_MIXED;
-	init_thread_stat_min_vals(ts_lcl);
-	ts_lcl->lat_percentiles = ts->lat_percentiles;
-	ts_lcl->clat_percentiles = ts->clat_percentiles;
-	ts_lcl->slat_percentiles = ts->slat_percentiles;
-	ts_lcl->percentile_precision = ts->percentile_precision;
-	memcpy(ts_lcl->percentile_list, ts->percentile_list, sizeof(ts->percentile_list));
+	if (ts_lcl)
+		show_ddir_status(rs, ts_lcl, DDIR_READ, out);
 
-	sum_thread_stats(ts_lcl, ts);
-
-	show_ddir_status(rs, ts_lcl, DDIR_READ, out);
 	free(ts_lcl);
 }
 
@@ -1332,27 +1346,11 @@ static void show_mixed_ddir_status_terse(struct thread_stat *ts,
 				   struct group_run_stats *rs,
 				   int ver, struct buf_output *out)
 {
-	struct thread_stat *ts_lcl;
+	struct thread_stat *ts_lcl = gen_mixed_ddir_stats_from_ts(ts);
 
-	/*
-	 * Handle aggregation of Reads (ddir = 0), Writes (ddir = 1), and
-	 * Trims (ddir = 2)
-	 */
-	ts_lcl = malloc(sizeof(struct thread_stat));
-	memset((void *)ts_lcl, 0, sizeof(struct thread_stat));
-	/* calculate mixed stats  */
-	ts_lcl->unified_rw_rep = UNIFIED_MIXED;
-	init_thread_stat_min_vals(ts_lcl);
-	ts_lcl->lat_percentiles = ts->lat_percentiles;
-	ts_lcl->clat_percentiles = ts->clat_percentiles;
-	ts_lcl->slat_percentiles = ts->slat_percentiles;
-	ts_lcl->percentile_precision = ts->percentile_precision;
-	memcpy(ts_lcl->percentile_list, ts->percentile_list, sizeof(ts->percentile_list));
-	
-	sum_thread_stats(ts_lcl, ts);
+	if (ts_lcl)
+		show_ddir_status_terse(ts_lcl, rs, DDIR_READ, ver, out);
 
-	/* add the aggregated stats to json parent */
-	show_ddir_status_terse(ts_lcl, rs, DDIR_READ, ver, out);
 	free(ts_lcl);
 }
 
@@ -1530,27 +1528,12 @@ static void add_ddir_status_json(struct thread_stat *ts,
 static void add_mixed_ddir_status_json(struct thread_stat *ts,
 		struct group_run_stats *rs, struct json_object *parent)
 {
-	struct thread_stat *ts_lcl;
-
-	/*
-	 * Handle aggregation of Reads (ddir = 0), Writes (ddir = 1), and
-	 * Trims (ddir = 2)
-	 */
-	ts_lcl = malloc(sizeof(struct thread_stat));
-	memset((void *)ts_lcl, 0, sizeof(struct thread_stat));
-	/* calculate mixed stats  */
-	ts_lcl->unified_rw_rep = UNIFIED_MIXED;
-	init_thread_stat_min_vals(ts_lcl);
-	ts_lcl->lat_percentiles = ts->lat_percentiles;
-	ts_lcl->clat_percentiles = ts->clat_percentiles;
-	ts_lcl->slat_percentiles = ts->slat_percentiles;
-	ts_lcl->percentile_precision = ts->percentile_precision;
-	memcpy(ts_lcl->percentile_list, ts->percentile_list, sizeof(ts->percentile_list));
-
-	sum_thread_stats(ts_lcl, ts);
+	struct thread_stat *ts_lcl = gen_mixed_ddir_stats_from_ts(ts);
 
 	/* add the aggregated stats to json parent */
-	add_ddir_status_json(ts_lcl, rs, DDIR_READ, parent);
+	if (ts_lcl)
+		add_ddir_status_json(ts_lcl, rs, DDIR_READ, parent);
+
 	free(ts_lcl);
 }
 
