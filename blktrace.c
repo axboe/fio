@@ -13,6 +13,12 @@
 #include "blktrace_api.h"
 #include "oslib/linux-dev-lookup.h"
 
+struct file_cache {
+	unsigned int maj;
+	unsigned int min;
+	unsigned int fileno;
+};
+
 /*
  * Just discard the pdu by seeking past it.
  */
@@ -87,28 +93,28 @@ static void trace_add_open_close_event(struct thread_data *td, int fileno, enum 
 	flist_add_tail(&ipo->list, &td->io_log_list);
 }
 
-static int trace_add_file(struct thread_data *td, __u32 device)
+static int trace_add_file(struct thread_data *td, __u32 device,
+			  struct file_cache *cache)
 {
-	static unsigned int last_maj, last_min, last_fileno;
 	unsigned int maj = FMAJOR(device);
 	unsigned int min = FMINOR(device);
 	struct fio_file *f;
 	char dev[256];
 	unsigned int i;
 
-	if (last_maj == maj && last_min == min)
-		return last_fileno;
+	if (cache->maj == maj && cache->min == min)
+		return cache->fileno;
 
-	last_maj = maj;
-	last_min = min;
+	cache->maj = maj;
+	cache->min = min;
 
 	/*
 	 * check for this file in our list
 	 */
 	for_each_file(td, f, i)
 		if (f->major == maj && f->minor == min) {
-			last_fileno = f->fileno;
-			return last_fileno;
+			cache->fileno = f->fileno;
+			return cache->fileno;
 		}
 
 	strcpy(dev, "/dev");
@@ -128,10 +134,10 @@ static int trace_add_file(struct thread_data *td, __u32 device)
 		td->files[fileno]->major = maj;
 		td->files[fileno]->minor = min;
 		trace_add_open_close_event(td, fileno, FIO_LOG_OPEN_FILE);
-		last_fileno = fileno;
+		cache->fileno = fileno;
 	}
 
-	return last_fileno;
+	return cache->fileno;
 }
 
 static void t_bytes_align(struct thread_options *o, struct blk_io_trace *t)
@@ -195,7 +201,8 @@ static bool handle_trace_notify(struct blk_io_trace *t)
 static bool handle_trace_discard(struct thread_data *td,
 				 struct blk_io_trace *t,
 				 unsigned long long ttime,
-				 unsigned long *ios, unsigned long long *bs)
+				 unsigned long *ios, unsigned long long *bs,
+				 struct file_cache *cache)
 {
 	struct io_piece *ipo;
 	int fileno;
@@ -205,7 +212,7 @@ static bool handle_trace_discard(struct thread_data *td,
 
 	ipo = calloc(1, sizeof(*ipo));
 	init_ipo(ipo);
-	fileno = trace_add_file(td, t->device);
+	fileno = trace_add_file(td, t->device, cache);
 
 	ios[DDIR_TRIM]++;
 	if (t->bytes > bs[DDIR_TRIM])
@@ -238,12 +245,12 @@ static void dump_trace(struct blk_io_trace *t)
 
 static bool handle_trace_fs(struct thread_data *td, struct blk_io_trace *t,
 			    unsigned long long ttime, unsigned long *ios,
-			    unsigned long long *bs)
+			    unsigned long long *bs, struct file_cache *cache)
 {
 	int rw;
 	int fileno;
 
-	fileno = trace_add_file(td, t->device);
+	fileno = trace_add_file(td, t->device, cache);
 
 	rw = (t->action & BLK_TC_ACT(BLK_TC_WRITE)) != 0;
 
@@ -271,7 +278,8 @@ static bool handle_trace_fs(struct thread_data *td, struct blk_io_trace *t,
 }
 
 static bool handle_trace_flush(struct thread_data *td, struct blk_io_trace *t,
-			       unsigned long long ttime, unsigned long *ios)
+			       unsigned long long ttime, unsigned long *ios,
+			       struct file_cache *cache)
 {
 	struct io_piece *ipo;
 	int fileno;
@@ -281,7 +289,7 @@ static bool handle_trace_flush(struct thread_data *td, struct blk_io_trace *t,
 
 	ipo = calloc(1, sizeof(*ipo));
 	init_ipo(ipo);
-	fileno = trace_add_file(td, t->device);
+	fileno = trace_add_file(td, t->device, cache);
 
 	ipo->delay = ttime / 1000;
 	ipo->ddir = DDIR_SYNC;
@@ -298,28 +306,29 @@ static bool handle_trace_flush(struct thread_data *td, struct blk_io_trace *t,
  * due to internal workings of the block layer.
  */
 static bool queue_trace(struct thread_data *td, struct blk_io_trace *t,
-			 unsigned long *ios, unsigned long long *bs)
+			 unsigned long *ios, unsigned long long *bs,
+			 struct file_cache *cache)
 {
-	static unsigned long long last_ttime;
+	unsigned long long *last_ttime = &td->io_log_blktrace_last_ttime;
 	unsigned long long delay = 0;
 
 	if ((t->action & 0xffff) != __BLK_TA_QUEUE)
 		return false;
 
 	if (!(t->action & BLK_TC_ACT(BLK_TC_NOTIFY))) {
-		if (!last_ttime || td->o.no_stall || t->time < last_ttime)
+		if (!*last_ttime || td->o.no_stall || t->time < *last_ttime)
 			delay = 0;
 		else if (td->o.replay_time_scale == 100)
-			delay = t->time - last_ttime;
+			delay = t->time - *last_ttime;
 		else {
-			double tmp = t->time - last_ttime;
+			double tmp = t->time - *last_ttime;
 			double scale;
 
 			scale = (double) 100.0 / (double) td->o.replay_time_scale;
 			tmp *= scale;
 			delay = tmp;
 		}
-		last_ttime = t->time;
+		*last_ttime = t->time;
 	}
 
 	t_bytes_align(&td->o, t);
@@ -327,11 +336,11 @@ static bool queue_trace(struct thread_data *td, struct blk_io_trace *t,
 	if (t->action & BLK_TC_ACT(BLK_TC_NOTIFY))
 		return handle_trace_notify(t);
 	else if (t->action & BLK_TC_ACT(BLK_TC_DISCARD))
-		return handle_trace_discard(td, t, delay, ios, bs);
+		return handle_trace_discard(td, t, delay, ios, bs, cache);
 	else if (t->action & BLK_TC_ACT(BLK_TC_FLUSH))
-		return handle_trace_flush(td, t, delay, ios);
+		return handle_trace_flush(td, t, delay, ios, cache);
 	else
-		return handle_trace_fs(td, t, delay, ios, bs);
+		return handle_trace_fs(td, t, delay, ios, bs, cache);
 }
 
 static void byteswap_trace(struct blk_io_trace *t)
@@ -409,6 +418,7 @@ bool init_blktrace_read(struct thread_data *td, const char *filename, int need_s
 		goto err;
 	}
 	td->io_log_blktrace_swap = need_swap;
+	td->io_log_blktrace_last_ttime = 0;
 	td->o.size = 0;
 
 	free_release_files(td);
@@ -439,6 +449,7 @@ err:
 bool read_blktrace(struct thread_data* td)
 {
 	struct blk_io_trace t;
+	struct file_cache cache = { };
 	unsigned long ios[DDIR_RWDIR_SYNC_CNT] = { };
 	unsigned long long rw_bs[DDIR_RWDIR_CNT] = { };
 	unsigned long skipped_writes;
@@ -502,7 +513,7 @@ bool read_blktrace(struct thread_data* td)
 			}
 		}
 
-		if (!queue_trace(td, &t, ios, rw_bs))
+		if (!queue_trace(td, &t, ios, rw_bs, &cache))
 			continue;
 
 		if (td->o.read_iolog_chunked) {
