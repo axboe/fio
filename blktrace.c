@@ -583,14 +583,6 @@ bool read_blktrace(struct thread_data* td)
 	}
 
 	/*
-	 * We need to do direct/raw ios to the device, to avoid getting
-	 * read-ahead in our way. But only do so if the minimum block size
-	 * is a multiple of 4k, otherwise we don't know if it's safe to do so.
-	 */
-	if (!fio_option_is_set(&td->o, odirect) && !(td_min_bs(td) & 4095))
-		td->o.odirect = 1;
-
-	/*
 	 * If depth wasn't manually set, use probed depth
 	 */
 	if (!fio_option_is_set(&td->o, iodepth))
