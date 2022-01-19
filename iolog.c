@@ -355,7 +355,7 @@ void write_iolog_close(struct thread_data *td)
 	td->iolog_buf = NULL;
 }
 
-static int64_t iolog_items_to_fetch(struct thread_data *td)
+int64_t iolog_items_to_fetch(struct thread_data *td)
 {
 	struct timespec now;
 	uint64_t elapsed;
