@@ -307,7 +307,7 @@ static bool queue_trace(struct thread_data *td, struct blk_io_trace *t,
 		return false;
 
 	if (!(t->action & BLK_TC_ACT(BLK_TC_NOTIFY))) {
-		if (!last_ttime || td->o.no_stall)
+		if (!last_ttime || td->o.no_stall || t->time < last_ttime)
 			delay = 0;
 		else if (td->o.replay_time_scale == 100)
 			delay = t->time - last_ttime;
