@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include "flist.h"
 #include "fio.h"
@@ -11,64 +12,19 @@
 #include "blktrace_api.h"
 #include "oslib/linux-dev-lookup.h"
 
-#define TRACE_FIFO_SIZE	8192
-
-/*
- * fifo refill frontend, to avoid reading data in trace sized bites
- */
-static int refill_fifo(struct thread_data *td, struct fifo *fifo, int fd)
-{
-	char buf[TRACE_FIFO_SIZE];
-	unsigned int total;
-	int ret;
-
-	total = sizeof(buf);
-	if (total > fifo_room(fifo))
-		total = fifo_room(fifo);
-
-	ret = read(fd, buf, total);
-	if (ret < 0) {
-		int read_err = errno;
-
-		assert(read_err > 0);
-		td_verror(td, read_err, "read blktrace file");
-		return -read_err;
-	}
-
-	if (ret > 0)
-		ret = fifo_put(fifo, buf, ret);
-
-	dprint(FD_BLKTRACE, "refill: filled %d bytes\n", ret);
-	return ret;
-}
-
-/*
- * Retrieve 'len' bytes from the fifo, refilling if necessary.
- */
-static int trace_fifo_get(struct thread_data *td, struct fifo *fifo, int fd,
-			  void *buf, unsigned int len)
-{
-	if (fifo_len(fifo) < len) {
-		int ret = refill_fifo(td, fifo, fd);
-
-		if (ret < 0)
-			return ret;
-	}
-
-	return fifo_get(fifo, buf, len);
-}
-
 /*
  * Just discard the pdu by seeking past it.
  */
-static int discard_pdu(struct thread_data *td, struct fifo *fifo, int fd,
-		       struct blk_io_trace *t)
+static int discard_pdu(FILE* f, struct blk_io_trace *t)
 {
 	if (t->pdu_len == 0)
 		return 0;
 
 	dprint(FD_BLKTRACE, "discard pdu len %u\n", t->pdu_len);
-	return trace_fifo_get(td, fifo, fd, NULL, t->pdu_len);
+	if (fseek(f, t->pdu_len, SEEK_CUR) < 0)
+		return -errno;
+
+	return t->pdu_len;
 }
 
 /*
@@ -444,33 +400,32 @@ bool load_blktrace(struct thread_data *td, const char *filename, int need_swap)
 	unsigned long ios[DDIR_RWDIR_SYNC_CNT] = { };
 	unsigned int rw_bs[DDIR_RWDIR_CNT] = { };
 	unsigned long skipped_writes;
-	struct fifo *fifo;
-	int fd, i, old_state, max_depth;
-	struct fio_file *f;
+	FILE *f;
+	int i, old_state, max_depth;
+	struct fio_file *fiof;
 	int this_depth[DDIR_RWDIR_CNT] = { };
 	int depth[DDIR_RWDIR_CNT] = { };
 
-	fd = open(filename, O_RDONLY);
-	if (fd < 0) {
+	f = fopen(filename, "rb");
+	if (!f) {
 		td_verror(td, errno, "open blktrace file");
 		return false;
 	}
-
-	fifo = fifo_alloc(TRACE_FIFO_SIZE);
 
 	old_state = td_bump_runstate(td, TD_SETTING_UP);
 
 	td->o.size = 0;
 	skipped_writes = 0;
 	do {
-		int ret = trace_fifo_get(td, fifo, fd, &t, sizeof(t));
+		int ret = fread(&t, 1, sizeof(t), f);
 
-		if (ret < 0)
+		if (ferror(f)) {
+			td_verror(td, errno, "read blktrace file");
 			goto err;
-		else if (!ret)
+		} else if (feof(f)) {
 			break;
-		else if (ret < (int) sizeof(t)) {
-			log_err("fio: short fifo get\n");
+		} else if (ret < (int) sizeof(t)) {
+			log_err("fio: iolog short read\n");
 			break;
 		}
 
@@ -487,12 +442,9 @@ bool load_blktrace(struct thread_data *td, const char *filename, int need_swap)
 								t.magic & 0xff);
 			goto err;
 		}
-		ret = discard_pdu(td, fifo, fd, &t);
+		ret = discard_pdu(f, &t);
 		if (ret < 0) {
 			td_verror(td, -ret, "blktrace lseek");
-			goto err;
-		} else if (t.pdu_len != ret) {
-			log_err("fio: discarded %d of %d\n", ret, t.pdu_len);
 			goto err;
 		}
 		if ((t.action & BLK_TC_ACT(BLK_TC_NOTIFY)) == 0) {
@@ -513,11 +465,10 @@ bool load_blktrace(struct thread_data *td, const char *filename, int need_swap)
 		handle_trace(td, &t, ios, rw_bs);
 	} while (1);
 
-	for_each_file(td, f, i)
-		trace_add_open_close_event(td, f->fileno, FIO_LOG_CLOSE_FILE);
+	for_each_file(td, fiof, i)
+		trace_add_open_close_event(td, fiof->fileno, FIO_LOG_CLOSE_FILE);
 
-	fifo_free(fifo);
-	close(fd);
+	fclose(f);
 
 	td_restore_runstate(td, old_state);
 
@@ -579,8 +530,7 @@ bool load_blktrace(struct thread_data *td, const char *filename, int need_swap)
 
 	return true;
 err:
-	close(fd);
-	fifo_free(fifo);
+	fclose(f);
 	return false;
 }
 
@@ -625,15 +575,14 @@ static void merge_finish_file(struct blktrace_cursor *bcs, int i, int *nr_logs)
 {
 	bcs[i].iter++;
 	if (bcs[i].iter < bcs[i].nr_iter) {
-		lseek(bcs[i].fd, 0, SEEK_SET);
+		fseek(bcs[i].f, 0, SEEK_SET);
 		return;
 	}
 
 	*nr_logs -= 1;
 
 	/* close file */
-	fifo_free(bcs[i].fifo);
-	close(bcs[i].fd);
+	fclose(bcs[i].f);
 
 	/* keep active files contiguous */
 	memmove(&bcs[i], &bcs[*nr_logs], sizeof(bcs[i]));
@@ -646,15 +595,16 @@ static int read_trace(struct thread_data *td, struct blktrace_cursor *bc)
 
 read_skip:
 	/* read an io trace */
-	ret = trace_fifo_get(td, bc->fifo, bc->fd, t, sizeof(*t));
-	if (ret < 0) {
+	ret = fread(&t, 1, sizeof(t), bc->f);
+	if (ferror(bc->f)) {
+		td_verror(td, errno, "read blktrace file");
 		return ret;
-	} else if (!ret) {
+	} else if (feof(bc->f)) {
 		if (!bc->length)
 			bc->length = bc->t.time;
 		return ret;
 	} else if (ret < (int) sizeof(*t)) {
-		log_err("fio: short fifo get\n");
+		log_err("fio: iolog short read\n");
 		return -1;
 	}
 
@@ -664,14 +614,10 @@ read_skip:
 	/* skip over actions that fio does not care about */
 	if ((t->action & 0xffff) != __BLK_TA_QUEUE ||
 	    t_get_ddir(t) == DDIR_INVAL) {
-		ret = discard_pdu(td, bc->fifo, bc->fd, t);
+		ret = discard_pdu(bc->f, t);
 		if (ret < 0) {
 			td_verror(td, -ret, "blktrace lseek");
 			return ret;
-		} else if (t->pdu_len != ret) {
-			log_err("fio: discarded %d of %d\n", ret,
-				t->pdu_len);
-			return -1;
 		}
 		goto read_skip;
 	}
@@ -729,14 +675,13 @@ int merge_blktrace_iologs(struct thread_data *td)
 	str = ptr = strdup(td->o.read_iolog_file);
 	nr_logs = 0;
 	for (i = 0; (name = get_next_str(&ptr)) != NULL; i++) {
-		bcs[i].fd = open(name, O_RDONLY);
-		if (bcs[i].fd < 0) {
+		bcs[i].f = fopen(name, "rb");
+		if (!bcs[i].f) {
 			log_err("fio: could not open file: %s\n", name);
-			ret = bcs[i].fd;
+			ret = -errno;
 			free(str);
 			goto err_file;
 		}
-		bcs[i].fifo = fifo_alloc(TRACE_FIFO_SIZE);
 		nr_logs++;
 
 		if (!is_blktrace(name, &bcs[i].swap)) {
@@ -761,13 +706,9 @@ int merge_blktrace_iologs(struct thread_data *td)
 		i = find_earliest_io(bcs, nr_logs);
 		bc = &bcs[i];
 		/* skip over the pdu */
-		ret = discard_pdu(td, bc->fifo, bc->fd, &bc->t);
+		ret = discard_pdu(bc->f, &bc->t);
 		if (ret < 0) {
 			td_verror(td, -ret, "blktrace lseek");
-			goto err_file;
-		} else if (bc->t.pdu_len != ret) {
-			log_err("fio: discarded %d of %d\n", ret,
-				bc->t.pdu_len);
 			goto err_file;
 		}
 
@@ -786,8 +727,7 @@ int merge_blktrace_iologs(struct thread_data *td)
 err_file:
 	/* cleanup */
 	for (i = 0; i < nr_logs; i++) {
-		fifo_free(bcs[i].fifo);
-		close(bcs[i].fd);
+		fclose(bcs[i].f);
 	}
 err_merge_buf:
 	free(merge_buf);

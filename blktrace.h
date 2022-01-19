@@ -10,7 +10,7 @@
 
 struct blktrace_cursor {
 	struct fifo		*fifo;	// fifo queue for reading
-	int			fd;	// blktrace file
+	FILE			*f;	// blktrace file
 	__u64			length; // length of trace
 	struct blk_io_trace	t;	// current io trace
 	int			swap;	// bitwise reverse required
