@@ -16,6 +16,16 @@ int blktrace_lookup_device(const char *redirect, char *path, unsigned int maj,
 	int found = 0;
 	DIR *D;
 
+	/*
+	 * If replay_redirect is set then always return this device
+	 * upon lookup which overrides the device lookup based on
+	 * major minor in the actual blktrace
+	 */
+	if (redirect) {
+		strcpy(path, redirect);
+		return 1;
+	}
+
 	D = opendir(path);
 	if (!D)
 		return 0;
@@ -43,17 +53,6 @@ int blktrace_lookup_device(const char *redirect, char *path, unsigned int maj,
 
 		if (!S_ISBLK(st.st_mode))
 			continue;
-
-		/*
-		 * If replay_redirect is set then always return this device
-		 * upon lookup which overrides the device lookup based on
-		 * major minor in the actual blktrace
-		 */
-		if (redirect) {
-			strcpy(path, redirect);
-			found = 1;
-			break;
-		}
 
 		if (maj == major(st.st_rdev) && min == minor(st.st_rdev)) {
 			strcpy(path, full_path);
