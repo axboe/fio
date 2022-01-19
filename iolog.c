@@ -152,10 +152,15 @@ int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 	while (!flist_empty(&td->io_log_list)) {
 		int ret;
 
-		if (!td->io_log_blktrace && td->o.read_iolog_chunked) {
+		if (td->o.read_iolog_chunked) {
 			if (td->io_log_checkmark == td->io_log_current) {
-				if (!read_iolog2(td))
-					return 1;
+				if (td->io_log_blktrace) {
+					if (!read_blktrace(td))
+						return 1;
+				} else {
+					if (!read_iolog2(td))
+						return 1;
+				}
 			}
 			td->io_log_current--;
 		}
@@ -709,7 +714,7 @@ bool init_iolog(struct thread_data *td)
 		 */
 		if (is_blktrace(fname, &need_swap)) {
 			td->io_log_blktrace = 1;
-			ret = load_blktrace(td, fname, need_swap);
+			ret = init_blktrace_read(td, fname, need_swap);
 		} else {
 			td->io_log_blktrace = 0;
 			ret = init_iolog_read(td, fname);

@@ -20,7 +20,9 @@ struct blktrace_cursor {
 };
 
 bool is_blktrace(const char *, int *);
-bool load_blktrace(struct thread_data *, const char *, int);
+bool init_blktrace_read(struct thread_data *, const char *, int);
+bool read_blktrace(struct thread_data* td);
+
 int merge_blktrace_iologs(struct thread_data *td);
 
 #else
@@ -30,11 +32,17 @@ static inline bool is_blktrace(const char *fname, int *need_swap)
 	return false;
 }
 
-static inline bool load_blktrace(struct thread_data *td, const char *fname,
+static inline bool init_blktrace_read(struct thread_data *td, const char *fname,
 				 int need_swap)
 {
 	return false;
 }
+
+static inline bool read_blktrace(struct thread_data* td)
+{
+	return false;
+}
+
 
 static inline int merge_blktrace_iologs(struct thread_data *td)
 {

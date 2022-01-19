@@ -428,6 +428,7 @@ struct thread_data {
 	struct flist_head io_log_list;
 	FILE *io_log_rfile;
 	unsigned int io_log_blktrace;
+	unsigned int io_log_blktrace_swap;
 	unsigned int io_log_current;
 	unsigned int io_log_checkmark;
 	unsigned int io_log_highmark;
