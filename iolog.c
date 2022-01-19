@@ -631,8 +631,6 @@ static bool init_iolog_read(struct thread_data *td, char *fname)
 	} else
 		f = fopen(fname, "r");
 
-	free(fname);
-
 	if (!f) {
 		perror("fopen read iolog");
 		return false;
@@ -719,6 +717,7 @@ bool init_iolog(struct thread_data *td)
 			td->io_log_blktrace = 0;
 			ret = init_iolog_read(td, fname);
 		}
+		free(fname);
 	} else if (td->o.write_iolog_file)
 		ret = init_iolog_write(td);
 	else
