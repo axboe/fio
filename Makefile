@@ -99,6 +99,7 @@ endif
 ifdef CONFIG_LIBAIO
   libaio_SRCS = engines/libaio.c
   cmdprio_SRCS = engines/cmdprio.c
+  LIBS += -laio
   libaio_LIBS = -laio
   ENGINES += libaio
 endif
