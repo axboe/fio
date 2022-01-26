@@ -77,7 +77,7 @@ struct librpma_fio_mem {
 char *librpma_fio_allocate_dram(struct thread_data *td, size_t size,
 		struct librpma_fio_mem *mem);
 
-char *librpma_fio_allocate_pmem(struct thread_data *td, const char *filename,
+char *librpma_fio_allocate_pmem(struct thread_data *td, struct fio_file *f,
 		size_t size, struct librpma_fio_mem *mem);
 
 void librpma_fio_free(struct librpma_fio_mem *mem);
