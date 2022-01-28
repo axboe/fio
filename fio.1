@@ -1686,10 +1686,10 @@ also be set as number of zones using 'z'.
 .TP
 .BI filesize \fR=\fPirange(int)
 Individual file sizes. May be a range, in which case fio will select sizes
-for files at random within the given range and limited to \fBsize\fR in
-total (if that is given). If not given, each created file is the same size.
-This option overrides \fBsize\fR in terms of file size, which means
-this value is used as a fixed size or possible range of each file.
+for files at random within the given range. If not given, each created file
+is the same size. This option overrides \fBsize\fR in terms of file size, 
+i.e. \fBsize\fR becomes merely the default for \fBio_size\fR (and
+has no effect it all if \fBio_size\fR is set explicitly).
 .TP
 .BI file_append \fR=\fPbool
 Perform I/O after the end of the file. Normally fio will operate within the
