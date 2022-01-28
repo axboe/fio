@@ -1,5 +1,5 @@
-# Fio README
-## Overview and history
+Overview and history
+--------------------
 
 Fio was originally written to save me the hassle of writing special test case
 programs when I wanted to test a specific workload, either for performance
@@ -22,13 +22,14 @@ that setting is given.  The typical use of fio is to write a job file matching
 the I/O load one wants to simulate.
 
 
-## Source
+Source
+------
 
 Fio resides in a git repo, the canonical place is:
 
 	git://git.kernel.dk/fio.git
 
-When inside a corporate firewall, `git://` URL sometimes does not work.
+When inside a corporate firewall, git:// URL sometimes does not work.
 If git:// does not work, use the http protocol instead:
 
 	http://git.kernel.dk/fio.git
@@ -54,8 +55,8 @@ or
 	https://github.com/axboe/fio.git
 
 
-## Mailing list
-
+Mailing list
+------------
 
 The fio project mailing list is meant for anything related to fio including
 general discussion, bug reporting, questions, and development. For bug reporting,
@@ -80,8 +81,8 @@ and archives for the old list can be found here:
 	http://maillist.kernel.dk/fio-devel/
 
 
-## Author
-
+Author
+------
 
 Fio was written by Jens Axboe <axboe@kernel.dk> to enable flexible testing of
 the Linux I/O subsystem and schedulers. He got tired of writing specific test
@@ -91,55 +92,56 @@ benchmark/test tools out there weren't flexible enough to do what he wanted.
 Jens Axboe <axboe@kernel.dk> 20060905
 
 
-## Binary packages
+Binary packages
+---------------
 
-**Debian:**
+Debian:
 	Starting with Debian "Squeeze", fio packages are part of the official
 	Debian repository. http://packages.debian.org/search?keywords=fio .
 
-**Ubuntu:**
+Ubuntu:
 	Starting with Ubuntu 10.04 LTS (aka "Lucid Lynx"), fio packages are part
 	of the Ubuntu "universe" repository.
 	http://packages.ubuntu.com/search?keywords=fio .
 
-**Red Hat, Fedora, CentOS & Co:**
+Red Hat, Fedora, CentOS & Co:
 	Starting with Fedora 9/Extra Packages for Enterprise Linux 4, fio
 	packages are part of the Fedora/EPEL repositories.
 	https://apps.fedoraproject.org/packages/fio .
 
-**Mandriva:**
+Mandriva:
 	Mandriva has integrated fio into their package repository, so installing
 	on that distro should be as easy as typing ``urpmi fio``.
 
-**Arch Linux:**
+Arch Linux:
         An Arch Linux package is provided under the Community sub-repository:
         https://www.archlinux.org/packages/?sort=&q=fio
 
-**Solaris:**
+Solaris:
 	Packages for Solaris are available from OpenCSW. Install their pkgutil
 	tool (http://www.opencsw.org/get-it/pkgutil/) and then install fio via
 	``pkgutil -i fio``.
 
-**Windows:**
+Windows:
 	Rebecca Cran <rebecca@bsdio.com> has fio packages for Windows at
 	https://bsdio.com/fio/ . The latest builds for Windows can also
 	be grabbed from https://ci.appveyor.com/project/axboe/fio by clicking
 	the latest x86 or x64 build, then selecting the ARTIFACTS tab.
 
-**BSDs:**
+BSDs:
 	Packages for BSDs may be available from their binary package repositories.
 	Look for a package "fio" using their binary package managers.
 
 
-## Building
-
+Building
+--------
 
 Just type::
-```
-./configure
-make
-make install
-```
+
+ $ ./configure
+ $ make
+ $ make install
+
 Note that GNU make is required. On BSDs it's available from devel/gmake within
 ports directory; on Solaris it's in the SUNWgmake package.  On platforms where
 GNU make isn't the default, type ``gmake`` instead of ``make``.
@@ -153,18 +155,18 @@ to be installed.  gfio isn't built automatically and can be enabled with a
 ``--enable-gfio`` option to configure.
 
 To build fio with a cross-compiler::
-```
-make clean
-make CROSS_COMPILE=/path/to/toolchain/prefix
-```
+
+ $ make clean
+ $ make CROSS_COMPILE=/path/to/toolchain/prefix
+
 Configure will attempt to determine the target platform automatically.
 
 It's possible to build fio for ESX as well, use the ``--esx`` switch to
 configure.
 
 
-## Windows
-
+Windows
+~~~~~~~
 
 The minimum versions of Windows for building/runing fio are Windows 7/Windows
 Server 2008 R2. On Windows, Cygwin (https://www.cygwin.com/) is required in
@@ -172,7 +174,7 @@ order to build fio. To create an MSI installer package install WiX from
 https://wixtoolset.org and run :file:`dobuild.cmd` from the :file:`os/windows`
 directory.
 
-### How to compile fio on 64-bit Windows:
+How to compile fio on 64-bit Windows:
 
  1. Install Cygwin (http://www.cygwin.com/). Install **make** and all
     packages starting with **mingw64-x86_64**. Ensure
@@ -194,21 +196,21 @@ https://github.com/mintty/mintty/wiki/Tips#inputoutput-interaction-with-alien-pr
 for details).
 
 
-## Documentation
-
+Documentation
+~~~~~~~~~~~~~
 
 Fio uses Sphinx_ to generate documentation from the reStructuredText_ files.
 To build HTML formatted documentation run ``make -C doc html`` and direct your
 browser to :file:`./doc/output/html/index.html`.  To build manual page run
 ``make -C doc man`` and then ``man doc/output/man/fio.1``.  To see what other
 output formats are supported run ``make -C doc help``.
-```
+
 .. _reStructuredText: http://www.sphinx-doc.org/rest.html
 .. _Sphinx: http://www.sphinx-doc.org
-```
 
-## Platforms
 
+Platforms
+---------
 
 Fio works on (at least) Linux, Solaris, AIX, HP-UX, OSX, NetBSD, OpenBSD,
 Windows, FreeBSD, and DragonFly. Some features and/or options may only be
@@ -250,8 +252,8 @@ POSIX aio should work now. To make the change permanent::
         posix_aio0 changed
 
 
-## Running fio
-
+Running fio
+-----------
 
 Running fio is normally the easiest part - you just give it the job file
 (or job files) as parameters::
