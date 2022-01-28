@@ -430,7 +430,9 @@ T_TEST_PROGS += $(T_AXMAP_PROGS)
 T_TEST_PROGS += $(T_LFSR_TEST_PROGS)
 T_TEST_PROGS += $(T_GEN_RAND_PROGS)
 T_PROGS += $(T_BTRACE_FIO_PROGS)
+ifdef CONFIG_ZLIB
 T_PROGS += $(T_DEDUPE_PROGS)
+endif
 T_PROGS += $(T_VS_PROGS)
 T_TEST_PROGS += $(T_MEMLOCK_PROGS)
 ifdef CONFIG_PREAD
@@ -618,8 +620,10 @@ t/fio-btrace2fio: $(T_BTRACE_FIO_OBJS)
 	$(QUIET_LINK)$(CC) $(LDFLAGS) -o $@ $(T_BTRACE_FIO_OBJS) $(LIBS)
 endif
 
+ifdef CONFIG_ZLIB
 t/fio-dedupe: $(T_DEDUPE_OBJS)
 	$(QUIET_LINK)$(CC) $(LDFLAGS) -o $@ $(T_DEDUPE_OBJS) $(LIBS)
+endif
 
 t/fio-verify-state: $(T_VS_OBJS)
 	$(QUIET_LINK)$(CC) $(LDFLAGS) -o $@ $(T_VS_OBJS) $(LIBS)
