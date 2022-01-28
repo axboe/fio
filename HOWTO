@@ -2318,6 +2318,16 @@ with the caveat that when used on the command line, they must come after the
 
 	Split the load into cycles of the given time. In microseconds.
 
+.. option:: cpumode=str : [cpuio]
+
+	Specify how to stress the CPU. It can take these two values:
+
+	**noop**
+		This is the default where the CPU executes noop instructions.
+	**qsort**
+		Replace the default noop instructions loop with a qsort algorithm to
+		consume more energy.
+
 .. option:: exit_on_io_done=bool : [cpuio]
 
 	Detect when I/O threads are done, then exit.
