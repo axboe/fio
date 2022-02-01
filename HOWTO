@@ -1951,6 +1951,7 @@ I/O engine
 		**posixaio**
 			POSIX asynchronous I/O using :manpage:`aio_read(3)` and
 			:manpage:`aio_write(3)`.
+			This engine defines engine specific options.
 
 		**solarisaio**
 			Solaris native asynchronous I/O.
@@ -2680,6 +2681,22 @@ with the caveat that when used on the command line, they must come after the
 .. option:: std_redirect=bool : [exec]
 
 	If set, stdout and stderr streams are redirected to files named from the job name. Default is true.
+
+.. options:: posixaio_respect_iodepth_batch_complete_max=bool : [posixaio]
+
+	If set, limit batch completions according to
+	:option:`iodepth_batch_complete_max`, as other engines do.  Default is
+	false, effectively behaving as though
+	:option:`iodepth_batch_complete_max` has the same value as
+	:option:`iodepth`.
+	Only applies to wait=aio_suspend, as other options already
+	respect :option:`iodepth_batch_complete_max`.
+
+.. options:: posixaio_wait=str : [posixaio]
+
+	Selects the mechanism used for waiting for I/Os to complete.
+	Default is aio_suspend.  On FreeBSD, aio_waitcomplete may be used.
+
 
 I/O depth
 ~~~~~~~~~

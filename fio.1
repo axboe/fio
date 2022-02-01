@@ -2434,6 +2434,13 @@ Defines the time between the SIGTERM and SIGKILL signals. Default is 1 second.
 .TP
 .BI (exec)std_redirect\fR=\fbool
 If set, stdout and stderr streams are redirected to files named from the job name. Default is true.
+.TP
+.BI (posixaio)posixaio_respect_iodepth_batch_complete_max\fR=\fPbool
+If set, limit batch completions according to
+\fBiodepth_batch_complete_max\fR, as other engines do.  Default is
+false, effectively setting
+\fBiodepth_batch_complete_max\fR to the same value as
+\fBiodepth\fR.
 .SS "I/O depth"
 .TP
 .BI iodepth \fR=\fPint
