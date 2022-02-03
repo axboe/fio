@@ -126,7 +126,8 @@ class FioLatTest():
             "--output-format={output-format}".format(**self.test_options),
         ]
         for opt in ['slat_percentiles', 'clat_percentiles', 'lat_percentiles',
-                    'unified_rw_reporting', 'fsync', 'fdatasync', 'numjobs', 'cmdprio_percentage']:
+                    'unified_rw_reporting', 'fsync', 'fdatasync', 'numjobs',
+                    'cmdprio_percentage', 'bssplit', 'cmdprio_bssplit']:
             if opt in self.test_options:
                 option = '--{0}={{{0}}}'.format(opt)
                 fio_args.append(option.format(**self.test_options))
@@ -761,7 +762,7 @@ class Test008(FioLatTest):
         job = self.json_data['jobs'][0]
 
         retval = True
-        if 'read' in job or 'write'in job or 'trim' in job:
+        if 'read' in job or 'write' in job or 'trim' in job:
             print("Unexpected data direction found in fio output")
             retval = False
         if not self.check_nocmdprio_lat(job):
@@ -953,12 +954,33 @@ class Test019(FioLatTest):
         job = self.json_data['jobs'][0]
 
         retval = True
-        if 'read' in job or 'write'in job or 'trim' in job:
+        if 'read' in job or 'write' in job or 'trim' in job:
             print("Unexpected data direction found in fio output")
             retval = False
 
         retval &= self.check_latencies(job['mixed'], 0, plus=True, unified=True)
         retval &= self.check_prio_latencies(job['mixed'], clat=False, plus=True)
+
+        return retval
+
+
+class Test021(FioLatTest):
+    """Test object for Test 21."""
+
+    def check(self):
+        """Check Test 21 output."""
+
+        job = self.json_data['jobs'][0]
+
+        retval = True
+        if not self.check_empty(job['trim']):
+            print("Unexpected trim data found in output")
+            retval = False
+
+        retval &= self.check_latencies(job['read'], 0, slat=False, tlat=False, plus=True)
+        retval &= self.check_latencies(job['write'], 1, slat=False, tlat=False, plus=True)
+        retval &= self.check_prio_latencies(job['read'], clat=True, plus=True)
+        retval &= self.check_prio_latencies(job['write'], clat=True, plus=True)
 
         return retval
 
@@ -1007,7 +1029,7 @@ def main():
             # randread, null
             # enable slat, clat, lat
             # only clat and lat will appear because
-            # because the null ioengine is syncrhonous
+            # because the null ioengine is synchronous
             "test_id": 1,
             "runtime": 2,
             "output-format": "json",
@@ -1047,7 +1069,7 @@ def main():
         {
             # randread, aio
             # enable slat, clat, lat
-            # all will appear because liaio is asynchronous
+            # all will appear because libaio is asynchronous
             "test_id": 4,
             "runtime": 5,
             "output-format": "json+",
@@ -1153,9 +1175,9 @@ def main():
             # randread, null
             # enable slat, clat, lat
             # only clat and lat will appear because
-            # because the null ioengine is syncrhonous
-            # same as Test 1 except
-            # numjobs = 4 to test sum_thread_stats() changes
+            # because the null ioengine is synchronous
+            # same as Test 1 except add numjobs = 4 to test
+            # sum_thread_stats() changes
             "test_id": 12,
             "runtime": 2,
             "output-format": "json",
@@ -1170,9 +1192,9 @@ def main():
         {
             # randread, aio
             # enable slat, clat, lat
-            # all will appear because liaio is asynchronous
-            # same as Test 4 except
-            # numjobs = 4 to test sum_thread_stats() changes
+            # all will appear because libaio is asynchronous
+            # same as Test 4 except add numjobs = 4 to test
+            # sum_thread_stats() changes
             "test_id": 13,
             "runtime": 5,
             "output-format": "json+",
@@ -1187,8 +1209,8 @@ def main():
         {
             # 50/50 r/w, aio, unified_rw_reporting
             # enable slat, clat, lata
-            # same as Test 8 except
-            # numjobs = 4 to test sum_thread_stats() changes
+            # same as Test 8 except add numjobs = 4 to test
+            # sum_thread_stats() changes
             "test_id": 14,
             "runtime": 5,
             "output-format": "json+",
@@ -1204,7 +1226,7 @@ def main():
         {
             # randread, aio
             # enable slat, clat, lat
-            # all will appear because liaio is asynchronous
+            # all will appear because libaio is asynchronous
             # same as Test 4 except add cmdprio_percentage
             "test_id": 15,
             "runtime": 5,
@@ -1278,8 +1300,8 @@ def main():
         {
             # 50/50 r/w, aio, unified_rw_reporting
             # enable slat, clat, lat
-            # same as Test 19 except
-            # add numjobs = 4 to test sum_thread_stats() changes
+            # same as Test 19 except add numjobs = 4 to test
+            # sum_thread_stats() changes
             "test_id": 20,
             "runtime": 5,
             "output-format": "json+",
@@ -1293,6 +1315,40 @@ def main():
             'numjobs': 4,
             "test_obj": Test019,
         },
+        {
+            # r/w, aio
+            # enable only clat
+            # test bssplit and cmdprio_bssplit
+            "test_id": 21,
+            "runtime": 5,
+            "output-format": "json+",
+            "slat_percentiles": 0,
+            "clat_percentiles": 1,
+            "lat_percentiles": 0,
+            "ioengine": aio,
+            'rw': 'randrw',
+            'bssplit': '64k/40:1024k/60',
+            'cmdprio_bssplit': '64k/25/1/1:64k/75/3/2:1024k/0',
+            "test_obj": Test021,
+        },
+        {
+            # r/w, aio
+            # enable only clat
+            # same as Test 21 except add numjobs = 4 to test
+            # sum_thread_stats() changes
+            "test_id": 22,
+            "runtime": 5,
+            "output-format": "json+",
+            "slat_percentiles": 0,
+            "clat_percentiles": 1,
+            "lat_percentiles": 0,
+            "ioengine": aio,
+            'rw': 'randrw',
+            'bssplit': '64k/40:1024k/60',
+            'cmdprio_bssplit': '64k/25/1/1:64k/75/3/2:1024k/0',
+            'numjobs': 4,
+            "test_obj": Test021,
+        },
     ]
 
     passed = 0
@@ -1304,9 +1360,10 @@ def main():
            (args.run_only and test['test_id'] not in args.run_only):
             skipped = skipped + 1
             outcome = 'SKIPPED (User request)'
-        elif (platform.system() != 'Linux' or os.geteuid() != 0) and 'cmdprio_percentage' in test:
+        elif (platform.system() != 'Linux' or os.geteuid() != 0) and \
+             ('cmdprio_percentage' in test or 'cmdprio_bssplit' in test):
             skipped = skipped + 1
-            outcome = 'SKIPPED (Linux root required for cmdprio_percentage tests)'
+            outcome = 'SKIPPED (Linux root required for cmdprio tests)'
         else:
             test_obj = test['test_obj'](artifact_root, test, args.debug)
             status = test_obj.run_fio(fio)
