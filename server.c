@@ -63,12 +63,28 @@ static char me[128];
 
 static pthread_key_t sk_out_key;
 
+#ifdef WIN32
+static char *fio_server_pipe_name  = NULL;
+static HANDLE hjob = INVALID_HANDLE_VALUE;
+struct ffi_element {
+	union {
+		pthread_t thread;
+		HANDLE hProcess;
+	};
+	bool is_thread;
+};
+#endif
+
 struct fio_fork_item {
 	struct flist_head list;
 	int exitval;
 	int signal;
 	int exited;
+#ifdef WIN32
+	struct ffi_element element;
+#else
 	pid_t pid;
+#endif
 };
 
 struct cmd_reply {
@@ -248,6 +264,27 @@ static int fio_send_data(int sk, const void *p, unsigned int len)
 	assert(len <= sizeof(struct fio_net_cmd) + FIO_SERVER_MAX_FRAGMENT_PDU);
 
 	return fio_sendv_data(sk, &iov, 1);
+}
+
+bool fio_server_poll_fd(int fd, short events, int timeout) {
+	struct pollfd pfd = {
+		.fd	= fd,
+		.events	= events,
+	};
+	int ret;
+
+	ret = poll(&pfd, 1, timeout);
+	if (ret < 0) {
+		if (errno == EINTR)
+			return false;
+		log_err("fio: poll: %s\n", strerror(errno));
+		return false;
+	} else if (!ret) {
+		return false;
+	}
+	if (pfd.revents & events)
+		return true;
+	return false;
 }
 
 static int fio_recv_data(int sk, void *buf, unsigned int len, bool wait)
@@ -651,6 +688,63 @@ static int fio_net_queue_stop(int error, int signal)
 	return fio_net_send_ack(NULL, error, signal);
 }
 
+#ifdef WIN32
+static void fio_server_add_fork_item(struct ffi_element *element, struct flist_head *list)
+{
+	struct fio_fork_item *ffi;
+
+	ffi = malloc(sizeof(*ffi));
+	ffi->exitval = 0;
+	ffi->signal = 0;
+	ffi->exited = 0;
+	ffi->element = *element;
+	flist_add_tail(&ffi->list, list);
+}
+
+static void fio_server_add_conn_pid(struct flist_head *conn_list, HANDLE hProcess)
+{
+	struct ffi_element element = {.hProcess = hProcess, .is_thread=FALSE};
+	dprint(FD_NET, "server: forked off connection job (tid=%u)\n", (int) element.thread);
+
+	fio_server_add_fork_item(&element, conn_list);
+}
+
+static void fio_server_add_job_pid(struct flist_head *job_list, pthread_t thread)
+{
+	struct ffi_element element = {.thread = thread, .is_thread=TRUE};
+	dprint(FD_NET, "server: forked off job job (tid=%u)\n", (int) element.thread);
+	fio_server_add_fork_item(&element, job_list);
+}
+
+static void fio_server_check_fork_item(struct fio_fork_item *ffi)
+{
+	int ret;
+
+	if (ffi->element.is_thread) {
+
+		ret = pthread_kill(ffi->element.thread, 0);
+		if (ret) {
+			int rev_val;
+			pthread_join(ffi->element.thread, (void**) &rev_val); /*if the thread is dead, then join it to get status*/
+
+			ffi->exitval = rev_val;
+			if (ffi->exitval)
+				log_err("thread (tid=%u) exited with %x\n", (int) ffi->element.thread, (int) ffi->exitval);
+			dprint(FD_PROCESS, "thread (tid=%u) exited with %x\n", (int) ffi->element.thread, (int) ffi->exitval);
+			ffi->exited = 1;
+		}
+	} else {
+		DWORD exit_val;
+		GetExitCodeProcess(ffi->element.hProcess, &exit_val);
+
+		if (exit_val != STILL_ACTIVE) {
+			dprint(FD_PROCESS, "process %u exited with %d\n", GetProcessId(ffi->element.hProcess), exit_val);
+			ffi->exited = 1;
+			ffi->exitval = exit_val;
+		}
+	}
+}
+#else
 static void fio_server_add_fork_item(pid_t pid, struct flist_head *list)
 {
 	struct fio_fork_item *ffi;
@@ -698,10 +792,21 @@ static void fio_server_check_fork_item(struct fio_fork_item *ffi)
 		}
 	}
 }
+#endif
 
 static void fio_server_fork_item_done(struct fio_fork_item *ffi, bool stop)
 {
+#ifdef WIN32
+	if (ffi->element.is_thread)
+		dprint(FD_NET, "tid %u exited, sig=%u, exitval=%d\n", (int) ffi->element.thread, ffi->signal, ffi->exitval);
+	else {
+		dprint(FD_NET, "pid %u exited, sig=%u, exitval=%d\n", (int)  GetProcessId(ffi->element.hProcess), ffi->signal, ffi->exitval);
+		CloseHandle(ffi->element.hProcess);
+		ffi->element.hProcess = INVALID_HANDLE_VALUE;
+	}
+#else
 	dprint(FD_NET, "pid %u exited, sig=%u, exitval=%d\n", (int) ffi->pid, ffi->signal, ffi->exitval);
+#endif
 
 	/*
 	 * Fold STOP and QUIT...
@@ -762,27 +867,62 @@ static int handle_load_file_cmd(struct fio_net_cmd *cmd)
 	return 0;
 }
 
+#ifdef WIN32
+static void *fio_backend_thread(void *data)
+{
+	int ret;
+	struct sk_out *sk_out = (struct sk_out *) data;
+
+	sk_out_assign(sk_out);
+
+	ret = fio_backend(sk_out);
+	sk_out_drop();
+
+	pthread_exit((void*) (intptr_t) ret);
+	return NULL;
+}
+#endif
+
 static int handle_run_cmd(struct sk_out *sk_out, struct flist_head *job_list,
 			  struct fio_net_cmd *cmd)
 {
-	pid_t pid;
 	int ret;
-
-	sk_out_assign(sk_out);
 
 	fio_time_init();
 	set_genesis_time();
 
-	pid = fork();
-	if (pid) {
-		fio_server_add_job_pid(job_list, pid);
-		return 0;
-	}
+#ifdef WIN32
+	{
+		pthread_t thread;
+		/* both this thread and backend_thread call sk_out_assign() to double increment
+		 * the ref count.  This ensures struct is valid until both threads are done with it
+		 */
+		sk_out_assign(sk_out);
+		ret = pthread_create(&thread, NULL,	fio_backend_thread, sk_out);
+		if (ret) {
+			log_err("pthread_create: %s\n", strerror(ret));
+			return ret;
+		}
 
-	ret = fio_backend(sk_out);
-	free_threads_shm();
-	sk_out_drop();
-	_exit(ret);
+		fio_server_add_job_pid(job_list, thread);
+		return ret;
+	}
+#else
+    {
+		pid_t pid;
+		sk_out_assign(sk_out);
+		pid = fork();
+		if (pid) {
+			fio_server_add_job_pid(job_list, pid);
+			return 0;
+		}
+
+		ret = fio_backend(sk_out);
+		free_threads_shm();
+		sk_out_drop();
+		_exit(ret);
+	}
+#endif
 }
 
 static int handle_job_cmd(struct fio_net_cmd *cmd)
@@ -1238,7 +1378,8 @@ static int handle_connection(struct sk_out *sk_out)
 		if (ret < 0)
 			break;
 
-		cmd = fio_net_recv_cmd(sk_out->sk, true);
+		if (pfd.revents & POLLIN)
+			cmd = fio_net_recv_cmd(sk_out->sk, true);
 		if (!cmd) {
 			ret = -1;
 			break;
@@ -1300,6 +1441,73 @@ static int get_my_addr_str(int sk)
 	return 0;
 }
 
+#ifdef WIN32
+static int handle_connection_process(void)
+{
+	WSAPROTOCOL_INFO protocol_info;
+	DWORD bytes_read;
+	HANDLE hpipe;
+	int sk;
+	struct sk_out *sk_out;
+	int ret;
+	char *msg = (char *) "connected";
+
+	log_info("server enter accept loop.  ProcessID %d\n", GetCurrentProcessId());
+
+	hpipe = CreateFile(
+					fio_server_pipe_name,
+					GENERIC_READ | GENERIC_WRITE,
+					0, NULL,
+					OPEN_EXISTING,
+					0, NULL);
+
+	if (hpipe == INVALID_HANDLE_VALUE) {
+		log_err("couldnt open pipe %s error %lu\n",
+				fio_server_pipe_name, GetLastError());
+		return -1;
+	}
+
+	if (!ReadFile(hpipe, &protocol_info, sizeof(protocol_info), &bytes_read, NULL)) {
+		log_err("couldnt read pi from pipe %s error %lu\n", fio_server_pipe_name,
+				GetLastError());
+	}
+
+	if (use_ipv6) /* use protocol_info to create a duplicate of parents socket */
+		sk = WSASocket(AF_INET6, SOCK_STREAM, 0, &protocol_info, 0, 0);
+	else
+		sk = WSASocket(AF_INET,  SOCK_STREAM, 0, &protocol_info, 0, 0);
+
+	sk_out = scalloc(1, sizeof(*sk_out));
+	if (!sk_out) {
+		CloseHandle(hpipe);
+		close(sk);
+		return -1;
+	}
+
+	sk_out->sk = sk;
+	sk_out->hProcess = INVALID_HANDLE_VALUE;
+	INIT_FLIST_HEAD(&sk_out->list);
+	__fio_sem_init(&sk_out->lock, FIO_SEM_UNLOCKED);
+	__fio_sem_init(&sk_out->wait, FIO_SEM_LOCKED);
+	__fio_sem_init(&sk_out->xmit, FIO_SEM_UNLOCKED);
+
+	get_my_addr_str(sk);
+
+	if (!WriteFile(hpipe, msg, strlen(msg), NULL, NULL)) {
+		log_err("couldnt write pipe\n");
+		close(sk);
+		return -1;
+	}
+	CloseHandle(hpipe);
+
+	sk_out_assign(sk_out);
+
+	ret = handle_connection(sk_out);
+	__sk_out_drop(sk_out);
+	return ret;
+}
+#endif
+
 static int accept_loop(int listen_sk)
 {
 	struct sockaddr_in addr;
@@ -1317,8 +1525,11 @@ static int accept_loop(int listen_sk)
 		struct sk_out *sk_out;
 		const char *from;
 		char buf[64];
+#ifdef WIN32
+		HANDLE hProcess;
+#else
 		pid_t pid;
-
+#endif
 		pfd.fd = listen_sk;
 		pfd.events = POLLIN;
 		do {
@@ -1376,6 +1587,13 @@ static int accept_loop(int listen_sk)
 		__fio_sem_init(&sk_out->wait, FIO_SEM_LOCKED);
 		__fio_sem_init(&sk_out->xmit, FIO_SEM_UNLOCKED);
 
+#ifdef WIN32
+		hProcess = windows_handle_connection(hjob, sk);
+		if (hProcess == INVALID_HANDLE_VALUE)
+			return -1;
+		sk_out->hProcess = hProcess;
+		fio_server_add_conn_pid(&conn_list, hProcess);
+#else
 		pid = fork();
 		if (pid) {
 			close(sk);
@@ -1392,6 +1610,7 @@ static int accept_loop(int listen_sk)
 		 */
 		sk_out_assign(sk_out);
 		handle_connection(sk_out);
+#endif
 	}
 
 	return exitval;
@@ -2489,11 +2708,24 @@ static int fio_server(void)
 	if (fio_handle_server_arg())
 		return -1;
 
+	set_sig_handlers();
+
+#ifdef WIN32
+	/* if this is a child process, go handle the connection */
+	if (fio_server_pipe_name != NULL) {
+		ret = handle_connection_process();
+		return ret;
+	}
+
+	/* job to link child processes so they terminate together */
+	hjob = windows_create_job();
+	if (hjob == INVALID_HANDLE_VALUE)
+		return -1;
+#endif
+
 	sk = fio_init_server_connection();
 	if (sk < 0)
 		return -1;
-
-	set_sig_handlers();
 
 	ret = accept_loop(sk);
 
@@ -2635,3 +2867,10 @@ void fio_server_set_arg(const char *arg)
 {
 	fio_server_arg = strdup(arg);
 }
+
+#ifdef WIN32
+void fio_server_internal_set(const char *arg)
+{
+	fio_server_pipe_name = strdup(arg);
+}
+#endif

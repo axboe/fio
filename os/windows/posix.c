@@ -1026,3 +1026,174 @@ in_addr_t inet_network(const char *cp)
 	hbo = ((nbo & 0xFF) << 24) + ((nbo & 0xFF00) << 8) + ((nbo & 0xFF0000) >> 8) + ((nbo & 0xFF000000) >> 24);
 	return hbo;
 }
+
+static HANDLE create_named_pipe(char *pipe_name, int wait_connect_time)
+{
+	HANDLE hpipe;
+
+	hpipe = CreateNamedPipe (
+			pipe_name,
+			PIPE_ACCESS_DUPLEX,
+			PIPE_WAIT | PIPE_TYPE_BYTE,
+			1, 0, 0, wait_connect_time, NULL);
+
+	if (hpipe == INVALID_HANDLE_VALUE) {
+		log_err("ConnectNamedPipe failed (%lu).\n", GetLastError());
+		return INVALID_HANDLE_VALUE;
+	}
+
+	if (!ConnectNamedPipe(hpipe, NULL)) {
+		log_err("ConnectNamedPipe failed (%lu).\n", GetLastError());
+		CloseHandle(hpipe);
+		return INVALID_HANDLE_VALUE;
+	}
+
+	return hpipe;
+}
+
+static BOOL windows_create_process(PROCESS_INFORMATION *pi, const char *args, HANDLE *hjob)
+{
+	LPSTR this_cmd_line = GetCommandLine();
+	LPSTR new_process_cmd_line = malloc((strlen(this_cmd_line)+strlen(args)) * sizeof(char *));
+	STARTUPINFO si = {0};
+	DWORD flags = 0;
+
+	strcpy(new_process_cmd_line, this_cmd_line);
+	strcat(new_process_cmd_line, args);
+
+	si.cb = sizeof(si);
+	memset(pi, 0, sizeof(*pi));
+
+	if ((hjob != NULL) && (*hjob != INVALID_HANDLE_VALUE))
+		flags = CREATE_SUSPENDED | CREATE_BREAKAWAY_FROM_JOB;
+
+	flags |= CREATE_NEW_CONSOLE;
+
+	if( !CreateProcess( NULL,
+		new_process_cmd_line,
+		NULL,    /* Process handle not inherited */
+		NULL,    /* Thread handle not inherited */
+		TRUE,    /* no handle inheritance */
+		flags,
+		NULL,    /* Use parent's environment block */
+		NULL,    /* Use parent's starting directory */
+		&si,
+		pi )
+	)
+	{
+		log_err("CreateProcess failed (%lu).\n", GetLastError() );
+		free(new_process_cmd_line);
+		return 1;
+	}
+	if ((hjob != NULL) && (*hjob != INVALID_HANDLE_VALUE)) {
+		BOOL ret = AssignProcessToJobObject(*hjob, pi->hProcess);
+		if (!ret) {
+			log_err("AssignProcessToJobObject failed (%lu).\n", GetLastError() );
+			return 1;
+		}
+
+ 		ResumeThread(pi->hThread);
+	}
+
+	free(new_process_cmd_line);
+	return 0;
+}
+
+HANDLE windows_create_job(void)
+{
+	JOBOBJECT_EXTENDED_LIMIT_INFORMATION jeli = { 0 };
+	BOOL success;
+	HANDLE hjob = CreateJobObject(NULL, NULL);
+
+	jeli.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+	success = SetInformationJobObject(hjob, JobObjectExtendedLimitInformation, &jeli, sizeof(jeli));
+	if ( success == 0 ) {
+        log_err( "SetInformationJobObject failed: error %lu\n", GetLastError() );
+        return INVALID_HANDLE_VALUE;
+    }
+	return hjob;
+}
+
+/* wait for a child process to either exit or connect to a child */
+static bool monitor_process_till_connect(PROCESS_INFORMATION *pi, HANDLE *hpipe)
+{
+	bool connected = FALSE;
+	bool process_alive = TRUE;
+	char buffer[32] = {0};
+	DWORD bytes_read;
+
+	do {
+		DWORD exit_code;
+		GetExitCodeProcess(pi->hProcess, &exit_code);
+		if (exit_code != STILL_ACTIVE) {
+			dprint(FD_PROCESS, "process %u exited %d\n", GetProcessId(pi->hProcess), exit_code);
+			break;
+		}
+
+		memset(buffer, 0, sizeof(buffer));
+		ReadFile(*hpipe, &buffer, sizeof(buffer) - 1, &bytes_read, NULL);
+		if (bytes_read && strstr(buffer, "connected")) {
+			dprint(FD_PROCESS, "process %u connected to client\n", GetProcessId(pi->hProcess));
+			connected = TRUE;
+		}
+		usleep(10*1000);
+	} while (process_alive && !connected);
+	return connected;
+}
+
+/*create a process with --server-internal to emulate fork() */
+HANDLE windows_handle_connection(HANDLE hjob, int sk)
+{
+	char pipe_name[64] =  "\\\\.\\pipe\\fiointernal-";
+	char args[128] = " --server-internal=";
+	PROCESS_INFORMATION pi;
+	HANDLE hpipe = INVALID_HANDLE_VALUE;
+	WSAPROTOCOL_INFO protocol_info;
+	HANDLE ret;
+
+	sprintf(pipe_name+strlen(pipe_name), "%d", GetCurrentProcessId());
+	sprintf(args+strlen(args), "%s", pipe_name);
+
+	if (windows_create_process(&pi, args, &hjob) != 0)
+		return INVALID_HANDLE_VALUE;
+	else
+		ret = pi.hProcess;
+
+	/* duplicate socket and write the protocol_info to pipe so child can
+	 * duplicate the communciation socket */
+	if (WSADuplicateSocket(sk, GetProcessId(pi.hProcess), &protocol_info)) {
+		log_err("WSADuplicateSocket failed (%lu).\n", GetLastError());
+		ret = INVALID_HANDLE_VALUE;
+		goto cleanup;
+	}
+
+	/* make a pipe with a unique name based upon processid */
+	hpipe = create_named_pipe(pipe_name, 1000);
+	if (hpipe == INVALID_HANDLE_VALUE) {
+		ret = INVALID_HANDLE_VALUE;
+		goto cleanup;
+	}
+
+	if (!WriteFile(hpipe, &protocol_info, sizeof(protocol_info), NULL, NULL)) {
+		log_err("WriteFile failed (%lu).\n", GetLastError());
+		ret = INVALID_HANDLE_VALUE;
+		goto cleanup;
+	}
+
+	dprint(FD_PROCESS, "process %d created child process %u\n", GetCurrentProcessId(), GetProcessId(pi.hProcess));
+
+	/* monitor the process until it either exits or connects. This level
+	 * doesnt care which of those occurs because the result is that it
+	 * needs to loop around and create another child process to monitor */
+	if (!monitor_process_till_connect(&pi, &hpipe))
+		ret = INVALID_HANDLE_VALUE;
+
+cleanup:
+	/* close the handles and pipes because this thread is done monitoring them */
+	if (ret == INVALID_HANDLE_VALUE)
+		CloseHandle(pi.hProcess);
+	CloseHandle(pi.hThread);
+	DisconnectNamedPipe(hpipe);
+	CloseHandle(hpipe);
+	return ret;
+}

@@ -11,6 +11,7 @@
 #include <errno.h>
 
 #include "../fio.h"
+#include "../optgroup.h"
 
 typedef BOOL (WINAPI *CANCELIOEX)(HANDLE hFile, LPOVERLAPPED lpOverlapped);
 
@@ -33,6 +34,26 @@ struct windowsaio_data {
 struct thread_ctx {
 	HANDLE iocp;
 	struct windowsaio_data *wd;
+};
+
+struct windowsaio_options {
+	struct thread_data *td;
+	unsigned int no_completion_thread;
+};
+
+static struct fio_option options[] = {
+	{
+		.name	= "no_completion_thread",
+		.lname	= "No completion polling thread",
+		.type	= FIO_OPT_STR_SET,
+		.off1	= offsetof(struct windowsaio_options, no_completion_thread),
+		.help	= "Use to avoid separate completion polling thread",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_WINDOWSAIO,
+	},
+	{
+		.name	= NULL,
+	},
 };
 
 static DWORD WINAPI IoCompletionRoutine(LPVOID lpParameter);
@@ -80,6 +101,7 @@ static int fio_windowsaio_init(struct thread_data *td)
 		struct thread_ctx *ctx;
 		struct windowsaio_data *wd;
 		HANDLE hFile;
+		struct windowsaio_options *o = td->eo;
 
 		hFile = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
 		if (hFile == INVALID_HANDLE_VALUE) {
@@ -91,29 +113,30 @@ static int fio_windowsaio_init(struct thread_data *td)
 		wd->iothread_running = TRUE;
 		wd->iocp = hFile;
 
-		if (!rc)
-			ctx = malloc(sizeof(struct thread_ctx));
+		if (o->no_completion_thread == 0) {
+			if (!rc)
+				ctx = malloc(sizeof(struct thread_ctx));
 
-		if (!rc && ctx == NULL) {
-			log_err("windowsaio: failed to allocate memory for thread context structure\n");
-			CloseHandle(hFile);
-			rc = 1;
+			if (!rc && ctx == NULL) {
+				log_err("windowsaio: failed to allocate memory for thread context structure\n");
+				CloseHandle(hFile);
+				rc = 1;
+			}
+
+			if (!rc) {
+				DWORD threadid;
+
+				ctx->iocp = hFile;
+				ctx->wd = wd;
+				wd->iothread = CreateThread(NULL, 0, IoCompletionRoutine, ctx, 0, &threadid);
+				if (!wd->iothread)
+					log_err("windowsaio: failed to create io completion thread\n");
+				else if (fio_option_is_set(&td->o, cpumask))
+					fio_setaffinity(threadid, td->o.cpumask);
+			}
+			if (rc || wd->iothread == NULL)
+				rc = 1;
 		}
-
-		if (!rc) {
-			DWORD threadid;
-
-			ctx->iocp = hFile;
-			ctx->wd = wd;
-			wd->iothread = CreateThread(NULL, 0, IoCompletionRoutine, ctx, 0, &threadid);
-			if (!wd->iothread)
-				log_err("windowsaio: failed to create io completion thread\n");
-			else if (fio_option_is_set(&td->o, cpumask))
-				fio_setaffinity(threadid, td->o.cpumask);
-		}
-
-		if (rc || wd->iothread == NULL)
-			rc = 1;
 	}
 
 	return rc;
@@ -302,9 +325,63 @@ static struct io_u* fio_windowsaio_event(struct thread_data *td, int event)
 	return wd->aio_events[event];
 }
 
-static int fio_windowsaio_getevents(struct thread_data *td, unsigned int min,
-				    unsigned int max,
-				    const struct timespec *t)
+/* dequeue completion entrees directly (no separate completion thread) */
+static int fio_windowsaio_getevents_nothread(struct thread_data *td, unsigned int min,
+				    unsigned int max, const struct timespec *t)
+{
+	struct windowsaio_data *wd = td->io_ops_data;
+	unsigned int dequeued = 0;
+	struct io_u *io_u;
+	DWORD start_count = 0;
+	DWORD end_count = 0;
+	DWORD mswait = 250;
+	struct fio_overlapped *fov;
+
+	if (t != NULL) {
+		mswait = (t->tv_sec * 1000) + (t->tv_nsec / 1000000);
+		start_count = GetTickCount();
+		end_count = start_count + (t->tv_sec * 1000) + (t->tv_nsec / 1000000);
+	}
+
+	do {
+		BOOL ret;
+		OVERLAPPED *ovl;
+
+		ULONG entries = min(16, max-dequeued);
+		OVERLAPPED_ENTRY oe[16];
+		ret = GetQueuedCompletionStatusEx(wd->iocp, oe, 16, &entries, mswait, 0);
+		if (ret && entries) {
+			int entry_num;
+
+			for (entry_num=0; entry_num<entries; entry_num++) {
+				ovl = oe[entry_num].lpOverlapped;
+				fov = CONTAINING_RECORD(ovl, struct fio_overlapped, o);
+				io_u = fov->io_u;
+
+				if (ovl->Internal == ERROR_SUCCESS) {
+					io_u->resid = io_u->xfer_buflen - ovl->InternalHigh;
+					io_u->error = 0;
+				} else {
+					io_u->resid = io_u->xfer_buflen;
+					io_u->error = win_to_posix_error(GetLastError());
+				}
+
+				fov->io_complete = FALSE;
+				wd->aio_events[dequeued] = io_u;
+				dequeued++;
+			}
+		}
+
+		if (dequeued >= min ||
+			(t != NULL && timeout_expired(start_count, end_count)))
+			break;
+	} while (1);
+	return dequeued;
+}
+
+/* dequeue completion entrees creates by separate IoCompletionRoutine thread */
+static int fio_windowaio_getevents_thread(struct thread_data *td, unsigned int min,
+				    unsigned int max, const struct timespec *t)
 {
 	struct windowsaio_data *wd = td->io_ops_data;
 	unsigned int dequeued = 0;
@@ -334,7 +411,6 @@ static int fio_windowsaio_getevents(struct thread_data *td, unsigned int min,
 				wd->aio_events[dequeued] = io_u;
 				dequeued++;
 			}
-
 		}
 		if (dequeued >= min)
 			break;
@@ -351,6 +427,16 @@ static int fio_windowsaio_getevents(struct thread_data *td, unsigned int min,
 	} while (1);
 
 	return dequeued;
+}
+
+static int fio_windowsaio_getevents(struct thread_data *td, unsigned int min,
+				    unsigned int max, const struct timespec *t)
+{
+	struct windowsaio_options *o = td->eo;
+
+	if (o->no_completion_thread)
+		return fio_windowsaio_getevents_nothread(td, min, max, t);
+	return fio_windowaio_getevents_thread(td, min, max, t);
 }
 
 static enum fio_q_status fio_windowsaio_queue(struct thread_data *td,
@@ -484,6 +570,8 @@ static struct ioengine_ops ioengine = {
 	.get_file_size	= generic_get_file_size,
 	.io_u_init	= fio_windowsaio_io_u_init,
 	.io_u_free	= fio_windowsaio_io_u_free,
+	.options	= options,
+	.option_struct_size	= sizeof(struct windowsaio_options),
 };
 
 static void fio_init fio_windowsaio_register(void)
