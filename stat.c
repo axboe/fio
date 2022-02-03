@@ -2241,7 +2241,6 @@ void __show_run_stats(void)
 		opt_lists[j] = &td->opt_list;
 
 		idx++;
-		ts->members++;
 
 		if (ts->groupid == -1) {
 			/*
@@ -2307,6 +2306,8 @@ void __show_run_stats(void)
 			ts->block_infos[k] = td->ts.block_infos[k];
 
 		sum_thread_stats(ts, &td->ts);
+
+		ts->members++;
 
 		if (td->o.ss_dur) {
 			ts->ss_state = td->ss.state;
