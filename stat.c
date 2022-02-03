@@ -1493,25 +1493,37 @@ static void add_ddir_status_json(struct thread_stat *ts,
 	if (!ddir_rw(ddir))
 		return;
 
-	/* Only print PRIO latencies if some high priority samples were gathered */
-	if (ts->clat_high_prio_stat[ddir].samples > 0) {
-		const char *high, *low;
+	/* Only include per prio stats if there are >= 2 prios with samples */
+	if (get_nr_prios_with_samples(ts, ddir) >= 2) {
+		struct json_array *array = json_create_array();
+		const char *obj_name;
+		int i;
 
-		if (ts->lat_percentiles) {
-			high = "lat_high_prio";
-			low = "lat_low_prio";
-		} else {
-			high = "clat_high_prio";
-			low = "clat_low_prio";
+		if (ts->lat_percentiles)
+			obj_name = "lat_ns";
+		else
+			obj_name = "clat_ns";
+
+		json_object_add_value_array(dir_object, "prios", array);
+
+		for (i = 0; i < ts->nr_clat_prio[ddir]; i++) {
+			if (ts->clat_prio[ddir][i].clat_stat.samples > 0) {
+				struct json_object *obj = json_create_object();
+				unsigned long long class, level;
+
+				class = ts->clat_prio[ddir][i].ioprio >> 13;
+				json_object_add_value_int(obj, "prioclass", class);
+				level = ts->clat_prio[ddir][i].ioprio & 7;
+				json_object_add_value_int(obj, "prio", level);
+
+				tmp_object = add_ddir_lat_json(ts,
+							       ts->clat_percentiles | ts->lat_percentiles,
+							       &ts->clat_prio[ddir][i].clat_stat,
+							       ts->clat_prio[ddir][i].io_u_plat);
+				json_object_add_value_object(obj, obj_name, tmp_object);
+				json_array_add_value_object(array, obj);
+			}
 		}
-
-		tmp_object = add_ddir_lat_json(ts, ts->clat_percentiles | ts->lat_percentiles,
-				&ts->clat_high_prio_stat[ddir], ts->io_u_plat_high_prio[ddir]);
-		json_object_add_value_object(dir_object, high, tmp_object);
-
-		tmp_object = add_ddir_lat_json(ts, ts->clat_percentiles | ts->lat_percentiles,
-				&ts->clat_low_prio_stat[ddir], ts->io_u_plat_low_prio[ddir]);
-		json_object_add_value_object(dir_object, low, tmp_object);
 	}
 
 	if (calc_lat(&ts->bw_stat[ddir], &min, &max, &mean, &dev)) {
