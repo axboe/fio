@@ -2786,10 +2786,18 @@ static inline void reset_io_stat(struct io_stat *ios)
 	ios->mean.u.f = ios->S.u.f = 0;
 }
 
+static inline void reset_io_u_plat(uint64_t *io_u_plat)
+{
+	int i;
+
+	for (i = 0; i < FIO_IO_U_PLAT_NR; i++)
+		io_u_plat[i] = 0;
+}
+
 void reset_io_stats(struct thread_data *td)
 {
 	struct thread_stat *ts = &td->ts;
-	int i, j, k;
+	int i, j;
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		reset_io_stat(&ts->clat_high_prio_stat[i]);
@@ -2806,20 +2814,16 @@ void reset_io_stats(struct thread_data *td)
 		ts->short_io_u[i] = 0;
 		ts->drop_io_u[i] = 0;
 
-		for (j = 0; j < FIO_IO_U_PLAT_NR; j++) {
-			ts->io_u_plat_high_prio[i][j] = 0;
-			ts->io_u_plat_low_prio[i][j] = 0;
-			if (!i)
-				ts->io_u_sync_plat[j] = 0;
-		}
+		reset_io_u_plat(ts->io_u_plat_high_prio[i]);
+		reset_io_u_plat(ts->io_u_plat_low_prio[i]);
 	}
 
 	for (i = 0; i < FIO_LAT_CNT; i++)
 		for (j = 0; j < DDIR_RWDIR_CNT; j++)
-			for (k = 0; k < FIO_IO_U_PLAT_NR; k++)
-				ts->io_u_plat[i][j][k] = 0;
+			reset_io_u_plat(ts->io_u_plat[i][j]);
 
 	ts->total_io_u[DDIR_SYNC] = 0;
+	reset_io_u_plat(ts->io_u_sync_plat);
 
 	for (i = 0; i < FIO_IO_U_MAP_NR; i++) {
 		ts->io_u_map[i] = 0;
