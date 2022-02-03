@@ -158,6 +158,12 @@ enum fio_lat {
 	FIO_LAT_CNT = 3,
 };
 
+struct clat_prio_stat {
+	uint64_t io_u_plat[FIO_IO_U_PLAT_NR];
+	struct io_stat clat_stat;
+	uint32_t ioprio;
+};
+
 struct thread_stat {
 	char name[FIO_JOBNAME_SIZE];
 	char verror[FIO_VERROR_SIZE];
@@ -280,6 +286,17 @@ struct thread_stat {
 		uint64_t pad5;
 	};
 
+	union {
+		struct clat_prio_stat *clat_prio[DDIR_RWDIR_CNT];
+		/*
+		 * For FIO_NET_CMD_TS, the pointed to data will temporarily
+		 * be stored at this offset from the start of the payload.
+		 */
+		uint64_t clat_prio_offset[DDIR_RWDIR_CNT];
+		uint64_t pad6;
+	};
+	uint32_t nr_clat_prio[DDIR_RWDIR_CNT];
+
 	uint64_t cachehit;
 	uint64_t cachemiss;
 } __attribute__((packed));
@@ -368,6 +385,8 @@ extern void add_bw_sample(struct thread_data *, struct io_u *,
 extern void add_sync_clat_sample(struct thread_stat *ts,
 				unsigned long long nsec);
 extern int calc_log_samples(void);
+extern void free_clat_prio_stats(struct thread_stat *);
+extern int alloc_clat_prio_stat_ddir(struct thread_stat *, enum fio_ddir, int);
 
 extern void print_disk_util(struct disk_util_stat *, struct disk_util_agg *, int terse, struct buf_output *);
 extern void json_array_add_disk_util(struct disk_util_stat *dus,

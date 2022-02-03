@@ -1995,6 +1995,46 @@ void sum_group_stats(struct group_run_stats *dst, struct group_run_stats *src)
 		dst->sig_figs = src->sig_figs;
 }
 
+/*
+ * Free the clat_prio_stat arrays allocated by alloc_clat_prio_stat_ddir().
+ */
+void free_clat_prio_stats(struct thread_stat *ts)
+{
+	enum fio_ddir ddir;
+
+	for (ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++) {
+		sfree(ts->clat_prio[ddir]);
+		ts->clat_prio[ddir] = NULL;
+		ts->nr_clat_prio[ddir] = 0;
+	}
+}
+
+/*
+ * Allocate a clat_prio_stat array. The array has to be allocated/freed using
+ * smalloc/sfree, so that it is accessible by the process/thread summing the
+ * thread_stats.
+ */
+int alloc_clat_prio_stat_ddir(struct thread_stat *ts, enum fio_ddir ddir,
+			      int nr_prios)
+{
+	struct clat_prio_stat *clat_prio;
+	int i;
+
+	clat_prio = scalloc(nr_prios, sizeof(*ts->clat_prio[ddir]));
+	if (!clat_prio) {
+		log_err("fio: failed to allocate ts clat data\n");
+		return 1;
+	}
+
+	for (i = 0; i < nr_prios; i++)
+		clat_prio[i].clat_stat.min_val = ULONG_MAX;
+
+	ts->clat_prio[ddir] = clat_prio;
+	ts->nr_clat_prio[ddir] = nr_prios;
+
+	return 0;
+}
+
 void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src)
 {
 	int k, l, m;
