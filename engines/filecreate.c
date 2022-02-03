@@ -49,7 +49,7 @@ static int open_file(struct thread_data *td, struct fio_file *f)
 		uint64_t nsec;
 
 		nsec = ntime_since_now(&start);
-		add_clat_sample(td, data->stat_ddir, nsec, 0, 0, 0, false);
+		add_clat_sample(td, data->stat_ddir, nsec, 0, 0, 0, 0);
 	}
 
 	return 0;

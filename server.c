@@ -1685,6 +1685,7 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 {
 	struct cmd_ts_pdu p;
 	int i, j, k;
+	size_t clat_prio_stats_extra_size = 0;
 	size_t ss_extra_size = 0;
 	size_t extended_buf_size = 0;
 	void *extended_buf;
@@ -1801,16 +1802,13 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 	p.ts.cachehit		= cpu_to_le64(ts->cachehit);
 	p.ts.cachemiss		= cpu_to_le64(ts->cachemiss);
 
-	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
-		for (j = 0; j < FIO_IO_U_PLAT_NR; j++) {
-			p.ts.io_u_plat_high_prio[i][j] = cpu_to_le64(ts->io_u_plat_high_prio[i][j]);
-			p.ts.io_u_plat_low_prio[i][j] = cpu_to_le64(ts->io_u_plat_low_prio[i][j]);
-		}
-		convert_io_stat(&p.ts.clat_high_prio_stat[i], &ts->clat_high_prio_stat[i]);
-		convert_io_stat(&p.ts.clat_low_prio_stat[i], &ts->clat_low_prio_stat[i]);
-	}
-
 	convert_gs(&p.rs, rs);
+
+	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
+		if (ts->nr_clat_prio[i])
+			clat_prio_stats_extra_size += ts->nr_clat_prio[i] * sizeof(*ts->clat_prio[i]);
+	}
+	extended_buf_size += clat_prio_stats_extra_size;
 
 	dprint(FD_NET, "ts->ss_state = %d\n", ts->ss_state);
 	if (ts->ss_state & FIO_SS_DATA)
@@ -1831,6 +1829,32 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 
 	memcpy(extended_buf, &p, sizeof(p));
 	extended_buf_wp = (struct cmd_ts_pdu *)extended_buf + 1;
+
+	if (clat_prio_stats_extra_size) {
+		for (i = 0; i < DDIR_RWDIR_CNT; i++) {
+			struct clat_prio_stat *prio = (struct clat_prio_stat *) extended_buf_wp;
+
+			for (j = 0; j < ts->nr_clat_prio[i]; j++) {
+				for (k = 0; k < FIO_IO_U_PLAT_NR; k++)
+					prio->io_u_plat[k] =
+						cpu_to_le64(ts->clat_prio[i][j].io_u_plat[k]);
+				convert_io_stat(&prio->clat_stat,
+						&ts->clat_prio[i][j].clat_stat);
+				prio->ioprio = cpu_to_le32(ts->clat_prio[i][j].ioprio);
+				prio++;
+			}
+
+			if (ts->nr_clat_prio[i]) {
+				uint64_t offset = (char *)extended_buf_wp - (char *)extended_buf;
+				struct cmd_ts_pdu *ptr = extended_buf;
+
+				ptr->ts.clat_prio_offset[i] = cpu_to_le64(offset);
+				ptr->ts.nr_clat_prio[i] = cpu_to_le32(ts->nr_clat_prio[i]);
+			}
+
+			extended_buf_wp = prio;
+		}
+	}
 
 	if (ss_extra_size) {
 		uint64_t *ss_iops, *ss_bw;

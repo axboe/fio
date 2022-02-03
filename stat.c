@@ -265,6 +265,18 @@ static void show_clat_percentiles(uint64_t *io_u_plat, unsigned long long nr,
 	free(ovals);
 }
 
+static int get_nr_prios_with_samples(struct thread_stat *ts, enum fio_ddir ddir)
+{
+	int i, nr_prios_with_samples = 0;
+
+	for (i = 0; i < ts->nr_clat_prio[ddir]; i++) {
+		if (ts->clat_prio[ddir][i].clat_stat.samples)
+			nr_prios_with_samples++;
+	}
+
+	return nr_prios_with_samples;
+}
+
 bool calc_lat(struct io_stat *is, unsigned long long *min,
 	      unsigned long long *max, double *mean, double *dev)
 {
@@ -511,7 +523,8 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	unsigned long long min, max, bw, iops;
 	double mean, dev;
 	char *io_p, *bw_p, *bw_p_alt, *iops_p, *post_st = NULL;
-	int i2p;
+	int i2p, i;
+	const char *clat_type = ts->lat_percentiles ? "lat" : "clat";
 
 	if (ddir_sync(ddir)) {
 		if (calc_lat(&ts->sync_stat, &min, &max, &mean, &dev)) {
@@ -572,12 +585,22 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 		display_lat("clat", min, max, mean, dev, out);
 	if (calc_lat(&ts->lat_stat[ddir], &min, &max, &mean, &dev))
 		display_lat(" lat", min, max, mean, dev, out);
-	if (calc_lat(&ts->clat_high_prio_stat[ddir], &min, &max, &mean, &dev)) {
-		display_lat(ts->lat_percentiles ? "high prio_lat" : "high prio_clat",
-				min, max, mean, dev, out);
-		if (calc_lat(&ts->clat_low_prio_stat[ddir], &min, &max, &mean, &dev))
-			display_lat(ts->lat_percentiles ? "low prio_lat" : "low prio_clat",
-					min, max, mean, dev, out);
+
+	/* Only print per prio stats if there are >= 2 prios with samples */
+	if (get_nr_prios_with_samples(ts, ddir) >= 2) {
+		for (i = 0; i < ts->nr_clat_prio[ddir]; i++) {
+			if (calc_lat(&ts->clat_prio[ddir][i].clat_stat, &min,
+				     &max, &mean, &dev)) {
+				char buf[64];
+
+				snprintf(buf, sizeof(buf),
+					 "%s prio %u/%u",
+					 clat_type,
+					 ts->clat_prio[ddir][i].ioprio >> 13,
+					 ts->clat_prio[ddir][i].ioprio & 7);
+				display_lat(buf, min, max, mean, dev, out);
+			}
+		}
 	}
 
 	if (ts->slat_percentiles && ts->slat_stat[ddir].samples > 0)
@@ -597,8 +620,7 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 					ts->percentile_precision, "lat", out);
 
 	if (ts->clat_percentiles || ts->lat_percentiles) {
-		const char *name = ts->lat_percentiles ? "lat" : "clat";
-		char prio_name[32];
+		char prio_name[64];
 		uint64_t samples;
 
 		if (ts->lat_percentiles)
@@ -606,25 +628,24 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 		else
 			samples = ts->clat_stat[ddir].samples;
 
-		/* Only print this if some high and low priority stats were collected */
-		if (ts->clat_high_prio_stat[ddir].samples > 0 &&
-			ts->clat_low_prio_stat[ddir].samples > 0)
-		{
-			sprintf(prio_name, "high prio (%.2f%%) %s",
-					100. * (double) ts->clat_high_prio_stat[ddir].samples / (double) samples,
-					name);
-			show_clat_percentiles(ts->io_u_plat_high_prio[ddir],
-						ts->clat_high_prio_stat[ddir].samples,
-						ts->percentile_list,
-						ts->percentile_precision, prio_name, out);
+		/* Only print per prio stats if there are >= 2 prios with samples */
+		if (get_nr_prios_with_samples(ts, ddir) >= 2) {
+			for (i = 0; i < ts->nr_clat_prio[ddir]; i++) {
+				uint64_t prio_samples = ts->clat_prio[ddir][i].clat_stat.samples;
 
-			sprintf(prio_name, "low prio (%.2f%%) %s",
-					100. * (double) ts->clat_low_prio_stat[ddir].samples / (double) samples,
-					name);
-			show_clat_percentiles(ts->io_u_plat_low_prio[ddir],
-						ts->clat_low_prio_stat[ddir].samples,
-						ts->percentile_list,
-						ts->percentile_precision, prio_name, out);
+				if (prio_samples > 0) {
+					snprintf(prio_name, sizeof(prio_name),
+						 "%s prio %u/%u (%.2f%% of IOs)",
+						 clat_type,
+						 ts->clat_prio[ddir][i].ioprio >> 13,
+						 ts->clat_prio[ddir][i].ioprio & 7,
+						 100. * (double) prio_samples / (double) samples);
+					show_clat_percentiles(ts->clat_prio[ddir][i].io_u_plat,
+							      prio_samples, ts->percentile_list,
+							      ts->percentile_precision,
+							      prio_name, out);
+				}
+			}
 		}
 	}
 
@@ -679,6 +700,7 @@ static void show_mixed_ddir_status(struct group_run_stats *rs,
 	if (ts_lcl)
 		show_ddir_status(rs, ts_lcl, DDIR_READ, out);
 
+	free_clat_prio_stats(ts_lcl);
 	free(ts_lcl);
 }
 
@@ -1353,6 +1375,7 @@ static void show_mixed_ddir_status_terse(struct thread_stat *ts,
 	if (ts_lcl)
 		show_ddir_status_terse(ts_lcl, rs, DDIR_READ, ver, out);
 
+	free_clat_prio_stats(ts_lcl);
 	free(ts_lcl);
 }
 
@@ -1537,6 +1560,7 @@ static void add_mixed_ddir_status_json(struct thread_stat *ts,
 	if (ts_lcl)
 		add_ddir_status_json(ts_lcl, rs, DDIR_READ, parent);
 
+	free_clat_prio_stats(ts_lcl);
 	free(ts_lcl);
 }
 
@@ -2038,6 +2062,175 @@ int alloc_clat_prio_stat_ddir(struct thread_stat *ts, enum fio_ddir ddir,
 	return 0;
 }
 
+static int grow_clat_prio_stat(struct thread_stat *dst, enum fio_ddir ddir)
+{
+	int curr_len = dst->nr_clat_prio[ddir];
+	void *new_arr;
+
+	new_arr = scalloc(curr_len + 1, sizeof(*dst->clat_prio[ddir]));
+	if (!new_arr) {
+		log_err("fio: failed to grow clat prio array\n");
+		return 1;
+	}
+
+	memcpy(new_arr, dst->clat_prio[ddir],
+	       curr_len * sizeof(*dst->clat_prio[ddir]));
+	sfree(dst->clat_prio[ddir]);
+
+	dst->clat_prio[ddir] = new_arr;
+	dst->clat_prio[ddir][curr_len].clat_stat.min_val = ULONG_MAX;
+	dst->nr_clat_prio[ddir]++;
+
+	return 0;
+}
+
+static int find_clat_prio_index(struct thread_stat *dst, enum fio_ddir ddir,
+				uint32_t ioprio)
+{
+	int i, nr_prios = dst->nr_clat_prio[ddir];
+
+	for (i = 0; i < nr_prios; i++) {
+		if (dst->clat_prio[ddir][i].ioprio == ioprio)
+			return i;
+	}
+
+	return -1;
+}
+
+static int alloc_or_get_clat_prio_index(struct thread_stat *dst,
+					enum fio_ddir ddir, uint32_t ioprio,
+					int *idx)
+{
+	int index = find_clat_prio_index(dst, ddir, ioprio);
+
+	if (index == -1) {
+		index = dst->nr_clat_prio[ddir];
+
+		if (grow_clat_prio_stat(dst, ddir))
+			return 1;
+
+		dst->clat_prio[ddir][index].ioprio = ioprio;
+	}
+
+	*idx = index;
+
+	return 0;
+}
+
+static int clat_prio_stats_copy(struct thread_stat *dst, struct thread_stat *src,
+				enum fio_ddir dst_ddir, enum fio_ddir src_ddir)
+{
+	size_t sz = sizeof(*src->clat_prio[src_ddir]) *
+		src->nr_clat_prio[src_ddir];
+
+	dst->clat_prio[dst_ddir] = smalloc(sz);
+	if (!dst->clat_prio[dst_ddir]) {
+		log_err("fio: failed to alloc clat prio array\n");
+		return 1;
+	}
+
+	memcpy(dst->clat_prio[dst_ddir], src->clat_prio[src_ddir], sz);
+	dst->nr_clat_prio[dst_ddir] = src->nr_clat_prio[src_ddir];
+
+	return 0;
+}
+
+static int clat_prio_stat_add_samples(struct thread_stat *dst,
+				      enum fio_ddir dst_ddir, uint32_t ioprio,
+				      struct io_stat *io_stat,
+				      uint64_t *io_u_plat)
+{
+	int i, dst_index;
+
+	if (!io_stat->samples)
+		return 0;
+
+	if (alloc_or_get_clat_prio_index(dst, dst_ddir, ioprio, &dst_index))
+		return 1;
+
+	sum_stat(&dst->clat_prio[dst_ddir][dst_index].clat_stat, io_stat,
+		 false);
+
+	for (i = 0; i < FIO_IO_U_PLAT_NR; i++)
+		dst->clat_prio[dst_ddir][dst_index].io_u_plat[i] += io_u_plat[i];
+
+	return 0;
+}
+
+static int sum_clat_prio_stats_src_single_prio(struct thread_stat *dst,
+					       struct thread_stat *src,
+					       enum fio_ddir dst_ddir,
+					       enum fio_ddir src_ddir)
+{
+	struct io_stat *io_stat;
+	uint64_t *io_u_plat;
+
+	/*
+	 * If src ts has no clat_prio_stat array, then all I/Os were submitted
+	 * using src->ioprio. Thus, the global samples in src->clat_stat (or
+	 * src->lat_stat) can be used as the 'per prio' samples for src->ioprio.
+	 */
+	assert(!src->clat_prio[src_ddir]);
+	assert(src->nr_clat_prio[src_ddir] == 0);
+
+	if (src->lat_percentiles) {
+		io_u_plat = src->io_u_plat[FIO_LAT][src_ddir];
+		io_stat = &src->lat_stat[src_ddir];
+	} else {
+		io_u_plat = src->io_u_plat[FIO_CLAT][src_ddir];
+		io_stat = &src->clat_stat[src_ddir];
+	}
+
+	return clat_prio_stat_add_samples(dst, dst_ddir, src->ioprio, io_stat,
+					  io_u_plat);
+}
+
+static int sum_clat_prio_stats_src_multi_prio(struct thread_stat *dst,
+					      struct thread_stat *src,
+					      enum fio_ddir dst_ddir,
+					      enum fio_ddir src_ddir)
+{
+	int i;
+
+	/*
+	 * If src ts has a clat_prio_stat array, then there are multiple prios
+	 * in use (i.e. src ts had cmdprio_percentage or cmdprio_bssplit set).
+	 * The samples for the default prio will exist in the src->clat_prio
+	 * array, just like the samples for any other prio.
+	 */
+	assert(src->clat_prio[src_ddir]);
+	assert(src->nr_clat_prio[src_ddir]);
+
+	/* If the dst ts doesn't yet have a clat_prio array, simply memcpy. */
+	if (!dst->clat_prio[dst_ddir])
+		return clat_prio_stats_copy(dst, src, dst_ddir, src_ddir);
+
+	/* The dst ts already has a clat_prio_array, add src stats into it. */
+	for (i = 0; i < src->nr_clat_prio[src_ddir]; i++) {
+		struct io_stat *io_stat = &src->clat_prio[src_ddir][i].clat_stat;
+		uint64_t *io_u_plat = src->clat_prio[src_ddir][i].io_u_plat;
+		uint32_t ioprio = src->clat_prio[src_ddir][i].ioprio;
+
+		if (clat_prio_stat_add_samples(dst, dst_ddir, ioprio, io_stat, io_u_plat))
+			return 1;
+	}
+
+	return 0;
+}
+
+static int sum_clat_prio_stats(struct thread_stat *dst, struct thread_stat *src,
+			       enum fio_ddir dst_ddir, enum fio_ddir src_ddir)
+{
+	if (dst->disable_prio_stat)
+		return 0;
+
+	if (!src->clat_prio[src_ddir])
+		return sum_clat_prio_stats_src_single_prio(dst, src, dst_ddir,
+							   src_ddir);
+
+	return sum_clat_prio_stats_src_multi_prio(dst, src, dst_ddir, src_ddir);
+}
+
 void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src)
 {
 	int k, l, m;
@@ -2045,12 +2238,11 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src)
 	for (l = 0; l < DDIR_RWDIR_CNT; l++) {
 		if (dst->unified_rw_rep != UNIFIED_MIXED) {
 			sum_stat(&dst->clat_stat[l], &src->clat_stat[l], false);
-			sum_stat(&dst->clat_high_prio_stat[l], &src->clat_high_prio_stat[l], false);
-			sum_stat(&dst->clat_low_prio_stat[l], &src->clat_low_prio_stat[l], false);
 			sum_stat(&dst->slat_stat[l], &src->slat_stat[l], false);
 			sum_stat(&dst->lat_stat[l], &src->lat_stat[l], false);
 			sum_stat(&dst->bw_stat[l], &src->bw_stat[l], true);
 			sum_stat(&dst->iops_stat[l], &src->iops_stat[l], true);
+			sum_clat_prio_stats(dst, src, l, l);
 
 			dst->io_bytes[l] += src->io_bytes[l];
 
@@ -2058,12 +2250,11 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src)
 				dst->runtime[l] = src->runtime[l];
 		} else {
 			sum_stat(&dst->clat_stat[0], &src->clat_stat[l], false);
-			sum_stat(&dst->clat_high_prio_stat[0], &src->clat_high_prio_stat[l], false);
-			sum_stat(&dst->clat_low_prio_stat[0], &src->clat_low_prio_stat[l], false);
 			sum_stat(&dst->slat_stat[0], &src->slat_stat[l], false);
 			sum_stat(&dst->lat_stat[0], &src->lat_stat[l], false);
 			sum_stat(&dst->bw_stat[0], &src->bw_stat[l], true);
 			sum_stat(&dst->iops_stat[0], &src->iops_stat[l], true);
+			sum_clat_prio_stats(dst, src, 0, l);
 
 			dst->io_bytes[0] += src->io_bytes[l];
 
@@ -2117,19 +2308,6 @@ void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src)
 	for (k = 0; k < FIO_IO_U_PLAT_NR; k++)
 		dst->io_u_sync_plat[k] += src->io_u_sync_plat[k];
 
-	for (k = 0; k < DDIR_RWDIR_CNT; k++) {
-		for (m = 0; m < FIO_IO_U_PLAT_NR; m++) {
-			if (dst->unified_rw_rep != UNIFIED_MIXED) {
-				dst->io_u_plat_high_prio[k][m] += src->io_u_plat_high_prio[k][m];
-				dst->io_u_plat_low_prio[k][m] += src->io_u_plat_low_prio[k][m];
-			} else {
-				dst->io_u_plat_high_prio[0][m] += src->io_u_plat_high_prio[k][m];
-				dst->io_u_plat_low_prio[0][m] += src->io_u_plat_low_prio[k][m];
-			}
-
-		}
-	}
-
 	dst->total_run_time += src->total_run_time;
 	dst->total_submit += src->total_submit;
 	dst->total_complete += src->total_complete;
@@ -2157,8 +2335,6 @@ void init_thread_stat_min_vals(struct thread_stat *ts)
 		ts->lat_stat[i].min_val = ULONG_MAX;
 		ts->bw_stat[i].min_val = ULONG_MAX;
 		ts->iops_stat[i].min_val = ULONG_MAX;
-		ts->clat_high_prio_stat[i].min_val = ULONG_MAX;
-		ts->clat_low_prio_stat[i].min_val = ULONG_MAX;
 	}
 	ts->sync_stat.min_val = ULONG_MAX;
 }
@@ -2517,6 +2693,12 @@ void __show_run_stats(void)
 
 	log_info_flush();
 	free(runstats);
+
+	/* free arrays allocated by sum_thread_stats(), if any */
+	for (i = 0; i < nr_ts; i++) {
+		ts = &threadstats[i];
+		free_clat_prio_stats(ts);
+	}
 	free(threadstats);
 	free(opt_lists);
 }
@@ -2641,6 +2823,14 @@ static inline void add_stat_sample(struct io_stat *is, unsigned long long data)
 	}
 
 	is->samples++;
+}
+
+static inline void add_stat_prio_sample(struct clat_prio_stat *clat_prio,
+					unsigned short clat_prio_index,
+					unsigned long long nsec)
+{
+	if (clat_prio)
+		add_stat_sample(&clat_prio[clat_prio_index].clat_stat, nsec);
 }
 
 /*
@@ -2848,14 +3038,28 @@ static inline void reset_io_u_plat(uint64_t *io_u_plat)
 		io_u_plat[i] = 0;
 }
 
+static inline void reset_clat_prio_stats(struct thread_stat *ts)
+{
+	enum fio_ddir ddir;
+	int i;
+
+	for (ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++) {
+		if (!ts->clat_prio[ddir])
+			continue;
+
+		for (i = 0; i < ts->nr_clat_prio[ddir]; i++) {
+			reset_io_stat(&ts->clat_prio[ddir][i].clat_stat);
+			reset_io_u_plat(ts->clat_prio[ddir][i].io_u_plat);
+		}
+	}
+}
+
 void reset_io_stats(struct thread_data *td)
 {
 	struct thread_stat *ts = &td->ts;
 	int i, j;
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
-		reset_io_stat(&ts->clat_high_prio_stat[i]);
-		reset_io_stat(&ts->clat_low_prio_stat[i]);
 		reset_io_stat(&ts->clat_stat[i]);
 		reset_io_stat(&ts->slat_stat[i]);
 		reset_io_stat(&ts->lat_stat[i]);
@@ -2867,14 +3071,13 @@ void reset_io_stats(struct thread_data *td)
 		ts->total_io_u[i] = 0;
 		ts->short_io_u[i] = 0;
 		ts->drop_io_u[i] = 0;
-
-		reset_io_u_plat(ts->io_u_plat_high_prio[i]);
-		reset_io_u_plat(ts->io_u_plat_low_prio[i]);
 	}
 
 	for (i = 0; i < FIO_LAT_CNT; i++)
 		for (j = 0; j < DDIR_RWDIR_CNT; j++)
 			reset_io_u_plat(ts->io_u_plat[i][j]);
+
+	reset_clat_prio_stats(ts);
 
 	ts->total_io_u[DDIR_SYNC] = 0;
 	reset_io_u_plat(ts->io_u_sync_plat);
@@ -3028,22 +3231,21 @@ static inline void add_lat_percentile_sample(struct thread_stat *ts,
 	ts->io_u_plat[lat][ddir][idx]++;
 }
 
-static inline void add_lat_percentile_prio_sample(struct thread_stat *ts,
-						  unsigned long long nsec,
-						  enum fio_ddir ddir,
-						  bool high_prio)
+static inline void
+add_lat_percentile_prio_sample(struct thread_stat *ts, unsigned long long nsec,
+			       enum fio_ddir ddir,
+			       unsigned short clat_prio_index)
 {
 	unsigned int idx = plat_val_to_idx(nsec);
 
-	if (!high_prio)
-		ts->io_u_plat_low_prio[ddir][idx]++;
-	else
-		ts->io_u_plat_high_prio[ddir][idx]++;
+	if (ts->clat_prio[ddir])
+		ts->clat_prio[ddir][clat_prio_index].io_u_plat[idx]++;
 }
 
 void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 		     unsigned long long nsec, unsigned long long bs,
-		     uint64_t offset, unsigned int ioprio, bool high_prio)
+		     uint64_t offset, unsigned int ioprio,
+		     unsigned short clat_prio_index)
 {
 	const bool needs_lock = td_async_processing(td);
 	unsigned long elapsed, this_window;
@@ -3056,7 +3258,7 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 	add_stat_sample(&ts->clat_stat[ddir], nsec);
 
 	/*
-	 * When lat_percentiles=1 (default 0), the reported high/low priority
+	 * When lat_percentiles=1 (default 0), the reported per priority
 	 * percentiles and stats are used for describing total latency values,
 	 * even though the variable names themselves start with clat_.
 	 *
@@ -3064,12 +3266,9 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 	 * lat_percentiles=0. add_lat_sample() will add the prio stat sample
 	 * when lat_percentiles=1.
 	 */
-	if (!ts->lat_percentiles) {
-		if (high_prio)
-			add_stat_sample(&ts->clat_high_prio_stat[ddir], nsec);
-		else
-			add_stat_sample(&ts->clat_low_prio_stat[ddir], nsec);
-	}
+	if (!ts->lat_percentiles)
+		add_stat_prio_sample(ts->clat_prio[ddir], clat_prio_index,
+				     nsec);
 
 	if (td->clat_log)
 		add_log_sample(td, td->clat_log, sample_val(nsec), ddir, bs,
@@ -3084,7 +3283,7 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 		add_lat_percentile_sample(ts, nsec, ddir, FIO_CLAT);
 		if (!ts->lat_percentiles)
 			add_lat_percentile_prio_sample(ts, nsec, ddir,
-						       high_prio);
+						       clat_prio_index);
 	}
 
 	if (iolog && iolog->hist_msec) {
@@ -3157,7 +3356,8 @@ void add_slat_sample(struct thread_data *td, enum fio_ddir ddir,
 
 void add_lat_sample(struct thread_data *td, enum fio_ddir ddir,
 		    unsigned long long nsec, unsigned long long bs,
-		    uint64_t offset, unsigned int ioprio, bool high_prio)
+		    uint64_t offset, unsigned int ioprio,
+		    unsigned short clat_prio_index)
 {
 	const bool needs_lock = td_async_processing(td);
 	struct thread_stat *ts = &td->ts;
@@ -3175,7 +3375,7 @@ void add_lat_sample(struct thread_data *td, enum fio_ddir ddir,
 			       offset, ioprio);
 
 	/*
-	 * When lat_percentiles=1 (default 0), the reported high/low priority
+	 * When lat_percentiles=1 (default 0), the reported per priority
 	 * percentiles and stats are used for describing total latency values,
 	 * even though the variable names themselves start with clat_.
 	 *
@@ -3186,12 +3386,9 @@ void add_lat_sample(struct thread_data *td, enum fio_ddir ddir,
 	 */
 	if (ts->lat_percentiles) {
 		add_lat_percentile_sample(ts, nsec, ddir, FIO_LAT);
-		add_lat_percentile_prio_sample(ts, nsec, ddir, high_prio);
-		if (high_prio)
-			add_stat_sample(&ts->clat_high_prio_stat[ddir], nsec);
-		else
-			add_stat_sample(&ts->clat_low_prio_stat[ddir], nsec);
-
+		add_lat_percentile_prio_sample(ts, nsec, ddir, clat_prio_index);
+		add_stat_prio_sample(ts->clat_prio[ddir], clat_prio_index,
+				     nsec);
 	}
 	if (needs_lock)
 		__td_io_u_unlock(td);

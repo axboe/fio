@@ -21,7 +21,6 @@ enum {
 	IO_U_F_TRIMMED		= 1 << 5,
 	IO_U_F_BARRIER		= 1 << 6,
 	IO_U_F_VER_LIST		= 1 << 7,
-	IO_U_F_HIGH_PRIO	= 1 << 8,
 };
 
 /*
@@ -194,6 +193,5 @@ static inline enum fio_ddir acct_ddir(struct io_u *io_u)
 	td_flags_clear((td), &(io_u->flags), (val))
 #define io_u_set(td, io_u, val)		\
 	td_flags_set((td), &(io_u)->flags, (val))
-#define io_u_is_high_prio(io_u)	(io_u->flags & IO_U_F_HIGH_PRIO)
 
 #endif
