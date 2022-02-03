@@ -1995,10 +1995,34 @@ To get a finer control over I/O priority, this option allows specifying
 the percentage of IOs that must have a priority set depending on the block
 size of the IO. This option is useful only when used together with the option
 \fBbssplit\fR, that is, multiple different block sizes are used for reads and
-writes. The format for this option is the same as the format of the
-\fBbssplit\fR option, with the exception that values for trim IOs are
-ignored. This option is mutually exclusive with the \fBcmdprio_percentage\fR
-option.
+writes.
+.RS
+.P
+The first accepted format for this option is the same as the format of the
+\fBbssplit\fR option:
+.RS
+.P
+cmdprio_bssplit=blocksize/percentage:blocksize/percentage
+.RE
+.P
+In this case, each entry will use the priority class and priority level defined
+by the options \fBcmdprio_class\fR and \fBcmdprio\fR respectively.
+.P
+The second accepted format for this option is:
+.RS
+.P
+cmdprio_bssplit=blocksize/percentage/class/level:blocksize/percentage/class/level
+.RE
+.P
+In this case, the priority class and priority level is defined inside each
+entry. In comparison with the first accepted format, the second accepted format
+does not restrict all entries to have the same priority class and priority
+level.
+.P
+For both formats, only the read and write data directions are supported, values
+for trim IOs are ignored. This option is mutually exclusive with the
+\fBcmdprio_percentage\fR option.
+.RE
 .TP
 .BI (io_uring)fixedbufs
 If fio is asked to do direct IO, then Linux will map pages for each IO call, and

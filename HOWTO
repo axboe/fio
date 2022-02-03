@@ -2212,10 +2212,28 @@ with the caveat that when used on the command line, they must come after the
 	depending on the block size of the IO. This option is useful only
 	when used together with the :option:`bssplit` option, that is,
 	multiple different block sizes are used for reads and writes.
-	The format for this option is the same as the format of the
-	:option:`bssplit` option, with the exception that values for
-	trim IOs are ignored. This option is mutually exclusive with the
-	:option:`cmdprio_percentage` option.
+
+	The first accepted format for this option is the same as the format of
+	the :option:`bssplit` option:
+
+		cmdprio_bssplit=blocksize/percentage:blocksize/percentage
+
+	In this case, each entry will use the priority class and priority
+	level defined by the options :option:`cmdprio_class` and
+	:option:`cmdprio` respectively.
+
+	The second accepted format for this option is:
+
+		cmdprio_bssplit=blocksize/percentage/class/level:blocksize/percentage/class/level
+
+	In this case, the priority class and priority level is defined inside
+	each entry. In comparison with the first accepted format, the second
+	accepted format does not restrict all entries to have the same priority
+	class and priority level.
+
+	For both formats, only the read and write data directions are supported,
+	values for trim IOs are ignored. This option is mutually exclusive with
+	the :option:`cmdprio_percentage` option.
 
 .. option:: fixedbufs : [io_uring]
 

@@ -50,6 +50,7 @@ struct io_u {
 	 * IO priority.
 	 */
 	unsigned short ioprio;
+	unsigned short clat_prio_index;
 
 	/*
 	 * Allocated/set buffer and length

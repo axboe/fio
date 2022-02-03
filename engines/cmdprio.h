@@ -17,6 +17,24 @@ enum {
 	CMDPRIO_MODE_BSSPLIT,
 };
 
+struct cmdprio_prio {
+	int32_t prio;
+	uint32_t perc;
+	uint16_t clat_prio_index;
+};
+
+struct cmdprio_bsprio {
+	uint64_t bs;
+	uint32_t tot_perc;
+	unsigned int nr_prios;
+	struct cmdprio_prio *prios;
+};
+
+struct cmdprio_bsprio_desc {
+	struct cmdprio_bsprio *bsprios;
+	unsigned int nr_bsprios;
+};
+
 struct cmdprio_options {
 	unsigned int percentage[CMDPRIO_RWDIR_CNT];
 	unsigned int class[CMDPRIO_RWDIR_CNT];
@@ -26,8 +44,8 @@ struct cmdprio_options {
 
 struct cmdprio {
 	struct cmdprio_options *options;
-	unsigned int bssplit_nr[CMDPRIO_RWDIR_CNT];
-	struct bssplit *bssplit[CMDPRIO_RWDIR_CNT];
+	struct cmdprio_prio perc_entry[CMDPRIO_RWDIR_CNT];
+	struct cmdprio_bsprio_desc bsprio_desc[CMDPRIO_RWDIR_CNT];
 	unsigned int mode;
 };
 
