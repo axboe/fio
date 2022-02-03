@@ -491,7 +491,8 @@ static struct thread_stat *gen_mixed_ddir_stats_from_ts(struct thread_stat *ts)
 	return ts_lcl;
 }
 
-static double convert_agg_kbytes_percent(struct group_run_stats *rs, int ddir, int mean)
+static double convert_agg_kbytes_percent(struct group_run_stats *rs,
+					 enum fio_ddir ddir, int mean)
 {
 	double p_of_agg = 100.0;
 	if (rs && rs->agg[ddir] > 1024) {
@@ -504,7 +505,7 @@ static double convert_agg_kbytes_percent(struct group_run_stats *rs, int ddir, i
 }
 
 static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
-			     int ddir, struct buf_output *out)
+			     enum fio_ddir ddir, struct buf_output *out)
 {
 	unsigned long runt;
 	unsigned long long min, max, bw, iops;
@@ -1251,8 +1252,9 @@ static void show_thread_status_normal(struct thread_stat *ts,
 }
 
 static void show_ddir_status_terse(struct thread_stat *ts,
-				   struct group_run_stats *rs, int ddir,
-				   int ver, struct buf_output *out)
+				   struct group_run_stats *rs,
+				   enum fio_ddir ddir, int ver,
+				   struct buf_output *out)
 {
 	unsigned long long min, max, minv, maxv, bw, iops;
 	unsigned long long *ovals = NULL;
@@ -1407,7 +1409,8 @@ static struct json_object *add_ddir_lat_json(struct thread_stat *ts,
 }
 
 static void add_ddir_status_json(struct thread_stat *ts,
-		struct group_run_stats *rs, int ddir, struct json_object *parent)
+				 struct group_run_stats *rs, enum fio_ddir ddir,
+				 struct json_object *parent)
 {
 	unsigned long long min, max;
 	unsigned long long bw_bytes, bw;
@@ -2353,7 +2356,7 @@ void __show_run_stats(void)
 	}
 
 	for (i = 0; i < groupid + 1; i++) {
-		int ddir;
+		enum fio_ddir ddir;
 
 		rs = &runstats[i];
 
@@ -2861,7 +2864,7 @@ static void __add_stat_to_log(struct io_log *iolog, enum fio_ddir ddir,
 static void _add_stat_to_log(struct io_log *iolog, unsigned long elapsed,
 			     bool log_max)
 {
-	int ddir;
+	enum fio_ddir ddir;
 
 	for (ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++)
 		__add_stat_to_log(iolog, ddir, elapsed, log_max);
