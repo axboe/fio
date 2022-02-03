@@ -119,10 +119,14 @@ extern int fio_cpus_split(os_cpu_mask_t *mask, unsigned int cpu);
 
 #ifndef FIO_HAVE_IOPRIO_CLASS
 #define ioprio_value_is_class_rt(prio)	(false)
+#define IOPRIO_MIN_PRIO_CLASS		0
+#define IOPRIO_MAX_PRIO_CLASS		0
 #endif
 #ifndef FIO_HAVE_IOPRIO
 #define ioprio_value(prioclass, prio)	(0)
 #define ioprio_set(which, who, prioclass, prio)	(0)
+#define IOPRIO_MIN_PRIO			0
+#define IOPRIO_MAX_PRIO			0
 #endif
 
 #ifndef FIO_HAVE_ODIRECT
