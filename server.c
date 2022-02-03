@@ -1703,6 +1703,7 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 	p.ts.pid		= cpu_to_le32(ts->pid);
 	p.ts.members		= cpu_to_le32(ts->members);
 	p.ts.unified_rw_rep	= cpu_to_le32(ts->unified_rw_rep);
+	p.ts.ioprio		= cpu_to_le32(ts->ioprio);
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		convert_io_stat(&p.ts.clat_stat[i], &ts->clat_stat[i]);

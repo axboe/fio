@@ -1786,6 +1786,7 @@ static void *thread_main(void *data)
 			goto err;
 		}
 		td->ioprio = ioprio_value(o->ioprio_class, o->ioprio);
+		td->ts.ioprio = td->ioprio;
 	}
 
 	if (td_io_init(td))

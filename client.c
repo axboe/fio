@@ -954,6 +954,7 @@ static void convert_ts(struct thread_stat *dst, struct thread_stat *src)
 	dst->pid		= le32_to_cpu(src->pid);
 	dst->members		= le32_to_cpu(src->members);
 	dst->unified_rw_rep	= le32_to_cpu(src->unified_rw_rep);
+	dst->ioprio		= le32_to_cpu(src->ioprio);
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		convert_io_stat(&dst->clat_stat[i], &src->clat_stat[i]);
