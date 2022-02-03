@@ -1452,6 +1452,26 @@ static bool wait_for_ok(const char *jobname, struct thread_options *o)
 	return true;
 }
 
+static int verify_per_group_options(struct thread_data *td, const char *jobname)
+{
+	struct thread_data *td2;
+	int i;
+
+	for_each_td(td2, i) {
+		if (td->groupid != td2->groupid)
+			continue;
+
+		if (td->o.stats &&
+		    td->o.lat_percentiles != td2->o.lat_percentiles) {
+			log_err("fio: lat_percentiles in job: %s differs from group\n",
+				jobname);
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
 /*
  * Treat an empty log file name the same as a one not given
  */
@@ -1569,6 +1589,10 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 
 	td->groupid = groupid;
 	prev_group_jobs++;
+
+	if (td->o.group_reporting && prev_group_jobs > 1 &&
+	    verify_per_group_options(td, jobname))
+		goto err;
 
 	if (setup_rate(td))
 		goto err;
