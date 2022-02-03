@@ -1762,7 +1762,6 @@ int fio_handle_client(struct fio_client *client)
 {
 	struct client_ops *ops = client->ops;
 	struct fio_net_cmd *cmd;
-	int size;
 
 	dprint(FD_NET, "client: handle %s\n", client->hostname);
 
@@ -1796,14 +1795,17 @@ int fio_handle_client(struct fio_client *client)
 		}
 	case FIO_NET_CMD_TS: {
 		struct cmd_ts_pdu *p = (struct cmd_ts_pdu *) cmd->payload;
+		uint64_t offset;
 
 		dprint(FD_NET, "client: ts->ss_state = %u\n", (unsigned int) le32_to_cpu(p->ts.ss_state));
 		if (le32_to_cpu(p->ts.ss_state) & FIO_SS_DATA) {
 			dprint(FD_NET, "client: received steadystate ring buffers\n");
 
-			size = le64_to_cpu(p->ts.ss_dur);
-			p->ts.ss_iops_data = (uint64_t *) ((struct cmd_ts_pdu *)cmd->payload + 1);
-			p->ts.ss_bw_data = p->ts.ss_iops_data + size;
+			offset = le64_to_cpu(p->ts.ss_iops_data_offset);
+			p->ts.ss_iops_data = (uint64_t *)((char *)p + offset);
+
+			offset = le64_to_cpu(p->ts.ss_bw_data_offset);
+			p->ts.ss_bw_data = (uint64_t *)((char *)p + offset);
 		}
 
 		convert_ts(&p->ts, &p->ts);

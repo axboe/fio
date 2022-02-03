@@ -1685,8 +1685,10 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 {
 	struct cmd_ts_pdu p;
 	int i, j, k;
-	void *ss_buf;
-	uint64_t *ss_iops, *ss_bw;
+	size_t ss_extra_size = 0;
+	size_t extended_buf_size = 0;
+	void *extended_buf;
+	void *extended_buf_wp;
 
 	dprint(FD_NET, "server sending end stats\n");
 
@@ -1810,26 +1812,53 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 	convert_gs(&p.rs, rs);
 
 	dprint(FD_NET, "ts->ss_state = %d\n", ts->ss_state);
-	if (ts->ss_state & FIO_SS_DATA) {
+	if (ts->ss_state & FIO_SS_DATA)
+		ss_extra_size = 2 * ts->ss_dur * sizeof(uint64_t);
+
+	extended_buf_size += ss_extra_size;
+	if (!extended_buf_size) {
+		fio_net_queue_cmd(FIO_NET_CMD_TS, &p, sizeof(p), NULL, SK_F_COPY);
+		return;
+	}
+
+	extended_buf_size += sizeof(p);
+	extended_buf = calloc(1, extended_buf_size);
+	if (!extended_buf) {
+		log_err("fio: failed to allocate FIO_NET_CMD_TS buffer\n");
+		return;
+	}
+
+	memcpy(extended_buf, &p, sizeof(p));
+	extended_buf_wp = (struct cmd_ts_pdu *)extended_buf + 1;
+
+	if (ss_extra_size) {
+		uint64_t *ss_iops, *ss_bw;
+		uint64_t offset;
+		struct cmd_ts_pdu *ptr = extended_buf;
+
 		dprint(FD_NET, "server sending steadystate ring buffers\n");
 
-		ss_buf = malloc(sizeof(p) + 2*ts->ss_dur*sizeof(uint64_t));
-
-		memcpy(ss_buf, &p, sizeof(p));
-
-		ss_iops = (uint64_t *) ((struct cmd_ts_pdu *)ss_buf + 1);
-		ss_bw = ss_iops + (int) ts->ss_dur;
-		for (i = 0; i < ts->ss_dur; i++) {
+		/* ss iops */
+		ss_iops = (uint64_t *) extended_buf_wp;
+		for (i = 0; i < ts->ss_dur; i++)
 			ss_iops[i] = cpu_to_le64(ts->ss_iops_data[i]);
+
+		offset = (char *)extended_buf_wp - (char *)extended_buf;
+		ptr->ts.ss_iops_data_offset = cpu_to_le64(offset);
+		extended_buf_wp = ss_iops + (int) ts->ss_dur;
+
+		/* ss bw */
+		ss_bw = extended_buf_wp;
+		for (i = 0; i < ts->ss_dur; i++)
 			ss_bw[i] = cpu_to_le64(ts->ss_bw_data[i]);
-		}
 
-		fio_net_queue_cmd(FIO_NET_CMD_TS, ss_buf, sizeof(p) + 2*ts->ss_dur*sizeof(uint64_t), NULL, SK_F_COPY);
-
-		free(ss_buf);
+		offset = (char *)extended_buf_wp - (char *)extended_buf;
+		ptr->ts.ss_bw_data_offset = cpu_to_le64(offset);
+		extended_buf_wp = ss_bw + (int) ts->ss_dur;
 	}
-	else
-		fio_net_queue_cmd(FIO_NET_CMD_TS, &p, sizeof(p), NULL, SK_F_COPY);
+
+	fio_net_queue_cmd(FIO_NET_CMD_TS, extended_buf, extended_buf_size, NULL, SK_F_COPY);
+	free(extended_buf);
 }
 
 void fio_server_send_gs(struct group_run_stats *rs)
