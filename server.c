@@ -266,7 +266,8 @@ static int fio_send_data(int sk, const void *p, unsigned int len)
 	return fio_sendv_data(sk, &iov, 1);
 }
 
-bool fio_server_poll_fd(int fd, short events, int timeout) {
+bool fio_server_poll_fd(int fd, short events, int timeout)
+{
 	struct pollfd pfd = {
 		.fd	= fd,
 		.events	= events,
