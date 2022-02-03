@@ -2171,6 +2171,58 @@ void init_thread_stat(struct thread_stat *ts)
 	ts->groupid = -1;
 }
 
+static void init_per_prio_stats(struct thread_stat *threadstats, int nr_ts)
+{
+	struct thread_data *td;
+	struct thread_stat *ts;
+	int i, j, last_ts, idx;
+	enum fio_ddir ddir;
+
+	j = 0;
+	last_ts = -1;
+	idx = 0;
+
+	/*
+	 * Loop through all tds, if a td requires per prio stats, temporarily
+	 * store a 1 in ts->disable_prio_stat, and then do an additional
+	 * loop at the end where we invert the ts->disable_prio_stat values.
+	 */
+	for_each_td(td, i) {
+		if (!td->o.stats)
+			continue;
+		if (idx &&
+		    (!td->o.group_reporting ||
+		     (td->o.group_reporting && last_ts != td->groupid))) {
+			idx = 0;
+			j++;
+		}
+
+		last_ts = td->groupid;
+		ts = &threadstats[j];
+
+		/* idx == 0 means first td in group, or td is not in a group. */
+		if (idx == 0)
+			ts->ioprio = td->ioprio;
+		else if (td->ioprio != ts->ioprio)
+			ts->disable_prio_stat = 1;
+
+		for (ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++) {
+			if (td->ts.clat_prio[ddir]) {
+				ts->disable_prio_stat = 1;
+				break;
+			}
+		}
+
+		idx++;
+	}
+
+	/* Loop through all dst threadstats and fixup the values. */
+	for (i = 0; i < nr_ts; i++) {
+		ts = &threadstats[i];
+		ts->disable_prio_stat = !ts->disable_prio_stat;
+	}
+}
+
 void __show_run_stats(void)
 {
 	struct group_run_stats *runstats, *rs;
@@ -2216,6 +2268,8 @@ void __show_run_stats(void)
 		init_thread_stat(&threadstats[i]);
 		opt_lists[i] = NULL;
 	}
+
+	init_per_prio_stats(threadstats, nr_ts);
 
 	j = 0;
 	last_ts = -1;

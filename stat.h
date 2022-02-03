@@ -174,6 +174,7 @@ struct thread_stat {
 	char description[FIO_JOBDESC_SIZE];
 	uint32_t members;
 	uint32_t unified_rw_rep;
+	uint32_t disable_prio_stat;
 
 	/*
 	 * bandwidth and latency stats
