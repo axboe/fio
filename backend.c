@@ -1777,6 +1777,17 @@ static void *thread_main(void *data)
 	if (!init_iolog(td))
 		goto err;
 
+	/* ioprio_set() has to be done before td_io_init() */
+	if (fio_option_is_set(o, ioprio) ||
+	    fio_option_is_set(o, ioprio_class)) {
+		ret = ioprio_set(IOPRIO_WHO_PROCESS, 0, o->ioprio_class, o->ioprio);
+		if (ret == -1) {
+			td_verror(td, errno, "ioprio_set");
+			goto err;
+		}
+		td->ioprio = ioprio_value(o->ioprio_class, o->ioprio);
+	}
+
 	if (td_io_init(td))
 		goto err;
 
@@ -1788,16 +1799,6 @@ static void *thread_main(void *data)
 
 	if (o->verify_async && verify_async_init(td))
 		goto err;
-
-	if (fio_option_is_set(o, ioprio) ||
-	    fio_option_is_set(o, ioprio_class)) {
-		ret = ioprio_set(IOPRIO_WHO_PROCESS, 0, o->ioprio_class, o->ioprio);
-		if (ret == -1) {
-			td_verror(td, errno, "ioprio_set");
-			goto err;
-		}
-		td->ioprio = ioprio_value(o->ioprio_class, o->ioprio);
-	}
 
 	if (o->cgroup && cgroup_setup(td, cgroup_list, &cgroup_mnt))
 		goto err;
