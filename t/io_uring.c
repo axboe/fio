@@ -287,6 +287,7 @@ out:
 	free(ovals);
 }
 
+#ifdef ARCH_HAVE_CPU_CLOCK
 static unsigned int plat_val_to_idx(unsigned long val)
 {
 	unsigned int msb, error_bits, base, offset, idx;
@@ -322,6 +323,7 @@ static unsigned int plat_val_to_idx(unsigned long val)
 
 	return idx;
 }
+#endif
 
 static void add_stat(struct submitter *s, int clock_index, int nr)
 {
@@ -789,9 +791,12 @@ static void *submitter_uring_fn(void *data)
 {
 	struct submitter *s = data;
 	struct io_sq_ring *ring = &s->sq_ring;
-	int ret, prepped, nr_batch;
-
-	nr_batch = submitter_init(s);
+	int ret, prepped;
+#ifdef ARCH_HAVE_CPU_CLOCK
+	int nr_batch = submitter_init(s);
+#else
+	submitter_init(s);
+#endif
 
 	prepped = 0;
 	do {
