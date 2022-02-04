@@ -10,6 +10,7 @@ main() {
     else
         sudo python3 t/run-fio-tests.py --skip 6 1007 1008 --debug
     fi
+    make -C doc html
 }
 
 main

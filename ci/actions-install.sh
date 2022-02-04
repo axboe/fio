@@ -60,6 +60,7 @@ DPKGCFG
     # care about the architecture.
     pkgs+=(
         python3-scipy
+	python3-sphinx
     )
 
     echo "Updating APT..."
@@ -78,7 +79,7 @@ install_macos() {
     #brew update >/dev/null 2>&1
     echo "Installing packages..."
     HOMEBREW_NO_AUTO_UPDATE=1 brew install cunit
-    pip3 install scipy six
+    pip3 install scipy six sphinx
 }
 
 main() {
