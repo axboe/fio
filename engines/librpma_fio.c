@@ -302,6 +302,12 @@ int librpma_fio_client_init(struct thread_data *td,
 	if (ccd->conn == NULL)
 		goto err_peer_delete;
 
+	/* get the connection's main CQ */
+	if ((ret = rpma_conn_get_cq(ccd->conn, &ccd->cq))) {
+		librpma_td_verror(td, ret, "rpma_conn_get_cq");
+		goto err_conn_delete;
+	}
+
 	/* get the connection's private data sent from the server */
 	if ((ret = rpma_conn_get_private_data(ccd->conn, &pdata))) {
 		librpma_td_verror(td, ret, "rpma_conn_get_private_data");
@@ -455,7 +461,7 @@ static enum fio_q_status client_queue_sync(struct thread_data *td,
 		struct io_u *io_u)
 {
 	struct librpma_fio_client_data *ccd = td->io_ops_data;
-	struct rpma_completion cmpl;
+	struct ibv_wc wc;
 	unsigned io_u_index;
 	int ret;
 
@@ -478,31 +484,31 @@ static enum fio_q_status client_queue_sync(struct thread_data *td,
 
 	do {
 		/* get a completion */
-		ret = rpma_conn_completion_get(ccd->conn, &cmpl);
+		ret = rpma_cq_get_wc(ccd->cq, 1, &wc, NULL);
 		if (ret == RPMA_E_NO_COMPLETION) {
 			/* lack of completion is not an error */
 			continue;
 		} else if (ret != 0) {
 			/* an error occurred */
-			librpma_td_verror(td, ret, "rpma_conn_completion_get");
+			librpma_td_verror(td, ret, "rpma_cq_get_wc");
 			goto err;
 		}
 
 		/* if io_us has completed with an error */
-		if (cmpl.op_status != IBV_WC_SUCCESS)
+		if (wc.status != IBV_WC_SUCCESS)
 			goto err;
 
-		if (cmpl.op == RPMA_OP_SEND)
+		if (wc.opcode == IBV_WC_SEND)
 			++ccd->op_send_completed;
 		else {
-			if (cmpl.op == RPMA_OP_RECV)
+			if (wc.opcode == IBV_WC_RECV)
 				++ccd->op_recv_completed;
 
 			break;
 		}
 	} while (1);
 
-	if (ccd->get_io_u_index(&cmpl, &io_u_index) != 1)
+	if (ccd->get_io_u_index(&wc, &io_u_index) != 1)
 		goto err;
 
 	if (io_u->index != io_u_index) {
@@ -654,8 +660,8 @@ int librpma_fio_client_commit(struct thread_data *td)
 static int client_getevent_process(struct thread_data *td)
 {
 	struct librpma_fio_client_data *ccd = td->io_ops_data;
-	struct rpma_completion cmpl;
-	/* io_u->index of completed io_u (cmpl.op_context) */
+	struct ibv_wc wc;
+	/* io_u->index of completed io_u (wc.wr_id) */
 	unsigned int io_u_index;
 	/* # of completed io_us */
 	int cmpl_num = 0;
@@ -665,7 +671,7 @@ static int client_getevent_process(struct thread_data *td)
 	int ret;
 
 	/* get a completion */
-	if ((ret = rpma_conn_completion_get(ccd->conn, &cmpl))) {
+	if ((ret = rpma_cq_get_wc(ccd->cq, 1, &wc, NULL))) {
 		/* lack of completion is not an error */
 		if (ret == RPMA_E_NO_COMPLETION) {
 			/* lack of completion is not an error */
@@ -673,22 +679,22 @@ static int client_getevent_process(struct thread_data *td)
 		}
 
 		/* an error occurred */
-		librpma_td_verror(td, ret, "rpma_conn_completion_get");
+		librpma_td_verror(td, ret, "rpma_cq_get_wc");
 		return -1;
 	}
 
 	/* if io_us has completed with an error */
-	if (cmpl.op_status != IBV_WC_SUCCESS) {
-		td->error = cmpl.op_status;
+	if (wc.status != IBV_WC_SUCCESS) {
+		td->error = wc.status;
 		return -1;
 	}
 
-	if (cmpl.op == RPMA_OP_SEND)
+	if (wc.opcode == IBV_WC_SEND)
 		++ccd->op_send_completed;
-	else if (cmpl.op == RPMA_OP_RECV)
+	else if (wc.opcode == IBV_WC_RECV)
 		++ccd->op_recv_completed;
 
-	if ((ret = ccd->get_io_u_index(&cmpl, &io_u_index)) != 1)
+	if ((ret = ccd->get_io_u_index(&wc, &io_u_index)) != 1)
 		return ret;
 
 	/* look for an io_u being completed */
@@ -750,7 +756,7 @@ int librpma_fio_client_getevents(struct thread_data *td, unsigned int min,
 
 			/*
 			 * To reduce CPU consumption one can use
-			 * the rpma_conn_completion_wait() function.
+			 * the rpma_cq_wait() function.
 			 * Note this greatly increase the latency
 			 * and make the results less stable.
 			 * The bandwidth stays more or less the same.
@@ -1028,6 +1034,12 @@ int librpma_fio_server_open_file(struct thread_data *td, struct fio_file *f,
 	csd->ws_mr = mr;
 	csd->ws_ptr = ws_ptr;
 	csd->conn = conn;
+
+	/* get the connection's main CQ */
+	if ((ret = rpma_conn_get_cq(csd->conn, &csd->cq))) {
+		librpma_td_verror(td, ret, "rpma_conn_get_cq");
+		goto err_conn_delete;
+	}
 
 	return 0;
 
