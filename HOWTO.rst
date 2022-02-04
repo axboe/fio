@@ -2277,12 +2277,10 @@ with the caveat that when used on the command line, they must come after the
         by the application. The benefits are more efficient IO for high IOPS
         scenarios, and lower latencies for low queue depth IO.
 
-
    [pvsync2]
 
 	Set RWF_HIPRI on I/O, indicating to the kernel that it's of higher priority
 	than normal.
-
 
    [sg]
 
@@ -2506,10 +2504,16 @@ with the caveat that when used on the command line, they must come after the
 
 	Specify the label or UUID of the DAOS container to open.
 
-.. option:: chunk_size=int : [dfs]
+.. option:: chunk_size=int
+
+   [dfs]
 
 	Specificy a different chunk size (in bytes) for the dfs file.
 	Use DAOS container's chunk size by default.
+
+   [libhdfs]
+
+	The size of the chunk to use for each file.
 
 .. option:: object_class=str : [dfs]
 
@@ -2523,10 +2527,6 @@ with the caveat that when used on the command line, they must come after the
 .. option:: hdfsdirectory : [libhdfs]
 
 	libhdfs will create chunk in this HDFS directory.
-
-.. option:: chunk_size : [libhdfs]
-
-	The size of the chunk to use for each file.
 
 .. option:: verb=str : [rdma]
 
