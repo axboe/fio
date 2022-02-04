@@ -2137,8 +2137,10 @@ I/O engine
 			Asynchronous read and write using DDN's Infinite Memory Engine (IME).
 			This engine will try to stack as much IOs as possible by creating
 			requests for IME. FIO will then decide when to commit these requests.
+
 		**libiscsi**
 			Read and write iscsi lun with libiscsi.
+
 		**nbd**
 			Read and write a Network Block Device (NBD).
 
@@ -2149,6 +2151,7 @@ I/O engine
 			unless :option:`verify` is set or :option:`cuda_io` is `posix`.
 			:option:`iomem` must not be `cudamalloc`. This ioengine defines
 			engine specific options.
+
 		**dfs**
 			I/O engine supporting asynchronous read and write operations to the
 			DAOS File System (DFS) via libdfs.
@@ -2175,8 +2178,8 @@ with the caveat that when used on the command line, they must come after the
     Set the percentage of I/O that will be issued with the highest priority.
     Default: 0. A single value applies to reads and writes. Comma-separated
     values may be specified for reads and writes. For this option to be
-    effective, NCQ priority must be supported and enabled, and `direct=1'
-    option must be used. fio must also be run as the root user. Unlike
+    effective, NCQ priority must be supported and enabled, and the :option:`direct`
+    option must be set. fio must also be run as the root user. Unlike
     slat/clat/lat stats, which can be tracked and reported independently, per
     priority stats only track and report a single type of latency. By default,
     completion latency (clat) will be reported, if :option:`lat_percentiles` is
@@ -2207,6 +2210,7 @@ with the caveat that when used on the command line, they must come after the
 	meaning of priority may differ. See also the :option:`prio` option.
 
 .. option:: cmdprio_bssplit=str[,str] : [io_uring] [libaio]
+
 	To get a finer control over I/O priority, this option allows
 	specifying the percentage of IOs that must have a priority set
 	depending on the block size of the IO. This option is useful only
@@ -2454,10 +2458,6 @@ with the caveat that when used on the command line, they must come after the
 
 	Specifies the name of the RBD.
 
-.. option:: pool=str : [rbd,rados]
-
-	Specifies the name of the Ceph pool containing RBD or RADOS data.
-
 .. option:: clientname=str : [rbd,rados]
 
 	Specifies the username (without the 'client.' prefix) used to access the
@@ -2475,6 +2475,30 @@ with the caveat that when used on the command line, they must come after the
         During initialization, touch (create if do not exist) all objects (files).
         Touching all objects affects ceph caches and likely impacts test results.
         Enabled by default.
+
+.. option:: pool=str :
+
+   [rbd,rados]
+
+	Specifies the name of the Ceph pool containing RBD or RADOS data.
+
+   [dfs]
+
+	Specify the label or UUID of the DAOS pool to connect to.
+
+.. option:: cont=str : [dfs]
+
+	Specify the label or UUID of the DAOS container to open.
+
+.. option:: chunk_size=int : [dfs]
+
+	Specificy a different chunk size (in bytes) for the dfs file.
+	Use DAOS container's chunk size by default.
+
+.. option:: object_class=str : [dfs]
+
+	Specificy a different object class for the dfs file.
+	Use DAOS container's object class by default.
 
 .. option:: skip_bad=bool : [mtd]
 
@@ -2663,24 +2687,6 @@ with the caveat that when used on the command line, they must come after the
 		to transfer data between RAM and the GPUs. Data is copied from
 		GPU to RAM before a write and copied from RAM to GPU after a
 		read. :option:`verify` does not affect use of cudaMemcpy.
-
-.. option:: pool=str : [dfs]
-
-	Specify the label or UUID of the DAOS pool to connect to.
-
-.. option:: cont=str : [dfs]
-
-	Specify the label or UUID of the DAOS container to open.
-
-.. option:: chunk_size=int : [dfs]
-
-	Specificy a different chunk size (in bytes) for the dfs file.
-	Use DAOS container's chunk size by default.
-
-.. option:: object_class=str : [dfs]
-
-	Specificy a different object class for the dfs file.
-	Use DAOS container's object class by default.
 
 .. option:: nfs_url=str : [nfs]
 
