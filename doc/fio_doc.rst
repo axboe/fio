@@ -5,7 +5,7 @@ fio - Flexible I/O tester rev. |version|
 .. include:: ../README.rst
 
 
-.. include:: ../HOWTO
+.. include:: ../HOWTO.rst
 
 
 
