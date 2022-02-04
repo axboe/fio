@@ -2041,6 +2041,9 @@ void free_clat_prio_stats(struct thread_stat *ts)
 {
 	enum fio_ddir ddir;
 
+	if (!ts)
+		return;
+
 	for (ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++) {
 		sfree(ts->clat_prio[ddir]);
 		ts->clat_prio[ddir] = NULL;
