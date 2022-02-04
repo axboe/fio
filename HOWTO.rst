@@ -2247,14 +2247,6 @@ with the caveat that when used on the command line, they must come after the
     map and release for each IO. This is more efficient, and reduces the
     IO latency as well.
 
-.. option:: hipri : [io_uring]
-
-    If this option is set, fio will attempt to use polled IO completions.
-    Normal IO completions generate interrupts to signal the completion of
-    IO, polled completions do not. Hence they are require active reaping
-    by the application. The benefits are more efficient IO for high IOPS
-    scenarios, and lower latencies for low queue depth IO.
-
 .. option:: registerfiles : [io_uring]
 
 	With this option, fio registers the set of files being used with the
@@ -2275,6 +2267,35 @@ with the caveat that when used on the command line, they must come after the
 	When :option:`sqthread_poll` is set, this option provides a way to
 	define which CPU should be used for the polling thread.
 
+.. option:: hipri
+
+   [io_uring]
+
+        If this option is set, fio will attempt to use polled IO completions.
+        Normal IO completions generate interrupts to signal the completion of
+        IO, polled completions do not. Hence they are require active reaping
+        by the application. The benefits are more efficient IO for high IOPS
+        scenarios, and lower latencies for low queue depth IO.
+
+
+   [pvsync2]
+
+	Set RWF_HIPRI on I/O, indicating to the kernel that it's of higher priority
+	than normal.
+
+
+   [sg]
+
+	If this option is set, fio will attempt to use polled IO completions.
+	This will have a similar effect as (io_uring)hipri. Only SCSI READ and
+	WRITE commands will have the SGV4_FLAG_HIPRI set (not UNMAP (trim) nor
+	VERIFY). Older versions of the Linux sg driver that do not support
+	hipri will simply ignore this flag and do normal IO. The Linux SCSI
+	Low Level Driver (LLD) that "owns" the device also needs to support
+	hipri (also known as iopoll and mq_poll). The MegaRAID driver is an
+	example of a SCSI LLD. Default: clear (0) which does normal
+	(interrupted based) IO.
+
 .. option:: userspace_reap : [libaio]
 
 	Normally, with the libaio engine in use, fio will use the
@@ -2282,11 +2303,6 @@ with the caveat that when used on the command line, they must come after the
 	this flag turned on, the AIO ring will be read directly from user-space to
 	reap events. The reaping mode is only enabled when polling for a minimum of
 	0 events (e.g. when :option:`iodepth_batch_complete` `=0`).
-
-.. option:: hipri : [pvsync2]
-
-	Set RWF_HIPRI on I/O, indicating to the kernel that it's of higher priority
-	than normal.
 
 .. option:: hipri_percentage : [pvsync2]
 
@@ -2596,18 +2612,6 @@ with the caveat that when used on the command line, they must come after the
 	Set the stream identifier for WRITE STREAM commands. If this is set to 0 (which is not
 	a valid stream identifier) fio will open a stream and then close it when done. Default
 	is 0.
-
-.. option:: hipri : [sg]
-
-	If this option is set, fio will attempt to use polled IO completions.
-	This will have a similar effect as (io_uring)hipri. Only SCSI READ and
-	WRITE commands will have the SGV4_FLAG_HIPRI set (not UNMAP (trim) nor
-	VERIFY). Older versions of the Linux sg driver that do not support
-	hipri will simply ignore this flag and do normal IO. The Linux SCSI
-	Low Level Driver (LLD) that "owns" the device also needs to support
-	hipri (also known as iopoll and mq_poll). The MegaRAID driver is an
-	example of a SCSI LLD. Default: clear (0) which does normal
-	(interrupted based) IO.
 
 .. option:: http_host=str : [http]
 
