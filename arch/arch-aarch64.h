@@ -27,4 +27,21 @@ static inline int arch_ffz(unsigned long bitmask)
 
 #define ARCH_HAVE_FFZ
 
+static inline unsigned long long get_cpu_clock(void)
+{
+	unsigned long val;
+
+	asm volatile("mrs %0, cntvct_el0" : "=r" (val));
+	return val;
+}
+#define ARCH_HAVE_CPU_CLOCK
+
+#define ARCH_HAVE_INIT
+extern bool tsc_reliable;
+static inline int arch_init(char *envp[])
+{
+	tsc_reliable = true;
+	return 0;
+}
+
 #endif
