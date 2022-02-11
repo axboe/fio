@@ -1091,8 +1091,10 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 				td->rate_io_issue_bytes[__ddir] += blen;
 			}
 
-			if (should_check_rate(td))
+			if (should_check_rate(td)) {
 				td->rate_next_io_time[__ddir] = usec_for_io(td, __ddir);
+				fio_gettime(&comp_time, NULL);
+			}
 
 		} else {
 			ret = io_u_submit(td, io_u);
@@ -1172,8 +1174,11 @@ reap:
 								f->file_name);
 			}
 		}
-	} else
+	} else {
+		if (td->o.io_submit_mode == IO_MODE_OFFLOAD)
+			workqueue_flush(&td->io_wq);
 		cleanup_pending_aio(td);
+	}
 
 	/*
 	 * stop job if we failed doing any IO
