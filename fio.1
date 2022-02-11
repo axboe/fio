@@ -2091,6 +2091,19 @@ option when using cpuio I/O engine.
 .BI (cpuio)cpuchunks \fR=\fPint
 Split the load into cycles of the given time. In microseconds.
 .TP
+.BI (cpuio)cpumode \fR=\fPstr
+Specify how to stress the CPU. It can take these two values:
+.RS
+.RS
+.TP
+.B noop
+This is the default and directs the CPU to execute noop instructions.
+.TP
+.B qsort
+Replace the default noop instructions with a qsort algorithm to consume more energy.
+.RE
+.RE
+.TP
 .BI (cpuio)exit_on_io_done \fR=\fPbool
 Detect when I/O threads are done, then exit.
 .TP

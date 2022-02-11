@@ -2137,8 +2137,10 @@ I/O engine
 			Asynchronous read and write using DDN's Infinite Memory Engine (IME).
 			This engine will try to stack as much IOs as possible by creating
 			requests for IME. FIO will then decide when to commit these requests.
+
 		**libiscsi**
 			Read and write iscsi lun with libiscsi.
+
 		**nbd**
 			Read and write a Network Block Device (NBD).
 
@@ -2149,6 +2151,7 @@ I/O engine
 			unless :option:`verify` is set or :option:`cuda_io` is `posix`.
 			:option:`iomem` must not be `cudamalloc`. This ioengine defines
 			engine specific options.
+
 		**dfs**
 			I/O engine supporting asynchronous read and write operations to the
 			DAOS File System (DFS) via libdfs.
@@ -2175,8 +2178,8 @@ with the caveat that when used on the command line, they must come after the
     Set the percentage of I/O that will be issued with the highest priority.
     Default: 0. A single value applies to reads and writes. Comma-separated
     values may be specified for reads and writes. For this option to be
-    effective, NCQ priority must be supported and enabled, and `direct=1'
-    option must be used. fio must also be run as the root user. Unlike
+    effective, NCQ priority must be supported and enabled, and the :option:`direct`
+    option must be set. fio must also be run as the root user. Unlike
     slat/clat/lat stats, which can be tracked and reported independently, per
     priority stats only track and report a single type of latency. By default,
     completion latency (clat) will be reported, if :option:`lat_percentiles` is
@@ -2207,6 +2210,7 @@ with the caveat that when used on the command line, they must come after the
 	meaning of priority may differ. See also the :option:`prio` option.
 
 .. option:: cmdprio_bssplit=str[,str] : [io_uring] [libaio]
+
 	To get a finer control over I/O priority, this option allows
 	specifying the percentage of IOs that must have a priority set
 	depending on the block size of the IO. This option is useful only
@@ -2243,14 +2247,6 @@ with the caveat that when used on the command line, they must come after the
     map and release for each IO. This is more efficient, and reduces the
     IO latency as well.
 
-.. option:: hipri : [io_uring]
-
-    If this option is set, fio will attempt to use polled IO completions.
-    Normal IO completions generate interrupts to signal the completion of
-    IO, polled completions do not. Hence they are require active reaping
-    by the application. The benefits are more efficient IO for high IOPS
-    scenarios, and lower latencies for low queue depth IO.
-
 .. option:: registerfiles : [io_uring]
 
 	With this option, fio registers the set of files being used with the
@@ -2271,6 +2267,33 @@ with the caveat that when used on the command line, they must come after the
 	When :option:`sqthread_poll` is set, this option provides a way to
 	define which CPU should be used for the polling thread.
 
+.. option:: hipri
+
+   [io_uring]
+
+        If this option is set, fio will attempt to use polled IO completions.
+        Normal IO completions generate interrupts to signal the completion of
+        IO, polled completions do not. Hence they are require active reaping
+        by the application. The benefits are more efficient IO for high IOPS
+        scenarios, and lower latencies for low queue depth IO.
+
+   [pvsync2]
+
+	Set RWF_HIPRI on I/O, indicating to the kernel that it's of higher priority
+	than normal.
+
+   [sg]
+
+	If this option is set, fio will attempt to use polled IO completions.
+	This will have a similar effect as (io_uring)hipri. Only SCSI READ and
+	WRITE commands will have the SGV4_FLAG_HIPRI set (not UNMAP (trim) nor
+	VERIFY). Older versions of the Linux sg driver that do not support
+	hipri will simply ignore this flag and do normal IO. The Linux SCSI
+	Low Level Driver (LLD) that "owns" the device also needs to support
+	hipri (also known as iopoll and mq_poll). The MegaRAID driver is an
+	example of a SCSI LLD. Default: clear (0) which does normal
+	(interrupted based) IO.
+
 .. option:: userspace_reap : [libaio]
 
 	Normally, with the libaio engine in use, fio will use the
@@ -2278,11 +2301,6 @@ with the caveat that when used on the command line, they must come after the
 	this flag turned on, the AIO ring will be read directly from user-space to
 	reap events. The reaping mode is only enabled when polling for a minimum of
 	0 events (e.g. when :option:`iodepth_batch_complete` `=0`).
-
-.. option:: hipri : [pvsync2]
-
-	Set RWF_HIPRI on I/O, indicating to the kernel that it's of higher priority
-	than normal.
 
 .. option:: hipri_percentage : [pvsync2]
 
@@ -2317,6 +2335,16 @@ with the caveat that when used on the command line, they must come after the
 .. option:: cpuchunks=int : [cpuio]
 
 	Split the load into cycles of the given time. In microseconds.
+
+.. option:: cpumode=str : [cpuio]
+
+	Specify how to stress the CPU. It can take these two values:
+
+	**noop**
+		This is the default where the CPU executes noop instructions.
+	**qsort**
+		Replace the default noop instructions loop with a qsort algorithm to
+		consume more energy.
 
 .. option:: exit_on_io_done=bool : [cpuio]
 
@@ -2444,10 +2472,6 @@ with the caveat that when used on the command line, they must come after the
 
 	Specifies the name of the RBD.
 
-.. option:: pool=str : [rbd,rados]
-
-	Specifies the name of the Ceph pool containing RBD or RADOS data.
-
 .. option:: clientname=str : [rbd,rados]
 
 	Specifies the username (without the 'client.' prefix) used to access the
@@ -2466,6 +2490,36 @@ with the caveat that when used on the command line, they must come after the
         Touching all objects affects ceph caches and likely impacts test results.
         Enabled by default.
 
+.. option:: pool=str :
+
+   [rbd,rados]
+
+	Specifies the name of the Ceph pool containing RBD or RADOS data.
+
+   [dfs]
+
+	Specify the label or UUID of the DAOS pool to connect to.
+
+.. option:: cont=str : [dfs]
+
+	Specify the label or UUID of the DAOS container to open.
+
+.. option:: chunk_size=int
+
+   [dfs]
+
+	Specificy a different chunk size (in bytes) for the dfs file.
+	Use DAOS container's chunk size by default.
+
+   [libhdfs]
+
+	The size of the chunk to use for each file.
+
+.. option:: object_class=str : [dfs]
+
+	Specificy a different object class for the dfs file.
+	Use DAOS container's object class by default.
+
 .. option:: skip_bad=bool : [mtd]
 
 	Skip operations against known bad blocks.
@@ -2473,10 +2527,6 @@ with the caveat that when used on the command line, they must come after the
 .. option:: hdfsdirectory : [libhdfs]
 
 	libhdfs will create chunk in this HDFS directory.
-
-.. option:: chunk_size : [libhdfs]
-
-	The size of the chunk to use for each file.
 
 .. option:: verb=str : [rdma]
 
@@ -2563,18 +2613,6 @@ with the caveat that when used on the command line, they must come after the
 	a valid stream identifier) fio will open a stream and then close it when done. Default
 	is 0.
 
-.. option:: hipri : [sg]
-
-	If this option is set, fio will attempt to use polled IO completions.
-	This will have a similar effect as (io_uring)hipri. Only SCSI READ and
-	WRITE commands will have the SGV4_FLAG_HIPRI set (not UNMAP (trim) nor
-	VERIFY). Older versions of the Linux sg driver that do not support
-	hipri will simply ignore this flag and do normal IO. The Linux SCSI
-	Low Level Driver (LLD) that "owns" the device also needs to support
-	hipri (also known as iopoll and mq_poll). The MegaRAID driver is an
-	example of a SCSI LLD. Default: clear (0) which does normal
-	(interrupted based) IO.
-
 .. option:: http_host=str : [http]
 
 	Hostname to connect to. For S3, this could be the bucket hostname.
@@ -2653,24 +2691,6 @@ with the caveat that when used on the command line, they must come after the
 		to transfer data between RAM and the GPUs. Data is copied from
 		GPU to RAM before a write and copied from RAM to GPU after a
 		read. :option:`verify` does not affect use of cudaMemcpy.
-
-.. option:: pool=str : [dfs]
-
-	Specify the label or UUID of the DAOS pool to connect to.
-
-.. option:: cont=str : [dfs]
-
-	Specify the label or UUID of the DAOS container to open.
-
-.. option:: chunk_size=int : [dfs]
-
-	Specificy a different chunk size (in bytes) for the dfs file.
-	Use DAOS container's chunk size by default.
-
-.. option:: object_class=str : [dfs]
-
-	Specificy a different object class for the dfs file.
-	Use DAOS container's object class by default.
 
 .. option:: nfs_url=str : [nfs]
 

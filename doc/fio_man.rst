@@ -9,4 +9,4 @@ Fio Manpage
 .. include:: ../README.rst
 
 
-.. include:: ../HOWTO
+.. include:: ../HOWTO.rst
