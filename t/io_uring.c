@@ -714,12 +714,15 @@ static int reap_events_aio(struct submitter *s, struct io_event *events, int evs
 static void *submitter_aio_fn(void *data)
 {
 	struct submitter *s = data;
-	int i, ret, prepped, nr_batch;
+	int i, ret, prepped;
 	struct iocb **iocbsptr;
 	struct iocb *iocbs;
 	struct io_event *events;
-
-	nr_batch = submitter_init(s);
+#ifdef ARCH_HAVE_CPU_CLOCK
+	int nr_batch = submitter_init(s);
+#else
+	submitter_init(s);
+#endif
 
 	iocbsptr = calloc(depth, sizeof(struct iocb *));
 	iocbs = calloc(depth, sizeof(struct iocb));
