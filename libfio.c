@@ -87,8 +87,8 @@ static void reset_io_counters(struct thread_data *td, int all)
 			td->this_io_bytes[ddir] = 0;
 			td->stat_io_blocks[ddir] = 0;
 			td->this_io_blocks[ddir] = 0;
-			td->rate_bytes[ddir] = 0;
-			td->rate_blocks[ddir] = 0;
+			td->last_rate_check_bytes[ddir] = 0;
+			td->last_rate_check_blocks[ddir] = 0;
 			td->bytes_done[ddir] = 0;
 			td->rate_io_issue_bytes[ddir] = 0;
 			td->rate_next_io_time[ddir] = 0;

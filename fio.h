@@ -335,10 +335,10 @@ struct thread_data {
 	 */
 	uint64_t rate_bps[DDIR_RWDIR_CNT];
 	uint64_t rate_next_io_time[DDIR_RWDIR_CNT];
-	unsigned long long rate_bytes[DDIR_RWDIR_CNT];
-	unsigned long rate_blocks[DDIR_RWDIR_CNT];
+	unsigned long long last_rate_check_bytes[DDIR_RWDIR_CNT];
+	unsigned long last_rate_check_blocks[DDIR_RWDIR_CNT];
 	unsigned long long rate_io_issue_bytes[DDIR_RWDIR_CNT];
-	struct timespec lastrate[DDIR_RWDIR_CNT];
+	struct timespec last_rate_check_time[DDIR_RWDIR_CNT];
 	int64_t last_usec[DDIR_RWDIR_CNT];
 	struct frand_state poisson_state[DDIR_RWDIR_CNT];
 

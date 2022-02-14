@@ -136,13 +136,10 @@ static void set_sig_handlers(void)
 static bool __check_min_rate(struct thread_data *td, struct timespec *now,
 			     enum fio_ddir ddir)
 {
-	unsigned long long bytes = 0;
-	unsigned long iops = 0;
-	unsigned long spent;
-	unsigned long long rate;
-	unsigned long long ratemin = 0;
-	unsigned int rate_iops = 0;
-	unsigned int rate_iops_min = 0;
+	unsigned long long current_rate_check_bytes = td->this_io_bytes[ddir];
+	unsigned long current_rate_check_blocks = td->this_io_blocks[ddir];
+	unsigned long long option_rate_bytes_min = td->o.ratemin[ddir];
+	unsigned int option_rate_iops_min = td->o.rate_iops_min[ddir];
 
 	assert(ddir_rw(ddir));
 
@@ -155,68 +152,44 @@ static bool __check_min_rate(struct thread_data *td, struct timespec *now,
 	if (mtime_since(&td->start, now) < 2000)
 		return false;
 
-	iops += td->this_io_blocks[ddir];
-	bytes += td->this_io_bytes[ddir];
-	ratemin += td->o.ratemin[ddir];
-	rate_iops += td->o.rate_iops[ddir];
-	rate_iops_min += td->o.rate_iops_min[ddir];
-
 	/*
-	 * if rate blocks is set, sample is running
+	 * if last_rate_check_blocks or last_rate_check_bytes is set,
+	 * we can compute a rate per ratecycle
 	 */
-	if (td->rate_bytes[ddir] || td->rate_blocks[ddir]) {
-		spent = mtime_since(&td->lastrate[ddir], now);
-		if (spent < td->o.ratecycle)
+	if (td->last_rate_check_bytes[ddir] || td->last_rate_check_blocks[ddir]) {
+		unsigned long spent = mtime_since(&td->last_rate_check_time[ddir], now);
+		if (spent < td->o.ratecycle || spent==0)
 			return false;
 
-		if (td->o.rate[ddir] || td->o.ratemin[ddir]) {
+		if (td->o.ratemin[ddir]) {
 			/*
 			 * check bandwidth specified rate
 			 */
-			if (bytes < td->rate_bytes[ddir]) {
-				log_err("%s: rate_min=%lluB/s not met, only transferred %lluB\n",
-					td->o.name, ratemin, bytes);
+			unsigned long long current_rate_bytes =
+				((current_rate_check_bytes - td->last_rate_check_bytes[ddir]) * 1000) / spent;
+			if (current_rate_bytes < option_rate_bytes_min) {
+				log_err("%s: rate_min=%lluB/s not met, got %lluB/s\n",
+					td->o.name, option_rate_bytes_min, current_rate_bytes);
 				return true;
-			} else {
-				if (spent)
-					rate = ((bytes - td->rate_bytes[ddir]) * 1000) / spent;
-				else
-					rate = 0;
-
-				if (rate < ratemin ||
-				    bytes < td->rate_bytes[ddir]) {
-					log_err("%s: rate_min=%lluB/s not met, got %lluB/s\n",
-						td->o.name, ratemin, rate);
-					return true;
-				}
 			}
 		} else {
 			/*
 			 * checks iops specified rate
 			 */
-			if (iops < rate_iops) {
-				log_err("%s: rate_iops_min=%u not met, only performed %lu IOs\n",
-						td->o.name, rate_iops, iops);
-				return true;
-			} else {
-				if (spent)
-					rate = ((iops - td->rate_blocks[ddir]) * 1000) / spent;
-				else
-					rate = 0;
+			unsigned long long current_rate_iops =
+				((current_rate_check_blocks - td->last_rate_check_blocks[ddir]) * 1000) / spent;
 
-				if (rate < rate_iops_min ||
-				    iops < td->rate_blocks[ddir]) {
-					log_err("%s: rate_iops_min=%u not met, got %llu IOPS\n",
-						td->o.name, rate_iops_min, rate);
-					return true;
-				}
+			if (current_rate_iops < option_rate_iops_min) {
+				log_err("%s: rate_iops_min=%u not met, got %llu IOPS\n",
+					td->o.name, option_rate_iops_min, current_rate_iops);
+				return true;
 			}
 		}
 	}
 
-	td->rate_bytes[ddir] = bytes;
-	td->rate_blocks[ddir] = iops;
-	memcpy(&td->lastrate[ddir], now, sizeof(*now));
+	td->last_rate_check_bytes[ddir] = current_rate_check_bytes;
+	td->last_rate_check_blocks[ddir] = current_rate_check_blocks;
+	memcpy(&td->last_rate_check_time[ddir], now, sizeof(*now));
 	return false;
 }
 
@@ -1845,11 +1818,11 @@ static void *thread_main(void *data)
 
 	if (o->ratemin[DDIR_READ] || o->ratemin[DDIR_WRITE] ||
 			o->ratemin[DDIR_TRIM]) {
-	        memcpy(&td->lastrate[DDIR_READ], &td->bw_sample_time,
+	        memcpy(&td->last_rate_check_time[DDIR_READ], &td->bw_sample_time,
 					sizeof(td->bw_sample_time));
-	        memcpy(&td->lastrate[DDIR_WRITE], &td->bw_sample_time,
+	        memcpy(&td->last_rate_check_time[DDIR_WRITE], &td->bw_sample_time,
 					sizeof(td->bw_sample_time));
-	        memcpy(&td->lastrate[DDIR_TRIM], &td->bw_sample_time,
+	        memcpy(&td->last_rate_check_time[DDIR_TRIM], &td->bw_sample_time,
 					sizeof(td->bw_sample_time));
 	}
 
