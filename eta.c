@@ -420,6 +420,7 @@ bool calc_thread_status(struct jobs_eta *je, int force)
 		if (is_power_of_2(td->o.kb_base))
 			je->is_pow2 = 1;
 		je->unit_base = td->o.unit_base;
+		je->sig_figs = td->o.sig_figs;
 		if (td->o.bw_avg_time < bw_avg_time)
 			bw_avg_time = td->o.bw_avg_time;
 		if (td->runstate == TD_RUNNING || td->runstate == TD_VERIFYING
@@ -600,9 +601,9 @@ void display_thread_status(struct jobs_eta *je)
 		char *tr, *mr;
 
 		mr = num2str(je->m_rate[0] + je->m_rate[1] + je->m_rate[2],
-				je->sig_figs, 0, je->is_pow2, N2S_BYTEPERSEC);
+				je->sig_figs, 1, je->is_pow2, N2S_BYTEPERSEC);
 		tr = num2str(je->t_rate[0] + je->t_rate[1] + je->t_rate[2],
-				je->sig_figs, 0, je->is_pow2, N2S_BYTEPERSEC);
+				je->sig_figs, 1, je->is_pow2, N2S_BYTEPERSEC);
 
 		p += sprintf(p, ", %s-%s", mr, tr);
 		free(tr);
