@@ -44,6 +44,7 @@ after_build:
   - file.exe fio.exe
   - make.exe test
   - 'cd os\windows && dobuild.cmd %ARCHITECTURE% && cd ..'
+  - ls.exe ./os/windows/*.msi
   - ps: Get-ChildItem .\os\windows\*.msi | % { Push-AppveyorArtifact $_.FullName -FileName $_.Name -DeploymentName fio.msi }
 
 test_script:
