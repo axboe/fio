@@ -1576,7 +1576,14 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 	td->ts.sig_figs = o->sig_figs;
 
 	init_thread_stat_min_vals(&td->ts);
-	td->ddir_seq_nr = o->ddir_seq_nr;
+
+	/*
+	 * td->>ddir_seq_nr needs to be initialized to 1, NOT o->ddir_seq_nr,
+	 * so that get_next_offset gets a new random offset the first time it
+	 * is called, instead of keeping an initial offset of 0 for the first
+	 * nr-1 calls
+	 */
+	td->ddir_seq_nr = 1;
 
 	if ((o->stonewall || o->new_group) && prev_group_jobs) {
 		prev_group_jobs = 0;
