@@ -2,6 +2,8 @@
 #define FIO_DISKUTIL_H
 #define FIO_DU_NAME_SZ		64
 
+#include <limits.h>
+
 #include "helper_thread.h"
 #include "fio_sem.h"
 
