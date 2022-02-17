@@ -646,6 +646,25 @@ fi
 print_config "zlib" "$zlib"
 
 ##########################################
+# fcntl(F_FULLFSYNC) support
+if test "$fcntl_sync" != "yes" ; then
+  fcntl_sync="no"
+fi
+cat > $TMPC << EOF
+#include <unistd.h>
+#include <fcntl.h>
+
+int main(int argc, char **argv)
+{
+  return fcntl(0, F_FULLSYNC);
+}
+EOF
+if compile_prog "" "" "fcntl(F_FULLSYNC)" ; then
+    fcntl_sync="yes"
+fi
+print_config "fcntl(F_FULLSYNC)" "$fcntl_sync"
+
+##########################################
 # linux-aio probe
 if test "$libaio" != "yes" ; then
   libaio="no"
@@ -3173,6 +3192,9 @@ if test "$dynamic_engines" = "yes" ; then
 fi
 if test "$pdb" = yes; then
   output_sym "CONFIG_PDB"
+fi
+if test "$fcntl_sync" = "yes" ; then
+  output_sym "CONFIG_FCNTL_SYNC"
 fi
 
 print_config "Lib-based ioengines dynamic" "$dynamic_engines"
