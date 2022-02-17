@@ -1156,6 +1156,7 @@ int main(int argc, char *argv[])
 	struct submitter *s;
 	unsigned long done, calls, reap;
 	int err, i, j, flags, fd, opt, threads_per_f, threads_rem = 0, nfiles;
+	long page_size;
 	struct file f;
 	char *fdepths;
 	void *ret;
@@ -1319,12 +1320,16 @@ int main(int argc, char *argv[])
 
 	arm_sig_int();
 
+	page_size = sysconf(_SC_PAGESIZE);
+	if (page_size < 0)
+		page_size = 4096;
+
 	for (j = 0; j < nthreads; j++) {
 		s = get_submitter(j);
 		for (i = 0; i < roundup_pow2(depth); i++) {
 			void *buf;
 
-			if (posix_memalign(&buf, bs, bs)) {
+			if (posix_memalign(&buf, page_size, bs)) {
 				printf("failed alloc\n");
 				return 1;
 			}
