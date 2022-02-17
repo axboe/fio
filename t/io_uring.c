@@ -364,7 +364,7 @@ static int io_uring_register_buffers(struct submitter *s)
 		return 0;
 
 	return syscall(__NR_io_uring_register, s->ring_fd,
-			IORING_REGISTER_BUFFERS, s->iovecs, depth);
+			IORING_REGISTER_BUFFERS, s->iovecs, roundup_pow2(depth));
 }
 
 static int io_uring_register_files(struct submitter *s)
@@ -962,7 +962,7 @@ static int setup_aio(struct submitter *s)
 		fixedbufs = register_files = 0;
 	}
 
-	return io_queue_init(depth, &s->aio_ctx);
+	return io_queue_init(roundup_pow2(depth), &s->aio_ctx);
 #else
 	fprintf(stderr, "Legacy AIO not available on this system/build\n");
 	errno = EINVAL;
@@ -1249,7 +1249,7 @@ int main(int argc, char *argv[])
 		dma_map = 0;
 
 	submitter = calloc(nthreads, sizeof(*submitter) +
-				depth * sizeof(struct iovec));
+				roundup_pow2(depth) * sizeof(struct iovec));
 	for (j = 0; j < nthreads; j++) {
 		s = get_submitter(j);
 		s->index = j;
@@ -1321,7 +1321,7 @@ int main(int argc, char *argv[])
 
 	for (j = 0; j < nthreads; j++) {
 		s = get_submitter(j);
-		for (i = 0; i < depth; i++) {
+		for (i = 0; i < roundup_pow2(depth); i++) {
 			void *buf;
 
 			if (posix_memalign(&buf, bs, bs)) {
