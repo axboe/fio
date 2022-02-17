@@ -656,13 +656,13 @@ cat > $TMPC << EOF
 
 int main(int argc, char **argv)
 {
-  return fcntl(0, F_FULLSYNC);
+  return fcntl(0, F_FULLFSYNC);
 }
 EOF
-if compile_prog "" "" "fcntl(F_FULLSYNC)" ; then
+if compile_prog "" "" "fcntl(F_FULLFSYNC)" ; then
     fcntl_sync="yes"
 fi
-print_config "fcntl(F_FULLSYNC)" "$fcntl_sync"
+print_config "fcntl(F_FULLFSYNC)" "$fcntl_sync"
 
 ##########################################
 # linux-aio probe

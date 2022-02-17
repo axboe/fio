@@ -2298,7 +2298,7 @@ int do_io_u_sync(const struct thread_data *td, struct io_u *io_u)
 
 	if (io_u->ddir == DDIR_SYNC) {
 #ifdef CONFIG_FCNTL_SYNC
-		ret = fcntl(io_u->file->fd, F_FULLSYNC);
+		ret = fcntl(io_u->file->fd, F_FULLFSYNC);
 #else
 		ret = fsync(io_u->file->fd);
 #endif
