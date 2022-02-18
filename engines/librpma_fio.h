@@ -94,12 +94,13 @@ typedef int (*librpma_fio_flush_t)(struct thread_data *td,
  * - ( 0) - skip
  * - (-1) - on error
  */
-typedef int (*librpma_fio_get_io_u_index_t)(struct rpma_completion *cmpl,
+typedef int (*librpma_fio_get_io_u_index_t)(struct ibv_wc *wc,
 		unsigned int *io_u_index);
 
 struct librpma_fio_client_data {
 	struct rpma_peer *peer;
 	struct rpma_conn *conn;
+	struct rpma_cq *cq;
 
 	/* aligned td->orig_buffer */
 	char *orig_buffer_aligned;
@@ -199,29 +200,29 @@ static inline int librpma_fio_client_io_complete_all_sends(
 		struct thread_data *td)
 {
 	struct librpma_fio_client_data *ccd = td->io_ops_data;
-	struct rpma_completion cmpl;
+	struct ibv_wc wc;
 	int ret;
 
 	while (ccd->op_send_posted != ccd->op_send_completed) {
 		/* get a completion */
-		ret = rpma_conn_completion_get(ccd->conn, &cmpl);
+		ret = rpma_cq_get_wc(ccd->cq, 1, &wc, NULL);
 		if (ret == RPMA_E_NO_COMPLETION) {
 			/* lack of completion is not an error */
 			continue;
 		} else if (ret != 0) {
 			/* an error occurred */
-			librpma_td_verror(td, ret, "rpma_conn_completion_get");
+			librpma_td_verror(td, ret, "rpma_cq_get_wc");
 			break;
 		}
 
-		if (cmpl.op_status != IBV_WC_SUCCESS)
+		if (wc.status != IBV_WC_SUCCESS)
 			return -1;
 
-		if (cmpl.op == RPMA_OP_SEND)
+		if (wc.opcode == IBV_WC_SEND)
 			++ccd->op_send_completed;
 		else {
 			log_err(
-				"A completion other than RPMA_OP_SEND got during cleaning up the CQ from SENDs\n");
+				"A completion other than IBV_WC_SEND got during cleaning up the CQ from SENDs\n");
 			return -1;
 		}
 	}
@@ -251,6 +252,7 @@ struct librpma_fio_server_data {
 
 	/* resources of an incoming connection */
 	struct rpma_conn *conn;
+	struct rpma_cq *cq;
 
 	char *ws_ptr;
 	struct rpma_mr_local *ws_mr;

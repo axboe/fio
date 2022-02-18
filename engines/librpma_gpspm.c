@@ -60,8 +60,7 @@ static inline int client_io_flush(struct thread_data *td,
 		struct io_u *first_io_u, struct io_u *last_io_u,
 		unsigned long long int len);
 
-static int client_get_io_u_index(struct rpma_completion *cmpl,
-		unsigned int *io_u_index);
+static int client_get_io_u_index(struct ibv_wc *wc, unsigned int *io_u_index);
 
 static int client_init(struct thread_data *td)
 {
@@ -317,17 +316,16 @@ static inline int client_io_flush(struct thread_data *td,
 	return 0;
 }
 
-static int client_get_io_u_index(struct rpma_completion *cmpl,
-		unsigned int *io_u_index)
+static int client_get_io_u_index(struct ibv_wc *wc, unsigned int *io_u_index)
 {
 	GPSPMFlushResponse *flush_resp;
 
-	if (cmpl->op != RPMA_OP_RECV)
+	if (wc->opcode != IBV_WC_RECV)
 		return 0;
 
 	/* unpack a response from the received buffer */
 	flush_resp = gpspm_flush_response__unpack(NULL,
-			cmpl->byte_len, cmpl->op_context);
+			wc->byte_len, (void *)wc->wr_id);
 	if (flush_resp == NULL) {
 		log_err("Cannot unpack the flush response buffer\n");
 		return -1;
@@ -373,7 +371,7 @@ struct server_data {
 	uint32_t msg_sqe_available; /* # of free SQ slots */
 
 	/* in-memory queues */
-	struct rpma_completion *msgs_queued;
+	struct ibv_wc *msgs_queued;
 	uint32_t msg_queued_nr;
 };
 
@@ -562,8 +560,7 @@ err_cfg_delete:
 	return ret;
 }
 
-static int server_qe_process(struct thread_data *td,
-		struct rpma_completion *cmpl)
+static int server_qe_process(struct thread_data *td, struct ibv_wc *wc)
 {
 	struct librpma_fio_server_data *csd = td->io_ops_data;
 	struct server_data *sd = csd->server_data;
@@ -580,7 +577,7 @@ static int server_qe_process(struct thread_data *td,
 	int ret;
 
 	/* calculate SEND/RECV pair parameters */
-	msg_index = (int)(uintptr_t)cmpl->op_context;
+	msg_index = (int)(uintptr_t)wc->wr_id;
 	io_u_buff_offset = IO_U_BUFF_OFF_SERVER(msg_index);
 	send_buff_offset = io_u_buff_offset + SEND_OFFSET;
 	recv_buff_offset = io_u_buff_offset + RECV_OFFSET;
@@ -588,7 +585,7 @@ static int server_qe_process(struct thread_data *td,
 	recv_buff_ptr = sd->orig_buffer_aligned + recv_buff_offset;
 
 	/* unpack a flush request from the received buffer */
-	flush_req = gpspm_flush_request__unpack(NULL, cmpl->byte_len,
+	flush_req = gpspm_flush_request__unpack(NULL, wc->byte_len,
 			recv_buff_ptr);
 	if (flush_req == NULL) {
 		log_err("cannot unpack the flush request buffer\n");
@@ -682,28 +679,28 @@ static int server_cmpl_process(struct thread_data *td)
 {
 	struct librpma_fio_server_data *csd = td->io_ops_data;
 	struct server_data *sd = csd->server_data;
-	struct rpma_completion *cmpl = &sd->msgs_queued[sd->msg_queued_nr];
+	struct ibv_wc *wc = &sd->msgs_queued[sd->msg_queued_nr];
 	struct librpma_fio_options_values *o = td->eo;
 	int ret;
 
-	ret = rpma_conn_completion_get(csd->conn, cmpl);
+	ret = rpma_cq_get_wc(csd->cq, 1, wc, NULL);
 	if (ret == RPMA_E_NO_COMPLETION) {
 		if (o->busy_wait_polling == 0) {
-			ret = rpma_conn_completion_wait(csd->conn);
+			ret = rpma_cq_wait(csd->cq);
 			if (ret == RPMA_E_NO_COMPLETION) {
 				/* lack of completion is not an error */
 				return 0;
 			} else if (ret != 0) {
-				librpma_td_verror(td, ret, "rpma_conn_completion_wait");
+				librpma_td_verror(td, ret, "rpma_cq_wait");
 				goto err_terminate;
 			}
 
-			ret = rpma_conn_completion_get(csd->conn, cmpl);
+			ret = rpma_cq_get_wc(csd->cq, 1, wc, NULL);
 			if (ret == RPMA_E_NO_COMPLETION) {
 				/* lack of completion is not an error */
 				return 0;
 			} else if (ret != 0) {
-				librpma_td_verror(td, ret, "rpma_conn_completion_get");
+				librpma_td_verror(td, ret, "rpma_cq_get_wc");
 				goto err_terminate;
 			}
 		} else {
@@ -711,17 +708,17 @@ static int server_cmpl_process(struct thread_data *td)
 			return 0;
 		}
 	} else if (ret != 0) {
-		librpma_td_verror(td, ret, "rpma_conn_completion_get");
+		librpma_td_verror(td, ret, "rpma_cq_get_wc");
 		goto err_terminate;
 	}
 
 	/* validate the completion */
-	if (cmpl->op_status != IBV_WC_SUCCESS)
+	if (wc->status != IBV_WC_SUCCESS)
 		goto err_terminate;
 
-	if (cmpl->op == RPMA_OP_RECV)
+	if (wc->opcode == IBV_WC_RECV)
 		++sd->msg_queued_nr;
-	else if (cmpl->op == RPMA_OP_SEND)
+	else if (wc->opcode == IBV_WC_SEND)
 		++sd->msg_sqe_available;
 
 	return 0;
