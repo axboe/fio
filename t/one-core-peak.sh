@@ -33,7 +33,7 @@ check_binary() {
   # Ensure the binaries are present and executable
   for bin in "$@"; do
     if [ ! -x ${bin} ]; then
-      which ${bin} >/dev/null
+      command -v ${bin} >/dev/null
       [ $? -eq 0 ] || fatal "${bin} doesn't exists or is not executable"
     fi
   done
@@ -197,7 +197,7 @@ show_nvme() {
   fw=$(cat ${device_dir}/firmware_rev | xargs) #xargs for trimming spaces
   serial=$(cat ${device_dir}/serial | xargs) #xargs for trimming spaces
   info ${device_name} "MODEL=${model} FW=${fw} serial=${serial} PCI=${pci_addr}@${link_speed} IRQ=${irq} NUMA=${numa} CPUS=${cpus} "
-  which nvme &> /dev/null
+  command -v nvme > /dev/null
   if [ $? -eq 0 ]; then
     status=""
     NCQA=$(nvme get-feature -H -f 0x7 ${device} 2>&1 |grep NCQA |cut -d ':' -f 2 | xargs)
