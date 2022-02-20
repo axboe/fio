@@ -27,7 +27,7 @@ struct hdfsio_data {
 };
 
 struct hdfsio_options {
-	void *pad;			/* needed because offset can't be 0 for a option defined used offsetof */
+	void *pad;			/* needed because offset can't be 0 for an option defined used offsetof */
 	char *host;
 	char *directory;
 	unsigned int port;

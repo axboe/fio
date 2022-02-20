@@ -52,7 +52,7 @@ static struct fio_option options[] = {
 	},
 };
 
-/* Alocates nbd_data. */
+/* Allocates nbd_data. */
 static int nbd_setup(struct thread_data *td)
 {
 	struct nbd_data *nbd_data;

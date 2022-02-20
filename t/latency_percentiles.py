@@ -270,7 +270,7 @@ class FioLatTest():
             #
             # Check only for the presence/absence of json+
             # latency bins. Future work can check the
-            # accurracy of the bin values and counts.
+            # accuracy of the bin values and counts.
             #
             # Because the latency percentiles are based on
             # the bins, we can be confident that the bin

@@ -66,7 +66,7 @@
 
 #ifndef CONFIG_NO_SHM
 /*
- * Bionic doesn't support SysV shared memeory, so implement it using ashmem
+ * Bionic doesn't support SysV shared memory, so implement it using ashmem
  */
 #include <stdio.h>
 #include <linux/ashmem.h>

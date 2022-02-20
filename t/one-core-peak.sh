@@ -34,7 +34,7 @@ check_binary() {
   for bin in "$@"; do
     if [ ! -x ${bin} ]; then
       command -v ${bin} >/dev/null
-      [ $? -eq 0 ] || fatal "${bin} doesn't exists or is not executable"
+      [ $? -eq 0 ] || fatal "${bin} doesn't exist or is not executable"
     fi
   done
 }

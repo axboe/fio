@@ -256,7 +256,7 @@ int mtd_mark_bad(const struct mtd_dev_info *mtd, int fd, int eb);
  * @mtd: MTD device description object
  * @fd: MTD device node file descriptor
  * @eb: eraseblock to read from
- * @offs: offset withing the eraseblock to read from
+ * @offs: offset within the eraseblock to read from
  * @buf: buffer to read data to
  * @len: how many bytes to read
  *
@@ -273,7 +273,7 @@ int mtd_read(const struct mtd_dev_info *mtd, int fd, int eb, int offs,
  * @mtd: MTD device description object
  * @fd: MTD device node file descriptor
  * @eb: eraseblock to write to
- * @offs: offset withing the eraseblock to write to
+ * @offs: offset within the eraseblock to write to
  * @data: data buffer to write
  * @len: how many data bytes to write
  * @oob: OOB buffer to write
@@ -329,7 +329,7 @@ int mtd_write_oob(libmtd_t desc, const struct mtd_dev_info *mtd, int fd,
  * @mtd: MTD device description object
  * @fd: MTD device node file descriptor
  * @eb: eraseblock to write to
- * @offs: offset withing the eraseblock to write to
+ * @offs: offset within the eraseblock to write to
  * @img_name: the file to write
  *
  * This function writes an image @img_name the MTD device defined by @mtd. @eb

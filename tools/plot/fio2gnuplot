@@ -492,8 +492,8 @@ def main(argv):
     #We need to adjust the output filename regarding the pattern required by the user
     if (pattern_set_by_user == True):
         gnuplot_output_filename=pattern
-        # As we do have some glob in the pattern, let's make this simpliest
-        # We do remove the simpliest parts of the expression to get a clear file name
+        # As we do have some glob in the pattern, let's make this simplest
+        # We do remove the simplest parts of the expression to get a clear file name
         gnuplot_output_filename=gnuplot_output_filename.replace('-*-','-')
         gnuplot_output_filename=gnuplot_output_filename.replace('*','-')
         gnuplot_output_filename=gnuplot_output_filename.replace('--','-')

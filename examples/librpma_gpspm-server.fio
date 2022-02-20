@@ -22,7 +22,7 @@ thread
 direct_write_to_pmem=0
 # set to 0 (false) to wait for completion instead of busy-wait polling completion.
 busy_wait_polling=1
-numjobs=1 # number of expected incomming connections
+numjobs=1 # number of expected incoming connections
 iodepth=2 # number of parallel GPSPM requests
 size=100MiB # size of workspace for a single connection
 filename=malloc # device dax or an existing fsdax file or "malloc" for allocation from DRAM

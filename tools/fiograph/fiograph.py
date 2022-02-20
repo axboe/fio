@@ -218,7 +218,7 @@ def fio_to_graphviz(filename, format):
     # The first job will be a new execution group
     new_execution_group = True
 
-    # Let's interate on all sections to create links between them
+    # Let's iterate on all sections to create links between them
     for section_name in fio_file.sections():
         # The current section
         section = fio_file[section_name]

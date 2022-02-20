@@ -151,7 +151,7 @@ static int _fio_rados_connect(struct thread_data *td)
 		char *client_name = NULL;
 
 		/*
-		* If we specify cluser name, the rados_create2
+		* If we specify cluster name, the rados_create2
 		* will not assume 'client.'. name is considered
 		* as a full type.id namestr
 		*/

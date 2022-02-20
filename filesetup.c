@@ -1486,7 +1486,7 @@ static bool init_rand_distribution(struct thread_data *td)
 
 /*
  * Check if the number of blocks exceeds the randomness capability of
- * the selected generator. Tausworthe is 32-bit, the others are fullly
+ * the selected generator. Tausworthe is 32-bit, the others are fully
  * 64-bit capable.
  */
 static int check_rand_gen_limits(struct thread_data *td, struct fio_file *f,

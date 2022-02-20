@@ -21,6 +21,6 @@ random_distribution=zoned:50/5:30/15:20/
 # The above applies to all of reads/writes/trims. If we wanted to do
 # something differently for writes, let's say 50% for the first 10%
 # and 50% for the remaining 90%, we could do it by adding a new section
-# after a a comma.
+# after a comma.
 
 # random_distribution=zoned:50/5:30/15:20/,50/10:50/90

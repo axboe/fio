@@ -1443,7 +1443,7 @@ I/O type
 	range of possible random values.
 	Defaults are: random for **pareto** and **zipf**, and 0.5 for **normal**.
 	If you wanted to use **zipf** with a `theta` of 1.2 centered on 1/4 of allowed value range,
-	you would use ``random_distibution=zipf:1.2:0.25``.
+	you would use ``random_distribution=zipf:1.2:0.25``.
 
 	For a **zoned** distribution, fio supports specifying percentages of I/O
 	access that should fall within what range of the file or device. For
@@ -3370,7 +3370,7 @@ Verification
 	To avoid false verification errors, do not use the norandommap option when
 	verifying data with async I/O engines and I/O depths > 1.  Or use the
 	norandommap and the lfsr random generator together to avoid writing to the
-	same offset with muliple outstanding I/Os.
+	same offset with multiple outstanding I/Os.
 
 .. option:: verify_offset=int
 

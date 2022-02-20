@@ -426,7 +426,7 @@ int librpma_fio_client_post_init(struct thread_data *td)
 
 	/*
 	 * td->orig_buffer is not aligned. The engine requires aligned io_us
-	 * so FIO alignes up the address using the formula below.
+	 * so FIO aligns up the address using the formula below.
 	 */
 	ccd->orig_buffer_aligned = PTR_ALIGN(td->orig_buffer, page_mask) +
 			td->o.mem_align;

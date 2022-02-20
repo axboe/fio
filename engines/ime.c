@@ -83,7 +83,7 @@ struct ime_data {
 	};
 	struct iovec 	*iovecs;		/* array of queued iovecs */
 	struct io_u 	**io_us;		/* array of queued io_u pointers */
-	struct io_u 	**event_io_us;	/* array of the events retieved afer get_events*/
+	struct io_u 	**event_io_us;	/* array of the events retrieved after get_events*/
 	unsigned int 	queued;			/* iovecs/io_us in the queue */
 	unsigned int 	events;			/* number of committed iovecs/io_us */
 

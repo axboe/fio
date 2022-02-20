@@ -999,7 +999,7 @@ const char *graph_find_tooltip(struct graph *g, int ix, int iy)
 				ydiff = fabs(yval - y);
 
 				/*
-				 * zero delta, or within or match critera, break
+				 * zero delta, or within or match criteria, break
 				 */
 				if (ydiff < best_delta) {
 					best_delta = ydiff;

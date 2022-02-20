@@ -68,7 +68,7 @@ struct group_run_stats {
  * than one. This method has low accuracy when the value is small. For
  * example, let the buckets be {[0,99],[100,199],...,[900,999]}, and
  * the represented value of each bucket be the mean of the range. Then
- * a value 0 has an round-off error of 49.5. To improve on this, we
+ * a value 0 has a round-off error of 49.5. To improve on this, we
  * use buckets with non-uniform ranges, while bounding the error of
  * each bucket within a ratio of the sample value. A simple example
  * would be when error_bound = 0.005, buckets are {

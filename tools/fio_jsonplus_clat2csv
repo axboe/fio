@@ -135,7 +135,7 @@ def more_bins(indices, bins):
 
     Returns:
         True if the indices do not yet point to the end of each bin in bins.
-        False if the indices point beyond their repsective bins.
+        False if the indices point beyond their respective bins.
     """
 
     for key, value in six.iteritems(indices):
@@ -160,7 +160,7 @@ def debug_print(debug, *args):
 def get_csvfile(dest, jobnum):
     """Generate CSV filename from command-line arguments and job numbers.
 
-    Paramaters:
+    Parameters:
         dest        file specification for CSV filename.
         jobnum      job number.
 
