@@ -278,8 +278,13 @@ static struct fio_option options[] = {
 static int io_uring_enter(struct ioring_data *ld, unsigned int to_submit,
 			 unsigned int min_complete, unsigned int flags)
 {
+#ifdef FIO_ARCH_HAS_SYSCALL
+	return __do_syscall6(__NR_io_uring_enter, ld->ring_fd, to_submit,
+				min_complete, flags, NULL, 0);
+#else
 	return syscall(__NR_io_uring_enter, ld->ring_fd, to_submit,
 			min_complete, flags, NULL, 0);
+#endif
 }
 
 static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)

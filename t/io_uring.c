@@ -422,8 +422,13 @@ out:
 static int io_uring_enter(struct submitter *s, unsigned int to_submit,
 			  unsigned int min_complete, unsigned int flags)
 {
+#ifdef FIO_ARCH_HAS_SYSCALL
+	return __do_syscall6(__NR_io_uring_enter, s->ring_fd, to_submit,
+				min_complete, flags, NULL, 0);
+#else
 	return syscall(__NR_io_uring_enter, s->ring_fd, to_submit, min_complete,
 			flags, NULL, 0);
+#endif
 }
 
 #ifndef CONFIG_HAVE_GETTID
