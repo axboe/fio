@@ -319,7 +319,7 @@ static int fio_cmdprio_gen_perc(struct thread_data *td, struct cmdprio *cmdprio)
 {
 	struct cmdprio_options *options = cmdprio->options;
 	struct cmdprio_prio *prio;
-	struct cmdprio_values values[CMDPRIO_RWDIR_CNT] = {0};
+	struct cmdprio_values values[CMDPRIO_RWDIR_CNT] = {};
 	struct thread_stat *ts = &td->ts;
 	enum fio_ddir ddir;
 	int ret;
@@ -368,8 +368,8 @@ static int fio_cmdprio_parse_and_gen_bssplit(struct thread_data *td,
 					     struct cmdprio *cmdprio)
 {
 	struct cmdprio_options *options = cmdprio->options;
-	struct cmdprio_parse_result parse_res[CMDPRIO_RWDIR_CNT] = {0};
-	struct cmdprio_values values[CMDPRIO_RWDIR_CNT] = {0};
+	struct cmdprio_parse_result parse_res[CMDPRIO_RWDIR_CNT] = {};
+	struct cmdprio_values values[CMDPRIO_RWDIR_CNT] = {};
 	struct thread_stat *ts = &td->ts;
 	int ret, implicit_cmdprio;
 	enum fio_ddir ddir;
