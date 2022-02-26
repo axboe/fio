@@ -248,7 +248,7 @@ static int fio_windowsaio_open_file(struct thread_data *td, struct fio_file *f)
 		log_err("fio: unknown fadvise type %d\n", td->o.fadvise_hint);
 	}
 
-	if (!td_write(td) || read_only)
+	if ((!td_write(td) && !(td->flags & TD_F_SYNCS)) || read_only)
 		access = GENERIC_READ;
 	else
 		access = (GENERIC_READ | GENERIC_WRITE);
