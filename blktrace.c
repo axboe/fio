@@ -297,6 +297,10 @@ static bool handle_trace_flush(struct thread_data *td, struct blk_io_trace *t,
 
 	ios[DDIR_SYNC]++;
 	dprint(FD_BLKTRACE, "store flush delay=%lu\n", ipo->delay);
+
+	if (!(td->flags & TD_F_SYNCS))
+		td->flags |= TD_F_SYNCS;
+
 	queue_io_piece(td, ipo);
 	return true;
 }

@@ -97,6 +97,7 @@ enum {
 	__TD_F_MMAP_KEEP,
 	__TD_F_DIRS_CREATED,
 	__TD_F_CHECK_RATE,
+	__TD_F_SYNCS,
 	__TD_F_LAST,		/* not a real bit, keep last */
 };
 
@@ -118,6 +119,7 @@ enum {
 	TD_F_MMAP_KEEP		= 1U << __TD_F_MMAP_KEEP,
 	TD_F_DIRS_CREATED	= 1U << __TD_F_DIRS_CREATED,
 	TD_F_CHECK_RATE		= 1U << __TD_F_CHECK_RATE,
+	TD_F_SYNCS		= 1U << __TD_F_SYNCS,
 };
 
 enum {
@@ -678,8 +680,8 @@ enum {
 	TD_NR,
 };
 
-#define TD_ENG_FLAG_SHIFT	17
-#define TD_ENG_FLAG_MASK	((1U << 17) - 1)
+#define TD_ENG_FLAG_SHIFT	18
+#define TD_ENG_FLAG_MASK	((1U << 18) - 1)
 
 static inline void td_set_ioengine_flags(struct thread_data *td)
 {

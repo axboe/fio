@@ -402,6 +402,7 @@ static bool read_iolog2(struct thread_data *td)
 	enum fio_ddir rw;
 	bool realloc = false;
 	int64_t items_to_fetch = 0;
+	int syncs;
 
 	if (td->o.read_iolog_chunked) {
 		items_to_fetch = iolog_items_to_fetch(td);
@@ -417,7 +418,7 @@ static bool read_iolog2(struct thread_data *td)
 	rfname = fname = malloc(256+16);
 	act = malloc(256+16);
 
-	reads = writes = waits = 0;
+	syncs = reads = writes = waits = 0;
 	while ((p = fgets(str, 4096, td->io_log_rfile)) != NULL) {
 		struct io_piece *ipo;
 		int r;
@@ -492,7 +493,9 @@ static bool read_iolog2(struct thread_data *td)
 				continue;
 			waits++;
 		} else if (rw == DDIR_INVAL) {
-		} else if (!ddir_sync(rw)) {
+		} else if (ddir_sync(rw)) {
+			syncs++;
+		} else {
 			log_err("bad ddir: %d\n", rw);
 			continue;
 		}
@@ -547,6 +550,8 @@ static bool read_iolog2(struct thread_data *td)
 			" read-only\n", td->o.name, writes);
 		writes = 0;
 	}
+	if (syncs)
+		td->flags |= TD_F_SYNCS;
 
 	if (td->o.read_iolog_chunked) {
 		if (td->io_log_current == 0) {

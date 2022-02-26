@@ -8,7 +8,7 @@
 #include "io_u.h"
 #include "zbd_types.h"
 
-#define FIO_IOOPS_VERSION	30
+#define FIO_IOOPS_VERSION	31
 
 #ifndef CONFIG_DYNAMIC_ENGINES
 #define FIO_STATIC	static
