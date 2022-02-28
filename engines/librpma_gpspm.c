@@ -685,29 +685,25 @@ static int server_cmpl_process(struct thread_data *td)
 
 	ret = rpma_cq_get_wc(csd->cq, 1, wc, NULL);
 	if (ret == RPMA_E_NO_COMPLETION) {
-		if (o->busy_wait_polling == 0) {
-			ret = rpma_cq_wait(csd->cq);
-			if (ret == RPMA_E_NO_COMPLETION) {
-				/* lack of completion is not an error */
-				return 0;
-			} else if (ret != 0) {
-				librpma_td_verror(td, ret, "rpma_cq_wait");
-				goto err_terminate;
-			}
+		if (o->busy_wait_polling)
+			return 0; /* lack of completion is not an error */
 
-			ret = rpma_cq_get_wc(csd->cq, 1, wc, NULL);
-			if (ret == RPMA_E_NO_COMPLETION) {
-				/* lack of completion is not an error */
-				return 0;
-			} else if (ret != 0) {
-				librpma_td_verror(td, ret, "rpma_cq_get_wc");
-				goto err_terminate;
-			}
-		} else {
-			/* lack of completion is not an error */
-			return 0;
+		ret = rpma_cq_wait(csd->cq);
+		if (ret == RPMA_E_NO_COMPLETION)
+			return 0; /* lack of completion is not an error */
+		if (ret) {
+			librpma_td_verror(td, ret, "rpma_cq_wait");
+			goto err_terminate;
 		}
-	} else if (ret != 0) {
+
+		ret = rpma_cq_get_wc(csd->cq, 1, wc, NULL);
+		if (ret == RPMA_E_NO_COMPLETION)
+			return 0; /* lack of completion is not an error */
+		if (ret) {
+			librpma_td_verror(td, ret, "rpma_cq_get_wc");
+			goto err_terminate;
+		}
+	} else if (ret) {
 		librpma_td_verror(td, ret, "rpma_cq_get_wc");
 		goto err_terminate;
 	}
