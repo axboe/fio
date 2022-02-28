@@ -3699,20 +3699,27 @@ Measurements and reporting
 
 	If set, fio will log Unix timestamps to the log files produced by enabling
 	write_type_log for each log type, instead of the default zero-based
-	timestamps.
+	timestamps. alternate_epoch will also be set as a Unix timestamp.
 
 .. option:: log_alternate_epoch=bool
 
-	If set, fio will log timestamps based on the epoch used by the clock specified
-	in the log_alternate_epoch_clock_id option, to the log files produced by
-	enabling write_type_log for each log type, instead of the default zero-based
-	timestamps.
+	If set, fio will set alternate_epoch based on the clock specified
+	in :option:`alternate_epoch_clock_id`. Further, fio will add alternate_epoch
+	to the timestamps in the log files produced by enabling write_type_log for
+	each log type. Fio will also report the alternate_epoch in its json output.
 
-.. option:: log_alternate_epoch_clock_id=int
+.. option:: record_alternate_epoch=bool
+
+	If set, fio will set alternate_epoch based on the clock specified
+	in :option:`alternate_epoch_clock_id`, but timestamps in log files produced
+	by enabling write_type_log for each log type will not be affected. Fio will
+	report the alternate_epoch in its json output.
+
+.. option:: alternate_epoch_clock_id=int
 
 	Specifies the clock_id to be used by clock_gettime to obtain the alternate epoch
-	if either log_unix_epoch or log_alternate_epoch are true. Otherwise has no
-	effect. Default value is 0, or CLOCK_REALTIME.
+	if log_unix_epoch, log_alternate_epoch, or record_alternate_epoch are true.
+	Otherwise has no effect. Default value is 0, or CLOCK_REALTIME.
 
 .. option:: block_error_percentiles=bool
 

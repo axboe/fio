@@ -173,7 +173,8 @@ struct thread_options {
 	unsigned int log_gz_store;
 	unsigned int log_unix_epoch;
 	unsigned int log_alternate_epoch;
-	unsigned int log_alternate_epoch_clock_id;
+	unsigned int record_alternate_epoch;
+	unsigned int alternate_epoch_clock_id;
 	unsigned int norandommap;
 	unsigned int softrandommap;
 	unsigned int bs_unaligned;
@@ -491,7 +492,8 @@ struct thread_options_pack {
 	uint32_t log_gz_store;
 	uint32_t log_unix_epoch;
 	uint32_t log_alternate_epoch;
-	uint32_t log_alternate_epoch_clock_id;
+	uint32_t record_alternate_epoch;
+	uint32_t alternate_epoch_clock_id;
 	uint32_t norandommap;
 	uint32_t softrandommap;
 	uint32_t bs_unaligned;
@@ -505,6 +507,7 @@ struct thread_options_pack {
 
 	struct zone_split zone_split[DDIR_RWDIR_CNT][ZONESPLIT_MAX];
 	uint32_t zone_split_nr[DDIR_RWDIR_CNT];
+	uint32_t pad5;
 
 	fio_fp64_t zipf_theta;
 	fio_fp64_t pareto_h;

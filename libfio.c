@@ -142,7 +142,11 @@ void reset_all_stats(struct thread_data *td)
 		td->ts.runtime[i] = 0;
 	}
 
-	set_epoch_time(td, td->o.log_unix_epoch | td->o.log_alternate_epoch, td->o.log_alternate_epoch_clock_id);
+	set_epoch_time(td,
+	               td->o.log_unix_epoch |
+	               td->o.log_alternate_epoch |
+	               td->o.record_alternate_epoch,
+	               td->o.alternate_epoch_clock_id);
 	memcpy(&td->start, &td->epoch, sizeof(td->epoch));
 	memcpy(&td->iops_sample_time, &td->epoch, sizeof(td->epoch));
 	memcpy(&td->bw_sample_time, &td->epoch, sizeof(td->epoch));

@@ -3395,18 +3395,24 @@ parameter. The files will be stored with a `.fz' suffix.
 .BI log_unix_epoch \fR=\fPbool
 If set, fio will log Unix timestamps to the log files produced by enabling
 write_type_log for each log type, instead of the default zero-based
-timestamps.
+timestamps. alternate_epoch will also be set as a Unix timestamp.
 .TP
 .BI log_alternate_epoch \fR=\fPbool
-If set, fio will log timestamps based on the epoch used by the clock specified
-in the \fBlog_alternate_epoch_clock_id\fR option, to the log files produced by
-enabling write_type_log for each log type, instead of the default zero-based
-timestamps.
+If set, fio will set alternate_epoch based on the clock specified in
+\fBlog_alternate_epoch_clock_id\fR. Further, fio will add alternate_epoch to the
+timestamps in the log files produced by enabling write_type_log for each log type.
+Fio will also report the alternate_epoch in its json output.
 .TP
-.BI log_alternate_epoch_clock_id \fR=\fPint
+.BI record_alternate_epoch \fR=\fPbool
+If set, fio will set alternate_epoch based on the clock specified in
+\fBlog_alternate_epoch_clock_id\fR, but timestamps in log files produced by
+enabling write_type_log for each log type will not be affected. Fio will report
+the alternate_epoch in its json output.
+.TP
+.BI alternate_epoch_clock_id \fR=\fPint
 Specifies the clock_id to be used by clock_gettime to obtain the alternate epoch
-if either \fBBlog_unix_epoch\fR or \fBlog_alternate_epoch\fR are true. Otherwise has no
-effect. Default value is 0, or CLOCK_REALTIME.
+if \fBBlog_unix_epoch\fR, \fBlog_alternate_epoch\fR, or \fBrecord_alternate_epoch\fR
+are true. Otherwise has no effect. Default value is 0, or CLOCK_REALTIME.
 .TP
 .BI block_error_percentiles \fR=\fPbool
 If set, record errors in trim block-sized units from writes and trims and

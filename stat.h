@@ -170,6 +170,7 @@ struct thread_stat {
 	uint32_t error;
 	uint32_t thread_number;
 	uint32_t groupid;
+	unsigned long long alternate_epoch;
 	uint32_t pid;
 	char description[FIO_JOBDESC_SIZE];
 	uint32_t members;
