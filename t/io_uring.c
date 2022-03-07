@@ -76,6 +76,7 @@ struct file {
 struct submitter {
 	pthread_t thread;
 	int ring_fd;
+	int enter_ring_fd;
 	int index;
 	struct io_sq_ring sq_ring;
 	struct io_uring_sqe *sqes;
@@ -127,6 +128,7 @@ static int stats = 0;		/* generate IO stats */
 static int aio = 0;		/* use libaio */
 static int runtime = 0;		/* runtime */
 static int random_io = 1;	/* random or sequential IO */
+static int register_ring = 1;	/* register ring */
 
 static unsigned long tsc_rate;
 
@@ -420,12 +422,14 @@ out:
 static int io_uring_enter(struct submitter *s, unsigned int to_submit,
 			  unsigned int min_complete, unsigned int flags)
 {
+	if (register_ring)
+		flags |= IORING_ENTER_REGISTERED_RING;
 #ifdef FIO_ARCH_HAS_SYSCALL
-	return __do_syscall6(__NR_io_uring_enter, s->ring_fd, to_submit,
+	return __do_syscall6(__NR_io_uring_enter, s->enter_ring_fd, to_submit,
 				min_complete, flags, NULL, 0);
 #else
-	return syscall(__NR_io_uring_enter, s->ring_fd, to_submit, min_complete,
-			flags, NULL, 0);
+	return syscall(__NR_io_uring_enter, s->enter_ring_fd, to_submit,
+			min_complete, flags, NULL, 0);
 #endif
 }
 
@@ -793,6 +797,34 @@ static void *submitter_aio_fn(void *data)
 }
 #endif
 
+static void io_uring_unregister_ring(struct submitter *s)
+{
+	struct io_uring_rsrc_update up = {
+		.offset	= s->enter_ring_fd,
+	};
+
+	syscall(__NR_io_uring_register, s->ring_fd, IORING_UNREGISTER_RING_FDS,
+		&up, 1);
+}
+
+static int io_uring_register_ring(struct submitter *s)
+{
+	struct io_uring_rsrc_update up = {
+		.data	= s->ring_fd,
+		.offset	= -1U,
+	};
+	int ret;
+
+	ret = syscall(__NR_io_uring_register, s->ring_fd,
+			IORING_REGISTER_RING_FDS, &up, 1);
+	if (ret == 1) {
+		s->enter_ring_fd = up.offset;
+		return 0;
+	}
+	register_ring = 0;
+	return -1;
+}
+
 static void *submitter_uring_fn(void *data)
 {
 	struct submitter *s = data;
@@ -803,6 +835,9 @@ static void *submitter_uring_fn(void *data)
 #else
 	submitter_init(s);
 #endif
+
+	if (register_ring)
+		io_uring_register_ring(s);
 
 	prepped = 0;
 	do {
@@ -895,6 +930,9 @@ submit:
 			break;
 		}
 	} while (!s->finish);
+
+	if (register_ring)
+		io_uring_unregister_ring(s);
 
 	finish = 1;
 	return NULL;
@@ -998,7 +1036,7 @@ static int setup_ring(struct submitter *s)
 		perror("io_uring_setup");
 		return 1;
 	}
-	s->ring_fd = fd;
+	s->ring_fd = s->enter_ring_fd = fd;
 
 	io_uring_probe(fd);
 
@@ -1103,10 +1141,12 @@ static void usage(char *argv, int status)
 		" -T <int>  : TSC rate in HZ\n"
 		" -r <int>  : Runtime in seconds, default %s\n"
 		" -R <bool> : Use random IO, default %d\n"
-		" -a <bool> : Use legacy aio, default %d\n",
+		" -a <bool> : Use legacy aio, default %d\n"
+		" -X <bool> : Use registered ring %d\n",
 		argv, DEPTH, BATCH_SUBMIT, BATCH_COMPLETE, BS, polled,
 		fixedbufs, dma_map, register_files, nthreads, !buffered, do_nop,
-		stats, runtime == 0 ? "unlimited" : runtime_str, random_io, aio);
+		stats, runtime == 0 ? "unlimited" : runtime_str, random_io, aio,
+		register_ring);
 	exit(status);
 }
 
@@ -1167,7 +1207,7 @@ int main(int argc, char *argv[])
 	if (!do_nop && argc < 2)
 		usage(argv[0], 1);
 
-	while ((opt = getopt(argc, argv, "d:s:c:b:p:B:F:n:N:O:t:T:a:r:D:R:h?")) != -1) {
+	while ((opt = getopt(argc, argv, "d:s:c:b:p:B:F:n:N:O:t:T:a:r:D:R:X:h?")) != -1) {
 		switch (opt) {
 		case 'a':
 			aio = !!atoi(optarg);
@@ -1233,6 +1273,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'R':
 			random_io = !!atoi(optarg);
+			break;
+		case 'X':
+			register_ring = !!atoi(optarg);
 			break;
 		case 'h':
 		case '?':
