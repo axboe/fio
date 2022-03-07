@@ -1209,7 +1209,7 @@ static void usage(char *argv, int status)
 		" -r <int>  : Runtime in seconds, default %s\n"
 		" -R <bool> : Use random IO, default %d\n"
 		" -a <bool> : Use legacy aio, default %d\n"
-		" -S <bool> : Use sync IO (preadv2), default %d"
+		" -S <bool> : Use sync IO (preadv2), default %d\n"
 		" -X <bool> : Use registered ring %d\n",
 		argv, DEPTH, BATCH_SUBMIT, BATCH_COMPLETE, BS, polled,
 		fixedbufs, dma_map, register_files, nthreads, !buffered, do_nop,
