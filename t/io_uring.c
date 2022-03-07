@@ -129,6 +129,7 @@ static int aio = 0;		/* use libaio */
 static int runtime = 0;		/* runtime */
 static int random_io = 1;	/* random or sequential IO */
 static int register_ring = 1;	/* register ring */
+static int use_sync = 0;	/* use preadv2 */
 
 static unsigned long tsc_rate;
 
@@ -938,6 +939,72 @@ submit:
 	return NULL;
 }
 
+static void *submitter_sync_fn(void *data)
+{
+	struct submitter *s = data;
+	int ret;
+
+	submitter_init(s);
+
+	do {
+		uint64_t offset;
+		struct file *f;
+		long r;
+
+		if (s->nr_files == 1) {
+			f = &s->files[0];
+		} else {
+			f = &s->files[s->cur_file];
+			if (f->pending_ios >= file_depth(s)) {
+				s->cur_file++;
+				if (s->cur_file == s->nr_files)
+					s->cur_file = 0;
+				f = &s->files[s->cur_file];
+			}
+		}
+		f->pending_ios++;
+
+		if (random_io) {
+			r = __rand64(&s->rand_state);
+			offset = (r % (f->max_blocks - 1)) * bs;
+		} else {
+			offset = f->cur_off;
+			f->cur_off += bs;
+			if (f->cur_off + bs > f->max_size)
+				f->cur_off = 0;
+		}
+
+#ifdef ARCH_HAVE_CPU_CLOCK
+		if (stats)
+			s->clock_batch[s->clock_index] = get_cpu_clock();
+#endif
+
+		s->inflight++;
+		s->calls++;
+
+		if (polled)
+			ret = preadv2(f->real_fd, &s->iovecs[0], 1, offset, RWF_HIPRI);
+		else
+			ret = preadv2(f->real_fd, &s->iovecs[0], 1, offset, 0);
+
+		if (ret < 0) {
+			perror("preadv2");
+			break;
+		} else if (ret != bs) {
+			break;
+		}
+
+		s->done++;
+		s->inflight--;
+		f->pending_ios--;
+		if (stats)
+			add_stat(s, s->clock_index, 1);
+	} while (!s->finish);
+
+	finish = 1;
+	return NULL;
+}
+
 static struct submitter *get_submitter(int offset)
 {
 	void *ret;
@@ -1142,11 +1209,12 @@ static void usage(char *argv, int status)
 		" -r <int>  : Runtime in seconds, default %s\n"
 		" -R <bool> : Use random IO, default %d\n"
 		" -a <bool> : Use legacy aio, default %d\n"
+		" -S <bool> : Use sync IO (preadv2), default %d"
 		" -X <bool> : Use registered ring %d\n",
 		argv, DEPTH, BATCH_SUBMIT, BATCH_COMPLETE, BS, polled,
 		fixedbufs, dma_map, register_files, nthreads, !buffered, do_nop,
 		stats, runtime == 0 ? "unlimited" : runtime_str, random_io, aio,
-		register_ring);
+		use_sync, register_ring);
 	exit(status);
 }
 
@@ -1207,7 +1275,7 @@ int main(int argc, char *argv[])
 	if (!do_nop && argc < 2)
 		usage(argv[0], 1);
 
-	while ((opt = getopt(argc, argv, "d:s:c:b:p:B:F:n:N:O:t:T:a:r:D:R:X:h?")) != -1) {
+	while ((opt = getopt(argc, argv, "d:s:c:b:p:B:F:n:N:O:t:T:a:r:D:R:X:S:h?")) != -1) {
 		switch (opt) {
 		case 'a':
 			aio = !!atoi(optarg);
@@ -1276,6 +1344,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'X':
 			register_ring = !!atoi(optarg);
+			break;
+		case 'S':
+			use_sync = !!atoi(optarg);
 			break;
 		case 'h':
 		case '?':
@@ -1387,7 +1458,9 @@ int main(int argc, char *argv[])
 	for (j = 0; j < nthreads; j++) {
 		s = get_submitter(j);
 
-		if (!aio)
+		if (use_sync)
+			continue;
+		else if (!aio)
 			err = setup_ring(s);
 		else
 			err = setup_aio(s);
@@ -1398,14 +1471,18 @@ int main(int argc, char *argv[])
 	}
 	s = get_submitter(0);
 	printf("polled=%d, fixedbufs=%d/%d, register_files=%d, buffered=%d, QD=%d\n", polled, fixedbufs, dma_map, register_files, buffered, depth);
-	if (!aio)
+	if (use_sync)
+		printf("Engine=preadv2\n");
+	else if (!aio)
 		printf("Engine=io_uring, sq_ring=%d, cq_ring=%d\n", *s->sq_ring.ring_entries, *s->cq_ring.ring_entries);
 	else
 		printf("Engine=aio\n");
 
 	for (j = 0; j < nthreads; j++) {
 		s = get_submitter(j);
-		if (!aio)
+		if (use_sync)
+			pthread_create(&s->thread, NULL, submitter_sync_fn, s);
+		else if (!aio)
 			pthread_create(&s->thread, NULL, submitter_uring_fn, s);
 #ifdef CONFIG_LIBAIO
 		else
