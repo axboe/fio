@@ -349,10 +349,8 @@ static int io_uring_map_buffers(struct submitter *s)
 
 	if (do_nop)
 		return 0;
-	if (s->nr_files > 1) {
-		fprintf(stderr, "Can't map buffers with multiple files\n");
-		return -1;
-	}
+	if (s->nr_files > 1)
+		fprintf(stdout, "Mapping buffers may not work with multiple files\n");
 
 	return syscall(__NR_io_uring_register, s->ring_fd,
 			IORING_REGISTER_MAP_BUFFERS, &map, 1);
