@@ -2098,7 +2098,7 @@ if test "$libhdfs" = "yes" ; then
     hdfs_conf_error=1
   fi
   if test "$FIO_LIBHDFS_INCLUDE" = "" ; then
-    echo "configure: FIO_LIBHDFS_INCLUDE should be defined to libhdfs inlude path"
+    echo "configure: FIO_LIBHDFS_INCLUDE should be defined to libhdfs include path"
     hdfs_conf_error=1
   fi
   if test "$FIO_LIBHDFS_LIB" = "" ; then
