@@ -2432,7 +2432,10 @@ reap:
 							strerror(ret));
 			} else {
 				pid_t pid;
+				struct fio_file **files;
 				dprint(FD_PROCESS, "will fork\n");
+				files = td->files;
+				read_barrier();
 				pid = fork();
 				if (!pid) {
 					int ret;
@@ -2441,6 +2444,9 @@ reap:
 					_exit(ret);
 				} else if (i == fio_debug_jobno)
 					*fio_debug_jobp = pid;
+				// freeing previously allocated memory for files
+				// this memory freed MUST NOT be shared between processes, only the pointer itself may be shared within TD
+				free(files);
 				free(fd);
 				fd = NULL;
 			}
