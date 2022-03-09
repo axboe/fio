@@ -2185,6 +2185,10 @@ static int __parse_jobs_ini(struct thread_data *td,
 		i++;
 	}
 
+	free(job_sections);
+	job_sections = NULL;
+	nr_job_sections = 0;
+
 	free(opts);
 out:
 	free(string);
