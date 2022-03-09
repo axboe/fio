@@ -817,6 +817,8 @@ store_option_value:
 
 		if (o->off1) {
 			cp = td_var(data, o, o->off1);
+			if (*cp)
+				free(*cp);
 			*cp = strdup(ptr);
 			if (strlen(ptr) > o->maxlen - 1) {
 				log_err("value exceeds max length of %d\n",
