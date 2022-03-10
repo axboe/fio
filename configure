@@ -248,6 +248,8 @@ for opt do
   ;;
   --disable-dfs) dfs="no"
   ;;
+  --enable-asan) asan="yes"
+  ;;
   --help)
     show_help="yes"
     ;;
@@ -293,6 +295,7 @@ if test "$show_help" = "yes" ; then
   echo "--disable-tcmalloc	Disable tcmalloc support"
   echo "--dynamic-libengines	Lib-based ioengines as dynamic libraries"
   echo "--disable-dfs		Disable DAOS File System support even if found"
+  echo "--enable-asan           Enable address sanitizer"
   exit $exit_val
 fi
 
@@ -3196,7 +3199,10 @@ fi
 if test "$fcntl_sync" = "yes" ; then
   output_sym "CONFIG_FCNTL_SYNC"
 fi
-
+if test "$asan" = "yes"; then
+  CFLAGS="$CFLAGS -fsanitize=address"
+  LDFLAGS="$LDFLAGS -fsanitize=address"
+fi
 print_config "Lib-based ioengines dynamic" "$dynamic_engines"
 cat > $TMPC << EOF
 int main(int argc, char **argv)
