@@ -290,9 +290,9 @@ if test "$show_help" = "yes" ; then
   echo "--enable-libiscsi       Enable iscsi support"
   echo "--enable-libnbd         Enable libnbd (NBD engine) support"
   echo "--disable-libzbc        Disable libzbc even if found"
-  echo "--disable-tcmalloc	Disable tcmalloc support"
-  echo "--dynamic-libengines	Lib-based ioengines as dynamic libraries"
-  echo "--disable-dfs		Disable DAOS File System support even if found"
+  echo "--disable-tcmalloc      Disable tcmalloc support"
+  echo "--dynamic-libengines    Lib-based ioengines as dynamic libraries"
+  echo "--disable-dfs           Disable DAOS File System support even if found"
   exit $exit_val
 fi
 
