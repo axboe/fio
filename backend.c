@@ -1600,7 +1600,7 @@ static void *thread_main(void *data)
 	uint64_t bytes_done[DDIR_RWDIR_CNT];
 	int deadlock_loop_cnt;
 	bool clear_state;
-	int res, ret;
+	int ret;
 
 	sk_out_assign(sk_out);
 	free(fd);
@@ -1931,13 +1931,23 @@ static void *thread_main(void *data)
 	 * another thread is checking its io_u's for overlap
 	 */
 	if (td_offload_overlap(td)) {
-		int res = pthread_mutex_lock(&overlap_check);
-		assert(res == 0);
+		int res;
+
+		res = pthread_mutex_lock(&overlap_check);
+		if (res) {
+			td->error = errno;
+			goto err;
+		}
 	}
 	td_set_runstate(td, TD_FINISHING);
 	if (td_offload_overlap(td)) {
+		int res;
+
 		res = pthread_mutex_unlock(&overlap_check);
-		assert(res == 0);
+		if (res) {
+			td->error = errno;
+			goto err;
+		}
 	}
 
 	update_rusage_stat(td);

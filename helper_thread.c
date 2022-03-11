@@ -1,4 +1,7 @@
+#include <errno.h>
 #include <signal.h>
+#include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 #ifdef CONFIG_HAVE_TIMERFD_CREATE
 #include <sys/timerfd.h>
@@ -122,7 +125,10 @@ static void submit_action(enum action a)
 		return;
 
 	ret = write_to_pipe(helper_data->pipe[1], &data, sizeof(data));
-	assert(ret == 1);
+	if (ret != 1) {
+		log_err("failed to write action into pipe, err %i:%s", errno, strerror(errno));
+		assert(0);
+	}
 }
 
 void helper_reset(void)

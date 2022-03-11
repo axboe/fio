@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "compiler/compiler.h"
 #include "os/os.h"
 #include "file.h"
 #include "fio.h"
@@ -90,13 +91,13 @@ static bool zbd_zone_full(const struct fio_file *f, struct fio_zone_info *z,
 static void zone_lock(struct thread_data *td, const struct fio_file *f,
 		      struct fio_zone_info *z)
 {
+#ifndef NDEBUG
 	struct zoned_block_device_info *zbd = f->zbd_info;
-	uint32_t nz = z - zbd->zone_info;
-
+	uint32_t const nz = z - zbd->zone_info;
 	/* A thread should never lock zones outside its working area. */
 	assert(f->min_zone <= nz && nz < f->max_zone);
-
 	assert(z->has_wp);
+#endif
 
 	/*
 	 * Lock the io_u target zone. The zone will be unlocked if io_u offset
@@ -116,11 +117,8 @@ static void zone_lock(struct thread_data *td, const struct fio_file *f,
 
 static inline void zone_unlock(struct fio_zone_info *z)
 {
-	int ret;
-
 	assert(z->has_wp);
-	ret = pthread_mutex_unlock(&z->mutex);
-	assert(!ret);
+	pthread_mutex_unlock(&z->mutex);
 }
 
 static inline struct fio_zone_info *zbd_get_zone(const struct fio_file *f,
@@ -339,7 +337,8 @@ static int zbd_reset_zones(struct thread_data *td, struct fio_file *f,
 	const uint64_t min_bs = td->o.min_bs[DDIR_WRITE];
 	int res = 0;
 
-	assert(min_bs);
+	if (fio_unlikely(0 == min_bs))
+		return 1;
 
 	dprint(FD_ZBD, "%s: examining zones %u .. %u\n",
 	       f->file_name, zbd_zone_idx(f, zb), zbd_zone_idx(f, ze));
@@ -1651,10 +1650,9 @@ unlock:
 static void zbd_put_io(struct thread_data *td, const struct io_u *io_u)
 {
 	const struct fio_file *f = io_u->file;
-	struct zoned_block_device_info *zbd_info = f->zbd_info;
 	struct fio_zone_info *z;
 
-	assert(zbd_info);
+	assert(f->zbd_info);
 
 	z = zbd_offset_to_zone(f, io_u->offset);
 	assert(z->has_wp);
