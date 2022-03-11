@@ -939,6 +939,7 @@ submit:
 	return NULL;
 }
 
+#ifdef CONFIG_PWRITEV2
 static void *submitter_sync_fn(void *data)
 {
 	struct submitter *s = data;
@@ -1004,6 +1005,13 @@ static void *submitter_sync_fn(void *data)
 	finish = 1;
 	return NULL;
 }
+#else
+static void *submitter_sync_fn(void *data)
+{
+	finish = 1;
+	return NULL;
+}
+#endif
 
 static struct submitter *get_submitter(int offset)
 {
@@ -1346,7 +1354,12 @@ int main(int argc, char *argv[])
 			register_ring = !!atoi(optarg);
 			break;
 		case 'S':
+#ifdef CONFIG_PWRITEV2
 			use_sync = !!atoi(optarg);
+#else
+			fprintf(stderr, "preadv2 not supported\n");
+			exit(1);
+#endif
 			break;
 		case 'h':
 		case '?':
