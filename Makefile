@@ -385,14 +385,16 @@ T_MEMLOCK_PROGS = t/memlock
 T_TT_OBJS = t/time-test.o
 T_TT_PROGS = t/time-test
 
+ifneq (,$(findstring -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION,$(CFLAGS)))
 T_FUZZ_OBJS = t/fuzz/fuzz_parseini.o
 T_FUZZ_OBJS += $(OBJS)
 ifdef CONFIG_ARITHMETIC
 T_FUZZ_OBJS += lex.yy.o y.tab.o
 endif
+# For proper fio code teardown CFLAGS needs to include -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
 # in case there is no fuzz driver defined by environment variable LIB_FUZZING_ENGINE, use a simple one
 # For instance, with compiler clang, address sanitizer and libFuzzer as a fuzzing engine, you should define
-# export CFLAGS="-fsanitize=address,fuzzer-no-link"
+# export CFLAGS="-fsanitize=address,fuzzer-no-link -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION"
 # export LIB_FUZZING_ENGINE="-fsanitize=address"
 # export CC=clang
 # before running configure && make
@@ -401,6 +403,10 @@ ifndef LIB_FUZZING_ENGINE
 T_FUZZ_OBJS += t/fuzz/onefile.o
 endif
 T_FUZZ_PROGS = t/fuzz/fuzz_parseini
+else	# CFLAGS includes -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
+T_FUZZ_OBJS =
+T_FUZZ_PROGS =
+endif
 
 T_OBJS = $(T_SMALLOC_OBJS)
 T_OBJS += $(T_IEEE_OBJS)
