@@ -280,7 +280,7 @@ static int insert_chunks(struct item *items, unsigned int nitems,
 			 uint64_t *ndupes, uint64_t *unique_capacity,
 			 struct zlib_ctrl *zc)
 {
-	int i, ret;
+	int i, ret = 0;
 
 	fio_sem_down(rb_lock);
 
