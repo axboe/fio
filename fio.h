@@ -184,7 +184,7 @@ struct zone_split_index {
  */
 struct thread_data {
 	struct flist_head opt_list;
-	unsigned long flags;
+	unsigned long long flags;
 	struct thread_options o;
 	void *eo;
 	pthread_t thread;
@@ -681,12 +681,12 @@ enum {
 };
 
 #define TD_ENG_FLAG_SHIFT	18
-#define TD_ENG_FLAG_MASK	((1U << 18) - 1)
+#define TD_ENG_FLAG_MASK	((1ULL << 18) - 1)
 
 static inline void td_set_ioengine_flags(struct thread_data *td)
 {
 	td->flags = (~(TD_ENG_FLAG_MASK << TD_ENG_FLAG_SHIFT) & td->flags) |
-		    (td->io_ops->flags << TD_ENG_FLAG_SHIFT);
+		    ((unsigned long long)td->io_ops->flags << TD_ENG_FLAG_SHIFT);
 }
 
 static inline bool td_ioengine_flagged(struct thread_data *td,
