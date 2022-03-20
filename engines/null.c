@@ -7,7 +7,7 @@
  * It also can act as external C++ engine - compiled with:
  *
  * g++ -O2 -g -shared -rdynamic -fPIC -o cpp_null null.c \
- *	-i ../config-host.h -DFIO_EXTERNAL_ENGINE
+ *	-include ../config-host.h -DFIO_EXTERNAL_ENGINE
  *
  * to test it execute:
  *
