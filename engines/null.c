@@ -6,7 +6,8 @@
  *
  * It also can act as external C++ engine - compiled with:
  *
- * g++ -O2 -g -shared -rdynamic -fPIC -o cpp_null null.c -DFIO_EXTERNAL_ENGINE
+ * g++ -O2 -g -shared -rdynamic -fPIC -o cpp_null null.c \
+ *	-i ../config-host.h -DFIO_EXTERNAL_ENGINE
  *
  * to test it execute:
  *
@@ -201,7 +202,7 @@ struct NullData {
 		return null_commit(td, impl_);
 	}
 
-	int fio_null_queue(struct thread_data *td, struct io_u *io_u)
+	fio_q_status fio_null_queue(struct thread_data *td, struct io_u *io_u)
 	{
 		return null_queue(td, impl_, io_u);
 	}
@@ -233,7 +234,7 @@ static int fio_null_commit(struct thread_data *td)
 	return NullData::get(td)->fio_null_commit(td);
 }
 
-static int fio_null_queue(struct thread_data *td, struct io_u *io_u)
+static fio_q_status fio_null_queue(struct thread_data *td, struct io_u *io_u)
 {
 	return NullData::get(td)->fio_null_queue(td, io_u);
 }
