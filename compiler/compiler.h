@@ -67,6 +67,7 @@
 #endif
 
 #ifndef __has_attribute
+#define __has_attribute(x) __GCC4_has_attribute_##x
 #define __GCC4_has_attribute___fallthrough__	0
 #endif
 
