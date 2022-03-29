@@ -2731,6 +2731,9 @@ int __show_running_run_stats(void)
 	fio_gettime(&ts, NULL);
 
 	for_each_td(td, i) {
+		if (td->runstate >= TD_EXITED)
+			continue;
+
 		td->update_rusage = 1;
 		for_each_rw_ddir(ddir) {
 			td->ts.io_bytes[ddir] = td->io_bytes[ddir];
@@ -2759,6 +2762,9 @@ int __show_running_run_stats(void)
 	__show_run_stats();
 
 	for_each_td(td, i) {
+		if (td->runstate >= TD_EXITED)
+			continue;
+
 		if (td_read(td) && td->ts.io_bytes[DDIR_READ])
 			td->ts.runtime[DDIR_READ] -= rt[i];
 		if (td_write(td) && td->ts.io_bytes[DDIR_WRITE])
