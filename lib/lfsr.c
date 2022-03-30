@@ -88,37 +88,37 @@ static inline void __lfsr_next(struct fio_lfsr *fl, unsigned int spin)
 	 */
 	switch (spin) {
 		case 15: __LFSR_NEXT(fl, fl->last_val);
-		fallthrough;
+		fio_fallthrough;
 		case 14: __LFSR_NEXT(fl, fl->last_val);
-		fallthrough;
+		fio_fallthrough;
 		case 13: __LFSR_NEXT(fl, fl->last_val);
-		fallthrough;
+		fio_fallthrough;
 		case 12: __LFSR_NEXT(fl, fl->last_val);
-		fallthrough;
+		fio_fallthrough;
 		case 11: __LFSR_NEXT(fl, fl->last_val);
-		fallthrough;
+		fio_fallthrough;
 		case 10: __LFSR_NEXT(fl, fl->last_val);
-		fallthrough;
+		fio_fallthrough;
 		case  9: __LFSR_NEXT(fl, fl->last_val);
-		fallthrough;
+		fio_fallthrough;
 		case  8: __LFSR_NEXT(fl, fl->last_val);
-		fallthrough;
+		fio_fallthrough;
 		case  7: __LFSR_NEXT(fl, fl->last_val);
-		fallthrough;
+		fio_fallthrough;
 		case  6: __LFSR_NEXT(fl, fl->last_val);
-		fallthrough;
+		fio_fallthrough;
 		case  5: __LFSR_NEXT(fl, fl->last_val);
-		fallthrough;
+		fio_fallthrough;
 		case  4: __LFSR_NEXT(fl, fl->last_val);
-		fallthrough;
+		fio_fallthrough;
 		case  3: __LFSR_NEXT(fl, fl->last_val);
-		fallthrough;
+		fio_fallthrough;
 		case  2: __LFSR_NEXT(fl, fl->last_val);
-		fallthrough;
+		fio_fallthrough;
 		case  1: __LFSR_NEXT(fl, fl->last_val);
-		fallthrough;
+		fio_fallthrough;
 		case  0: __LFSR_NEXT(fl, fl->last_val);
-		fallthrough;
+		fio_fallthrough;
 		default: break;
 	}
 }

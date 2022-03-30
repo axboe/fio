@@ -72,9 +72,9 @@
 #endif
 
 #if __has_attribute(__fallthrough__)
-#define fallthrough	 __attribute__((__fallthrough__))
+#define fio_fallthrough	 __attribute__((__fallthrough__))
 #else
-#define fallthrough	do {} while (0)  /* fallthrough */
+#define fio_fallthrough	do {} while (0)  /* fallthrough */
 #endif
 
 #endif

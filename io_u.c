@@ -993,7 +993,7 @@ static void __io_u_mark_map(uint64_t *map, unsigned int nr)
 		break;
 	case 1 ... 4:
 		idx = 1;
-		fallthrough;
+		fio_fallthrough;
 	case 0:
 		break;
 	}
@@ -1035,7 +1035,7 @@ void io_u_mark_depth(struct thread_data *td, unsigned int nr)
 		break;
 	case 2 ... 3:
 		idx = 1;
-		fallthrough;
+		fio_fallthrough;
 	case 1:
 		break;
 	}
@@ -1076,7 +1076,7 @@ static void io_u_mark_lat_nsec(struct thread_data *td, unsigned long long nsec)
 		break;
 	case 2 ... 3:
 		idx = 1;
-		fallthrough;
+		fio_fallthrough;
 	case 0 ... 1:
 		break;
 	}
@@ -1118,7 +1118,7 @@ static void io_u_mark_lat_usec(struct thread_data *td, unsigned long long usec)
 		break;
 	case 2 ... 3:
 		idx = 1;
-		fallthrough;
+		fio_fallthrough;
 	case 0 ... 1:
 		break;
 	}
@@ -1166,7 +1166,7 @@ static void io_u_mark_lat_msec(struct thread_data *td, unsigned long long msec)
 		break;
 	case 2 ... 3:
 		idx = 1;
-		fallthrough;
+		fio_fallthrough;
 	case 0 ... 1:
 		break;
 	}

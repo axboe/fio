@@ -601,7 +601,7 @@ static int __handle_option(const struct fio_option *o, const char *ptr,
 	}
 	case FIO_OPT_STR_VAL_TIME:
 		is_time = 1;
-		fallthrough;
+		fio_fallthrough;
 	case FIO_OPT_ULL:
 	case FIO_OPT_INT:
 	case FIO_OPT_STR_VAL:
@@ -980,7 +980,7 @@ store_option_value:
 	}
 	case FIO_OPT_DEPRECATED:
 		ret = 1;
-		fallthrough;
+		fio_fallthrough;
 	case FIO_OPT_SOFT_DEPRECATED:
 		log_info("Option %s is deprecated\n", o->name);
 		break;

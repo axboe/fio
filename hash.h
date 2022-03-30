@@ -142,20 +142,20 @@ static inline uint32_t jhash(const void *key, uint32_t length, uint32_t initval)
 	/* Last block: affect all 32 bits of (c) */
 	/* All the case statements fall through */
 	switch (length) {
-	case 12: c += (uint32_t) k[11] << 24;	fallthrough;
-	case 11: c += (uint32_t) k[10] << 16;	fallthrough;
-	case 10: c += (uint32_t) k[9] << 8;	fallthrough;
-	case 9:  c += k[8];			fallthrough;
-	case 8:  b += (uint32_t) k[7] << 24;	fallthrough;
-	case 7:  b += (uint32_t) k[6] << 16;	fallthrough;
-	case 6:  b += (uint32_t) k[5] << 8;	fallthrough;
-	case 5:  b += k[4];			fallthrough;
-	case 4:  a += (uint32_t) k[3] << 24;	fallthrough;
-	case 3:  a += (uint32_t) k[2] << 16;	fallthrough;
-	case 2:  a += (uint32_t) k[1] << 8;	fallthrough;
+	case 12: c += (uint32_t) k[11] << 24;	fio_fallthrough;
+	case 11: c += (uint32_t) k[10] << 16;	fio_fallthrough;
+	case 10: c += (uint32_t) k[9] << 8;	fio_fallthrough;
+	case 9:  c += k[8];			fio_fallthrough;
+	case 8:  b += (uint32_t) k[7] << 24;	fio_fallthrough;
+	case 7:  b += (uint32_t) k[6] << 16;	fio_fallthrough;
+	case 6:  b += (uint32_t) k[5] << 8;	fio_fallthrough;
+	case 5:  b += k[4];			fio_fallthrough;
+	case 4:  a += (uint32_t) k[3] << 24;	fio_fallthrough;
+	case 3:  a += (uint32_t) k[2] << 16;	fio_fallthrough;
+	case 2:  a += (uint32_t) k[1] << 8;	fio_fallthrough;
 	case 1:  a += k[0];
 		 __jhash_final(a, b, c);
-		 fallthrough;
+		 fio_fallthrough;
 	case 0: /* Nothing left to add */
 		break;
 	}
