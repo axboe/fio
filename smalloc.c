@@ -283,13 +283,13 @@ static void sfree_check_redzone(struct block_hdr *hdr)
 	if (hdr->prered != SMALLOC_PRE_RED) {
 		log_err("smalloc pre redzone destroyed!\n"
 			" ptr=%p, prered=%x, expected %x\n",
-				hdr, hdr->prered, SMALLOC_PRE_RED);
+				hdr+1, hdr->prered, SMALLOC_PRE_RED);
 		assert(0);
 	}
 	if (*postred != SMALLOC_POST_RED) {
 		log_err("smalloc post redzone destroyed!\n"
 			"  ptr=%p, postred=%x, expected %x\n",
-				hdr, *postred, SMALLOC_POST_RED);
+				hdr+1, *postred, SMALLOC_POST_RED);
 		assert(0);
 	}
 }
