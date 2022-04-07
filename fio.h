@@ -432,6 +432,7 @@ struct thread_data {
 	unsigned int io_log_blktrace;
 	unsigned int io_log_blktrace_swap;
 	unsigned long long io_log_last_ttime;
+	struct timespec io_log_start_time;
 	unsigned int io_log_current;
 	unsigned int io_log_checkmark;
 	unsigned int io_log_highmark;

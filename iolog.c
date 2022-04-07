@@ -41,18 +41,24 @@ void queue_io_piece(struct thread_data *td, struct io_piece *ipo)
 
 void log_io_u(const struct thread_data *td, const struct io_u *io_u)
 {
+	struct timespec now;
+
 	if (!td->o.write_iolog_file)
 		return;
 
-	fprintf(td->iolog_f, "%s %s %llu %llu\n", io_u->file->file_name,
+	fio_gettime(&now, NULL);
+	fprintf(td->iolog_f, "%lu %s %s %llu %llu\n", utime_since_now(&td->io_log_start_time),
+						io_u->file->file_name,
 						io_ddir_name(io_u->ddir),
 						io_u->offset, io_u->buflen);
+
 }
 
 void log_file(struct thread_data *td, struct fio_file *f,
 	      enum file_log_act what)
 {
 	const char *act[] = { "add", "open", "close" };
+	struct timespec now;
 
 	assert(what < 3);
 
@@ -66,7 +72,9 @@ void log_file(struct thread_data *td, struct fio_file *f,
 	if (!td->iolog_f)
 		return;
 
-	fprintf(td->iolog_f, "%s %s\n", f->file_name, act[what]);
+	fio_gettime(&now, NULL);
+	fprintf(td->iolog_f, "%lu %s %s\n", utime_since_now(&td->io_log_start_time),
+						f->file_name, act[what]);
 }
 
 static void iolog_delay(struct thread_data *td, unsigned long delay)
@@ -738,11 +746,12 @@ static bool init_iolog_write(struct thread_data *td)
 	td->iolog_f = f;
 	td->iolog_buf = malloc(8192);
 	setvbuf(f, td->iolog_buf, _IOFBF, 8192);
+	fio_gettime(&td->io_log_start_time, NULL);
 
 	/*
 	 * write our version line
 	 */
-	if (fprintf(f, "%s\n", iolog_ver2) < 0) {
+	if (fprintf(f, "%s\n", iolog_ver3) < 0) {
 		perror("iolog init\n");
 		return false;
 	}
