@@ -313,25 +313,14 @@ static bool queue_trace(struct thread_data *td, struct blk_io_trace *t,
 			 unsigned long *ios, unsigned long long *bs,
 			 struct file_cache *cache)
 {
-	unsigned long long *last_ttime = &td->io_log_blktrace_last_ttime;
+	unsigned long long *last_ttime = &td->io_log_last_ttime;
 	unsigned long long delay = 0;
 
 	if ((t->action & 0xffff) != __BLK_TA_QUEUE)
 		return false;
 
 	if (!(t->action & BLK_TC_ACT(BLK_TC_NOTIFY))) {
-		if (!*last_ttime || td->o.no_stall || t->time < *last_ttime)
-			delay = 0;
-		else if (td->o.replay_time_scale == 100)
-			delay = t->time - *last_ttime;
-		else {
-			double tmp = t->time - *last_ttime;
-			double scale;
-
-			scale = (double) 100.0 / (double) td->o.replay_time_scale;
-			tmp *= scale;
-			delay = tmp;
-		}
+		delay = delay_since_ttime(td, t->time);
 		*last_ttime = t->time;
 	}
 
@@ -422,7 +411,7 @@ bool init_blktrace_read(struct thread_data *td, const char *filename, int need_s
 		goto err;
 	}
 	td->io_log_blktrace_swap = need_swap;
-	td->io_log_blktrace_last_ttime = 0;
+	td->io_log_last_ttime = 0;
 	td->o.size = 0;
 
 	free_release_files(td);

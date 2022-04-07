@@ -227,10 +227,8 @@ struct io_piece {
 	unsigned long len;
 	unsigned int flags;
 	enum fio_ddir ddir;
-	union {
-		unsigned long delay;
-		unsigned int file_action;
-	};
+	unsigned long delay;
+	unsigned int file_action;
 };
 
 /*
@@ -259,6 +257,8 @@ extern int iolog_compress_init(struct thread_data *, struct sk_out *);
 extern void iolog_compress_exit(struct thread_data *);
 extern size_t log_chunk_sizes(struct io_log *);
 extern int init_io_u_buffers(struct thread_data *);
+extern unsigned long long delay_since_ttime(const struct thread_data *,
+					     unsigned long long);
 
 #ifdef CONFIG_ZLIB
 extern int iolog_file_inflate(const char *);
