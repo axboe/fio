@@ -4117,7 +4117,9 @@ given in bytes. The `action' can be one of these:
 .TP
 .B wait
 Wait for `offset' microseconds. Everything below 100 is discarded.
-The time is relative to the previous `wait' statement.
+The time is relative to the previous `wait' statement. Note that action `wait`
+is not allowed as of version 3, as the same behavior can be achieved using
+timestamps.
 .TP
 .B read
 Read `length' bytes beginning from `offset'.
@@ -4133,6 +4135,37 @@ Write `length' bytes beginning from `offset'.
 .TP
 .B trim
 Trim the given file from the given `offset' for `length' bytes.
+.RE
+.RE
+.RE
+.TP
+.B Trace file format v3
+The third version of the trace file format was added in fio version 3.31. It
+forces each action to have a timestamp associated with it.
+.RS
+.P
+The first line of the trace file has to be:
+.RS
+.P
+"fio version 3 iolog"
+.RE
+.P
+Following this can be lines in two different formats, which are described below.
+.P
+.B
+The file management format:
+.RS
+timestamp filename action
+.P
+.RE
+.B
+The file I/O action format:
+.RS
+timestamp filename action offset length
+.P
+The `timestamp` is relative to the beginning of the run (ie starts at 0). The
+`filename`, `action`, `offset` and `length`  are identical to version 2, except
+that version 3 does not allow the `wait` action.
 .RE
 .RE
 .SH I/O REPLAY \- MERGING TRACES
