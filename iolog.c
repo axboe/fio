@@ -47,10 +47,10 @@ void log_io_u(const struct thread_data *td, const struct io_u *io_u)
 		return;
 
 	fio_gettime(&now, NULL);
-	fprintf(td->iolog_f, "%lu %s %s %llu %llu\n",
-			(unsigned long) utime_since_now(&td->io_log_start_time),
-			io_u->file->file_name, io_ddir_name(io_u->ddir),
-			io_u->offset, io_u->buflen);
+	fprintf(td->iolog_f, "%llu %s %s %llu %llu\n",
+		(unsigned long long) utime_since_now(&td->io_log_start_time),
+		io_u->file->file_name, io_ddir_name(io_u->ddir), io_u->offset,
+		io_u->buflen);
 
 }
 
@@ -73,9 +73,9 @@ void log_file(struct thread_data *td, struct fio_file *f,
 		return;
 
 	fio_gettime(&now, NULL);
-	fprintf(td->iolog_f, "%lu %s %s\n",
-			(unsigned long) utime_since_now(&td->io_log_start_time),
-			f->file_name, act[what]);
+	fprintf(td->iolog_f, "%llu %s %s\n",
+		(unsigned long long) utime_since_now(&td->io_log_start_time),
+		f->file_name, act[what]);
 }
 
 static void iolog_delay(struct thread_data *td, unsigned long delay)
