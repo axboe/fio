@@ -81,8 +81,13 @@ static inline int json_object_add_value_string(struct json_object *obj,
 	struct json_value arg = {
 		.type = JSON_TYPE_STRING,
 	};
+	union {
+		const char *a;
+		char *b;
+	} string;
 
-	arg.string = strdup(val ? : "");
+	string.a = val ? val : "";
+	arg.string = string.b;
 	return json_object_add_value_type(obj, name, &arg);
 }
 
