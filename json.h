@@ -1,6 +1,9 @@
 #ifndef __JSON__H
 #define __JSON__H
 
+#include <stdlib.h>
+#include <string.h>
+
 #include "lib/output_buffer.h"
 
 #define JSON_TYPE_STRING 0
@@ -81,9 +84,14 @@ static inline int json_object_add_value_string(struct json_object *obj,
 	struct json_value arg = {
 		.type = JSON_TYPE_STRING,
 	};
+	int res;
+	char *string;
 
-	arg.string = strdup(val ? : "");
-	return json_object_add_value_type(obj, name, &arg);
+	string = arg.string = strdup(val ? : "");
+	res = json_object_add_value_type(obj, name, &arg);
+	free(string);
+
+	return res;
 }
 
 static inline int json_object_add_value_object(struct json_object *obj,
