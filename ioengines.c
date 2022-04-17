@@ -223,6 +223,8 @@ struct ioengine_ops *load_ioengine(struct thread_data *td)
  */
 void free_ioengine(struct thread_data *td)
 {
+	assert(td != NULL && td->io_ops != NULL);
+
 	dprint(FD_IO, "free ioengine %s\n", td->io_ops->name);
 
 	if (td->eo && td->io_ops->options) {
