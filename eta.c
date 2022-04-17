@@ -3,6 +3,7 @@
  */
 #include <unistd.h>
 #include <string.h>
+#include <stdlib.h>
 #ifdef CONFIG_VALGRIND_DEV
 #include <valgrind/drd.h>
 #else
@@ -707,10 +708,10 @@ void print_thread_status(void)
 	size_t size;
 
 	je = get_jobs_eta(false, &size);
-	if (je)
+	if (je) {
 		display_thread_status(je);
-
-	free(je);
+		free(je);
+	}
 }
 
 void print_status_init(int thr_number)

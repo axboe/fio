@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include <sys/time.h>
 #include <sys/stat.h>
 #include <math.h>
@@ -1698,6 +1699,7 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 	if (je) {
 		json_object_add_value_int(root, "eta", je->eta_sec);
 		json_object_add_value_int(root, "elapsed", je->elapsed_sec);
+		free(je);
 	}
 
 	if (opt_list)

@@ -1323,7 +1323,7 @@ static int handle_xmits(struct sk_out *sk_out)
 	sk_unlock(sk_out);
 
 	while (!flist_empty(&list)) {
-		entry = flist_entry(list.next, struct sk_entry, list);
+		entry = flist_first_entry(&list, struct sk_entry, list);
 		flist_del(&entry->list);
 		ret += handle_sk_entry(sk_out, entry);
 	}
