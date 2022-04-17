@@ -546,9 +546,10 @@ class FioJobTest_iops_rate(FioJobTest):
             return
 
         iops1 = self.json_data['jobs'][0]['read']['iops']
-        iops2 = self.json_data['jobs'][1]['read']['iops']
-        ratio = iops2 / iops1
         logging.debug("Test %d: iops1: %f", self.testnum, iops1)
+        iops2 = self.json_data['jobs'][1]['read']['iops']
+        logging.debug("Test %d: iops2: %f", self.testnum, iops2)
+        ratio = iops2 / iops1
         logging.debug("Test %d: ratio: %f", self.testnum, ratio)
 
         if iops1 < 950 or iops1 > 1050:
