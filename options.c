@@ -4666,6 +4666,16 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_IO_BUF,
 	},
 	{
+		.name	= "dedupe_global",
+		.lname	= "Global deduplication",
+		.type	= FIO_OPT_BOOL,
+		.off1	= offsetof(struct thread_options, dedupe_global),
+		.help	= "Share deduplication buffers across jobs",
+		.def	= "0",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IO_BUF,
+	},
+	{
 		.name	= "dedupe_mode",
 		.lname	= "Dedupe mode",
 		.help	= "Mode for the deduplication buffer generation",

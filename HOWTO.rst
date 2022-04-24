@@ -1749,6 +1749,12 @@ Buffers and memory
 	Note that size needs to be explicitly provided and only 1 file per
 	job is supported
 
+.. option:: dedupe_global=bool
+
+	This controls whether the deduplication buffers will be shared amongst
+	all jobs that have this option set. The buffers are spread evenly between
+	participating jobs.
+
 .. option:: invalidate=bool
 
 	Invalidate the buffer/page cache parts of the files to be used prior to

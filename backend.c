@@ -2570,6 +2570,11 @@ int fio_backend(struct sk_out *sk_out)
 		setup_log(&agg_io_log[DDIR_TRIM], &p, "agg-trim_bw.log");
 	}
 
+	if (init_global_dedupe_working_set_seeds()) {
+		log_err("fio: failed to initialize global dedupe working set\n");
+		return 1;
+	}
+
 	startup_sem = fio_sem_init(FIO_SEM_LOCKED);
 	if (!sk_out)
 		is_local_backend = true;

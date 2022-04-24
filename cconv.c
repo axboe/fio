@@ -305,6 +305,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->dedupe_percentage = le32_to_cpu(top->dedupe_percentage);
 	o->dedupe_mode = le32_to_cpu(top->dedupe_mode);
 	o->dedupe_working_set_percentage = le32_to_cpu(top->dedupe_working_set_percentage);
+	o->dedupe_global = le32_to_cpu(top->dedupe_global);
 	o->block_error_hist = le32_to_cpu(top->block_error_hist);
 	o->replay_align = le32_to_cpu(top->replay_align);
 	o->replay_scale = le32_to_cpu(top->replay_scale);
@@ -513,6 +514,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->dedupe_percentage = cpu_to_le32(o->dedupe_percentage);
 	top->dedupe_mode = cpu_to_le32(o->dedupe_mode);
 	top->dedupe_working_set_percentage = cpu_to_le32(o->dedupe_working_set_percentage);
+	top->dedupe_global = cpu_to_le32(o->dedupe_global);
 	top->block_error_hist = cpu_to_le32(o->block_error_hist);
 	top->replay_align = cpu_to_le32(o->replay_align);
 	top->replay_scale = cpu_to_le32(o->replay_scale);
