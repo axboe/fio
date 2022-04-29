@@ -1553,6 +1553,15 @@ Note that \fBsize\fR needs to be explicitly provided and only 1 file
 per job is supported
 .RE
 .TP
+.BI dedupe_global \fR=\fPbool
+This controls whether the deduplication buffers will be shared amongst
+all jobs that have this option set. The buffers are spread evenly between
+participating jobs.
+.P
+.RS
+Note that \fBdedupe_mode\fR must be set to \fBworking_set\fR for this to work.
+Can be used in combination with compression
+.TP
 .BI invalidate \fR=\fPbool
 Invalidate the buffer/page cache parts of the files to be used prior to
 starting I/O if the platform and file type support it. Defaults to true.

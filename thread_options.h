@@ -263,6 +263,7 @@ struct thread_options {
 	unsigned int dedupe_percentage;
 	unsigned int dedupe_mode;
 	unsigned int dedupe_working_set_percentage;
+	unsigned int dedupe_global;
 	unsigned int time_based;
 	unsigned int disable_lat;
 	unsigned int disable_clat;
@@ -578,6 +579,7 @@ struct thread_options_pack {
 	uint32_t dedupe_percentage;
 	uint32_t dedupe_mode;
 	uint32_t dedupe_working_set_percentage;
+	uint32_t dedupe_global;
 	uint32_t time_based;
 	uint32_t disable_lat;
 	uint32_t disable_clat;
@@ -596,6 +598,7 @@ struct thread_options_pack {
 	uint32_t lat_percentiles;
 	uint32_t slat_percentiles;
 	uint32_t percentile_precision;
+	uint32_t pad5;
 	fio_fp64_t percentile_list[FIO_IO_U_LIST_MAX_LEN];
 
 	uint8_t read_iolog_file[FIO_TOP_STR_MAX];
