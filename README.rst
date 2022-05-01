@@ -107,7 +107,7 @@ Ubuntu:
 Red Hat, Fedora, CentOS & Co:
 	Starting with Fedora 9/Extra Packages for Enterprise Linux 4, fio
 	packages are part of the Fedora/EPEL repositories.
-	https://apps.fedoraproject.org/packages/fio .
+	https://packages.fedoraproject.org/pkgs/fio/ .
 
 Mandriva:
 	Mandriva has integrated fio into their package repository, so installing
