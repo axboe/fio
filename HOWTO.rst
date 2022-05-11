@@ -2171,6 +2171,12 @@ I/O engine
 		**exec**
 			Execute 3rd party tools. Could be used to perform monitoring during jobs runtime.
 
+		**xnvme**
+			I/O engine using the xNVMe C API, for NVMe devices. The xnvme engine provides
+			flexibility to access GNU/Linux Kernel NVMe driver via libaio, IOCTLs, io_uring,
+			the SPDK NVMe driver, or your own custom NVMe driver. The xnvme engine includes
+			engine specific options. (See https://xnvme.io).
+
 I/O engine specific parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -2260,7 +2266,7 @@ with the caveat that when used on the command line, they must come after the
 	making the submission and completion part more lightweight. Required
 	for the below :option:`sqthread_poll` option.
 
-.. option:: sqthread_poll : [io_uring]
+.. option:: sqthread_poll : [io_uring] [xnvme]
 
 	Normally fio will submit IO by issuing a system call to notify the
 	kernel of available items in the SQ ring. If this option is set, the
@@ -2275,7 +2281,7 @@ with the caveat that when used on the command line, they must come after the
 
 .. option:: hipri
 
-   [io_uring]
+   [io_uring], [xnvme]
 
         If this option is set, fio will attempt to use polled IO completions.
         Normal IO completions generate interrupts to signal the completion of
@@ -2724,6 +2730,51 @@ with the caveat that when used on the command line, they must come after the
 .. option:: std_redirect=bool : [exec]
 
 	If set, stdout and stderr streams are redirected to files named from the job name. Default is true.
+
+.. option:: xnvme_async=str : [xnvme]
+
+	Select the xnvme async command interface. This can take these values.
+
+	**emu**
+		This is default and used to emulate asynchronous I/O.
+	**thrpool**
+		Use thread pool for Asynchronous I/O.
+	**io_uring**
+		Use Linux io_uring/liburing for Asynchronous I/O.
+	**libaio**
+		Use Linux aio for Asynchronous I/O.
+	**posix**
+		Use POSIX aio for Asynchronous I/O.
+	**nil**
+		Use nil-io; For introspective perf. evaluation
+
+.. option:: xnvme_sync=str : [xnvme]
+
+	Select the xnvme synchronous command interface. This can take these values.
+
+	**nvme**
+		This is default and uses Linux NVMe Driver ioctl() for synchronous I/O.
+	**psync**
+		Use pread()/write() for synchronous I/O.
+
+.. option:: xnvme_admin=str : [xnvme]
+
+	Select the xnvme admin command interface. This can take these values.
+
+	**nvme**
+		This is default and uses linux NVMe Driver ioctl() for admin commands.
+	**block**
+		Use Linux Block Layer ioctl() and sysfs for admin commands.
+	**file_as_ns**
+		Use file-stat to construct NVMe idfy responses.
+
+.. option:: xnvme_dev_nsid=int : [xnvme]
+
+	xnvme namespace identifier, for userspace NVMe driver.
+
+.. option:: xnvme_iovec=int : [xnvme]
+
+	If this option is set. xnvme will use vectored read/write commands.
 
 I/O depth
 ~~~~~~~~~

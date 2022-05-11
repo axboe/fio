@@ -1965,6 +1965,12 @@ via kernel NFS.
 .TP
 .B exec
 Execute 3rd party tools. Could be used to perform monitoring during jobs runtime.
+.TP
+.B xnvme
+I/O engine using the xNVMe C API, for NVMe devices. The xnvme engine provides
+flexibility to access GNU/Linux Kernel NVMe driver via libaio, IOCTLs, io_uring,
+the SPDK NVMe driver, or your own custom NVMe driver. The xnvme engine includes
+engine specific options. (See \fIhttps://xnvme.io/\fR).
 .SS "I/O engine specific parameters"
 In addition, there are some parameters which are only valid when a specific
 \fBioengine\fR is in use. These are used identically to normal parameters,
@@ -2039,7 +2045,7 @@ release them when IO is done. If this option is set, the pages are pre-mapped
 before IO is started. This eliminates the need to map and release for each IO.
 This is more efficient, and reduces the IO latency as well.
 .TP
-.BI (io_uring)hipri
+.BI (io_uring,xnvme)hipri
 If this option is set, fio will attempt to use polled IO completions. Normal IO
 completions generate interrupts to signal the completion of IO, polled
 completions do not. Hence they are require active reaping by the application.
@@ -2052,7 +2058,7 @@ This avoids the overhead of managing file counts in the kernel, making the
 submission and completion part more lightweight. Required for the below
 sqthread_poll option.
 .TP
-.BI (io_uring)sqthread_poll
+.BI (io_uring,xnvme)sqthread_poll
 Normally fio will submit IO by issuing a system call to notify the kernel of
 available items in the SQ ring. If this option is set, the act of submitting IO
 will be done by a polling thread in the kernel. This frees up cycles for fio, at
@@ -2480,6 +2486,66 @@ Defines the time between the SIGTERM and SIGKILL signals. Default is 1 second.
 .TP
 .BI (exec)std_redirect\fR=\fbool
 If set, stdout and stderr streams are redirected to files named from the job name. Default is true.
+.TP
+.BI (xnvme)xnvme_async\fR=\fPstr
+Select the xnvme async command interface. This can take these values.
+.RS
+.RS
+.TP
+.B emu
+This is default and used to emulate asynchronous I/O
+.TP
+.BI thrpool
+Use thread pool for Asynchronous I/O
+.TP
+.BI io_uring
+Use Linux io_uring/liburing for Asynchronous I/O
+.TP
+.BI libaio
+Use Linux aio for Asynchronous I/O
+.TP
+.BI posix
+Use POSIX aio for Asynchronous I/O
+.TP
+.BI nil
+Use nil-io; For introspective perf. evaluation
+.RE
+.RE
+.TP
+.BI (xnvme)xnvme_sync\fR=\fPstr
+Select the xnvme synchronous command interface. This can take these values.
+.RS
+.RS
+.TP
+.B nvme
+This is default and uses Linux NVMe Driver ioctl() for synchronous I/O
+.TP
+.BI psync
+Use pread()/write() for synchronous I/O
+.RE
+.RE
+.TP
+.BI (xnvme)xnvme_admin\fR=\fPstr
+Select the xnvme admin command interface. This can take these values.
+.RS
+.RS
+.TP
+.B nvme
+This is default and uses Linux NVMe Driver ioctl() for admin commands
+.TP
+.BI block
+Use Linux Block Layer ioctl() and sysfs for admin commands
+.TP
+.BI file_as_ns
+Use file-stat as to construct NVMe idfy responses
+.RE
+.RE
+.TP
+.BI (xnvme)xnvme_dev_nsid\fR=\fPint
+xnvme namespace identifier, for userspace NVMe driver.
+.TP
+.BI (xnvme)xnvme_iovec
+If this option is set, xnvme will use vectored read/write commands.
 .SS "I/O depth"
 .TP
 .BI iodepth \fR=\fPint
