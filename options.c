@@ -2145,6 +2145,11 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .help = "NFS IO engine",
 			  },
 #endif
+#ifdef CONFIG_LIBXNVME
+			  { .ival = "xnvme",
+			    .help = "XNVME IO engine",
+			  },
+#endif
 		},
 	},
 	{

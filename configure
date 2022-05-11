@@ -171,6 +171,7 @@ march_set="no"
 libiscsi="no"
 libnbd="no"
 libnfs="no"
+xnvme="no"
 libzbc=""
 dfs=""
 dynamic_engines="no"
@@ -240,6 +241,8 @@ for opt do
   ;;
   --disable-libzbc) libzbc="no"
   ;;
+  --enable-xnvme) xnvme="yes"
+  ;;
   --disable-tcmalloc) disable_tcmalloc="yes"
   ;;
   --disable-nfs) disable_nfs="yes"
@@ -291,6 +294,7 @@ if test "$show_help" = "yes" ; then
   echo "--with-ime=             Install path for DDN's Infinite Memory Engine"
   echo "--enable-libiscsi       Enable iscsi support"
   echo "--enable-libnbd         Enable libnbd (NBD engine) support"
+  echo "--enable-xnvme          Enable xnvme support"
   echo "--disable-libzbc        Disable libzbc even if found"
   echo "--disable-tcmalloc      Disable tcmalloc support"
   echo "--dynamic-libengines    Lib-based ioengines as dynamic libraries"
@@ -2584,6 +2588,19 @@ fi
 print_config "libzbc engine" "$libzbc"
 
 ##########################################
+# Check if we have xnvme
+if test "$xnvme" != "yes" ; then
+  if check_min_lib_version xnvme 0.2.0; then
+    xnvme="yes"
+    xnvme_cflags=$(pkg-config --cflags xnvme)
+    xnvme_libs=$(pkg-config --libs xnvme)
+  else
+    xnvme="no"
+  fi
+fi
+print_config "xnvme engine" "$xnvme"
+
+##########################################
 # check march=armv8-a+crc+crypto
 if test "$march_armv8_a_crc_crypto" != "yes" ; then
   march_armv8_a_crc_crypto="no"
@@ -3189,6 +3206,11 @@ if test "$libnfs" = "yes" ; then
   echo "CONFIG_LIBNFS=m" >> $config_host_mak
   echo "LIBNFS_CFLAGS=$libnfs_cflags" >> $config_host_mak
   echo "LIBNFS_LIBS=$libnfs_libs" >> $config_host_mak
+fi
+if test "$xnvme" = "yes" ; then
+  output_sym "CONFIG_LIBXNVME"
+  echo "LIBXNVME_CFLAGS=$xnvme_cflags" >> $config_host_mak
+  echo "LIBXNVME_LIBS=$xnvme_libs" >> $config_host_mak
 fi
 if test "$dynamic_engines" = "yes" ; then
   output_sym "CONFIG_DYNAMIC_ENGINES"

@@ -223,7 +223,12 @@ ifdef CONFIG_LIBZBC
   libzbc_LIBS = -lzbc
   ENGINES += libzbc
 endif
-
+ifdef CONFIG_LIBXNVME
+  xnvme_SRCS = engines/xnvme.c
+  xnvme_LIBS = $(LIBXNVME_LIBS)
+  xnvme_CFLAGS = $(LIBXNVME_CFLAGS)
+  ENGINES += xnvme
+endif
 ifeq ($(CONFIG_TARGET_OS), Linux)
   SOURCE += diskutil.c fifo.c blktrace.c cgroup.c trim.c engines/sg.c \
 		oslib/linux-dev-lookup.c engines/io_uring.c
