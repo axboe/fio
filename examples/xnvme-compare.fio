@@ -1,0 +1,72 @@
+; Compare fio IO engines with a random-read workload using BS=4k at QD=1
+;
+; README
+;
+; This job-file is intended to be used as:
+;
+; # Use the built-in io_uring engine to get baseline numbers
+; fio examples/xnvme-compare.fio \
+;   --section=default \
+;   --ioengine=io_uring \
+;   --sqthread_poll=1 \
+;   --filename=/dev/nvme0n1
+;
+; # Use the xNVMe io-engine engine with Linux backend and io_uring async. impl.
+; fio examples/xnvme-compare.fio \
+;   --section=default \
+;   --ioengine=xnvme \
+;   --sqthread_poll=1 \
+;   --xnvme_async=io_uring \
+;   --filename=/dev/nvme0n1
+;
+; # Use the xNVMe io-engine engine with Linux backend and libaio async. impl.
+; fio examples/xnvme-compare.fio \
+;   --section=default \
+;   --ioengine=xnvme \
+;   --xnvme_async=libaio \
+;   --filename=/dev/nvme0n1
+;
+; # Use the xNVMe io-engine engine with SPDK backend, note that you have to set the Namespace-id
+; fio examples/xnvme-compare.fio \
+;   --section=default \
+;   --ioengine=xnvme \
+;   --xnvme_dev_nsid=1 \
+;   --filename=0000\\:01\\:00.0
+;
+; NOTE: The URI encoded in the filename above, the ":" must be escaped.
+;
+; On the command-line using two "\\":
+;
+; --filename=0000\\:01\\:00.0
+;
+; Within a fio-script using a single "\":
+;
+; filename=0000\:01\:00.0
+;
+; NOTE: If you want to override the default bs, iodepth, and workload, then
+; invoke it as:
+;
+; FIO_BS="512" FIO_RW="verify" FIO_IODEPTH=16 fio examples/xnvme-compare.fio \
+;   --section=override
+;
+[global]
+rw=randread
+size=12G
+iodepth=1
+bs=4K
+direct=1
+thread=1
+time_based=1
+runtime=7
+ramp_time=3
+norandommap=1
+
+; Avoid accidentally creating device files; e.g. "/dev/nvme0n1", "/dev/nullb0"
+allow_file_create=0
+
+[default]
+
+[override]
+rw=${FIO_RW}
+iodepth=${FIO_IODEPTH}
+bs=${FIO_BS}
