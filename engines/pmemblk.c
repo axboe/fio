@@ -375,10 +375,11 @@ static enum fio_q_status fio_pmemblk_queue(struct thread_data *td,
 		off /= pmb->pmb_bsize;
 		len /= pmb->pmb_bsize;
 		while (0 < len) {
-			if (io_u->ddir == DDIR_READ &&
-			   0 != pmemblk_read(pmb->pmb_pool, buf, off)) {
-				io_u->error = errno;
-				break;
+			if (io_u->ddir == DDIR_READ) {
+				if (0 != pmemblk_read(pmb->pmb_pool, buf, off)) {
+					io_u->error = errno;
+					break;
+				}
 			} else if (0 != pmemblk_write(pmb->pmb_pool, buf, off)) {
 				io_u->error = errno;
 				break;
