@@ -311,21 +311,15 @@ class FioJobTest(FioExeTest):
         #
         # Sometimes fio informational messages are included at the top of the
         # JSON output, especially under Windows. Try to decode output as JSON
-        # data, lopping off up to the first four lines
+        # data, skipping everything until the first {
         #
         lines = file_data.splitlines()
-        for i in range(5):
-            file_data = '\n'.join(lines[i:])
-            try:
-                self.json_data = json.loads(file_data)
-            except json.JSONDecodeError:
-                continue
-            else:
-                logging.debug("Test %d: skipped %d lines decoding JSON data", self.testnum, i)
-                return
-
-        self.failure_reason = "{0} unable to decode JSON data,".format(self.failure_reason)
-        self.passed = False
+        file_data = '\n'.join(lines[lines.index("{"):])
+        try:
+            self.json_data = json.loads(file_data)
+        except json.JSONDecodeError:
+            self.failure_reason = "{0} unable to decode JSON data,".format(self.failure_reason)
+            self.passed = False
 
 
 class FioJobTest_t0005(FioJobTest):
