@@ -1064,6 +1064,7 @@ Target file/device
 	thread/process.
 
 .. option:: ignore_zone_limits=bool
+
 	If this option is used, fio will ignore the maximum number of open
 	zones limit of the zoned block device in use, thus allowing the
 	option :option:`max_open_zones` value to be larger than the device
