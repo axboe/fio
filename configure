@@ -3142,7 +3142,7 @@ if test "$libzbc" = "yes" ; then
   output_sym "CONFIG_LIBZBC"
 fi
 if test "$zlib" = "no" ; then
-  echo "Consider installing zlib-dev (zlib-devel, some fio features depend on it."
+  echo "Consider installing zlib1g-dev (zlib-devel) as some fio features depend on it."
   if test "$build_static" = "yes"; then
     echo "Note that some distros have separate packages for static libraries."
   fi
