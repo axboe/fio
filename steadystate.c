@@ -250,13 +250,6 @@ int steadystate_check(void)
 		rate_time = mtime_since(&ss->prev_time, &now);
 		memcpy(&ss->prev_time, &now, sizeof(now));
 
-		/*
-		 * Begin monitoring when job starts but don't actually use
-		 * data in checking stopping criterion until ss->ramp_time is
-		 * over. This ensures that we will have a sane value in
-		 * prev_iops/bw the first time through after ss->ramp_time
-		 * is done.
-		 */
 		if (ss->state & FIO_SS_RAMP_OVER) {
 			group_bw += 1000 * (td_bytes - ss->prev_bytes) / rate_time;
 			group_iops += 1000 * (td_iops - ss->prev_iops) / rate_time;
