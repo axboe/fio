@@ -2243,6 +2243,10 @@ Ceph cluster. If the \fBclustername\fR is specified, the \fBclientname\fR shall 
 the full *type.id* string. If no type. prefix is given, fio will add 'client.'
 by default.
 .TP
+.BI (rados)conf \fR=\fPstr
+Specifies the configuration path of ceph cluster, so conf file does not
+have to be /etc/ceph/ceph.conf.
+.TP
 .BI (rbd,rados)busy_poll \fR=\fPbool
 Poll store instead of waiting for completion. Usually this provides better
 throughput at cost of higher(up to 100%) CPU utilization.

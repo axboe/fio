@@ -14,6 +14,7 @@
 ioengine=rados
 clientname=admin
 pool=rados
+conf=/etc/ceph/ceph.conf
 busy_poll=0
 rw=randwrite
 bs=4k
