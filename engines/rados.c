@@ -37,6 +37,7 @@ struct rados_options {
 	char *cluster_name;
 	char *pool_name;
 	char *client_name;
+	char *conf;
 	int busy_poll;
 	int touch_objects;
 };
@@ -66,6 +67,16 @@ static struct fio_option options[] = {
 		.type     = FIO_OPT_STR_STORE,
 		.help     = "Name of the ceph client to access RADOS engine",
 		.off1     = offsetof(struct rados_options, client_name),
+		.category = FIO_OPT_C_ENGINE,
+		.group    = FIO_OPT_G_RBD,
+	},
+	{
+		.name     = "conf",
+		.lname    = "ceph configuration file path",
+		.type     = FIO_OPT_STR_STORE,
+		.help     = "Path of the ceph configuration file",
+		.off1     = offsetof(struct rados_options, conf),
+		.def      = "/etc/ceph/ceph.conf",
 		.category = FIO_OPT_C_ENGINE,
 		.group    = FIO_OPT_G_RBD,
 	},
@@ -184,7 +195,7 @@ static int _fio_rados_connect(struct thread_data *td)
 		goto failed_early;
 	}
 
-	r = rados_conf_read_file(rados->cluster, NULL);
+	r = rados_conf_read_file(rados->cluster, o->conf);
 	if (r < 0) {
 		log_err("rados_conf_read_file failed.\n");
 		goto failed_early;

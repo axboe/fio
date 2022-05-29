@@ -2495,6 +2495,11 @@ with the caveat that when used on the command line, they must come after the
 	the full *type.id* string. If no type. prefix is given, fio will add
 	'client.' by default.
 
+.. option:: conf=str : [rados]
+
+    Specifies the configuration path of ceph cluster, so conf file does not
+    have to be /etc/ceph/ceph.conf.
+
 .. option:: busy_poll=bool : [rbd,rados]
 
         Poll store instead of waiting for completion. Usually this provides better
