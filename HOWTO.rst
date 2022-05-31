@@ -1952,6 +1952,10 @@ I/O engine
 			for both direct and buffered IO.
 			This engine defines engine specific options.
 
+		**io_uring_cmd**
+			Fast Linux native asynchronous I/O for pass through commands.
+			This engine defines engine specific options.
+
 		**libaio**
 			Linux native asynchronous I/O. Note that Linux may only support
 			queued behavior with non-buffered I/O (set ``direct=1`` or
@@ -2255,22 +2259,34 @@ with the caveat that when used on the command line, they must come after the
 	values for trim IOs are ignored. This option is mutually exclusive with
 	the :option:`cmdprio_percentage` option.
 
-.. option:: fixedbufs : [io_uring]
+.. option:: fixedbufs : [io_uring] [io_uring_cmd]
 
-    If fio is asked to do direct IO, then Linux will map pages for each
-    IO call, and release them when IO is done. If this option is set, the
-    pages are pre-mapped before IO is started. This eliminates the need to
-    map and release for each IO. This is more efficient, and reduces the
-    IO latency as well.
+	If fio is asked to do direct IO, then Linux will map pages for each
+	IO call, and release them when IO is done. If this option is set, the
+	pages are pre-mapped before IO is started. This eliminates the need to
+	map and release for each IO. This is more efficient, and reduces the
+	IO latency as well.
 
-.. option:: registerfiles : [io_uring]
+.. option:: nonvectored : [io_uring] [io_uring_cmd]
+
+	With this option, fio will use non-vectored read/write commands, where
+	address must contain the address directly. Default is -1.
+
+.. option:: force_async=int : [io_uring] [io_uring_cmd]
+
+	Normal operation for io_uring is to try and issue an sqe as
+	non-blocking first, and if that fails, execute it in an async manner.
+	With this option set to N, then every N request fio will ask sqe to
+	be issued in an async manner. Default is 0.
+
+.. option:: registerfiles : [io_uring] [io_uring_cmd]
 
 	With this option, fio registers the set of files being used with the
 	kernel. This avoids the overhead of managing file counts in the kernel,
 	making the submission and completion part more lightweight. Required
 	for the below :option:`sqthread_poll` option.
 
-.. option:: sqthread_poll : [io_uring] [xnvme]
+.. option:: sqthread_poll : [io_uring] [io_uring_cmd] [xnvme]
 
 	Normally fio will submit IO by issuing a system call to notify the
 	kernel of available items in the SQ ring. If this option is set, the
@@ -2278,14 +2294,19 @@ with the caveat that when used on the command line, they must come after the
 	This frees up cycles for fio, at the cost of using more CPU in the
 	system.
 
-.. option:: sqthread_poll_cpu : [io_uring]
+.. option:: sqthread_poll_cpu : [io_uring] [io_uring_cmd]
 
 	When :option:`sqthread_poll` is set, this option provides a way to
 	define which CPU should be used for the polling thread.
 
+.. option:: cmd_type=str : [io_uring_cmd]
+
+	Specifies the type of uring passthrough command to be used. Supported
+	value is nvme. Default is nvme.
+
 .. option:: hipri
 
-   [io_uring], [xnvme]
+   [io_uring] [io_uring_cmd] [xnvme]
 
         If this option is set, fio will attempt to use polled IO completions.
         Normal IO completions generate interrupts to signal the completion of
