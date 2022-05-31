@@ -2587,6 +2587,27 @@ if test "$libzbc" != "no" ; then
 fi
 print_config "libzbc engine" "$libzbc"
 
+if test "$targetos" = "Linux" ; then
+##########################################
+# Check NVME_URING_CMD support
+cat > $TMPC << EOF
+#include <linux/nvme_ioctl.h>
+int main(void)
+{
+  struct nvme_uring_cmd *cmd;
+
+  return sizeof(struct nvme_uring_cmd);
+}
+EOF
+if compile_prog "" "" "nvme uring cmd"; then
+  output_sym "CONFIG_NVME_URING_CMD"
+  nvme_uring_cmd="yes"
+else
+  nvme_uring_cmd="no"
+fi
+print_config "NVMe uring command support" "$nvme_uring_cmd"
+fi
+
 ##########################################
 # Check if we have xnvme
 if test "$xnvme" != "yes" ; then
