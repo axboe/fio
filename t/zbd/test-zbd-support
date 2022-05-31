@@ -229,6 +229,14 @@ require_regular_block_dev() {
 	return 0
 }
 
+require_block_dev() {
+	if [[ -b "$realdev" ]]; then
+		return 0
+	fi
+	SKIP_REASON="$dev is not a block device"
+	return 1
+}
+
 require_seq_zones() {
 	local req_seq_zones=${1}
 	local seq_bytes=$((disk_size - first_sequential_zone_sector * 512))
@@ -251,8 +259,9 @@ require_conv_zones() {
 	return 0
 }
 
-# Check whether buffered writes are refused.
+# Check whether buffered writes are refused for block devices.
 test1() {
+    require_block_dev || return $SKIP_TESTCASE
     run_fio --name=job1 --filename="$dev" --rw=write --direct=0 --bs=4K	\
 	    "$(ioengine "psync")" --size="${zone_size}" --thread=1	\
 	    --zonemode=zbd --zonesize="${zone_size}" 2>&1 |

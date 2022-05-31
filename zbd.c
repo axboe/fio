@@ -466,7 +466,7 @@ out:
 	return res;
 }
 
-/* Verify whether direct I/O is used for all host-managed zoned drives. */
+/* Verify whether direct I/O is used for all host-managed zoned block drives. */
 static bool zbd_using_direct_io(void)
 {
 	struct thread_data *td;
@@ -477,7 +477,7 @@ static bool zbd_using_direct_io(void)
 		if (td->o.odirect || !(td->o.td_ddir & TD_DDIR_WRITE))
 			continue;
 		for_each_file(td, f, j) {
-			if (f->zbd_info &&
+			if (f->zbd_info && f->filetype == FIO_TYPE_BLOCK &&
 			    f->zbd_info->model == ZBD_HOST_MANAGED)
 				return false;
 		}
