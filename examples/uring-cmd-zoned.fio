@@ -1,0 +1,31 @@
+# io_uring_cmd I/O engine for nvme-ns generic zoned character device
+#
+# NOTE: with write workload iodepth must be set to 1 as there is no IO
+# scheduler.
+
+[global]
+filename=/dev/ng0n1
+ioengine=io_uring_cmd
+cmd_type=nvme
+zonemode=zbd
+size=1G
+iodepth=1
+bs=256K
+verify=crc32c
+stonewall=1
+
+[rand-write]
+rw=randwrite
+
+[write-opts]
+rw=write
+registerfiles=1
+sqthread_poll=1
+sqthread_poll_cpu=0
+
+[randwrite-opts]
+rw=randwrite
+sqthread_poll=1
+sqthread_poll_cpu=0
+nonvectored=1
+registerfiles=1
