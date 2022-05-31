@@ -43,8 +43,15 @@ struct nvme_uring_cmd {
 #define NVME_IDENTIFY_DATA_SIZE 4096
 #define NVME_IDENTIFY_CSI_SHIFT 24
 
+#define NVME_ZNS_ZRA_REPORT_ZONES 0
+#define NVME_ZNS_ZRAS_FEAT_ERZ (1 << 16)
+#define NVME_ZNS_ZSA_RESET 0x4
+#define NVME_ZONE_TYPE_SEQWRITE_REQ 0x2
+
 enum nvme_identify_cns {
-	NVME_IDENTIFY_CNS_NS = 0x00,
+	NVME_IDENTIFY_CNS_NS		= 0x00,
+	NVME_IDENTIFY_CNS_CSI_NS	= 0x05,
+	NVME_IDENTIFY_CNS_CSI_CTRL	= 0x06,
 };
 
 enum nvme_csi {
@@ -60,6 +67,18 @@ enum nvme_admin_opcode {
 enum nvme_io_opcode {
 	nvme_cmd_write			= 0x01,
 	nvme_cmd_read			= 0x02,
+	nvme_zns_cmd_mgmt_send		= 0x79,
+	nvme_zns_cmd_mgmt_recv		= 0x7a,
+};
+
+enum nvme_zns_zs {
+	NVME_ZNS_ZS_EMPTY		= 0x1,
+	NVME_ZNS_ZS_IMPL_OPEN		= 0x2,
+	NVME_ZNS_ZS_EXPL_OPEN		= 0x3,
+	NVME_ZNS_ZS_CLOSED		= 0x4,
+	NVME_ZNS_ZS_READ_ONLY		= 0xd,
+	NVME_ZNS_ZS_FULL		= 0xe,
+	NVME_ZNS_ZS_OFFLINE		= 0xf,
 };
 
 struct nvme_data {
@@ -127,10 +146,69 @@ static inline int ilog2(uint32_t i)
 	return log;
 }
 
+struct nvme_zns_lbafe {
+	__le64	zsze;
+	__u8	zdes;
+	__u8	rsvd9[7];
+};
+
+struct nvme_zns_id_ns {
+	__le16			zoc;
+	__le16			ozcs;
+	__le32			mar;
+	__le32			mor;
+	__le32			rrl;
+	__le32			frl;
+	__le32			rrl1;
+	__le32			rrl2;
+	__le32			rrl3;
+	__le32			frl1;
+	__le32			frl2;
+	__le32			frl3;
+	__le32			numzrwa;
+	__le16			zrwafg;
+	__le16			zrwasz;
+	__u8			zrwacap;
+	__u8			rsvd53[2763];
+	struct nvme_zns_lbafe	lbafe[64];
+	__u8			vs[256];
+};
+
+struct nvme_zns_desc {
+	__u8	zt;
+	__u8	zs;
+	__u8	za;
+	__u8	zai;
+	__u8	rsvd4[4];
+	__le64	zcap;
+	__le64	zslba;
+	__le64	wp;
+	__u8	rsvd32[32];
+};
+
+struct nvme_zone_report {
+	__le64			nr_zones;
+	__u8			rsvd8[56];
+	struct nvme_zns_desc	entries[];
+};
+
 int fio_nvme_get_info(struct fio_file *f, __u32 *nsid, __u32 *lba_sz,
 		      __u64 *nlba);
 
 int fio_nvme_uring_cmd_prep(struct nvme_uring_cmd *cmd, struct io_u *io_u,
 			    struct iovec *iov);
+
+int fio_nvme_get_zoned_model(struct thread_data *td, struct fio_file *f,
+			     enum zbd_zoned_model *model);
+
+int fio_nvme_report_zones(struct thread_data *td, struct fio_file *f,
+			  uint64_t offset, struct zbd_zone *zbdz,
+			  unsigned int nr_zones);
+
+int fio_nvme_reset_wp(struct thread_data *td, struct fio_file *f,
+		      uint64_t offset, uint64_t length);
+
+int fio_nvme_get_max_open_zones(struct thread_data *td, struct fio_file *f,
+				unsigned int *max_open_zones);
 
 #endif
