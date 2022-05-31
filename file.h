@@ -126,12 +126,14 @@ struct fio_file {
 	unsigned int last_write_idx;
 
 	/*
-	 * For use by the io engine for offset or private data storage
+	 * For use by the io engine to store offset
 	 */
-	union {
-		uint64_t engine_pos;
-		void *engine_data;
-	};
+	uint64_t engine_pos;
+
+	/*
+	 * For use by the io engine for private data storage
+	 */
+	void *engine_data;
 
 	/*
 	 * if io is protected by a semaphore, this is set
