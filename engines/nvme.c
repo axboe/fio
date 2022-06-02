@@ -62,7 +62,7 @@ int fio_nvme_get_info(struct fio_file *f, __u32 *nsid, __u32 *lba_sz,
 		      __u64 *nlba)
 {
 	struct nvme_id_ns ns;
-	unsigned int namespace_id;
+	int namespace_id;
 	int fd, err;
 
 	if (f->filetype != FIO_TYPE_CHAR) {
