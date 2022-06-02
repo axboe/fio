@@ -402,45 +402,41 @@ static int fio_ioring_cmd_prep(struct thread_data *td, struct io_u *io_u)
 	struct ioring_data *ld = td->io_ops_data;
 	struct ioring_options *o = td->eo;
 	struct fio_file *f = io_u->file;
+	struct nvme_uring_cmd *cmd;
 	struct io_uring_sqe *sqe;
-	int ret;
 
-	/* nvme_uring_cmd case */
-	if (o->cmd_type == FIO_URING_CMD_NVME) {
-		struct nvme_uring_cmd *cmd;
+	/* only supports nvme_uring_cmd */
+	if (o->cmd_type != FIO_URING_CMD_NVME)
+		return -EINVAL;
 
-		sqe = &ld->sqes[(io_u->index) << 1];
+	sqe = &ld->sqes[(io_u->index) << 1];
 
-		if (o->registerfiles) {
-			sqe->fd = f->engine_pos;
-			sqe->flags = IOSQE_FIXED_FILE;
-		} else {
-			sqe->fd = f->fd;
-		}
-		sqe->rw_flags = 0;
-		if (!td->o.odirect && o->uncached)
-			sqe->rw_flags |= RWF_UNCACHED;
-		if (o->nowait)
-			sqe->rw_flags |= RWF_NOWAIT;
-
-		sqe->opcode = IORING_OP_URING_CMD;
-		sqe->user_data = (unsigned long) io_u;
-		if (o->nonvectored)
-			sqe->cmd_op = NVME_URING_CMD_IO;
-		else
-			sqe->cmd_op = NVME_URING_CMD_IO_VEC;
-		if (o->force_async && ++ld->prepped == o->force_async) {
-			ld->prepped = 0;
-			sqe->flags |= IOSQE_ASYNC;
-		}
-
-		cmd = (struct nvme_uring_cmd *)sqe->cmd;
-		ret = fio_nvme_uring_cmd_prep(cmd, io_u,
-				o->nonvectored ? NULL : &ld->iovecs[io_u->index]);
-
-		return ret;
+	if (o->registerfiles) {
+		sqe->fd = f->engine_pos;
+		sqe->flags = IOSQE_FIXED_FILE;
+	} else {
+		sqe->fd = f->fd;
 	}
-	return -EINVAL;
+	sqe->rw_flags = 0;
+	if (!td->o.odirect && o->uncached)
+		sqe->rw_flags |= RWF_UNCACHED;
+	if (o->nowait)
+		sqe->rw_flags |= RWF_NOWAIT;
+
+	sqe->opcode = IORING_OP_URING_CMD;
+	sqe->user_data = (unsigned long) io_u;
+	if (o->nonvectored)
+		sqe->cmd_op = NVME_URING_CMD_IO;
+	else
+		sqe->cmd_op = NVME_URING_CMD_IO_VEC;
+	if (o->force_async && ++ld->prepped == o->force_async) {
+		ld->prepped = 0;
+		sqe->flags |= IOSQE_ASYNC;
+	}
+
+	cmd = (struct nvme_uring_cmd *)sqe->cmd;
+	return fio_nvme_uring_cmd_prep(cmd, io_u,
+			o->nonvectored ? NULL : &ld->iovecs[io_u->index]);
 }
 
 static struct io_u *fio_ioring_event(struct thread_data *td, int event)
