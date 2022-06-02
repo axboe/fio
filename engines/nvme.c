@@ -182,8 +182,10 @@ int fio_nvme_report_zones(struct thread_data *td, struct fio_file *f,
 	zones_fetched = 0;
 	zr_len = sizeof(*zr) + (zones_chunks * sizeof(struct nvme_zns_desc));
 	zr = calloc(1, zr_len);
-	if (!zr)
+	if (!zr) {
+		close(fd);
 		return -ENOMEM;
+	}
 
 	ret = nvme_identify(fd, data->nsid, NVME_IDENTIFY_CNS_NS,
 				NVME_CSI_NVM, &ns);
