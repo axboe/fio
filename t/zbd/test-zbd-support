@@ -259,6 +259,16 @@ require_conv_zones() {
 	return 0
 }
 
+require_max_open_zones() {
+	local min=${1}
+
+	if ((max_open_zones !=0 && max_open_zones < min)); then
+		SKIP_REASON="max_open_zones of $dev is smaller than $min"
+		return 1
+	fi
+	return 0
+}
+
 # Check whether buffered writes are refused for block devices.
 test1() {
     require_block_dev || return $SKIP_TESTCASE
@@ -461,6 +471,8 @@ test12() {
 # Random write to sequential zones, libaio, queue depth 64, max 4 open zones.
 test13() {
     local size off capacity
+
+    require_max_open_zones 4 || return $SKIP_TESTCASE
 
     prep_write
     size=$((8 * zone_size))
