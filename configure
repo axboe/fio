@@ -2578,6 +2578,10 @@ int main(int argc, char **argv)
 }
 EOF
 if test "$libzbc" != "no" ; then
+  if [ -e /usr/include/libzbc/libzbc ]; then
+    # SUSE Linux.
+    CFLAGS="$CFLAGS -I/usr/include/libzbc"
+  fi
   if compile_prog "" "-lzbc" "libzbc"; then
     libzbc="yes"
     if ! check_min_lib_version libzbc 5; then
