@@ -1128,7 +1128,8 @@ cat > $TMPC << EOF
 #include <sched.h>
 int main(int argc, char **argv)
 {
-  cpu_set_t mask;
+  cpu_set_t mask = { };
+
   return sched_setaffinity(0, sizeof(mask), &mask);
 }
 EOF
@@ -1139,7 +1140,8 @@ else
 #include <sched.h>
 int main(int argc, char **argv)
 {
-  cpu_set_t mask;
+  cpu_set_t mask = { };
+
   return sched_setaffinity(0, &mask);
 }
 EOF
@@ -1621,7 +1623,8 @@ cat > $TMPC << EOF
 #include <sched.h>
 int main(int argc, char **argv)
 {
-  struct sched_param p;
+  struct sched_param p = { };
+
   return sched_setscheduler(0, SCHED_IDLE, &p);
 }
 EOF
@@ -1743,7 +1746,9 @@ cat > $TMPC << EOF
 #include <sys/uio.h>
 int main(int argc, char **argv)
 {
-  return pwritev(0, NULL, 1, 0) + preadv(0, NULL, 1, 0);
+  struct iovec iov[1] = { };
+
+  return pwritev(0, iov, 1, 0) + preadv(0, iov, 1, 0);
 }
 EOF
 if compile_prog "" "" "pwritev"; then
@@ -1761,7 +1766,9 @@ cat > $TMPC << EOF
 #include <sys/uio.h>
 int main(int argc, char **argv)
 {
-  return pwritev2(0, NULL, 1, 0, 0) + preadv2(0, NULL, 1, 0, 0);
+  struct iovec iov[1] = { };
+
+  return pwritev2(0, iov, 1, 0, 0) + preadv2(0, iov, 1, 0, 0);
 }
 EOF
 if compile_prog "" "" "pwritev2"; then
@@ -1787,14 +1794,14 @@ cat > $TMPC << EOF
 #include <stdio.h>
 int main(int argc, char **argv)
 {
-  struct addrinfo hints;
-  struct in6_addr addr;
+  struct addrinfo hints = { };
+  struct in6_addr addr = in6addr_any;
   int ret;
 
   ret = getaddrinfo(NULL, NULL, &hints, NULL);
   freeaddrinfo(NULL);
-  printf("%s\n", gai_strerror(ret));
-  addr = in6addr_any;
+  printf("%s %d\n", gai_strerror(ret), addr.s6_addr[0]);
+
   return 0;
 }
 EOF
@@ -2155,9 +2162,7 @@ cat > $TMPC << EOF
 #include <stdlib.h>
 int main(int argc, char **argv)
 {
-  int rc;
-  rc = pmem_is_pmem(NULL, 0);
-  return 0;
+  return pmem_is_pmem(NULL, 0);
 }
 EOF
 if compile_prog "" "-lpmem" "libpmem"; then
@@ -2176,7 +2181,7 @@ if test "$libpmem" = "yes"; then
 #include <stdlib.h>
 int main(int argc, char **argv)
 {
-  pmem_memcpy(NULL, NULL, NULL, NULL);
+  pmem_memcpy(NULL, NULL, 0, 0);
   return 0;
 }
 EOF
@@ -2392,7 +2397,7 @@ int main(int argc, char **argv)
   FILE *mtab = setmntent(NULL, "r");
   struct mntent *mnt = getmntent(mtab);
   endmntent(mtab);
-  return 0;
+  return mnt != NULL;
 }
 EOF
 if compile_prog "" "" "getmntent"; then
@@ -2573,6 +2578,10 @@ int main(int argc, char **argv)
 }
 EOF
 if test "$libzbc" != "no" ; then
+  if [ -e /usr/include/libzbc/libzbc ]; then
+    # SUSE Linux.
+    CFLAGS="$CFLAGS -I/usr/include/libzbc"
+  fi
   if compile_prog "" "-lzbc" "libzbc"; then
     libzbc="yes"
     if ! check_min_lib_version libzbc 5; then
