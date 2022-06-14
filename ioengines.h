@@ -83,6 +83,8 @@ enum fio_ioengine_flags {
 	FIO_ASYNCIO_SYNC_TRIM
 			= 1 << 14,	/* io engine has async ->queue except for trim */
 	FIO_NO_OFFLOAD	= 1 << 15,	/* no async offload */
+	FIO_ASYNCIO_SETS_ISSUE_TIME
+			= 1 << 16,	/* async ioengine with commit function that sets issue_time */
 };
 
 /*
