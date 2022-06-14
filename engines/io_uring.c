@@ -608,6 +608,12 @@ static void fio_ioring_queued(struct thread_data *td, int start, int nr)
 
 		start++;
 	}
+
+	/*
+	 * only used for iolog
+	 */
+	if (td->o.read_iolog_file)
+		memcpy(&td->last_issue, &now, sizeof(now));
 }
 
 static int fio_ioring_commit(struct thread_data *td)
