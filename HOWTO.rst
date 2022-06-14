@@ -4165,24 +4165,31 @@ writes in the example above).  In the order listed, they denote:
 **slat**
 		Submission latency (**min** being the minimum, **max** being the
 		maximum, **avg** being the average, **stdev** being the standard
-		deviation).  This is the time it took to submit the I/O.  For
-		sync I/O this row is not displayed as the slat is really the
-		completion latency (since queue/complete is one operation there).
-		This value can be in nanoseconds, microseconds or milliseconds ---
-		fio will choose the most appropriate base and print that (in the
-		example above nanoseconds was the best scale).  Note: in :option:`--minimal` mode
-		latencies are always expressed in microseconds.
+                deviation).  This is the time from when fio initialized the I/O
+                to submission.  For synchronous ioengines this includes the time
+                up until just before the ioengine's queue function is called.
+                For asynchronous ioengines this includes the time up through the
+                completion of the ioengine's queue function (and commit function
+                if it is defined). For sync I/O this row is not displayed as the
+                slat is negligible.  This value can be in nanoseconds,
+                microseconds or milliseconds --- fio will choose the most
+                appropriate base and print that (in the example above
+                nanoseconds was the best scale).  Note: in :option:`--minimal`
+                mode latencies are always expressed in microseconds.
 
 **clat**
 		Completion latency. Same names as slat, this denotes the time from
-		submission to completion of the I/O pieces. For sync I/O, clat will
-		usually be equal (or very close) to 0, as the time from submit to
-		complete is basically just CPU time (I/O has already been done, see slat
-		explanation).
+                submission to completion of the I/O pieces. For sync I/O, this
+                represents the time from when the I/O was submitted to the
+                operating system to when it was completed. For asynchronous
+                ioengines this is the time from when the ioengine's queue (and
+                commit if available) functions were completed to when the I/O's
+                completion was reaped by fio.
 
 **lat**
 		Total latency. Same names as slat and clat, this denotes the time from
 		when fio created the I/O unit to completion of the I/O operation.
+                It is the sum of submission and completion latency.
 
 **bw**
 		Bandwidth statistics based on samples. Same names as the xlat stats,
