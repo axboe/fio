@@ -832,6 +832,12 @@ static void fio_rdmaio_queued(struct thread_data *td, struct io_u **io_us,
 		memcpy(&io_u->issue_time, &now, sizeof(now));
 		io_u_queued(td, io_u);
 	}
+
+	/*
+	 * only used for iolog
+	 */
+	if (td->o.read_iolog_file)
+		memcpy(&td->last_issue, &now, sizeof(now));
 }
 
 static int fio_rdmaio_commit(struct thread_data *td)
@@ -1404,7 +1410,8 @@ FIO_STATIC struct ioengine_ops ioengine = {
 	.cleanup		= fio_rdmaio_cleanup,
 	.open_file		= fio_rdmaio_open_file,
 	.close_file		= fio_rdmaio_close_file,
-	.flags			= FIO_DISKLESSIO | FIO_UNIDIR | FIO_PIPEIO,
+	.flags			= FIO_DISKLESSIO | FIO_UNIDIR | FIO_PIPEIO |
+					FIO_ASYNCIO_SETS_ISSUE_TIME,
 	.options		= options,
 	.option_struct_size	= sizeof(struct rdmaio_options),
 };

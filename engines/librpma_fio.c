@@ -621,9 +621,16 @@ int librpma_fio_client_commit(struct thread_data *td)
 		}
 	}
 
-	if ((fill_time = fio_fill_issue_time(td)))
+	if ((fill_time = fio_fill_issue_time(td))) {
 		fio_gettime(&now, NULL);
 
+		/*
+		 * only used for iolog
+		 */
+		if (td->o.read_iolog_file)
+			memcpy(&td->last_issue, &now, sizeof(now));
+
+	}
 	/* move executed io_us from queued[] to flight[] */
 	for (i = 0; i < ccd->io_u_queued_nr; i++) {
 		struct io_u *io_u = ccd->io_us_queued[i];
