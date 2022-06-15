@@ -442,7 +442,10 @@ err:
 bool read_blktrace(struct thread_data* td)
 {
 	struct blk_io_trace t;
-	struct file_cache cache = { };
+	struct file_cache cache = {
+		.maj = ~0U,
+		.min = ~0U,
+	};
 	unsigned long ios[DDIR_RWDIR_SYNC_CNT] = { };
 	unsigned long long rw_bs[DDIR_RWDIR_CNT] = { };
 	unsigned long skipped_writes;
