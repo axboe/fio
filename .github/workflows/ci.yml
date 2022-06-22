@@ -15,6 +15,7 @@ jobs:
         - linux-clang
         - macos
         - linux-i686-gcc
+        - android
         include:
         - build: linux-gcc
           os: ubuntu-20.04
@@ -27,8 +28,12 @@ jobs:
         - build: linux-i686-gcc
           os: ubuntu-20.04
           arch: i686
+        - build: android
+          os: ubuntu-20.04
+          arch: aarch64-linux-android32
 
     env:
+      CI_TARGET_BUILD: ${{ matrix.build }}
       CI_TARGET_ARCH: ${{ matrix.arch }}
       CC: ${{ matrix.cc }}
 

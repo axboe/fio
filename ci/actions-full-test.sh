@@ -3,6 +3,8 @@
 set -eu
 
 main() {
+    [ "${CI_TARGET_BUILD}" = android ] && return 0
+
     echo "Running long running tests..."
     export PYTHONUNBUFFERED="TRUE"
     if [[ "${CI_TARGET_ARCH}" == "arm64" ]]; then
