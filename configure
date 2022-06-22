@@ -171,7 +171,7 @@ march_set="no"
 libiscsi="no"
 libnbd="no"
 libnfs="no"
-xnvme="no"
+xnvme=""
 libzbc=""
 dfs=""
 dynamic_engines="no"
@@ -241,7 +241,7 @@ for opt do
   ;;
   --disable-libzbc) libzbc="no"
   ;;
-  --enable-xnvme) xnvme="yes"
+  --disable-xnvme) xnvme="no"
   ;;
   --disable-tcmalloc) disable_tcmalloc="yes"
   ;;
@@ -294,7 +294,7 @@ if test "$show_help" = "yes" ; then
   echo "--with-ime=             Install path for DDN's Infinite Memory Engine"
   echo "--enable-libiscsi       Enable iscsi support"
   echo "--enable-libnbd         Enable libnbd (NBD engine) support"
-  echo "--enable-xnvme          Enable xnvme support"
+  echo "--disable-xnvme         Disable xnvme support even if found"
   echo "--disable-libzbc        Disable libzbc even if found"
   echo "--disable-tcmalloc      Disable tcmalloc support"
   echo "--dynamic-libengines    Lib-based ioengines as dynamic libraries"
@@ -2619,7 +2619,7 @@ fi
 
 ##########################################
 # Check if we have xnvme
-if test "$xnvme" != "yes" ; then
+if test "$xnvme" != "no" ; then
   if check_min_lib_version xnvme 0.2.0; then
     xnvme="yes"
     xnvme_cflags=$(pkg-config --cflags xnvme)
