@@ -16,7 +16,7 @@ cmake .. -DCMAKE_BUILD_TYPE=Release \
 	-DBUILD_DOC=OFF \
 	-DBUILD_EXAMPLES=OFF \
 	-DBUILD_TESTS=OFF
-make -j$(nproc)
-sudo make -j$(nproc) install
-cd $WORKDIR
+make -j"$(nproc)"
+sudo make -j"$(nproc)" install
+cd "$WORKDIR"
 rm -rf $ZIP_FILE rpma-${LIBRPMA_VERSION}
