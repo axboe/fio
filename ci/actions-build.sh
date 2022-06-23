@@ -11,8 +11,23 @@ main() {
     local configure_flags=()
 
     set_ci_target_os
-    case "${CI_TARGET_OS}" in
-        "linux")
+    case "${CI_TARGET_BUILD}/${CI_TARGET_OS}" in
+        android/*)
+            export UNAME=Android
+            if [ -z "${CI_TARGET_ARCH}" ]; then
+                echo "Error: CI_TARGET_ARCH has not been set"
+                return 1
+            fi
+            NDK=$PWD/android-ndk-r24/toolchains/llvm/prebuilt/linux-x86_64/bin
+            export PATH="${NDK}:${PATH}"
+            export LIBS="-landroid"
+            CC=${NDK}/${CI_TARGET_ARCH}-clang
+            if [ ! -e "${CC}" ]; then
+                echo "Error: could not find ${CC}"
+                return 1
+            fi
+            ;;
+        */linux)
             case "${CI_TARGET_ARCH}" in
                 "i686")
                     extra_cflags="${extra_cflags} -m32"

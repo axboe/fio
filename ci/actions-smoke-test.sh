@@ -3,6 +3,8 @@
 set -eu
 
 main() {
+    [ "${CI_TARGET_BUILD}" = "android" ] && return 0
+
     echo "Running smoke tests..."
     make test
 }

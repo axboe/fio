@@ -12,7 +12,8 @@ WORKDIR=$(pwd)
 #    /bin/sh: 1: clang: not found
 # if CC is not set to the full path of clang.
 #
-export CC=$(type -P $CC)
+CC=$(type -P "$CC")
+export CC
 
 # Install PMDK libraries, because PMDK's libpmem
 # is a dependency of the librpma fio engine.
@@ -22,7 +23,7 @@ export CC=$(type -P $CC)
 wget https://github.com/pmem/pmdk/releases/download/${PMDK_VERSION}/pmdk-${PMDK_VERSION}.tar.gz
 tar -xzf pmdk-${PMDK_VERSION}.tar.gz
 cd pmdk-${PMDK_VERSION}
-make -j$(nproc) NDCTL_ENABLE=n
-sudo make -j$(nproc) install prefix=/usr NDCTL_ENABLE=n
-cd $WORKDIR
+make -j"$(nproc)" NDCTL_ENABLE=n
+sudo make -j"$(nproc)" install prefix=/usr NDCTL_ENABLE=n
+cd "$WORKDIR"
 rm -rf pmdk-${PMDK_VERSION}
