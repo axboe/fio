@@ -97,18 +97,17 @@ void init_rand_seed(struct frand_state *state, uint64_t seed, bool use64)
 
 void __fill_random_buf(void *buf, unsigned int len, uint64_t seed)
 {
-    int64_t *b = buf;
-    int64_t *e = b  + len / sizeof *b;
-    unsigned int rest = len % sizeof *b;
+	uint64_t *b = buf;
+	uint64_t *e = b  + len / sizeof(*b);
+	unsigned int rest = len % sizeof(*b);
 
-    for (int64_t *p = b; p != e; ++p) {
-        *p = seed;
-        seed *= GOLDEN_RATIO_PRIME;
-        seed >>= 3;
-    }
+	while (b != e) {
+		*b++ = seed;
+		seed *= GOLDEN_RATIO_64;
+	}
 
-    if (rest)
-        __builtin_memcpy(e, &seed, rest);
+	if (fio_unlikely(rest))
+		__builtin_memcpy(e, &seed, rest);
 }
 
 uint64_t fill_random_buf(struct frand_state *fs, void *buf,
