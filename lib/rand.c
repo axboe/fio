@@ -103,7 +103,7 @@ void __fill_random_buf(void *buf, unsigned int len, uint64_t seed)
 
 	for (; b != e; ++b) {
 		*b = seed;
-		seed *= GOLDEN_RATIO_64;
+		seed = __hash_u64(seed);
 	}
 
 	if (fio_unlikely(rest))
