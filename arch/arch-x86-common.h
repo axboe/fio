@@ -15,7 +15,7 @@ static inline void cpuid(unsigned int op,
 #define ARCH_HAVE_INIT
 
 extern bool tsc_reliable;
-extern int arch_random;
+extern int arch_random, arch_aes;
 
 static inline void arch_init_intel(void)
 {
@@ -37,11 +37,12 @@ static inline void arch_init_intel(void)
 	tsc_reliable = (edx & (1U << 8)) != 0;
 
 	/*
-	 * Check for FDRAND
+	 * Check for FDRAND / AES
 	 */
 	eax = 0x1;
 	do_cpuid(&eax, &ebx, &ecx, &edx);
 	arch_random = (ecx & (1U << 30)) != 0;
+	arch_aes = (ecx & (1U << 25)) != 0;
 }
 
 static inline void arch_init_amd(void)
@@ -54,6 +55,13 @@ static inline void arch_init_amd(void)
 
 	cpuid(0x80000007, &eax, &ebx, &ecx, &edx);
 	tsc_reliable = (edx & (1U << 8)) != 0;
+
+	/*
+	 * Check for AES
+	 */
+	eax = 0x1;
+	do_cpuid(&eax, &ebx, &ecx, &edx);
+	arch_aes = (ecx & (1U << 25)) != 0;
 }
 
 static inline void arch_init(char *envp[])

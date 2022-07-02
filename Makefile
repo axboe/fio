@@ -31,7 +31,7 @@ ifndef CONFIG_FIO_NO_OPT
   FIO_CFLAGS += -O3
 endif
 ifdef CONFIG_BUILD_NATIVE
-  FIO_CFLAGS += -march=native
+  FIO_CFLAGS += -march=native -maes
 endif
 
 ifdef CONFIG_PDB

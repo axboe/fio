@@ -1111,7 +1111,7 @@ void td_fill_rand_seeds(struct thread_data *td)
 	td_fill_rand_seeds_internal(td, rand_type);
 
 	init_rand_seed(&td->buf_state, td->rand_seeds[FIO_RAND_BUF_OFF],
-			rand_type);
+			arch_aes ? FIO_RAND_AES : rand_type);
 	frand_copy(&td->buf_state_prev, &td->buf_state);
 }
 

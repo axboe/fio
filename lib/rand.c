@@ -34,11 +34,14 @@
 */
 
 #include <string.h>
+#ifdef CONFIG_ARCH_AES
+#include <wmmintrin.h>
+#endif
 #include "rand.h"
 #include "pattern.h"
 #include "../hash.h"
 
-int arch_random;
+int arch_random, arch_aes;
 
 static inline uint64_t __seed(uint64_t x, uint64_t m)
 {
@@ -75,6 +78,14 @@ void __init_rand64(struct taus258_state *state, uint64_t seed)
 		__rand64(state);
 }
 
+static void __init_rand_aes(struct frand_state *state, unsigned int seed)
+{
+#ifdef CONFIG_ARCH_AES
+	if (arch_aes)
+		aes_seed(state, seed);
+#endif
+}
+
 void init_rand(struct frand_state *state, enum fio_rand_type rand_type)
 {
 	state->rand_type = rand_type;
@@ -85,6 +96,9 @@ void init_rand(struct frand_state *state, enum fio_rand_type rand_type)
 		break;
 	case FIO_RAND_64:
 		__init_rand64(&state->state64, 1);
+		break;
+	case FIO_RAND_AES:
+		__init_rand_aes(state, 1);
 		break;
 	}
 }
@@ -98,6 +112,14 @@ void init_rand_seed(struct frand_state *state, uint64_t seed,
 	case FIO_RAND_32:
 		__init_rand32(&state->state32, (unsigned int) seed);
 		break;
+	case FIO_RAND_AES:
+#ifdef CONFIG_ARCH_AES
+		if (arch_aes) {
+			aes_seed(state, seed);
+			break;
+		}
+#endif
+		fio_fallthrough;
 	case FIO_RAND_64:
 		__init_rand64(&state->state64, seed);
 		break;
@@ -219,3 +241,42 @@ uint64_t fill_random_buf_percentage(struct frand_state *fs, void *buf,
 					pattern, pbytes);
 	return r;
 }
+
+#ifdef CONFIG_ARCH_AES
+void aes_seed(struct frand_state *fs, unsigned int seed)
+{
+	fs->aes_accum = _mm_setr_epi32(seed, seed * 2, seed * 3, seed * 4);
+	fs->aes_key = _mm_setr_epi32(seed * 5, seed * 6, seed * 7, seed * 8);
+}
+
+void fill_random_buf_aes(struct frand_state *fs, void *buf, unsigned int len)
+{
+	__m128i accum = fs->aes_accum;
+	__m128i key = fs->aes_key;
+	unsigned int rem = len & 15;
+	int i, loops;
+
+	loops = len / 16;
+	if (fio_unlikely(!len))
+		goto old_fill;
+
+	for (i = 0; i < loops; i++) {
+		__m128i tmp;
+
+		tmp = _mm_aesenc_si128(accum, key);
+		accum = tmp;
+		_mm_store_si128(buf, tmp);
+		buf += 16;
+	}
+
+	fs->aes_accum = accum;
+	fs->aes_key = key;
+
+	if (fio_unlikely(rem)) {
+		unsigned int r;
+old_fill:
+		r = *(unsigned long *) buf;
+		__fill_random_buf(buf, rem, r);
+	}
+}
+#endif

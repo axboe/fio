@@ -2908,6 +2908,28 @@ EOF
 fi
 print_config "timerfd_create" "$timerfd_create"
 
+##########################################
+# check for AES
+arch_aes="no"
+if test "$disable_native" != "yes" ; then
+cat > $TMPC << EOF
+#include <stdint.h>
+#include <wmmintrin.h>
+
+int main(int argc, char **argv)
+{
+  __m128i tmp, foo;
+  _mm_setr_epi32(0, 2, 4, 8);
+  tmp = _mm_aesenc_si128(tmp, foo);
+  return 0;
+}
+EOF
+  if compile_prog "-march=native -maes" "" "arch_aes"; then
+    arch_aes="yes"
+  fi
+fi
+print_config "arch_aes" "$arch_aes"
+
 #############################################################################
 
 if test "$wordsize" = "64" ; then
@@ -3262,6 +3284,11 @@ if test "$asan" = "yes"; then
   CFLAGS="$CFLAGS -fsanitize=address"
   LDFLAGS="$LDFLAGS -fsanitize=address"
 fi
+if test "$arch_aes" = "yes"; then
+  CFLAGS="$CFLAGS -maes"
+  output_sym "CONFIG_ARCH_AES"
+fi
+
 print_config "Lib-based ioengines dynamic" "$dynamic_engines"
 cat > $TMPC << EOF
 int main(int argc, char **argv)

@@ -2260,12 +2260,18 @@ void fill_io_buffer(struct thread_data *td, void *buf, unsigned long long min_wr
 			left -= this_write;
 			save_buf_state(td, rs);
 		} while (left);
-	} else if (o->buffer_pattern_bytes)
+	} else if (o->buffer_pattern_bytes) {
 		fill_buffer_pattern(td, buf, max_bs);
-	else if (o->zero_buffers)
+	} else if (o->zero_buffers) {
 		memset(buf, 0, max_bs);
-	else
-		fill_random_buf(get_buf_state(td), buf, max_bs);
+	} else {
+#ifdef CONFIG_ARCH_AES
+		if (arch_aes)
+			fill_random_buf_aes(&td->buf_state, buf, max_bs);
+		else
+#endif
+			fill_random_buf(get_buf_state(td), buf, max_bs);
+	}
 }
 
 /*
