@@ -3,12 +3,18 @@
 
 #include <inttypes.h>
 #include <assert.h>
+#include <stdio.h>
 #include "types.h"
 
 #define FRAND32_MAX	(-1U)
 #define FRAND32_MAX_PLUS_ONE	(1.0 * (1ULL << 32))
 #define FRAND64_MAX	(-1ULL)
 #define FRAND64_MAX_PLUS_ONE	(1.0 * (1ULL << 32) * (1ULL << 32))
+
+enum fio_rand_type {
+	FIO_RAND_32,
+	FIO_RAND_64,
+};
 
 struct taus88_state {
 	unsigned int s1, s2, s3;
@@ -19,7 +25,7 @@ struct taus258_state {
 };
 
 struct frand_state {
-	unsigned int use64;
+	enum fio_rand_type rand_type;
 	union {
 		struct taus88_state state32;
 		struct taus258_state state64;
@@ -28,10 +34,14 @@ struct frand_state {
 
 static inline uint64_t rand_max(struct frand_state *state)
 {
-	if (state->use64)
+	switch (state->rand_type) {
+	case FIO_RAND_64:
 		return FRAND64_MAX;
-	else
+	case FIO_RAND_32:
 		return FRAND32_MAX;
+	default:
+		return ~0UL;
+	}
 }
 
 static inline void __frand32_copy(struct taus88_state *dst,
@@ -54,12 +64,15 @@ static inline void __frand64_copy(struct taus258_state *dst,
 
 static inline void frand_copy(struct frand_state *dst, struct frand_state *src)
 {
-	if (src->use64)
+	switch (src->rand_type) {
+	case FIO_RAND_64:
 		__frand64_copy(&dst->state64, &src->state64);
-	else
+		break;
+	case FIO_RAND_32:
 		__frand32_copy(&dst->state32, &src->state32);
-
-	dst->use64 = src->use64;
+		break;
+	}
+	dst->rand_type = src->rand_type;
 }
 
 static inline unsigned int __rand32(struct taus88_state *state)
@@ -97,22 +110,32 @@ static inline uint64_t __rand64(struct taus258_state *state)
 
 static inline uint64_t __rand(struct frand_state *state)
 {
-	if (state->use64)
+	switch (state->rand_type) {
+	case FIO_RAND_64:
 		return __rand64(&state->state64);
-	else
+	case FIO_RAND_32:
 		return __rand32(&state->state32);
+	default:
+		return 0;
+	}
 }
 
 static inline double __rand_0_1(struct frand_state *state)
 {
-	if (state->use64) {
+	switch (state->rand_type) {
+	case FIO_RAND_64: {
 		uint64_t val = __rand64(&state->state64);
 
 		return (val + 1.0) / FRAND64_MAX_PLUS_ONE;
-	} else {
+		}
+	case FIO_RAND_32: {
 		uint32_t val = __rand32(&state->state32);
 
 		return (val + 1.0) / FRAND32_MAX_PLUS_ONE;
+		}
+	default:
+		fprintf(stderr, "fio: illegal rand type for 0..1 generation\n");
+		return 0.0;
 	}
 }
 
@@ -120,7 +143,7 @@ static inline uint32_t rand32_upto(struct frand_state *state, uint32_t end)
 {
 	uint32_t r;
 
-	assert(!state->use64);
+	assert(state->rand_type == FIO_RAND_32);
 
 	r = __rand32(&state->state32);
 	end++;
@@ -131,7 +154,7 @@ static inline uint64_t rand64_upto(struct frand_state *state, uint64_t end)
 {
 	uint64_t r;
 
-	assert(state->use64);
+	assert(state->rand_type == FIO_RAND_64);
 
 	r = __rand64(&state->state64);
 	end++;
@@ -144,10 +167,15 @@ static inline uint64_t rand64_upto(struct frand_state *state, uint64_t end)
 static inline uint64_t rand_between(struct frand_state *state, uint64_t start,
 				    uint64_t end)
 {
-	if (state->use64)
+	switch (state->rand_type) {
+	case FIO_RAND_64:
 		return start + rand64_upto(state, end - start);
-	else
+	case FIO_RAND_32:
 		return start + rand32_upto(state, end - start);
+	default:
+		fprintf(stderr, "fio: illegal rand type for rand_between\n");
+		return start;
+	}
 }
 
 static inline uint64_t __get_next_seed(struct frand_state *fs)
@@ -160,8 +188,8 @@ static inline uint64_t __get_next_seed(struct frand_state *fs)
 	return r;
 }
 
-extern void init_rand(struct frand_state *, bool);
-extern void init_rand_seed(struct frand_state *, uint64_t seed, bool);
+extern void init_rand(struct frand_state *, enum fio_rand_type);
+extern void init_rand_seed(struct frand_state *, uint64_t seed, enum fio_rand_type);
 void __init_rand64(struct taus258_state *state, uint64_t seed);
 extern void __fill_random_buf(void *buf, unsigned int len, uint64_t seed);
 extern uint64_t fill_random_buf(struct frand_state *, void *buf, unsigned int len);

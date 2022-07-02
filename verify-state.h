@@ -15,7 +15,7 @@ struct thread_rand64_state {
 };
 
 struct thread_rand_state {
-	uint64_t use64;
+	uint64_t rand_type;
 	union {
 		struct thread_rand32_state state32;
 		struct thread_rand64_state state64;

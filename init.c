@@ -1009,18 +1009,19 @@ static void init_rand_file_service(struct thread_data *td)
 
 void td_fill_verify_state_seed(struct thread_data *td)
 {
-	bool use64;
+	enum fio_rand_type rand_type;
 
 	if (td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE64)
-		use64 = true;
+		rand_type = FIO_RAND_64;
 	else
-		use64 = false;
+		rand_type = FIO_RAND_32;
 
 	init_rand_seed(&td->verify_state, td->rand_seeds[FIO_RAND_VER_OFF],
-		use64);
+			rand_type);
 }
 
-static void td_fill_rand_seeds_internal(struct thread_data *td, bool use64)
+static void td_fill_rand_seeds_internal(struct thread_data *td,
+					enum fio_rand_type rand_type)
 {
 	uint64_t read_seed = td->rand_seeds[FIO_RAND_BS_OFF];
 	uint64_t write_seed = td->rand_seeds[FIO_RAND_BS1_OFF];
@@ -1039,28 +1040,39 @@ static void td_fill_rand_seeds_internal(struct thread_data *td, bool use64)
 		write_seed = read_seed;
 	if (td_trimwrite(td))
 		trim_seed = write_seed;
-	init_rand_seed(&td->bsrange_state[DDIR_READ], read_seed, use64);
-	init_rand_seed(&td->bsrange_state[DDIR_WRITE], write_seed, use64);
-	init_rand_seed(&td->bsrange_state[DDIR_TRIM], trim_seed, use64);
+	init_rand_seed(&td->bsrange_state[DDIR_READ], read_seed, rand_type);
+	init_rand_seed(&td->bsrange_state[DDIR_WRITE], write_seed, rand_type);
+	init_rand_seed(&td->bsrange_state[DDIR_TRIM], trim_seed, rand_type);
 
 	td_fill_verify_state_seed(td);
 	init_rand_seed(&td->rwmix_state, td->rand_seeds[FIO_RAND_MIX_OFF], false);
 
 	if (td->o.file_service_type == FIO_FSERVICE_RANDOM)
-		init_rand_seed(&td->next_file_state, td->rand_seeds[FIO_RAND_FILE_OFF], use64);
+		init_rand_seed(&td->next_file_state, td->rand_seeds[FIO_RAND_FILE_OFF], rand_type);
 	else if (td->o.file_service_type & __FIO_FSERVICE_NONUNIFORM)
 		init_rand_file_service(td);
 
-	init_rand_seed(&td->file_size_state, td->rand_seeds[FIO_RAND_FILE_SIZE_OFF], use64);
-	init_rand_seed(&td->trim_state, td->rand_seeds[FIO_RAND_TRIM_OFF], use64);
-	init_rand_seed(&td->delay_state, td->rand_seeds[FIO_RAND_START_DELAY], use64);
-	init_rand_seed(&td->poisson_state[0], td->rand_seeds[FIO_RAND_POISSON_OFF], 0);
-	init_rand_seed(&td->poisson_state[1], td->rand_seeds[FIO_RAND_POISSON2_OFF], 0);
-	init_rand_seed(&td->poisson_state[2], td->rand_seeds[FIO_RAND_POISSON3_OFF], 0);
-	init_rand_seed(&td->dedupe_state, td->rand_seeds[FIO_DEDUPE_OFF], false);
-	init_rand_seed(&td->zone_state, td->rand_seeds[FIO_RAND_ZONE_OFF], false);
-	init_rand_seed(&td->prio_state, td->rand_seeds[FIO_RAND_PRIO_CMDS], false);
-	init_rand_seed(&td->dedupe_working_set_index_state, td->rand_seeds[FIO_RAND_DEDUPE_WORKING_SET_IX], use64);
+	init_rand_seed(&td->file_size_state,
+			td->rand_seeds[FIO_RAND_FILE_SIZE_OFF], rand_type);
+	init_rand_seed(&td->trim_state,
+			td->rand_seeds[FIO_RAND_TRIM_OFF], rand_type);
+	init_rand_seed(&td->delay_state,
+			td->rand_seeds[FIO_RAND_START_DELAY], rand_type);
+	init_rand_seed(&td->poisson_state[0],
+			td->rand_seeds[FIO_RAND_POISSON_OFF], FIO_RAND_32);
+	init_rand_seed(&td->poisson_state[1],
+			td->rand_seeds[FIO_RAND_POISSON2_OFF], FIO_RAND_32);
+	init_rand_seed(&td->poisson_state[2],
+			td->rand_seeds[FIO_RAND_POISSON3_OFF], FIO_RAND_32);
+	init_rand_seed(&td->dedupe_state, td->rand_seeds[FIO_DEDUPE_OFF],
+			FIO_RAND_32);
+	init_rand_seed(&td->zone_state, td->rand_seeds[FIO_RAND_ZONE_OFF],
+			FIO_RAND_32);
+	init_rand_seed(&td->prio_state, td->rand_seeds[FIO_RAND_PRIO_CMDS],
+			FIO_RAND_32);
+	init_rand_seed(&td->dedupe_working_set_index_state,
+			td->rand_seeds[FIO_RAND_DEDUPE_WORKING_SET_IX],
+			rand_type);
 
 	if (!td_random(td))
 		return;
@@ -1068,18 +1080,20 @@ static void td_fill_rand_seeds_internal(struct thread_data *td, bool use64)
 	if (td->o.rand_repeatable)
 		td->rand_seeds[FIO_RAND_BLOCK_OFF] = FIO_RANDSEED * td->thread_number;
 
-	init_rand_seed(&td->random_state, td->rand_seeds[FIO_RAND_BLOCK_OFF], use64);
+	init_rand_seed(&td->random_state, td->rand_seeds[FIO_RAND_BLOCK_OFF],
+			rand_type);
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		struct frand_state *s = &td->seq_rand_state[i];
 
-		init_rand_seed(s, td->rand_seeds[FIO_RAND_SEQ_RAND_READ_OFF], false);
+		init_rand_seed(s, td->rand_seeds[FIO_RAND_SEQ_RAND_READ_OFF],
+				FIO_RAND_32);
 	}
 }
 
 void td_fill_rand_seeds(struct thread_data *td)
 {
-	bool use64;
+	enum fio_rand_type rand_type;
 
 	if (td->o.allrand_repeatable) {
 		unsigned int i;
@@ -1090,13 +1104,14 @@ void td_fill_rand_seeds(struct thread_data *td)
 	}
 
 	if (td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE64)
-		use64 = true;
+		rand_type = FIO_RAND_64;
 	else
-		use64 = false;
+		rand_type = FIO_RAND_32;
 
-	td_fill_rand_seeds_internal(td, use64);
+	td_fill_rand_seeds_internal(td, rand_type);
 
-	init_rand_seed(&td->buf_state, td->rand_seeds[FIO_RAND_BUF_OFF], use64);
+	init_rand_seed(&td->buf_state, td->rand_seeds[FIO_RAND_BUF_OFF],
+			rand_type);
 	frand_copy(&td->buf_state_prev, &td->buf_state);
 }
 

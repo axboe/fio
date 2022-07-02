@@ -75,24 +75,33 @@ void __init_rand64(struct taus258_state *state, uint64_t seed)
 		__rand64(state);
 }
 
-void init_rand(struct frand_state *state, bool use64)
+void init_rand(struct frand_state *state, enum fio_rand_type rand_type)
 {
-	state->use64 = use64;
+	state->rand_type = rand_type;
 
-	if (!use64)
+	switch (rand_type) {
+	case FIO_RAND_32:
 		__init_rand32(&state->state32, 1);
-	else
+		break;
+	case FIO_RAND_64:
 		__init_rand64(&state->state64, 1);
+		break;
+	}
 }
 
-void init_rand_seed(struct frand_state *state, uint64_t seed, bool use64)
+void init_rand_seed(struct frand_state *state, uint64_t seed,
+		    enum fio_rand_type rand_type)
 {
-	state->use64 = use64;
+	state->rand_type = rand_type;
 
-	if (!use64)
+	switch (rand_type) {
+	case FIO_RAND_32:
 		__init_rand32(&state->state32, (unsigned int) seed);
-	else
+		break;
+	case FIO_RAND_64:
 		__init_rand64(&state->state64, seed);
+		break;
+	}
 }
 
 void __fill_random_buf_small(void *buf, unsigned int len, uint64_t seed)
