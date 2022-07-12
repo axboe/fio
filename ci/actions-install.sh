@@ -26,6 +26,7 @@ DPKGCFG
         libibverbs-dev
         libnuma-dev
         librdmacm-dev
+	libnfs-dev
         valgrind
     )
     case "${CI_TARGET_ARCH}" in
@@ -78,7 +79,7 @@ install_macos() {
     #echo "Updating homebrew..."
     #brew update >/dev/null 2>&1
     echo "Installing packages..."
-    HOMEBREW_NO_AUTO_UPDATE=1 brew install cunit
+    HOMEBREW_NO_AUTO_UPDATE=1 brew install cunit libnfs
     pip3 install scipy six sphinx
 }
 
