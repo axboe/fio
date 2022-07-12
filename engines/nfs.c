@@ -279,14 +279,6 @@ static int fio_libnfs_close(struct thread_data *td, struct fio_file *f)
 	return ret;
 }
 
-/*
- * Hook for writing out outstanding data.
- */
-static int fio_libnfs_commit(struct thread_data *td) {
-	nfs_event_loop(td, true);
-	return 0;
-}
-
 struct ioengine_ops ioengine = {
 	.name		= "nfs",
 	.version	= FIO_IOOPS_VERSION,
@@ -297,7 +289,6 @@ struct ioengine_ops ioengine = {
 	.cleanup	= fio_libnfs_cleanup,
 	.open_file	= fio_libnfs_open,
 	.close_file	= fio_libnfs_close,
-	.commit     = fio_libnfs_commit,
 	.flags      = FIO_DISKLESSIO | FIO_NOEXTEND | FIO_NODISKUTIL,
 	.options	= options,
 	.option_struct_size	= sizeof(struct fio_libnfs_options),
