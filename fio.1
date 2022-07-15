@@ -2793,7 +2793,8 @@ of milliseconds. Defaults to 1000.
 .BI write_iolog \fR=\fPstr
 Write the issued I/O patterns to the specified file. See
 \fBread_iolog\fR. Specify a separate file for each job, otherwise the
-iologs will be interspersed and the file may be corrupt.
+iologs will be interspersed and the file may be corrupt. This file will be
+opened in append mode.
 .TP
 .BI read_iolog \fR=\fPstr
 Open an iolog with the specified filename and replay the I/O patterns it

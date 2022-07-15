@@ -3049,7 +3049,8 @@ I/O replay
 
 	Write the issued I/O patterns to the specified file. See
 	:option:`read_iolog`.  Specify a separate file for each job, otherwise the
-	iologs will be interspersed and the file may be corrupt.
+        iologs will be interspersed and the file may be corrupt. This file will
+        be opened in append mode.
 
 .. option:: read_iolog=str
 
