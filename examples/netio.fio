@@ -2,13 +2,14 @@
 [global]
 ioengine=net
 #Use hostname=/tmp.fio.sock for local unix domain sockets
-port=8888
+port=8890
 #Use =udp for UDP, =unix for local unix domain socket
 protocol=tcp
 bs=4k
 size=100g
 #set the below option to enable end-to-end data integrity tests
 #verify=md5
+iodepth=128
 
 [receiver]
 listen

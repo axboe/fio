@@ -18,6 +18,26 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
+/* From libaio.c */
+#include <libaio.h>
+#include <sys/time.h>
+#include <sys/resource.h>
+#include "../fio.h"
+#include "../lib/pow2.h"
+#include "../optgroup.h"
+#include "../lib/memalign.h"
+#include "cmdprio.h"
+
+/* Should be defined in newest aio_abi.h */
+#ifndef IOCB_FLAG_IOPRIO
+#define IOCB_FLAG_IOPRIO    (1 << 1)
+#endif
+
+/* Hack for libaio < 0.3.111 */
+#ifndef CONFIG_LIBAIO_RW_FLAGS
+#define aio_rw_flags __pad2
+#endif
+
 #include "../fio.h"
 #include "../verify.h"
 #include "../optgroup.h"
@@ -32,6 +52,14 @@ struct netio_data {
 	struct sockaddr_un addr_un;
 	uint64_t udp_send_seq;
 	uint64_t udp_recv_seq;
+
+	// for libaio
+	io_context_t aio_ctx;
+	struct iocb iocb;
+	struct io_event aio_events;
+	
+	int fd;
+
 };
 
 struct netio_options {
@@ -70,6 +98,20 @@ enum {
 	FIO_TYPE_TCP_V6	= 4,
 	FIO_TYPE_UDP_V6	= 5,
 };
+
+int wait_for_libaio_complete(struct thread_data* td, void* buf, size_t n){
+	struct netio_data *nd = td->io_ops_data;
+	struct iocb *iocb = &nd->iocb;
+	int ret;
+	io_prep_pwrite(iocb, nd->fd, buf, n, 0);
+	ret = io_submit(nd->aio_ctx, 1, &iocb);
+	while (ret <= 0){
+		ret = io_submit(nd->aio_ctx, 1, &iocb);
+	}
+	ret = io_getevents(nd->aio_ctx, 1,
+				1, &nd->aio_events, NULL);
+	return ret;
+}
 
 static int str_hostname_cb(void *data, const char *input);
 static struct fio_option options[] = {
@@ -619,6 +661,8 @@ static int fio_netio_recv(struct thread_data *td, struct io_u *io_u)
 		} else {
 			ret = recv(io_u->file->fd, io_u->xfer_buf,
 					io_u->xfer_buflen, flags);
+			// TODO(ze.ma): test 
+			wait_for_libaio_complete(td, io_u->xfer_buf, ret);
 
 			if (is_close_msg(io_u, ret)) {
 				td->done = 1;
@@ -982,6 +1026,15 @@ static int fio_netio_open_file(struct thread_data *td, struct fio_file *f)
 	int ret;
 	struct netio_options *o = td->eo;
 
+	// for libaio
+	if (o->listen){
+		int flags = O_WRONLY;
+		struct netio_data *ld = td->io_ops_data;
+		flags |= O_CREAT;
+		flags |= OS_O_DIRECT;
+		ld->fd = open("net_libaio.tmp", flags, 0600);
+	}
+
 	if (o->listen)
 		ret = fio_netio_accept(td, f);
 	else
@@ -1273,6 +1326,14 @@ static int fio_netio_setup_listen(struct thread_data *td)
 	struct netio_data *nd = td->io_ops_data;
 	struct netio_options *o = td->eo;
 	int ret;
+
+	int err;
+
+	err = io_queue_init(td->o.iodepth, &nd->aio_ctx);
+	if (err) {
+		td_verror(td, -err, "io_queue_init");
+		return 1;
+	}
 
 	if (is_udp(o) || is_tcp(o))
 		ret = fio_netio_setup_listen_inet(td, o->port);
