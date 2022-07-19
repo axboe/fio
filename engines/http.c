@@ -29,6 +29,10 @@
 #include "fio.h"
 #include "../optgroup.h"
 
+/*
+ * Silence OpenSSL 3.0 deprecated function warnings
+ */
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
 enum {
 	FIO_HTTP_WEBDAV	    = 0,
