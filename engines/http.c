@@ -526,8 +526,8 @@ static enum fio_q_status fio_http_queue(struct thread_data *td,
 			if (status == 100 || (status >= 200 && status <= 204))
 				goto out;
 			log_err("DDIR_WRITE failed with HTTP status code %ld\n", status);
-			goto err;
 		}
+		goto err;
 	} else if (io_u->ddir == DDIR_READ) {
 		curl_easy_setopt(http->curl, CURLOPT_READDATA, NULL);
 		curl_easy_setopt(http->curl, CURLOPT_WRITEDATA, &_curl_stream);
