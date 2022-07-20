@@ -57,6 +57,8 @@ struct http_options {
 	char *s3_key;
 	char *s3_keyid;
 	char *s3_region;
+	char *s3_sse_customer_key;
+	char *s3_sse_customer_algorithm;
 	char *s3_storage_class;
 	char *swift_auth_token;
 	int verbose;
@@ -159,6 +161,26 @@ static struct fio_option options[] = {
 		.help     = "S3 region",
 		.off1     = offsetof(struct http_options, s3_region),
 		.def	  = "us-east-1",
+		.category = FIO_OPT_C_ENGINE,
+		.group    = FIO_OPT_G_HTTP,
+	},
+	{
+		.name     = "http_s3_sse_customer_key",
+		.lname    = "SSE Customer Key",
+		.type     = FIO_OPT_STR_STORE,
+		.help     = "S3 SSE Customer Key",
+		.off1     = offsetof(struct http_options, s3_sse_customer_key),
+		.def	  = "",
+		.category = FIO_OPT_C_ENGINE,
+		.group    = FIO_OPT_G_HTTP,
+	},
+	{
+		.name     = "http_s3_sse_customer_algorithm",
+		.lname    = "SSE Customer Algorithm",
+		.type     = FIO_OPT_STR_STORE,
+		.help     = "S3 SSE Customer Algorithm",
+		.off1     = offsetof(struct http_options, s3_sse_customer_algorithm),
+		.def	  = "AES256",
 		.category = FIO_OPT_C_ENGINE,
 		.group    = FIO_OPT_G_HTTP,
 	},
@@ -277,6 +299,54 @@ static char *_gen_hex_md5(const char *p, size_t len)
 	return _conv_hex(hash, MD5_DIGEST_LENGTH);
 }
 
+static char *_conv_base64_encode(const unsigned char *p, size_t len)
+{
+	char *r, *ret;
+	int i;
+	static const char sEncodingTable[] = {
+		'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
+		'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+		'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
+		'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
+		'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
+		'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
+		'w', 'x', 'y', 'z', '0', '1', '2', '3',
+		'4', '5', '6', '7', '8', '9', '+', '/'
+	};
+
+	size_t out_len = 4 * ((len + 2) / 3);
+	ret = r = malloc(out_len + 1);
+
+	for (i = 0; i < len - 2; i += 3) {
+		*r++ = sEncodingTable[(p[i] >> 2) & 0x3F];
+		*r++ = sEncodingTable[((p[i] & 0x3) << 4) | ((int) (p[i + 1] & 0xF0) >> 4)];
+		*r++ = sEncodingTable[((p[i + 1] & 0xF) << 2) | ((int) (p[i + 2] & 0xC0) >> 6)];
+		*r++ = sEncodingTable[p[i + 2] & 0x3F];
+	}
+
+	if (i < len) {
+		*r++ = sEncodingTable[(p[i] >> 2) & 0x3F];
+		if (i == (len - 1)) {
+			*r++ = sEncodingTable[((p[i] & 0x3) << 4)];
+			*r++ = '=';
+		} else {
+			*r++ = sEncodingTable[((p[i] & 0x3) << 4) | ((int) (p[i + 1] & 0xF0) >> 4)];
+			*r++ = sEncodingTable[((p[i + 1] & 0xF) << 2)];
+		}
+		*r++ = '=';
+	}
+
+	ret[out_len]=0;
+	return ret;
+}
+
+static char *_gen_base64_md5(const unsigned char *p, size_t len)
+{
+	unsigned char hash[MD5_DIGEST_LENGTH];
+	MD5((unsigned char*)p, len, hash);
+	return _conv_base64_encode(hash, MD5_DIGEST_LENGTH);
+}
+
 static void _hmac(unsigned char *md, void *key, int key_len, char *data) {
 #ifndef CONFIG_HAVE_OPAQUE_HMAC_CTX
 	HMAC_CTX _ctx;
@@ -356,6 +426,9 @@ static void _add_aws_auth_header(CURL *curl, struct curl_slist *slist, struct ht
 	const char *service = "s3";
 	const char *aws = "aws4_request";
 	unsigned char md[SHA256_DIGEST_LENGTH];
+	unsigned char sse_key[33] = {0};
+	char *sse_key_base64 = NULL;
+	char *sse_key_md5_base64 = NULL;
 
 	time_t t = time(NULL);
 	struct tm *gtm = gmtime(&t);
@@ -363,6 +436,9 @@ static void _add_aws_auth_header(CURL *curl, struct curl_slist *slist, struct ht
 	strftime (date_short, sizeof(date_short), "%Y%m%d", gtm);
 	strftime (date_iso, sizeof(date_iso), "%Y%m%dT%H%M%SZ", gtm);
 	uri_encoded = _aws_uriencode(uri);
+
+	if (o->s3_sse_customer_key != NULL)
+		strncpy((char*)sse_key, o->s3_sse_customer_key, sizeof(sse_key) - 1);
 
 	if (op == DDIR_WRITE) {
 		dsha = _gen_hex_sha256(buf, len);
@@ -377,23 +453,50 @@ static void _add_aws_auth_header(CURL *curl, struct curl_slist *slist, struct ht
 	}
 
 	/* Create the canonical request first */
-	snprintf(creq, sizeof(creq),
-	"%s\n"
-	"%s\n"
-	"\n"
-	"host:%s\n"
-	"x-amz-content-sha256:%s\n"
-	"x-amz-date:%s\n"
-	"x-amz-storage-class:%s\n"
-	"\n"
-	"host;x-amz-content-sha256;x-amz-date;x-amz-storage-class\n"
-	"%s"
-	, method
-	, uri_encoded, o->host, dsha, date_iso, o->s3_storage_class, dsha);
+	if (sse_key[0] != '\0') {
+		sse_key_base64 = _conv_base64_encode(sse_key, sizeof(sse_key) - 1);
+		sse_key_md5_base64 = _gen_base64_md5(sse_key, sizeof(sse_key) - 1);
+		snprintf(creq, sizeof(creq),
+			"%s\n"
+			"%s\n"
+			"\n"
+			"host:%s\n"
+			"x-amz-content-sha256:%s\n"
+			"x-amz-date:%s\n"
+			"x-amz-server-side-encryption-customer-algorithm:%s\n"
+			"x-amz-server-side-encryption-customer-key:%s\n"
+			"x-amz-server-side-encryption-customer-key-md5:%s\n"
+			"x-amz-storage-class:%s\n"
+			"\n"
+			"host;x-amz-content-sha256;x-amz-date;"
+			"x-amz-server-side-encryption-customer-algorithm;"
+			"x-amz-server-side-encryption-customer-key;"
+			"x-amz-server-side-encryption-customer-key-md5;"
+			"x-amz-storage-class\n"
+			"%s"
+			, method
+			, uri_encoded, o->host, dsha, date_iso
+			, o->s3_sse_customer_algorithm, sse_key_base64
+			, sse_key_md5_base64, o->s3_storage_class, dsha);
+	} else {
+		snprintf(creq, sizeof(creq),
+			"%s\n"
+			"%s\n"
+			"\n"
+			"host:%s\n"
+			"x-amz-content-sha256:%s\n"
+			"x-amz-date:%s\n"
+			"x-amz-storage-class:%s\n"
+			"\n"
+			"host;x-amz-content-sha256;x-amz-date;x-amz-storage-class\n"
+			"%s"
+			, method
+			, uri_encoded, o->host, dsha, date_iso, o->s3_storage_class, dsha);
+	}
 
 	csha = _gen_hex_sha256(creq, strlen(creq));
 	snprintf(sts, sizeof(sts), "AWS4-HMAC-SHA256\n%s\n%s/%s/%s/%s\n%s",
-		date_iso, date_short, o->s3_region, service, aws, csha);
+			date_iso, date_short, o->s3_region, service, aws, csha);
 
 	snprintf((char *)dkey, sizeof(dkey), "AWS4%s", o->s3_key);
 	_hmac(md, dkey, strlen(dkey), date_short);
@@ -412,11 +515,33 @@ static void _add_aws_auth_header(CURL *curl, struct curl_slist *slist, struct ht
 
 	snprintf(s, sizeof(s), "x-amz-date: %s", date_iso);
 	slist = curl_slist_append(slist, s);
+
+	if (sse_key[0] != '\0') {
+		snprintf(s, sizeof(s), "x-amz-server-side-encryption-customer-algorithm: %s", o->s3_sse_customer_algorithm);
+		slist = curl_slist_append(slist, s);
+		snprintf(s, sizeof(s), "x-amz-server-side-encryption-customer-key: %s", sse_key_base64);
+		slist = curl_slist_append(slist, s);
+		snprintf(s, sizeof(s), "x-amz-server-side-encryption-customer-key-md5: %s", sse_key_md5_base64);
+		slist = curl_slist_append(slist, s);
+	}
+
 	snprintf(s, sizeof(s), "x-amz-storage-class: %s", o->s3_storage_class);
 	slist = curl_slist_append(slist, s);
-	snprintf(s, sizeof(s), "Authorization: AWS4-HMAC-SHA256 Credential=%s/%s/%s/s3/aws4_request,"
-	"SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-storage-class,Signature=%s",
-	o->s3_keyid, date_short, o->s3_region, signature);
+
+	if (sse_key[0] != '\0') {
+		snprintf(s, sizeof(s), "Authorization: AWS4-HMAC-SHA256 Credential=%s/%s/%s/s3/aws4_request,"
+			"SignedHeaders=host;x-amz-content-sha256;"
+			"x-amz-date;x-amz-server-side-encryption-customer-algorithm;"
+			"x-amz-server-side-encryption-customer-key;"
+			"x-amz-server-side-encryption-customer-key-md5;"
+			"x-amz-storage-class,"
+			"Signature=%s",
+		o->s3_keyid, date_short, o->s3_region, signature);
+	} else {
+		snprintf(s, sizeof(s), "Authorization: AWS4-HMAC-SHA256 Credential=%s/%s/%s/s3/aws4_request,"
+			"SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-storage-class,Signature=%s",
+			o->s3_keyid, date_short, o->s3_region, signature);
+	}
 	slist = curl_slist_append(slist, s);
 
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
@@ -425,6 +550,10 @@ static void _add_aws_auth_header(CURL *curl, struct curl_slist *slist, struct ht
 	free(csha);
 	free(dsha);
 	free(signature);
+	if (sse_key_base64 != NULL) {
+		free(sse_key_base64);
+		free(sse_key_md5_base64);
+	}
 }
 
 static void _add_swift_header(CURL *curl, struct curl_slist *slist, struct http_options *o,
