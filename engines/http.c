@@ -57,6 +57,7 @@ struct http_options {
 	char *s3_key;
 	char *s3_keyid;
 	char *s3_region;
+	char *s3_storage_class;
 	char *swift_auth_token;
 	int verbose;
 	unsigned int mode;
@@ -158,6 +159,16 @@ static struct fio_option options[] = {
 		.help     = "S3 region",
 		.off1     = offsetof(struct http_options, s3_region),
 		.def	  = "us-east-1",
+		.category = FIO_OPT_C_ENGINE,
+		.group    = FIO_OPT_G_HTTP,
+	},
+	{
+		.name     = "http_s3_storage_class",
+		.lname    = "S3 Storage class",
+		.type     = FIO_OPT_STR_STORE,
+		.help     = "S3 Storage Class",
+		.off1     = offsetof(struct http_options, s3_storage_class),
+		.def	  = "STANDARD",
 		.category = FIO_OPT_C_ENGINE,
 		.group    = FIO_OPT_G_HTTP,
 	},
@@ -335,8 +346,8 @@ static void _add_aws_auth_header(CURL *curl, struct curl_slist *slist, struct ht
 	char date_iso[32];
 	char method[8];
 	char dkey[128];
-	char creq[512];
-	char sts[256];
+	char creq[4096];
+	char sts[512];
 	char s[512];
 	char *uri_encoded = NULL;
 	char *dsha = NULL;
@@ -373,11 +384,12 @@ static void _add_aws_auth_header(CURL *curl, struct curl_slist *slist, struct ht
 	"host:%s\n"
 	"x-amz-content-sha256:%s\n"
 	"x-amz-date:%s\n"
+	"x-amz-storage-class:%s\n"
 	"\n"
-	"host;x-amz-content-sha256;x-amz-date\n"
+	"host;x-amz-content-sha256;x-amz-date;x-amz-storage-class\n"
 	"%s"
 	, method
-	, uri_encoded, o->host, dsha, date_iso, dsha);
+	, uri_encoded, o->host, dsha, date_iso, o->s3_storage_class, dsha);
 
 	csha = _gen_hex_sha256(creq, strlen(creq));
 	snprintf(sts, sizeof(sts), "AWS4-HMAC-SHA256\n%s\n%s/%s/%s/%s\n%s",
@@ -400,9 +412,10 @@ static void _add_aws_auth_header(CURL *curl, struct curl_slist *slist, struct ht
 
 	snprintf(s, sizeof(s), "x-amz-date: %s", date_iso);
 	slist = curl_slist_append(slist, s);
-
+	snprintf(s, sizeof(s), "x-amz-storage-class: %s", o->s3_storage_class);
+	slist = curl_slist_append(slist, s);
 	snprintf(s, sizeof(s), "Authorization: AWS4-HMAC-SHA256 Credential=%s/%s/%s/s3/aws4_request,"
-	"SignedHeaders=host;x-amz-content-sha256;x-amz-date,Signature=%s",
+	"SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-storage-class,Signature=%s",
 	o->s3_keyid, date_short, o->s3_region, signature);
 	slist = curl_slist_append(slist, s);
 
