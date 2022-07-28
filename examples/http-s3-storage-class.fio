@@ -1,0 +1,37 @@
+# Example test for the HTTP engine's S3 support against Amazon AWS.
+# Obviously, you have to adjust the S3 credentials; for this example,
+# they're passed in via the environment.
+# And here add storage class parameter, you can set normal test for
+# STANDARD and compression test for another storage class.
+#
+
+[global]
+ioengine=http
+name=test
+direct=1
+filename=/larsmb-fio-test/object
+http_verbose=0
+https=on
+http_mode=s3
+http_s3_key=${S3_KEY}
+http_s3_keyid=${S3_ID}
+http_host=s3.eu-central-1.amazonaws.com
+http_s3_region=eu-central-1
+http_s3_storage_class=${STORAGE_CLASS}
+group_reporting
+
+# With verify, this both writes and reads the object
+[create]
+rw=write
+bs=4k
+size=64k
+io_size=4k
+verify=sha256
+
+[trim]
+stonewall
+rw=trim
+bs=4k
+size=64k
+io_size=4k
+
