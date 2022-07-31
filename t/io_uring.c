@@ -1546,8 +1546,15 @@ int main(int argc, char *argv[])
 		else
 			printf("IOPS=%lu, ", iops);
 		max_iops = max(max_iops, iops);
-		if (!do_nop)
-			printf("BW=%luMiB/s, ", bw);
+		if (!do_nop) {
+			if (bw > 2000) {
+				double bw_g = (double) bw / 1000.0;
+
+				printf("BW=%.2fGiB/s, ", bw_g);
+			} else {
+				printf("BW=%luMiB/s, ", bw);
+			}
+		}
 		printf("IOS/call=%ld/%ld, inflight=(%s)\n", rpc, ipc, fdepths);
 		done = this_done;
 		calls = this_call;
