@@ -641,14 +641,18 @@ static int detect_node(struct submitter *s, const char *name)
 #ifdef CONFIG_LIBNUMA
 	const char *base = basename(name);
 	char str[128];
-	int fd, node;
+	int ret, fd, node;
 
 	sprintf(str, "/sys/block/%s/device/numa_node", base);
 	fd = open(str, O_RDONLY);
 	if (fd < 0)
 		return -1;
 
-	read(fd, str, sizeof(str));
+	ret = read(fd, str, sizeof(str));
+	if (ret < 0) {
+		close(fd);
+		return -1;
+	}
 	node = atoi(str);
 	s->numa_node = node;
 	close(fd);
