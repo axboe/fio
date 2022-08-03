@@ -1,4 +1,4 @@
-; Using the libaio ioengine, random write to a (zoned) block device,
+; Using the psync ioengine, random write to a (zoned) block device,
 ; writing at most 32 zones at a time. Target zones are chosen randomly
 ; and writes directed at the write pointer of the chosen zones
 
