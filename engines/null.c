@@ -44,9 +44,28 @@ static int null_getevents(struct null_data *nd, unsigned int min_events,
 	return ret;
 }
 
+static void null_queued(struct thread_data *td, struct null_data *nd)
+{
+	struct timespec now;
+
+	if (!fio_fill_issue_time(td))
+		return;
+
+	fio_gettime(&now, NULL);
+
+	for (int i = 0; i < nd->queued; i++) {
+		struct io_u *io_u = nd->io_us[i];
+
+		memcpy(&io_u->issue_time, &now, sizeof(now));
+		io_u_queued(td, io_u);
+	}
+}
+
 static int null_commit(struct thread_data *td, struct null_data *nd)
 {
 	if (!nd->events) {
+		null_queued(td, nd);
+
 #ifndef FIO_EXTERNAL_ENGINE
 		io_u_mark_submit(td, nd->queued);
 #endif
