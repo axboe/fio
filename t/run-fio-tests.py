@@ -528,7 +528,7 @@ class FioJobTest_t0014(FioJobTest):
 
 
 class FioJobTest_t0015(FioJobTest):
-    """Test consists of fio test job t0015
+    """Test consists of fio test jobs t0015 and t0016
     Confirm that mean(slat) + mean(clat) = mean(tlat)"""
 
     def check_result(self):
@@ -846,6 +846,16 @@ TEST_LIST = [
         'pre_success':      None,
         'output_format':    'json',
         'requirements':     [Requirements.linux, Requirements.libaio],
+    },
+    {
+        'test_id':          16,
+        'test_class':       FioJobTest_t0015,
+        'job':              't0016-259ebc00.fio',
+        'success':          SUCCESS_DEFAULT,
+        'pre_job':          None,
+        'pre_success':      None,
+        'output_format':    'json',
+        'requirements':     [],
     },
     {
         'test_id':          1000,
