@@ -527,6 +527,27 @@ class FioJobTest_t0014(FioJobTest):
             return
 
 
+class FioJobTest_t0015(FioJobTest):
+    """Test consists of fio test job t0015
+    Confirm that mean(slat) + mean(clat) = mean(tlat)"""
+
+    def check_result(self):
+        super(FioJobTest_t0015, self).check_result()
+
+        if not self.passed:
+            return
+
+        slat = self.json_data['jobs'][0]['read']['slat_ns']['mean']
+        clat = self.json_data['jobs'][0]['read']['clat_ns']['mean']
+        tlat = self.json_data['jobs'][0]['read']['lat_ns']['mean']
+        logging.debug('Test %d: slat %f, clat %f, tlat %f', self.testnum, slat, clat, tlat)
+
+        if abs(slat + clat - tlat) > 1:
+            self.failure_reason = "{0} slat {1} + clat {2} = {3} != tlat {4},".format(
+                self.failure_reason, slat, clat, slat+clat, tlat)
+            self.passed = False
+
+
 class FioJobTest_iops_rate(FioJobTest):
     """Test consists of fio test job t0009
     Confirm that job0 iops == 1000
@@ -815,6 +836,16 @@ TEST_LIST = [
         'pre_success':      None,
         'output_format':    'json',
         'requirements':     [],
+    },
+    {
+        'test_id':          15,
+        'test_class':       FioJobTest_t0015,
+        'job':              't0015-e78980ff.fio',
+        'success':          SUCCESS_DEFAULT,
+        'pre_job':          None,
+        'pre_success':      None,
+        'output_format':    'json',
+        'requirements':     [Requirements.linux, Requirements.libaio],
     },
     {
         'test_id':          1000,
