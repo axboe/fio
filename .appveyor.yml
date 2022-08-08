@@ -50,5 +50,18 @@ after_build:
 test_script:
   - python.exe t/run-fio-tests.py --artifact-root test-artifacts --debug
 
+deploy:
+  - provider: GitHub
+    description: fio Windows installer
+    auth_token:                      # encrypted token from GitHub
+      secure: Tjj+xRQEV25P6dQgboUblTCKx/LtUOUav2bvzSCtwMhHMAxrrn2adod6nlTf0ItV
+    artifact: fio.msi                # upload installer to release assets
+    draft: false
+    prerelease: false
+    on:
+      branch: master                 # release from this branch only
+      APPVEYOR_REPO_TAG: true        # deploy on tag push only
+      DISTRO: cygwin
+
 on_finish:
   - 'bash.exe -lc "cd \"${APPVEYOR_BUILD_FOLDER}\" && [ -d test-artifacts ] && 7z a -t7z test-artifacts.7z test-artifacts -xr!foo.0.0 -xr!latency.?.0 -xr!fio_jsonplus_clat2csv.test && appveyor PushArtifact test-artifacts.7z'
