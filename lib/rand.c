@@ -95,7 +95,7 @@ void init_rand_seed(struct frand_state *state, uint64_t seed, bool use64)
 		__init_rand64(&state->state64, seed);
 }
 
-void __fill_random_buf(void *buf, unsigned int len, uint64_t seed)
+void __fill_random_buf_small(void *buf, unsigned int len, uint64_t seed)
 {
 	uint64_t *b = buf;
 	uint64_t *e = b  + len / sizeof(*b);
@@ -108,6 +108,41 @@ void __fill_random_buf(void *buf, unsigned int len, uint64_t seed)
 
 	if (fio_unlikely(rest))
 		__builtin_memcpy(e, &seed, rest);
+}
+
+void __fill_random_buf(void *buf, unsigned int len, uint64_t seed)
+{
+#define MAX_SEED_BUCKETS 16
+	static uint64_t prime[MAX_SEED_BUCKETS] = {1,  2,  3,  5,
+						   7,  11, 13, 17,
+						   19, 23, 29, 31,
+						   37, 41, 43, 47};
+
+	uint64_t *b, *e, s[CONFIG_SEED_BUCKETS];
+	unsigned int rest;
+	int p;
+
+	/*
+	 * Calculate the max index which is multiples of the seed buckets.
+	 */
+	rest = (len / sizeof(*b) / CONFIG_SEED_BUCKETS) * CONFIG_SEED_BUCKETS;
+
+	b = buf;
+	e = b + rest;
+
+	rest = len - (rest * sizeof(*b));
+
+	for (p = 0; p < CONFIG_SEED_BUCKETS; p++)
+		s[p] = seed * prime[p];
+
+	for (; b != e; b += CONFIG_SEED_BUCKETS) {
+		for (p = 0; p < CONFIG_SEED_BUCKETS; ++p) {
+			b[p] = s[p];
+			s[p] = __hash_u64(s[p]);
+		}
+	}
+
+	__fill_random_buf_small(b, rest, s[0]);
 }
 
 uint64_t fill_random_buf(struct frand_state *fs, void *buf,
