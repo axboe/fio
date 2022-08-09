@@ -113,9 +113,11 @@ static struct null_data *null_init(struct thread_data *td)
 	if (td->o.iodepth != 1) {
 		nd->io_us = (struct io_u **) malloc(td->o.iodepth * sizeof(struct io_u *));
 		memset(nd->io_us, 0, td->o.iodepth * sizeof(struct io_u *));
+		td->io_ops->flags |= FIO_ASYNCIO_SETS_ISSUE_TIME;
 	} else
 		td->io_ops->flags |= FIO_SYNCIO;
 
+	td_set_ioengine_flags(td);
 	return nd;
 }
 

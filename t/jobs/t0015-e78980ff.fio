@@ -1,0 +1,7 @@
+# Expected result: mean(slat) + mean(clat) = mean(lat)
+# Buggy result: equality does not hold
+
+[test]
+ioengine=libaio
+size=1M
+iodepth=16
