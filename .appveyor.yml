@@ -59,7 +59,6 @@ deploy:
     draft: false
     prerelease: false
     on:
-      branch: master                 # release from this branch only
       APPVEYOR_REPO_TAG: true        # deploy on tag push only
       DISTRO: cygwin
 
