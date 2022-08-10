@@ -112,12 +112,8 @@ void __fill_random_buf_small(void *buf, unsigned int len, uint64_t seed)
 
 void __fill_random_buf(void *buf, unsigned int len, uint64_t seed)
 {
-#define MAX_SEED_BUCKETS 16
-	static uint64_t prime[MAX_SEED_BUCKETS] = {1,  2,  3,  5,
-						   7,  11, 13, 17,
-						   19, 23, 29, 31,
-						   37, 41, 43, 47};
-
+	static uint64_t prime[] = {1, 2, 3, 5, 7, 11, 13, 17,
+				   19, 23, 29, 31, 37, 41, 43, 47};
 	uint64_t *b, *e, s[CONFIG_SEED_BUCKETS];
 	unsigned int rest;
 	int p;
