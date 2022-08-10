@@ -116,6 +116,10 @@ has() {
   type "$1" >/dev/null 2>&1
 }
 
+num() {
+  echo "$1" | grep -P -q "^[0-9]+$"
+}
+
 check_define() {
   cat > $TMPC <<EOF
 #if !defined($1)
@@ -174,6 +178,7 @@ libnfs=""
 xnvme=""
 libzbc=""
 dfs=""
+seed_buckets=""
 dynamic_engines="no"
 prefix=/usr/local
 
@@ -255,6 +260,8 @@ for opt do
   ;;
   --enable-asan) asan="yes"
   ;;
+  --seed-buckets=*) seed_buckets="$optarg"
+  ;;
   --help)
     show_help="yes"
     ;;
@@ -302,6 +309,7 @@ if test "$show_help" = "yes" ; then
   echo "--dynamic-libengines    Lib-based ioengines as dynamic libraries"
   echo "--disable-dfs           Disable DAOS File System support even if found"
   echo "--enable-asan           Enable address sanitizer"
+  echo "--seed-buckets=         Number of seed buckets for the refill-buffer"
   exit $exit_val
 fi
 
@@ -3273,6 +3281,15 @@ if test "$disable_tcmalloc" != "yes"; then
   fi
 fi
 print_config "TCMalloc support" "$tcmalloc"
+if ! num "$seed_buckets"; then
+  seed_buckets=4
+elif test "$seed_buckets" -lt 2; then
+  seed_buckets=2
+elif test "$seed_buckets" -gt 16; then
+  seed_buckets=16
+fi
+echo "#define CONFIG_SEED_BUCKETS $seed_buckets" >> $config_host_h
+print_config "seed_buckets" "$seed_buckets"
 
 echo "LIBS+=$LIBS" >> $config_host_mak
 echo "GFIO_LIBS+=$GFIO_LIBS" >> $config_host_mak
