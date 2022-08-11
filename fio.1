@@ -2308,6 +2308,15 @@ The S3 secret key.
 .BI (http)http_s3_keyid \fR=\fPstr
 The S3 key/access id.
 .TP
+.BI (http)http_s3_sse_customer_key \fR=\fPstr
+The encryption customer key in SSE server side.
+.TP
+.BI (http)http_s3_sse_customer_algorithm \fR=\fPstr
+The encryption customer algorithm in SSE server side. Default is \fBAES256\fR
+.TP
+.BI (http)http_s3_storage_class \fR=\fPstr
+Which storage class to access. User-customizable settings. Default is \fBSTANDARD\fR
+.TP
 .BI (http)http_swift_auth_token \fR=\fPstr
 The Swift auth token. See the example configuration file on how to
 retrieve this.

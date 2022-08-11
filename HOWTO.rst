@@ -2692,6 +2692,20 @@ with the caveat that when used on the command line, they must come after the
 
 	The S3 key/access id.
 
+.. option:: http_s3_sse_customer_key=str : [http]
+
+        The encryption customer key in SSE server side.
+
+.. option:: http_s3_sse_customer_algorithm=str : [http]
+
+        The encryption customer algorithm in SSE server side.
+        Default is **AES256**
+
+.. option:: http_s3_storage_class=str : [http]
+
+        Which storage class to access. User-customizable settings.
+        Default is **STANDARD**
+
 .. option:: http_swift_auth_token=str : [http]
 
 	The Swift auth token. See the example configuration file on how
