@@ -1,0 +1,9 @@
+# Expected result: mean(slat) + mean(clat) = mean(lat)
+# Buggy result: equality does not hold
+# This is similar to t0015 and t0016 except that is uses posixaio which is
+# available on more platforms and does not have a commit hook
+
+[test]
+ioengine=posixaio
+size=1M
+iodepth=16
