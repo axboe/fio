@@ -850,7 +850,7 @@ TEST_LIST = [
     {
         'test_id':          16,
         'test_class':       FioJobTest_t0015,
-        'job':              't0016-259ebc00.fio',
+        'job':              't0016-d54ae22.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
         'pre_success':      None,
