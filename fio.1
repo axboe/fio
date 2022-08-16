@@ -2530,22 +2530,29 @@ Select the xnvme async command interface. This can take these values.
 .RS
 .TP
 .B emu
-This is default and used to emulate asynchronous I/O
+This is default and use to emulate asynchronous I/O by using a single thread to
+create a queue pair on top of a synchronous I/O interface using the NVMe driver
+IOCTL.
 .TP
 .BI thrpool
-Use thread pool for Asynchronous I/O
+Emulate an asynchronous I/O interface with a pool of userspace threads on top
+of a synchronous I/O interface using the NVMe driver IOCTL. By default four
+threads are used.
 .TP
 .BI io_uring
-Use Linux io_uring/liburing for Asynchronous I/O
+Linux native asynchronous I/O interface which supports both direct and buffered
+I/O.
 .TP
 .BI libaio
 Use Linux aio for Asynchronous I/O
 .TP
 .BI posix
-Use POSIX aio for Asynchronous I/O
+Use the posix asynchronous I/O interface to perform one or more I/O operations
+asynchronously.
 .TP
 .BI nil
-Use nil-io; For introspective perf. evaluation
+Do not transfer any data; just pretend to. This is mainly used for
+introspective performance evaluation.
 .RE
 .RE
 .TP
@@ -2555,10 +2562,14 @@ Select the xnvme synchronous command interface. This can take these values.
 .RS
 .TP
 .B nvme
-This is default and uses Linux NVMe Driver ioctl() for synchronous I/O
+This is default and uses Linux NVMe Driver ioctl() for synchronous I/O.
 .TP
 .BI psync
-Use pread()/write() for synchronous I/O
+This supports regular as well as vectored pread() and pwrite() commands.
+.TP
+.BI block
+This is the same as psync except that it also supports zone management
+commands using Linux block layer IOCTLs.
 .RE
 .RE
 .TP
@@ -2568,18 +2579,15 @@ Select the xnvme admin command interface. This can take these values.
 .RS
 .TP
 .B nvme
-This is default and uses Linux NVMe Driver ioctl() for admin commands
+This is default and uses Linux NVMe Driver ioctl() for admin commands.
 .TP
 .BI block
-Use Linux Block Layer ioctl() and sysfs for admin commands
-.TP
-.BI file_as_ns
-Use file-stat as to construct NVMe idfy responses
+Use Linux Block Layer ioctl() and sysfs for admin commands.
 .RE
 .RE
 .TP
 .BI (xnvme)xnvme_dev_nsid\fR=\fPint
-xnvme namespace identifier, for userspace NVMe driver.
+xnvme namespace identifier for userspace NVMe driver such as SPDK.
 .TP
 .BI (xnvme)xnvme_iovec
 If this option is set, xnvme will use vectored read/write commands.

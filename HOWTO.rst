@@ -2780,41 +2780,56 @@ with the caveat that when used on the command line, they must come after the
 	Select the xnvme async command interface. This can take these values.
 
 	**emu**
-		This is default and used to emulate asynchronous I/O.
+		This is default and use to emulate asynchronous I/O by using a
+		single thread to create a queue pair on top of a synchronous
+		I/O interface using the NVMe driver IOCTL.
 	**thrpool**
-		Use thread pool for Asynchronous I/O.
+		Emulate an asynchronous I/O interface with a pool of userspace
+		threads on top of a synchronous I/O interface using the NVMe
+		driver IOCTL. By default four threads are used.
 	**io_uring**
-		Use Linux io_uring/liburing for Asynchronous I/O.
+		Linux native asynchronous I/O interface which supports both
+		direct and buffered I/O.
+	**io_uring_cmd**
+		Fast Linux native asynchronous I/O interface for NVMe pass
+		through commands. This only works with NVMe character device
+		(/dev/ngXnY).
 	**libaio**
 		Use Linux aio for Asynchronous I/O.
 	**posix**
-		Use POSIX aio for Asynchronous I/O.
+		Use the posix asynchronous I/O interface to perform one or
+		more I/O operations asynchronously.
 	**nil**
-		Use nil-io; For introspective perf. evaluation
+		Do not transfer any data; just pretend to. This is mainly used
+		for introspective performance evaluation.
 
 .. option:: xnvme_sync=str : [xnvme]
 
 	Select the xnvme synchronous command interface. This can take these values.
 
 	**nvme**
-		This is default and uses Linux NVMe Driver ioctl() for synchronous I/O.
+		This is default and uses Linux NVMe Driver ioctl() for
+		synchronous I/O.
 	**psync**
-		Use pread()/write() for synchronous I/O.
+		This supports regular as well as vectored pread() and pwrite()
+		commands.
+	**block**
+		This is the same as psync except that it also supports zone
+		management commands using Linux block layer IOCTLs.
 
 .. option:: xnvme_admin=str : [xnvme]
 
 	Select the xnvme admin command interface. This can take these values.
 
 	**nvme**
-		This is default and uses linux NVMe Driver ioctl() for admin commands.
+		This is default and uses linux NVMe Driver ioctl() for admin
+		commands.
 	**block**
 		Use Linux Block Layer ioctl() and sysfs for admin commands.
-	**file_as_ns**
-		Use file-stat to construct NVMe idfy responses.
 
 .. option:: xnvme_dev_nsid=int : [xnvme]
 
-	xnvme namespace identifier, for userspace NVMe driver.
+	xnvme namespace identifier for userspace NVMe driver, such as SPDK.
 
 .. option:: xnvme_iovec=int : [xnvme]
 
