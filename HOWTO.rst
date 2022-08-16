@@ -1301,7 +1301,7 @@ I/O type
 	effectively caps the file size at `real_size - offset`. Can be combined with
 	:option:`size` to constrain the start and end range of the I/O workload.
 	A percentage can be specified by a number between 1 and 100 followed by '%',
-	for example, ``offset=20%`` to specify 20%. In ZBD mode, value can be set as 
+	for example, ``offset=20%`` to specify 20%. In ZBD mode, value can be set as
         number of zones using 'z'.
 
 .. option:: offset_align=int
@@ -1877,7 +1877,7 @@ I/O size
 	If this option is not specified, fio will use the full size of the given
 	files or devices.  If the files do not exist, size must be given. It is also
 	possible to give size as a percentage between 1 and 100. If ``size=20%`` is
-	given, fio will use 20% of the full size of the given files or devices. 
+	given, fio will use 20% of the full size of the given files or devices.
 	In ZBD mode, value can also be set as number of zones using 'z'.
 	Can be combined with :option:`offset` to constrain the start and end range
 	that I/O will be done within.
