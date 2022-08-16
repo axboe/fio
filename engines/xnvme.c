@@ -205,8 +205,13 @@ static void _dev_close(struct thread_data *td, struct xnvme_fioe_fwrap *fwrap)
 
 static void xnvme_fioe_cleanup(struct thread_data *td)
 {
-	struct xnvme_fioe_data *xd = td->io_ops_data;
+	struct xnvme_fioe_data *xd = NULL;
 	int err;
+
+	if (!td->io_ops_data)
+		return;
+
+	xd = td->io_ops_data;
 
 	err = pthread_mutex_lock(&g_serialize);
 	if (err)
@@ -367,8 +372,14 @@ static int xnvme_fioe_iomem_alloc(struct thread_data *td, size_t total_mem)
 /* NOTE: using the first device for buffer-allocators) */
 static void xnvme_fioe_iomem_free(struct thread_data *td)
 {
-	struct xnvme_fioe_data *xd = td->io_ops_data;
-	struct xnvme_fioe_fwrap *fwrap = &xd->files[0];
+	struct xnvme_fioe_data *xd = NULL;
+	struct xnvme_fioe_fwrap *fwrap = NULL;
+
+	if (!td->io_ops_data)
+		return;
+
+	xd = td->io_ops_data;
+	fwrap = &xd->files[0];
 
 	if (!fwrap->dev) {
 		log_err("ioeng->iomem_free(): failed no dev-handle\n");
