@@ -3927,6 +3927,13 @@ Error handling
 	appended, the total error count and the first error. The error field given
 	in the stats is the first error that was hit during the run.
 
+	Note: a write error from the device may go unnoticed by fio when using
+	buffered IO, as the write() (or similar) system call merely dirties the
+	kernel pages, unless :option:`sync` or :option:`direct` is used. Device IO
+	errors occur when the dirty data is actually written out to disk. If fully
+	sync writes aren't desirable, :option:`fsync` or :option:`fdatasync` can be
+	used as well. This is specific to writes, as reads are always synchronous.
+
 	The allowed values are:
 
 		**none**
