@@ -2316,12 +2316,16 @@ static void run_threads(struct sk_out *sk_out)
 
 		if (!td->o.create_serialize) {
 			/*
-			 *  When operating on a single rile in parallel,
+			 *  When operating on a single file in parallel,
 			 *  perform single-threaded early setup so that
 			 *  when setup_files() does not run into issues
-			 *  later.
+			 *  later. As files are added by add_job(), a
+			 *  single shared file will end up with
+			 *  files_size==1. Jobs dynamically creating
+			 *  files will end up with files_size>=2, even
+			 *  if there is only a single file per job.
 			*/
-			if (!i && td->o.nr_files == 1) {
+			if (!i && td->files_size == 1) {
 				if (setup_shared_file(td)) {
 					exit_value++;
 					if (td->error)
