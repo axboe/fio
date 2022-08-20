@@ -91,6 +91,7 @@ struct thread_options {
 	unsigned int unit_base;
 	unsigned int ddir_seq_nr;
 	long long ddir_seq_add;
+	unsigned int io_buffer_filled;
 	unsigned int iodepth;
 	unsigned int iodepth_low;
 	unsigned int iodepth_batch;
