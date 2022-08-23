@@ -1109,8 +1109,9 @@ int setup_shared_file(struct thread_data *td)
 		dprint(FD_FILE, "fio: extending shared file\n");
 		f->real_file_size = file_size;
 		err = extend_file(td, f);
-		if (!err)
+		if (!err) {
 			err = __file_invalidate_cache(td, f, 0, f->real_file_size);
+		}
 		get_file_sizes(td);
 		dprint(FD_FILE, "shared setup new real_file_size=%llu\n", 
 				(unsigned long long)f->real_file_size);

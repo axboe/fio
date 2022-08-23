@@ -2321,7 +2321,7 @@ static void run_threads(struct sk_out *sk_out)
 			 *  when setup_files() does not run into issues
 			 *  later.
 			*/
-			if (!i && td->o.nr_files == 1) {
+			if (!i && td->o.nr_files==1) {
 				if (setup_shared_file(td)) {
 					exit_value++;
 					if (td->error)
