@@ -2314,25 +2314,8 @@ static void run_threads(struct sk_out *sk_out)
 	for_each_td(td, i) {
 		print_status_init(td->thread_number - 1);
 
-		if (!td->o.create_serialize) {
-			/*
-			 *  When operating on a single rile in parallel,
-			 *  perform single-threaded early setup so that
-			 *  when setup_files() does not run into issues
-			 *  later.
-			*/
-			if (!i && td->o.nr_files==1) {
-				if (setup_shared_file(td)) {
-					exit_value++;
-					if (td->error)
-						log_err("fio: pid=%d, err=%d/%s\n",
-							(int) td->pid, td->error, td->verror);
-					td_set_runstate(td, TD_REAPED);
-					todo--;
-				}
-			}
+		if (!td->o.create_serialize)
 			continue;
-		}
 
 		if (fio_verify_load_state(td))
 			goto reap;

@@ -143,7 +143,7 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 	if (unlink_file || new_layout) {
 		int ret;
 
-		dprint(FD_FILE, "layout %d unlink %d %s\n", new_layout, unlink_file, f->file_name);
+		dprint(FD_FILE, "layout unlink %s\n", f->file_name);
 
 		ret = td_io_unlink_file(td, f);
 		if (ret != 0 && ret != ENOENT) {
@@ -197,9 +197,6 @@ static int extend_file(struct thread_data *td, struct fio_file *f)
 			}
 		}
 	}
-
-
-	dprint(FD_FILE, "fill file %s, size %llu\n", f->file_name, (unsigned long long) f->real_file_size);
 
 	left = f->real_file_size;
 	bs = td->o.max_bs[DDIR_WRITE];
@@ -1081,45 +1078,6 @@ static bool create_work_dirs(struct thread_data *td, const char *fname)
 	return true;
 }
 
-int setup_shared_file(struct thread_data *td)
-{
-	struct fio_file *f;
-	uint64_t file_size;
-	int err = 0;
-
-	if (td->o.nr_files > 1) {
-		log_err("fio: shared file setup called for multiple files\n");
-		return -1;
-	}
-
-	get_file_sizes(td);
-
-	f = td->files[0];
-
-	if (f == NULL) {
-		log_err("fio: NULL shared file\n");
-		return -1;
-	}
-
-	file_size = thread_number * td->o.size;
-	dprint(FD_FILE, "shared setup %s real_file_size=%llu, desired=%llu\n", 
-			f->file_name, (unsigned long long)f->real_file_size, (unsigned long long)file_size);
-
-	if (f->real_file_size < file_size) {
-		dprint(FD_FILE, "fio: extending shared file\n");
-		f->real_file_size = file_size;
-		err = extend_file(td, f);
-		if (!err) {
-			err = __file_invalidate_cache(td, f, 0, f->real_file_size);
-		}
-		get_file_sizes(td);
-		dprint(FD_FILE, "shared setup new real_file_size=%llu\n", 
-				(unsigned long long)f->real_file_size);
-	}
-
-	return err;
-}
-
 /*
  * Open the files and setup files sizes, creating files if necessary.
  */
@@ -1134,7 +1092,7 @@ int setup_files(struct thread_data *td)
 	const unsigned long long bs = td_min_bs(td);
 	uint64_t fs = 0;
 
-	dprint(FD_FILE, "setup files (thread_number=%d, subjob_number=%d)\n", td->thread_number, td->subjob_number);
+	dprint(FD_FILE, "setup files\n");
 
 	old_state = td_bump_runstate(td, TD_SETTING_UP);
 
