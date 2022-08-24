@@ -1,7 +1,11 @@
 #ifndef FIO_OS_LINUX_H
 #define FIO_OS_LINUX_H
 
+#ifdef __ANDROID__
+#define FIO_OS  os_android
+#else
 #define	FIO_OS	os_linux
+#endif
 
 #include <sys/ioctl.h>
 #include <sys/uio.h>
@@ -18,6 +22,10 @@
 #include <linux/fs.h>
 #include <scsi/sg.h>
 #include <asm/byteorder.h>
+#ifdef __ANDROID__
+#include "os-ashmem.h"
+#define FIO_NO_HAVE_SHM_H
+#endif
 
 #ifdef ARCH_HAVE_CRC_CRYPTO
 #include <sys/auxv.h>

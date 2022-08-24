@@ -33,9 +33,7 @@ typedef enum {
 } cpu_features;
 
 /* IWYU pragma: begin_exports */
-#if defined(__ANDROID__)
-#include "os-android.h"
-#elif defined(__linux__)
+#if defined(__linux__)
 #include "os-linux.h"
 #elif defined(__FreeBSD__)
 #include "os-freebsd.h"
