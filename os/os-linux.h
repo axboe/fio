@@ -17,6 +17,7 @@
 #include <linux/major.h>
 #include <linux/fs.h>
 #include <scsi/sg.h>
+#include <asm/byteorder.h>
 
 #ifdef ARCH_HAVE_CRC_CRYPTO
 #include <sys/auxv.h>
@@ -50,6 +51,7 @@
 #define FIO_HAVE_TRIM
 #define FIO_HAVE_GETTID
 #define FIO_USE_GENERIC_INIT_RANDOM_STATE
+#define FIO_HAVE_BYTEORDER_FUNCS
 #define FIO_HAVE_PWRITEV2
 #define FIO_HAVE_SHM_ATTACH_REMOVED
 
