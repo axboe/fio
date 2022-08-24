@@ -24,6 +24,7 @@
   #define __has_builtin(x) 0  // Compatibility with non-clang compilers.
 #endif
 
+#define FIO_HAVE_CPU_AFFINITY
 #define FIO_HAVE_DISK_UTIL
 #define FIO_HAVE_IOSCHED_SWITCH
 #define FIO_HAVE_IOPRIO
@@ -44,6 +45,13 @@
 
 #define OS_MAP_ANON		MAP_ANONYMOUS
 
+typedef cpu_set_t os_cpu_mask_t;
+
+#define fio_setaffinity(pid, cpumask)		\
+	sched_setaffinity((pid), sizeof(cpumask), &(cpumask))
+#define fio_getaffinity(pid, ptr)	\
+	sched_getaffinity((pid), sizeof(cpu_set_t), (ptr))
+
 #ifndef POSIX_MADV_DONTNEED
 #define posix_madvise   madvise
 #define POSIX_MADV_DONTNEED MADV_DONTNEED
@@ -63,6 +71,24 @@
 #define fio_get_thread_affinity(mask)	\
 	pthread_getaffinity_np(pthread_self(), sizeof(mask), &(mask))
 #endif
+
+#define fio_cpu_clear(mask, cpu)	CPU_CLR((cpu), (mask))
+#define fio_cpu_set(mask, cpu)		CPU_SET((cpu), (mask))
+#define fio_cpu_isset(mask, cpu)	(CPU_ISSET((cpu), (mask)) != 0)
+#define fio_cpu_count(mask)		CPU_COUNT((mask))
+
+static inline int fio_cpuset_init(os_cpu_mask_t *mask)
+{
+	CPU_ZERO(mask);
+	return 0;
+}
+
+static inline int fio_cpuset_exit(os_cpu_mask_t *mask)
+{
+	return 0;
+}
+
+#define FIO_MAX_CPUS			CPU_SETSIZE
 
 #ifndef CONFIG_NO_SHM
 /*
