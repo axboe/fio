@@ -445,11 +445,17 @@ static struct io_u *fio_ioring_event(struct thread_data *td, int event)
 	struct io_uring_cqe *cqe;
 	struct io_u *io_u;
 	unsigned index;
+	static int eio;
 
 	index = (event + ld->cq_ring_off) & ld->cq_ring_mask;
 
 	cqe = &ld->cq_ring.cqes[index];
 	io_u = (struct io_u *) (uintptr_t) cqe->user_data;
+
+	if (eio++ == 5) {
+		printf("mark EIO\n");
+		cqe->res = -EIO;
+	}
 
 	if (cqe->res != io_u->xfer_buflen) {
 		if (cqe->res > io_u->xfer_buflen)
@@ -532,6 +538,7 @@ static int fio_ioring_getevents(struct thread_data *td, unsigned int min,
 			if (r < 0) {
 				if (errno == EAGAIN || errno == EINTR)
 					continue;
+				r = -errno;
 				td_verror(td, errno, "io_uring_enter");
 				break;
 			}
@@ -665,6 +672,7 @@ static int fio_ioring_commit(struct thread_data *td)
 				usleep(1);
 				continue;
 			}
+			ret = -errno;
 			td_verror(td, errno, "io_uring_enter submit");
 			break;
 		}
