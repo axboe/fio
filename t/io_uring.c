@@ -799,15 +799,14 @@ static int submitter_init(struct submitter *s)
 	int i, nr_batch, err;
 	static int init_printed;
 	char buf[80];
-
 	s->tid = gettid();
 	printf("submitter=%d, tid=%d, file=%s, node=%d\n", s->index, s->tid,
 							s->filename, s->numa_node);
 
 	set_affinity(s);
 
-	__init_rand64(&s->rand_state, pthread_self());
-	srand48(pthread_self());
+	__init_rand64(&s->rand_state, s->tid);
+	srand48(s->tid);
 
 	for (i = 0; i < MAX_FDS; i++)
 		s->files[i].fileno = i;
