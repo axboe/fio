@@ -582,6 +582,7 @@ class Requirements(object):
 
     _linux = False
     _libaio = False
+    _io_uring = False
     _zbd = False
     _root = False
     _zoned_nullb = False
@@ -605,6 +606,12 @@ class Requirements(object):
                 Requirements._zbd = "CONFIG_HAS_BLKZONED" in contents
                 Requirements._libaio = "CONFIG_LIBAIO" in contents
 
+            contents, success = FioJobTest.get_file("/proc/kallsyms")
+            if not success:
+                print("Unable to open '/proc/kallsyms' to probe for io_uring support")
+            else:
+                Requirements._io_uring = "io_uring_setup" in contents
+
             Requirements._root = (os.geteuid() == 0)
             if Requirements._zbd and Requirements._root:
                 try:
@@ -627,6 +634,7 @@ class Requirements(object):
 
         req_list = [Requirements.linux,
                     Requirements.libaio,
+                    Requirements.io_uring,
                     Requirements.zbd,
                     Requirements.root,
                     Requirements.zoned_nullb,
@@ -647,6 +655,11 @@ class Requirements(object):
     def libaio(cls):
         """Is libaio available?"""
         return Requirements._libaio, "libaio required"
+
+    @classmethod
+    def io_uring(cls):
+        """Is io_uring available?"""
+        return Requirements._io_uring, "io_uring required"
 
     @classmethod
     def zbd(cls):
@@ -866,6 +879,15 @@ TEST_LIST = [
         'pre_success':      None,
         'output_format':    'json',
         'requirements':     [Requirements.not_windows],
+    },
+    {
+        'test_id':          18,
+        'test_class':       FioJobTest,
+        'job':              't0018.fio',
+        'success':          SUCCESS_DEFAULT,
+        'pre_job':          None,
+        'pre_success':      None,
+        'requirements':     [Requirements.linux, Requirements.io_uring],
     },
     {
         'test_id':          1000,
