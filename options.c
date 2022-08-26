@@ -4666,7 +4666,6 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.maxval	= 100,
 		.minval	= 0,
 		.help	= "Percentage of buffers that are dedupable",
-		.def    = "100",
 		.interval = 1,
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_IO_BUF,
