@@ -12,6 +12,8 @@
 #include <libaio.h>
 #endif
 
+#define IO_BUFFER_FILL_INTERVAL (128)
+
 enum {
 	IO_U_F_FREE		= 1 << 0,
 	IO_U_F_FLIGHT		= 1 << 1,

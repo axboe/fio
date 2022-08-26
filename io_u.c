@@ -2221,10 +2221,35 @@ static void save_buf_state(struct thread_data *td, struct frand_state *rs)
 		frand_copy(&td->buf_state_prev, rs);
 }
 
+static bool swap_data_in_buffer(void *buf, unsigned int percentage,
+				unsigned int len)
+{
+	unsigned int this_len;
+	int64_t start, end, tmp;
+	int64_t *ptr_start, *ptr_end;
+
+	this_len = ((unsigned long long)len * (100 - percentage)) / 100;
+	if (this_len > sizeof(int64_t)) {
+		ptr_start = (int64_t *)buf;
+		ptr_end = (int64_t *)((int8_t *)buf + this_len - sizeof(int64_t));
+		start = *ptr_start;
+		end = *ptr_end;
+		tmp = start;
+		*ptr_start = end;
+		*ptr_end = tmp;
+
+		return true;
+        }
+
+	return false;
+}
+
 void fill_io_buffer(struct thread_data *td, void *buf, unsigned long long min_write,
 		    unsigned long long max_bs)
 {
 	struct thread_options *o = &td->o;
+	bool data_swap = false;
+	bool swap_succeed = false;
 
 	if (o->mem_type == MEM_CUDA_MALLOC)
 		return;
@@ -2234,6 +2259,13 @@ void fill_io_buffer(struct thread_data *td, void *buf, unsigned long long min_wr
 		struct frand_state *rs = NULL;
 		unsigned long long left = max_bs;
 		unsigned long long this_write;
+
+		o->io_buffer_filled++;
+		if ((++o->io_buffer_filled) > o->iodepth * IO_BUFFER_FILL_INTERVAL)
+			o->io_buffer_filled = 0;
+
+		if (o->io_buffer_filled >= o->iodepth)
+			data_swap = true;
 
 		do {
 			/*
@@ -2251,10 +2283,14 @@ void fill_io_buffer(struct thread_data *td, void *buf, unsigned long long min_wr
 			this_write = min_not_zero(min_write,
 						(unsigned long long) td->o.compress_chunk);
 
-			fill_random_buf_percentage(rs, buf, perc,
-				this_write, this_write,
-				o->buffer_pattern,
-				o->buffer_pattern_bytes);
+			if (data_swap)
+				swap_succeed = swap_data_in_buffer(buf, perc, this_write);
+
+			if (!data_swap || !swap_succeed)
+				fill_random_buf_percentage(rs, buf, perc,
+					this_write, this_write,
+					o->buffer_pattern,
+					o->buffer_pattern_bytes);
 
 			buf += this_write;
 			left -= this_write;

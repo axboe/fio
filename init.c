@@ -900,6 +900,8 @@ static int fixup_options(struct thread_data *td)
 		}
 	}
 
+	o->io_buffer_filled = 0;
+	
 	/*
 	 * Using a non-uniform random distribution excludes usage of
 	 * a random map

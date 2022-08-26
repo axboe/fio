@@ -97,7 +97,7 @@ struct thread_options {
 	unsigned int iodepth_batch_complete_min;
 	unsigned int iodepth_batch_complete_max;
 	unsigned int serialize_overlap;
-
+	unsigned long long io_buffer_filled;
 	unsigned int unique_filename;
 
 	unsigned long long size;
