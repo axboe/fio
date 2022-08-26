@@ -30,6 +30,7 @@
 #include <sched.h>
 
 #include "../arch/arch.h"
+#include "../os/os.h"
 #include "../lib/types.h"
 #include "../lib/roundup.h"
 #include "../lib/rand.h"
@@ -494,13 +495,6 @@ static int io_uring_enter(struct submitter *s, unsigned int to_submit,
 			min_complete, flags, NULL, 0);
 #endif
 }
-
-#ifndef CONFIG_HAVE_GETTID
-static int gettid(void)
-{
-	return syscall(__NR_gettid);
-}
-#endif
 
 static unsigned file_depth(struct submitter *s)
 {
