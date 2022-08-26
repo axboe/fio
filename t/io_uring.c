@@ -615,7 +615,7 @@ static void init_io_pt(struct submitter *s, unsigned index)
 	sqe->opcode = IORING_OP_URING_CMD;
 	sqe->user_data = (unsigned long) f->fileno;
 	if (stats)
-		sqe->user_data |= ((unsigned long)s->clock_index << 32);
+		sqe->user_data |= ((__u64) s->clock_index << 32ULL);
 	sqe->cmd_op = NVME_URING_CMD_IO;
 	slba = offset >> f->lba_shift;
 	nlb = (bs >> f->lba_shift) - 1;
