@@ -1503,9 +1503,6 @@ static int str_buffer_pattern_cb(void *data, const char *input)
 	 */
 	if (!td->o.compress_percentage && !td_read(td))
 		td->o.refill_buffers = 0;
-	else if (!td_read(td) && (td->o.dedupe_percentage == 100) &&
-		 (td->o.verify == VERIFY_NONE))
-		td->o.refill_buffers = 0;
 	else
 		td->o.refill_buffers = 1;
 
@@ -1530,11 +1527,7 @@ static int str_dedupe_cb(void *data, unsigned long long *il)
 
 	td->flags |= TD_F_COMPRESS;
 	td->o.dedupe_percentage = *il;
-	if (!td_read(td) && (td->o.dedupe_percentage == 100) &&
-	    (td->o.verify == VERIFY_NONE))
-	    	td->o.refill_buffers = 0;
-	else
-		td->o.refill_buffers = 1;
+	td->o.refill_buffers = 1;
 	return 0;
 }
 

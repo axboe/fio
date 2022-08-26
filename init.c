@@ -887,21 +887,16 @@ static int fixup_options(struct thread_data *td)
 	/*
 	 * For fully compressible data, just zero them at init time.
 	 * It's faster than repeatedly filling it. For non-zero
-	 * compression, we will have refill_buffers set if either
-	 * data dedupe or verify is set. Set it, unless the job file
-	 * already changed it.
+	 * compression, we should have refill_buffers set. Set it, unless
+	 * the job file already changed it.
 	 */
 	if (o->compress_percentage) {
 		if (o->compress_percentage == 100) {
 			o->zero_buffers = 1;
 			o->compress_percentage = 0;
 		} else if (!fio_option_is_set(o, refill_buffers)) {
-			if (td_read(td) || o->dedupe_percentage != 100) {
-				o->refill_buffers = 1;
-				td->flags |= TD_F_REFILL_BUFFERS;
-			} else {
-				o->refill_buffers = 0;
-			}
+			o->refill_buffers = 1;
+			td->flags |= TD_F_REFILL_BUFFERS;
 		}
 	}
 

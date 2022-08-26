@@ -2235,7 +2235,8 @@ void fill_io_buffer(struct thread_data *td, void *buf, unsigned long long min_wr
 		unsigned long long left = max_bs;
 		unsigned long long this_write;
 
-		if (!o->refill_buffers) {
+		if (td_write(td) && o->dedupe_percentage == 100 &&
+		    o->verify == VERIFY_NONE) {
 			if (o->io_buffer_filled >= o->iodepth) {
 				return;
 			}
