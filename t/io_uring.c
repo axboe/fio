@@ -117,7 +117,7 @@ static struct submitter *submitter;
 static volatile int finish;
 static int stats_running;
 static unsigned long max_iops;
-static long page_size;
+static long t_io_uring_page_size;
 
 static int depth = DEPTH;
 static int batch_submit = BATCH_SUBMIT;
@@ -195,9 +195,9 @@ static unsigned long plat_idx_to_val(unsigned int idx)
 	return cycles_to_nsec(base + ((k + 0.5) * (1 << error_bits)));
 }
 
-unsigned int calc_clat_percentiles(unsigned long *io_u_plat, unsigned long nr,
-				   unsigned long **output,
-				   unsigned long *maxv, unsigned long *minv)
+unsigned int calculate_clat_percentiles(unsigned long *io_u_plat,
+		unsigned long nr, unsigned long **output,
+		unsigned long *maxv, unsigned long *minv)
 {
 	unsigned long sum = 0;
 	unsigned int len = plist_len, i, j = 0;
@@ -251,7 +251,7 @@ static void show_clat_percentiles(unsigned long *io_u_plat, unsigned long nr,
 	bool is_last;
 	char fmt[32];
 
-	len = calc_clat_percentiles(io_u_plat, nr, &ovals, &maxv, &minv);
+	len = calculate_clat_percentiles(io_u_plat, nr, &ovals, &maxv, &minv);
 	if (!len || !ovals)
 		goto out;
 
@@ -786,7 +786,7 @@ static void *allocate_mem(struct submitter *s, int size)
 		return numa_alloc_onnode(size, s->numa_node);
 #endif
 
-	if (posix_memalign(&buf, page_size, bs)) {
+	if (posix_memalign(&buf, t_io_uring_page_size, bs)) {
 		printf("failed alloc\n");
 		return NULL;
 	}
@@ -1542,9 +1542,9 @@ int main(int argc, char *argv[])
 
 	arm_sig_int();
 
-	page_size = sysconf(_SC_PAGESIZE);
-	if (page_size < 0)
-		page_size = 4096;
+	t_io_uring_page_size = sysconf(_SC_PAGESIZE);
+	if (t_io_uring_page_size < 0)
+		t_io_uring_page_size = 4096;
 
 	for (j = 0; j < nthreads; j++) {
 		s = get_submitter(j);
