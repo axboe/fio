@@ -26,7 +26,7 @@ jobs:
         - build: macos
           os: macos-11
         - build: linux-i686-gcc
-          os: ubuntu-20.04
+          os: ubuntu-22.04
           arch: i686
         - build: android
           os: ubuntu-22.04

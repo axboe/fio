@@ -23,26 +23,21 @@ DPKGCFG
         libcunit1-dev
         libcurl4-openssl-dev
         libfl-dev
-        libibverbs-dev
         libnuma-dev
-        librdmacm-dev
 	libnfs-dev
         valgrind
     )
     case "${CI_TARGET_ARCH}" in
         "i686")
             sudo dpkg --add-architecture i386
-            opts="--allow-downgrades"
             pkgs=("${pkgs[@]/%/:i386}")
             pkgs+=(
                 gcc-multilib
                 pkg-config:i386
                 zlib1g-dev:i386
-		libpcre2-8-0=10.34-7
             )
             ;;
         "x86_64")
-            opts=""
             pkgs+=(
                 libglusterfs-dev
                 libgoogle-perftools-dev
@@ -53,6 +48,8 @@ DPKGCFG
                 librbd-dev
                 libtcmalloc-minimal4
                 nvidia-cuda-dev
+                libibverbs-dev
+                librdmacm-dev
             )
 	    echo "Removing libunwind-14-dev because of conflicts with libunwind-dev"
 	    sudo apt remove -y libunwind-14-dev
@@ -68,8 +65,8 @@ DPKGCFG
 
     echo "Updating APT..."
     sudo apt-get -qq update
-    echo "Installing packages..."
-    sudo apt-get install "$opts" -o APT::Immediate-Configure=false --no-install-recommends -qq -y "${pkgs[@]}"
+    echo "Installing packages... ${pkgs[@]}"
+    sudo apt-get install -o APT::Immediate-Configure=false --no-install-recommends -qq -y "${pkgs[@]}"
 }
 
 install_linux() {
