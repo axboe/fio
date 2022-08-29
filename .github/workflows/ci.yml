@@ -18,10 +18,10 @@ jobs:
         - android
         include:
         - build: linux-gcc
-          os: ubuntu-20.04
+          os: ubuntu-22.04
           cc: gcc
         - build: linux-clang
-          os: ubuntu-20.04
+          os: ubuntu-22.04
           cc: clang
         - build: macos
           os: macos-11
@@ -29,7 +29,7 @@ jobs:
           os: ubuntu-20.04
           arch: i686
         - build: android
-          os: ubuntu-20.04
+          os: ubuntu-22.04
           arch: aarch64-linux-android32
 
     env:

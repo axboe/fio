@@ -54,6 +54,8 @@ DPKGCFG
                 libtcmalloc-minimal4
                 nvidia-cuda-dev
             )
+	    echo "Removing libunwind-14-dev because of conflicts with libunwind-dev"
+	    sudo apt remove -y libunwind-14-dev
             ;;
     esac
 
