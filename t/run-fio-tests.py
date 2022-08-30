@@ -576,7 +576,7 @@ class FioJobTest_t0019(FioJobTest):
 
 
 class FioJobTest_t0020(FioJobTest):
-    """Test consists of fio test job t0020
+    """Test consists of fio test jobs t0020 and t0021
     Confirm that almost all offsets were touched non-sequentially"""
 
     def check_result(self):
@@ -612,6 +612,41 @@ class FioJobTest_t0020(FioJobTest):
             if not i in offsets:
                 self.passed = False
                 self.failure_reason += " missing offset {0}".format(i*4096)
+
+
+class FioJobTest_t0022(FioJobTest):
+    """Test consists of fio test job t0022"""
+
+    def check_result(self):
+        super(FioJobTest_t0022, self).check_result()
+
+        bw_log_filename = os.path.join(self.test_dir, "test_bw.log")
+        file_data, success = self.get_file(bw_log_filename)
+        log_lines = file_data.split('\n')
+
+        filesize = 1024*1024
+        bs = 4096
+        seq_count = 0
+        offsets = set()
+
+        prev = int(log_lines[0].split(',')[4])
+        for line in log_lines[1:]:
+            offsets.add(prev/bs)
+            if len(line.strip()) == 0:
+                continue
+            cur = int(line.split(',')[4])
+            if cur - prev == bs:
+                seq_count += 1
+            prev = cur
+
+        # 10 is an arbitrary threshold
+        if seq_count > 10:
+            self.passed = False
+            self.failure_reason = "too many ({0}) consecutive offsets".format(seq_count)
+
+        if len(offsets) == filesize/bs:
+            self.passed = False
+            self.failure_reason += " no duplicate offsets found with norandommap=1".format(len(offsets))
 
 
 class FioJobTest_iops_rate(FioJobTest):
@@ -968,6 +1003,24 @@ TEST_LIST = [
         'test_id':          20,
         'test_class':       FioJobTest_t0020,
         'job':              't0020.fio',
+        'success':          SUCCESS_DEFAULT,
+        'pre_job':          None,
+        'pre_success':      None,
+        'requirements':     [],
+    },
+    {
+        'test_id':          21,
+        'test_class':       FioJobTest_t0020,
+        'job':              't0021.fio',
+        'success':          SUCCESS_DEFAULT,
+        'pre_job':          None,
+        'pre_success':      None,
+        'requirements':     [],
+    },
+    {
+        'test_id':          22,
+        'test_class':       FioJobTest_t0022,
+        'job':              't0022.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
         'pre_success':      None,
