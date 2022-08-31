@@ -815,9 +815,20 @@ static int fio_ioring_queue_init(struct thread_data *td)
 	 */
 	p.flags |= IORING_SETUP_COOP_TASKRUN;
 
+	/*
+	 * io_uring is always a single issuer, and we can defer task_work
+	 * runs until we reap events.
+	 */
+	p.flags |= IORING_SETUP_SINGLE_ISSUER | IORING_SETUP_DEFER_TASKRUN;
+
 retry:
 	ret = syscall(__NR_io_uring_setup, depth, &p);
 	if (ret < 0) {
+		if (errno == EINVAL && p.flags & IORING_SETUP_DEFER_TASKRUN) {
+			p.flags &= ~IORING_SETUP_DEFER_TASKRUN;
+			p.flags &= ~IORING_SETUP_SINGLE_ISSUER;
+			goto retry;
+		}
 		if (errno == EINVAL && p.flags & IORING_SETUP_COOP_TASKRUN) {
 			p.flags &= ~IORING_SETUP_COOP_TASKRUN;
 			goto retry;
