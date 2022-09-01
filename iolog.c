@@ -1574,14 +1574,14 @@ void iolog_compress_exit(struct thread_data *td)
  * Queue work item to compress the existing log entries. We reset the
  * current log to a small size, and reference the existing log in the
  * data that we queue for compression. Once compression has been done,
- * this old log is freed. If called with finish == true, will not return
- * until the log compression has completed, and will flush all previous
- * logs too
+ * this old log is freed. Will not return until the log compression
+ * has completed, and will flush all previous logs too
  */
 static int iolog_flush(struct io_log *log)
 {
 	struct iolog_flush_data *data;
 
+	workqueue_flush(&log->td->log_compress_wq);
 	data = malloc(sizeof(*data));
 	if (!data)
 		return 1;

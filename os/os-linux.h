@@ -1,7 +1,11 @@
 #ifndef FIO_OS_LINUX_H
 #define FIO_OS_LINUX_H
 
+#ifdef __ANDROID__
+#define FIO_OS  os_android
+#else
 #define	FIO_OS	os_linux
+#endif
 
 #include <sys/ioctl.h>
 #include <sys/uio.h>
@@ -17,6 +21,11 @@
 #include <linux/major.h>
 #include <linux/fs.h>
 #include <scsi/sg.h>
+#include <asm/byteorder.h>
+#ifdef __ANDROID__
+#include "os-ashmem.h"
+#define FIO_NO_HAVE_SHM_H
+#endif
 
 #ifdef ARCH_HAVE_CRC_CRYPTO
 #include <sys/auxv.h>
@@ -50,6 +59,7 @@
 #define FIO_HAVE_TRIM
 #define FIO_HAVE_GETTID
 #define FIO_USE_GENERIC_INIT_RANDOM_STATE
+#define FIO_HAVE_BYTEORDER_FUNCS
 #define FIO_HAVE_PWRITEV2
 #define FIO_HAVE_SHM_ATTACH_REMOVED
 
@@ -81,8 +91,8 @@ typedef cpu_set_t os_cpu_mask_t;
 	pthread_getaffinity_np(pthread_self(), sizeof(mask), &(mask))
 #endif
 
-#define fio_cpu_clear(mask, cpu)	(void) CPU_CLR((cpu), (mask))
-#define fio_cpu_set(mask, cpu)		(void) CPU_SET((cpu), (mask))
+#define fio_cpu_clear(mask, cpu)	CPU_CLR((cpu), (mask))
+#define fio_cpu_set(mask, cpu)		CPU_SET((cpu), (mask))
 #define fio_cpu_isset(mask, cpu)	(CPU_ISSET((cpu), (mask)) != 0)
 #define fio_cpu_count(mask)		CPU_COUNT((mask))
 

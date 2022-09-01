@@ -30,11 +30,13 @@
 #include <sched.h>
 
 #include "../arch/arch.h"
+#include "../os/os.h"
 #include "../lib/types.h"
 #include "../lib/roundup.h"
 #include "../lib/rand.h"
 #include "../minmax.h"
 #include "../os/linux/io_uring.h"
+#include "../engines/nvme.h"
 
 struct io_sq_ring {
 	unsigned *head;
@@ -67,6 +69,8 @@ struct file {
 	unsigned long max_size;
 	unsigned long cur_off;
 	unsigned pending_ios;
+	unsigned int nsid;	/* nsid field required for nvme-passthrough */
+	unsigned int lba_shift;	/* lba_shift field required for nvme-passthrough */
 	int real_fd;
 	int fixed_fd;
 	int fileno;
@@ -117,7 +121,7 @@ static struct submitter *submitter;
 static volatile int finish;
 static int stats_running;
 static unsigned long max_iops;
-static long page_size;
+static long t_io_uring_page_size;
 
 static int depth = DEPTH;
 static int batch_submit = BATCH_SUBMIT;
@@ -139,6 +143,7 @@ static int random_io = 1;	/* random or sequential IO */
 static int register_ring = 1;	/* register ring */
 static int use_sync = 0;	/* use preadv2 */
 static int numa_placement = 0;	/* set to node of device */
+static int pt = 0;		/* passthrough I/O or not */
 
 static unsigned long tsc_rate;
 
@@ -160,6 +165,54 @@ struct io_uring_map_buffers {
 	__u64	rsvd[2];
 };
 #endif
+
+static int nvme_identify(int fd, __u32 nsid, enum nvme_identify_cns cns,
+			 enum nvme_csi csi, void *data)
+{
+	struct nvme_passthru_cmd cmd = {
+		.opcode         = nvme_admin_identify,
+		.nsid           = nsid,
+		.addr           = (__u64)(uintptr_t)data,
+		.data_len       = NVME_IDENTIFY_DATA_SIZE,
+		.cdw10          = cns,
+		.cdw11          = csi << NVME_IDENTIFY_CSI_SHIFT,
+		.timeout_ms     = NVME_DEFAULT_IOCTL_TIMEOUT,
+	};
+
+	return ioctl(fd, NVME_IOCTL_ADMIN_CMD, &cmd);
+}
+
+static int nvme_get_info(int fd, __u32 *nsid, __u32 *lba_sz, __u64 *nlba)
+{
+	struct nvme_id_ns ns;
+	int namespace_id;
+	int err;
+
+	namespace_id = ioctl(fd, NVME_IOCTL_ID);
+	if (namespace_id < 0) {
+		fprintf(stderr, "error failed to fetch namespace-id\n");
+		close(fd);
+		return -errno;
+	}
+
+	/*
+	 * Identify namespace to get namespace-id, namespace size in LBA's
+	 * and LBA data size.
+	 */
+	err = nvme_identify(fd, namespace_id, NVME_IDENTIFY_CNS_NS,
+				NVME_CSI_NVM, &ns);
+	if (err) {
+		fprintf(stderr, "error failed to fetch identify namespace\n");
+		close(fd);
+		return err;
+	}
+
+	*nsid = namespace_id;
+	*lba_sz = 1 << ns.lbaf[(ns.flbas & 0x0f)].ds;
+	*nlba = ns.nsze;
+
+	return 0;
+}
 
 static unsigned long cycles_to_nsec(unsigned long cycles)
 {
@@ -195,9 +248,9 @@ static unsigned long plat_idx_to_val(unsigned int idx)
 	return cycles_to_nsec(base + ((k + 0.5) * (1 << error_bits)));
 }
 
-unsigned int calc_clat_percentiles(unsigned long *io_u_plat, unsigned long nr,
-				   unsigned long **output,
-				   unsigned long *maxv, unsigned long *minv)
+unsigned int calculate_clat_percentiles(unsigned long *io_u_plat,
+		unsigned long nr, unsigned long **output,
+		unsigned long *maxv, unsigned long *minv)
 {
 	unsigned long sum = 0;
 	unsigned int len = plist_len, i, j = 0;
@@ -251,7 +304,7 @@ static void show_clat_percentiles(unsigned long *io_u_plat, unsigned long nr,
 	bool is_last;
 	char fmt[32];
 
-	len = calc_clat_percentiles(io_u_plat, nr, &ovals, &maxv, &minv);
+	len = calculate_clat_percentiles(io_u_plat, nr, &ovals, &maxv, &minv);
 	if (!len || !ovals)
 		goto out;
 
@@ -396,6 +449,8 @@ static int io_uring_register_files(struct submitter *s)
 
 static int io_uring_setup(unsigned entries, struct io_uring_params *p)
 {
+	int ret;
+
 	/*
 	 * Clamp CQ ring size at our SQ ring size, we don't need more entries
 	 * than that.
@@ -403,7 +458,28 @@ static int io_uring_setup(unsigned entries, struct io_uring_params *p)
 	p->flags |= IORING_SETUP_CQSIZE;
 	p->cq_entries = entries;
 
-	return syscall(__NR_io_uring_setup, entries, p);
+	p->flags |= IORING_SETUP_COOP_TASKRUN;
+	p->flags |= IORING_SETUP_SINGLE_ISSUER;
+	p->flags |= IORING_SETUP_DEFER_TASKRUN;
+retry:
+	ret = syscall(__NR_io_uring_setup, entries, p);
+	if (!ret)
+		return 0;
+
+	if (errno == EINVAL && p->flags & IORING_SETUP_COOP_TASKRUN) {
+		p->flags &= ~IORING_SETUP_COOP_TASKRUN;
+		goto retry;
+	}
+	if (errno == EINVAL && p->flags & IORING_SETUP_SINGLE_ISSUER) {
+		p->flags &= ~IORING_SETUP_SINGLE_ISSUER;
+		goto retry;
+	}
+	if (errno == EINVAL && p->flags & IORING_SETUP_DEFER_TASKRUN) {
+		p->flags &= ~IORING_SETUP_DEFER_TASKRUN;
+		goto retry;
+	}
+
+	return ret;
 }
 
 static void io_uring_probe(int fd)
@@ -443,24 +519,33 @@ static int io_uring_enter(struct submitter *s, unsigned int to_submit,
 #endif
 }
 
-#ifndef CONFIG_HAVE_GETTID
-static int gettid(void)
-{
-	return syscall(__NR_gettid);
-}
-#endif
-
 static unsigned file_depth(struct submitter *s)
 {
 	return (depth + s->nr_files - 1) / s->nr_files;
 }
 
+static unsigned long long get_offset(struct submitter *s, struct file *f)
+{
+	unsigned long long offset;
+	long r;
+
+	if (random_io) {
+		r = __rand64(&s->rand_state);
+		offset = (r % (f->max_blocks - 1)) * bs;
+	} else {
+		offset = f->cur_off;
+		f->cur_off += bs;
+		if (f->cur_off + bs > f->max_size)
+			f->cur_off = 0;
+	}
+
+	return offset;
+}
+
 static void init_io(struct submitter *s, unsigned index)
 {
 	struct io_uring_sqe *sqe = &s->sqes[index];
-	unsigned long offset;
 	struct file *f;
-	long r;
 
 	if (do_nop) {
 		sqe->opcode = IORING_OP_NOP;
@@ -479,16 +564,6 @@ static void init_io(struct submitter *s, unsigned index)
 		}
 	}
 	f->pending_ios++;
-
-	if (random_io) {
-		r = __rand64(&s->rand_state);
-		offset = (r % (f->max_blocks - 1)) * bs;
-	} else {
-		offset = f->cur_off;
-		f->cur_off += bs;
-		if (f->cur_off + bs > f->max_size)
-			f->cur_off = 0;
-	}
 
 	if (register_files) {
 		sqe->flags = IOSQE_FIXED_FILE;
@@ -514,26 +589,88 @@ static void init_io(struct submitter *s, unsigned index)
 		sqe->buf_index = 0;
 	}
 	sqe->ioprio = 0;
-	sqe->off = offset;
+	sqe->off = get_offset(s, f);
 	sqe->user_data = (unsigned long) f->fileno;
 	if (stats && stats_running)
 		sqe->user_data |= ((uint64_t)s->clock_index << 32);
+}
+
+static void init_io_pt(struct submitter *s, unsigned index)
+{
+	struct io_uring_sqe *sqe = &s->sqes[index << 1];
+	unsigned long offset;
+	struct file *f;
+	struct nvme_uring_cmd *cmd;
+	unsigned long long slba;
+	unsigned long long nlb;
+	long r;
+
+	if (s->nr_files == 1) {
+		f = &s->files[0];
+	} else {
+		f = &s->files[s->cur_file];
+		if (f->pending_ios >= file_depth(s)) {
+			s->cur_file++;
+			if (s->cur_file == s->nr_files)
+				s->cur_file = 0;
+			f = &s->files[s->cur_file];
+		}
+	}
+	f->pending_ios++;
+
+	if (random_io) {
+		r = __rand64(&s->rand_state);
+		offset = (r % (f->max_blocks - 1)) * bs;
+	} else {
+		offset = f->cur_off;
+		f->cur_off += bs;
+		if (f->cur_off + bs > f->max_size)
+			f->cur_off = 0;
+	}
+
+	if (register_files) {
+		sqe->fd = f->fixed_fd;
+		sqe->flags = IOSQE_FIXED_FILE;
+	} else {
+		sqe->fd = f->real_fd;
+		sqe->flags = 0;
+	}
+	sqe->opcode = IORING_OP_URING_CMD;
+	sqe->user_data = (unsigned long) f->fileno;
+	if (stats)
+		sqe->user_data |= ((__u64) s->clock_index << 32ULL);
+	sqe->cmd_op = NVME_URING_CMD_IO;
+	slba = offset >> f->lba_shift;
+	nlb = (bs >> f->lba_shift) - 1;
+	cmd = (struct nvme_uring_cmd *)&sqe->cmd;
+	/* cdw10 and cdw11 represent starting slba*/
+	cmd->cdw10 = slba & 0xffffffff;
+	cmd->cdw11 = slba >> 32;
+	/* cdw12 represent number of lba to be read*/
+	cmd->cdw12 = nlb;
+	cmd->addr = (unsigned long) s->iovecs[index].iov_base;
+	cmd->data_len = bs;
+	cmd->nsid = f->nsid;
+	cmd->opcode = 2;
 }
 
 static int prep_more_ios_uring(struct submitter *s, int max_ios)
 {
 	struct io_sq_ring *ring = &s->sq_ring;
 	unsigned index, tail, next_tail, prepped = 0;
+	unsigned int head = atomic_load_acquire(ring->head);
 
 	next_tail = tail = *ring->tail;
 	do {
 		next_tail++;
-		if (next_tail == atomic_load_acquire(ring->head))
+		if (next_tail == head)
 			break;
 
 		index = tail & sq_ring_mask;
-		init_io(s, index);
-		ring->array[index] = index;
+		if (pt)
+			init_io_pt(s, index);
+		else
+			init_io(s, index);
 		prepped++;
 		tail = next_tail;
 	} while (prepped < max_ios);
@@ -549,7 +686,29 @@ static int get_file_size(struct file *f)
 
 	if (fstat(f->real_fd, &st) < 0)
 		return -1;
-	if (S_ISBLK(st.st_mode)) {
+	if (pt) {
+		__u64 nlba;
+		__u32 lbs;
+		int ret;
+
+		if (!S_ISCHR(st.st_mode)) {
+			fprintf(stderr, "passthrough works with only nvme-ns "
+					"generic devices (/dev/ngXnY)\n");
+			return -1;
+		}
+		ret = nvme_get_info(f->real_fd, &f->nsid, &lbs, &nlba);
+		if (ret)
+			return -1;
+		if ((bs % lbs) != 0) {
+			printf("error: bs:%d should be a multiple logical_block_size:%d\n",
+					bs, lbs);
+			return -1;
+		}
+		f->max_blocks = nlba / bs;
+		f->max_size = nlba;
+		f->lba_shift = ilog2(lbs);
+		return 0;
+	} else if (S_ISBLK(st.st_mode)) {
 		unsigned long long bytes;
 
 		if (ioctl(f->real_fd, BLKGETSIZE64, &bytes) != 0)
@@ -593,6 +752,60 @@ static int reap_events_uring(struct submitter *s)
 					printf("Your filesystem/driver/kernel doesn't support polled IO\n");
 				return -1;
 			}
+		}
+		if (stats) {
+			int clock_index = cqe->user_data >> 32;
+
+			if (last_idx != clock_index) {
+				if (last_idx != -1) {
+					add_stat(s, last_idx, stat_nr);
+					stat_nr = 0;
+				}
+				last_idx = clock_index;
+			}
+			stat_nr++;
+		}
+		reaped++;
+		head++;
+	} while (1);
+
+	if (stat_nr)
+		add_stat(s, last_idx, stat_nr);
+
+	if (reaped) {
+		s->inflight -= reaped;
+		atomic_store_release(ring->head, head);
+	}
+	return reaped;
+}
+
+static int reap_events_uring_pt(struct submitter *s)
+{
+	struct io_cq_ring *ring = &s->cq_ring;
+	struct io_uring_cqe *cqe;
+	unsigned head, reaped = 0;
+	int last_idx = -1, stat_nr = 0;
+	unsigned index;
+	int fileno;
+
+	head = *ring->head;
+	do {
+		struct file *f;
+
+		read_barrier();
+		if (head == atomic_load_acquire(ring->tail))
+			break;
+		index = head & cq_ring_mask;
+		cqe = &ring->cqes[index << 1];
+		fileno = cqe->user_data & 0xffffffff;
+		f = &s->files[fileno];
+		f->pending_ios--;
+
+		if (cqe->res != 0) {
+			printf("io: unexpected ret=%d\n", cqe->res);
+			if (polled && cqe->res == -EINVAL)
+				printf("passthrough doesn't support polled IO\n");
+			return -1;
 		}
 		if (stats) {
 			int clock_index = cqe->user_data >> 32;
@@ -695,8 +908,9 @@ static int setup_ring(struct submitter *s)
 	struct io_sq_ring *sring = &s->sq_ring;
 	struct io_cq_ring *cring = &s->cq_ring;
 	struct io_uring_params p;
-	int ret, fd;
+	int ret, fd, i;
 	void *ptr;
+	size_t len;
 
 	memset(&p, 0, sizeof(p));
 
@@ -708,6 +922,10 @@ static int setup_ring(struct submitter *s)
 			p.flags |= IORING_SETUP_SQ_AFF;
 			p.sq_thread_cpu = sq_thread_cpu;
 		}
+	}
+	if (pt) {
+		p.flags |= IORING_SETUP_SQE128;
+		p.flags |= IORING_SETUP_CQE32;
 	}
 
 	fd = io_uring_setup(depth, &p);
@@ -761,11 +979,22 @@ static int setup_ring(struct submitter *s)
 	sring->array = ptr + p.sq_off.array;
 	sq_ring_mask = *sring->ring_mask;
 
-	s->sqes = mmap(0, p.sq_entries * sizeof(struct io_uring_sqe),
+	if (p.flags & IORING_SETUP_SQE128)
+		len = 2 * p.sq_entries * sizeof(struct io_uring_sqe);
+	else
+		len = p.sq_entries * sizeof(struct io_uring_sqe);
+	s->sqes = mmap(0, len,
 			PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, fd,
 			IORING_OFF_SQES);
 
-	ptr = mmap(0, p.cq_off.cqes + p.cq_entries * sizeof(struct io_uring_cqe),
+	if (p.flags & IORING_SETUP_CQE32) {
+		len = p.cq_off.cqes +
+			2 * p.cq_entries * sizeof(struct io_uring_cqe);
+	} else {
+		len = p.cq_off.cqes +
+			p.cq_entries * sizeof(struct io_uring_cqe);
+	}
+	ptr = mmap(0, len,
 			PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, fd,
 			IORING_OFF_CQ_RING);
 	cring->head = ptr + p.cq_off.head;
@@ -774,6 +1003,10 @@ static int setup_ring(struct submitter *s)
 	cring->ring_entries = ptr + p.cq_off.ring_entries;
 	cring->cqes = ptr + p.cq_off.cqes;
 	cq_ring_mask = *cring->ring_mask;
+
+	for (i = 0; i < p.sq_entries; i++)
+		sring->array[i] = i;
+
 	return 0;
 }
 
@@ -786,7 +1019,7 @@ static void *allocate_mem(struct submitter *s, int size)
 		return numa_alloc_onnode(size, s->numa_node);
 #endif
 
-	if (posix_memalign(&buf, page_size, bs)) {
+	if (posix_memalign(&buf, t_io_uring_page_size, bs)) {
 		printf("failed alloc\n");
 		return NULL;
 	}
@@ -855,7 +1088,16 @@ static int submitter_init(struct submitter *s)
 		s->plat = NULL;
 		nr_batch = 0;
 	}
+	/* perform the expensive command initialization part for passthrough here
+	 * rather than in the fast path
+	 */
+	if (pt) {
+		for (i = 0; i < roundup_pow2(depth); i++) {
+			struct io_uring_sqe *sqe = &s->sqes[i << 1];
 
+			memset(&sqe->cmd, 0, sizeof(struct nvme_uring_cmd));
+		}
+	}
 	return nr_batch;
 }
 
@@ -863,10 +1105,8 @@ static int submitter_init(struct submitter *s)
 static int prep_more_ios_aio(struct submitter *s, int max_ios, struct iocb *iocbs)
 {
 	uint64_t data;
-	long long offset;
 	struct file *f;
 	unsigned index;
-	long r;
 
 	index = 0;
 	while (index < max_ios) {
@@ -885,10 +1125,8 @@ static int prep_more_ios_aio(struct submitter *s, int max_ios, struct iocb *iocb
 		}
 		f->pending_ios++;
 
-		r = lrand48();
-		offset = (r % (f->max_blocks - 1)) * bs;
 		io_prep_pread(iocb, f->real_fd, s->iovecs[index].iov_base,
-				s->iovecs[index].iov_len, offset);
+				s->iovecs[index].iov_len, get_offset(s, f));
 
 		data = f->fileno;
 		if (stats && stats_running)
@@ -1111,7 +1349,10 @@ submit:
 		do {
 			int r;
 
-			r = reap_events_uring(s);
+			if (pt)
+				r = reap_events_uring_pt(s);
+			else
+				r = reap_events_uring(s);
 			if (r == -1) {
 				s->finish = 1;
 				break;
@@ -1168,7 +1409,6 @@ static void *submitter_sync_fn(void *data)
 	do {
 		uint64_t offset;
 		struct file *f;
-		long r;
 
 		if (s->nr_files == 1) {
 			f = &s->files[0];
@@ -1183,16 +1423,6 @@ static void *submitter_sync_fn(void *data)
 		}
 		f->pending_ios++;
 
-		if (random_io) {
-			r = __rand64(&s->rand_state);
-			offset = (r % (f->max_blocks - 1)) * bs;
-		} else {
-			offset = f->cur_off;
-			f->cur_off += bs;
-			if (f->cur_off + bs > f->max_size)
-				f->cur_off = 0;
-		}
-
 #ifdef ARCH_HAVE_CPU_CLOCK
 		if (stats)
 			s->clock_batch[s->clock_index] = get_cpu_clock();
@@ -1201,6 +1431,7 @@ static void *submitter_sync_fn(void *data)
 		s->inflight++;
 		s->calls++;
 
+		offset = get_offset(s, f);
 		if (polled)
 			ret = preadv2(f->real_fd, &s->iovecs[0], 1, offset, RWF_HIPRI);
 		else
@@ -1305,11 +1536,12 @@ static void usage(char *argv, int status)
 		" -a <bool> : Use legacy aio, default %d\n"
 		" -S <bool> : Use sync IO (preadv2), default %d\n"
 		" -X <bool> : Use registered ring %d\n"
-		" -P <bool> : Automatically place on device home node %d\n",
+		" -P <bool> : Automatically place on device home node %d\n"
+		" -u <bool> : Use nvme-passthrough I/O, default %d\n",
 		argv, DEPTH, BATCH_SUBMIT, BATCH_COMPLETE, BS, polled,
 		fixedbufs, dma_map, register_files, nthreads, !buffered, do_nop,
 		stats, runtime == 0 ? "unlimited" : runtime_str, random_io, aio,
-		use_sync, register_ring, numa_placement);
+		use_sync, register_ring, numa_placement, pt);
 	exit(status);
 }
 
@@ -1368,7 +1600,7 @@ int main(int argc, char *argv[])
 	if (!do_nop && argc < 2)
 		usage(argv[0], 1);
 
-	while ((opt = getopt(argc, argv, "d:s:c:b:p:B:F:n:N:O:t:T:a:r:D:R:X:S:P:h?")) != -1) {
+	while ((opt = getopt(argc, argv, "d:s:c:b:p:B:F:n:N:O:t:T:a:r:D:R:X:S:P:u:h?")) != -1) {
 		switch (opt) {
 		case 'a':
 			aio = !!atoi(optarg);
@@ -1448,6 +1680,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'P':
 			numa_placement = !!atoi(optarg);
+			break;
+		case 'u':
+			pt = !!atoi(optarg);
 			break;
 		case 'h':
 		case '?':
@@ -1542,9 +1777,9 @@ int main(int argc, char *argv[])
 
 	arm_sig_int();
 
-	page_size = sysconf(_SC_PAGESIZE);
-	if (page_size < 0)
-		page_size = 4096;
+	t_io_uring_page_size = sysconf(_SC_PAGESIZE);
+	if (t_io_uring_page_size < 0)
+		t_io_uring_page_size = 4096;
 
 	for (j = 0; j < nthreads; j++) {
 		s = get_submitter(j);

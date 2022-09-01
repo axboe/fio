@@ -445,17 +445,11 @@ static struct io_u *fio_ioring_event(struct thread_data *td, int event)
 	struct io_uring_cqe *cqe;
 	struct io_u *io_u;
 	unsigned index;
-	static int eio;
 
 	index = (event + ld->cq_ring_off) & ld->cq_ring_mask;
 
 	cqe = &ld->cq_ring.cqes[index];
 	io_u = (struct io_u *) (uintptr_t) cqe->user_data;
-
-	if (eio++ == 5) {
-		printf("mark EIO\n");
-		cqe->res = -EIO;
-	}
 
 	if (cqe->res != io_u->xfer_buflen) {
 		if (cqe->res > io_u->xfer_buflen)
@@ -815,9 +809,30 @@ static int fio_ioring_queue_init(struct thread_data *td)
 	p.flags |= IORING_SETUP_CQSIZE;
 	p.cq_entries = depth;
 
+	/*
+	 * Setup COOP_TASKRUN as we don't need to get IPI interrupted for
+	 * completing IO operations.
+	 */
+	p.flags |= IORING_SETUP_COOP_TASKRUN;
+
+	/*
+	 * io_uring is always a single issuer, and we can defer task_work
+	 * runs until we reap events.
+	 */
+	p.flags |= IORING_SETUP_SINGLE_ISSUER | IORING_SETUP_DEFER_TASKRUN;
+
 retry:
 	ret = syscall(__NR_io_uring_setup, depth, &p);
 	if (ret < 0) {
+		if (errno == EINVAL && p.flags & IORING_SETUP_DEFER_TASKRUN) {
+			p.flags &= ~IORING_SETUP_DEFER_TASKRUN;
+			p.flags &= ~IORING_SETUP_SINGLE_ISSUER;
+			goto retry;
+		}
+		if (errno == EINVAL && p.flags & IORING_SETUP_COOP_TASKRUN) {
+			p.flags &= ~IORING_SETUP_COOP_TASKRUN;
+			goto retry;
+		}
 		if (errno == EINVAL && p.flags & IORING_SETUP_CQSIZE) {
 			p.flags &= ~IORING_SETUP_CQSIZE;
 			goto retry;
