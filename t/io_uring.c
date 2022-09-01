@@ -658,11 +658,12 @@ static int prep_more_ios_uring(struct submitter *s, int max_ios)
 {
 	struct io_sq_ring *ring = &s->sq_ring;
 	unsigned index, tail, next_tail, prepped = 0;
+	unsigned int head = atomic_load_acquire(ring->head);
 
 	next_tail = tail = *ring->tail;
 	do {
 		next_tail++;
-		if (next_tail == atomic_load_acquire(ring->head))
+		if (next_tail == head)
 			break;
 
 		index = tail & sq_ring_mask;
@@ -670,7 +671,6 @@ static int prep_more_ios_uring(struct submitter *s, int max_ios)
 			init_io_pt(s, index);
 		else
 			init_io(s, index);
-		ring->array[index] = index;
 		prepped++;
 		tail = next_tail;
 	} while (prepped < max_ios);
@@ -908,7 +908,7 @@ static int setup_ring(struct submitter *s)
 	struct io_sq_ring *sring = &s->sq_ring;
 	struct io_cq_ring *cring = &s->cq_ring;
 	struct io_uring_params p;
-	int ret, fd;
+	int ret, fd, i;
 	void *ptr;
 	size_t len;
 
@@ -1003,6 +1003,10 @@ static int setup_ring(struct submitter *s)
 	cring->ring_entries = ptr + p.cq_off.ring_entries;
 	cring->cqes = ptr + p.cq_off.cqes;
 	cq_ring_mask = *cring->ring_mask;
+
+	for (i = 0; i < p.sq_entries; i++)
+		sring->array[i] = i;
+
 	return 0;
 }
 
