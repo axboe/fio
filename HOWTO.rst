@@ -4809,6 +4809,10 @@ load a local file as well. This is done by using :option:`--remote-config` ::
 Then fio will open this local (to the server) job file instead of being passed
 one from the client.
 
+In an IPv6 network, use prefix "ip6:" before the IP address.
+
+   fio --client=ip6:<server1 Ipv6 address> <job file(s)> --client=ip6:<server2 IPv6 address> <job file(s)>
+
 If you have many servers (example: 100 VMs/containers), you can input a pathname
 of a file containing host IPs/names as the parameter value for the
 :option:`--client` option.  For example, here is an example :file:`host.list`
