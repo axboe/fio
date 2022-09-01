@@ -4801,6 +4801,10 @@ Fio can connect to multiple servers this way::
 
     fio --client=<server1> <job file(s)> --client=<server2> <job file(s)>
 
+In an IPv6 network, use prefix "ip6:" before the IP address.
+
+   fio --client=ip6:<server1 IPv6 address> <job file(s)> --client=ip6:<server2 IPv6 address> <job file(s)>
+
 If the job file is located on the fio server, then you can tell the server to
 load a local file as well. This is done by using :option:`--remote-config` ::
 
@@ -4808,10 +4812,6 @@ load a local file as well. This is done by using :option:`--remote-config` ::
 
 Then fio will open this local (to the server) job file instead of being passed
 one from the client.
-
-In an IPv6 network, use prefix "ip6:" before the IP address.
-
-   fio --client=ip6:<server1 Ipv6 address> <job file(s)> --client=ip6:<server2 IPv6 address> <job file(s)>
 
 If you have many servers (example: 100 VMs/containers), you can input a pathname
 of a file containing host IPs/names as the parameter value for the
