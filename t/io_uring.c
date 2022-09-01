@@ -449,6 +449,8 @@ static int io_uring_register_files(struct submitter *s)
 
 static int io_uring_setup(unsigned entries, struct io_uring_params *p)
 {
+	int ret;
+
 	/*
 	 * Clamp CQ ring size at our SQ ring size, we don't need more entries
 	 * than that.
@@ -456,7 +458,28 @@ static int io_uring_setup(unsigned entries, struct io_uring_params *p)
 	p->flags |= IORING_SETUP_CQSIZE;
 	p->cq_entries = entries;
 
-	return syscall(__NR_io_uring_setup, entries, p);
+	p->flags |= IORING_SETUP_COOP_TASKRUN;
+	p->flags |= IORING_SETUP_SINGLE_ISSUER;
+	p->flags |= IORING_SETUP_DEFER_TASKRUN;
+retry:
+	ret = syscall(__NR_io_uring_setup, entries, p);
+	if (!ret)
+		return 0;
+
+	if (errno == EINVAL && p->flags & IORING_SETUP_COOP_TASKRUN) {
+		p->flags &= ~IORING_SETUP_COOP_TASKRUN;
+		goto retry;
+	}
+	if (errno == EINVAL && p->flags & IORING_SETUP_SINGLE_ISSUER) {
+		p->flags &= ~IORING_SETUP_SINGLE_ISSUER;
+		goto retry;
+	}
+	if (errno == EINVAL && p->flags & IORING_SETUP_DEFER_TASKRUN) {
+		p->flags &= ~IORING_SETUP_DEFER_TASKRUN;
+		goto retry;
+	}
+
+	return ret;
 }
 
 static void io_uring_probe(int fd)
