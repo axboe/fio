@@ -501,12 +501,28 @@ static unsigned file_depth(struct submitter *s)
 	return (depth + s->nr_files - 1) / s->nr_files;
 }
 
+static unsigned long long get_offset(struct submitter *s, struct file *f)
+{
+	unsigned long long offset;
+	long r;
+
+	if (random_io) {
+		r = __rand64(&s->rand_state);
+		offset = (r % (f->max_blocks - 1)) * bs;
+	} else {
+		offset = f->cur_off;
+		f->cur_off += bs;
+		if (f->cur_off + bs > f->max_size)
+			f->cur_off = 0;
+	}
+
+	return offset;
+}
+
 static void init_io(struct submitter *s, unsigned index)
 {
 	struct io_uring_sqe *sqe = &s->sqes[index];
-	unsigned long offset;
 	struct file *f;
-	long r;
 
 	if (do_nop) {
 		sqe->opcode = IORING_OP_NOP;
@@ -525,16 +541,6 @@ static void init_io(struct submitter *s, unsigned index)
 		}
 	}
 	f->pending_ios++;
-
-	if (random_io) {
-		r = __rand64(&s->rand_state);
-		offset = (r % (f->max_blocks - 1)) * bs;
-	} else {
-		offset = f->cur_off;
-		f->cur_off += bs;
-		if (f->cur_off + bs > f->max_size)
-			f->cur_off = 0;
-	}
 
 	if (register_files) {
 		sqe->flags = IOSQE_FIXED_FILE;
@@ -560,7 +566,7 @@ static void init_io(struct submitter *s, unsigned index)
 		sqe->buf_index = 0;
 	}
 	sqe->ioprio = 0;
-	sqe->off = offset;
+	sqe->off = get_offset(s, f);
 	sqe->user_data = (unsigned long) f->fileno;
 	if (stats && stats_running)
 		sqe->user_data |= ((uint64_t)s->clock_index << 32);
@@ -1072,10 +1078,8 @@ static int submitter_init(struct submitter *s)
 static int prep_more_ios_aio(struct submitter *s, int max_ios, struct iocb *iocbs)
 {
 	uint64_t data;
-	long long offset;
 	struct file *f;
 	unsigned index;
-	long r;
 
 	index = 0;
 	while (index < max_ios) {
@@ -1094,10 +1098,8 @@ static int prep_more_ios_aio(struct submitter *s, int max_ios, struct iocb *iocb
 		}
 		f->pending_ios++;
 
-		r = lrand48();
-		offset = (r % (f->max_blocks - 1)) * bs;
 		io_prep_pread(iocb, f->real_fd, s->iovecs[index].iov_base,
-				s->iovecs[index].iov_len, offset);
+				s->iovecs[index].iov_len, get_offset(s, f));
 
 		data = f->fileno;
 		if (stats && stats_running)
@@ -1380,7 +1382,6 @@ static void *submitter_sync_fn(void *data)
 	do {
 		uint64_t offset;
 		struct file *f;
-		long r;
 
 		if (s->nr_files == 1) {
 			f = &s->files[0];
@@ -1395,16 +1396,6 @@ static void *submitter_sync_fn(void *data)
 		}
 		f->pending_ios++;
 
-		if (random_io) {
-			r = __rand64(&s->rand_state);
-			offset = (r % (f->max_blocks - 1)) * bs;
-		} else {
-			offset = f->cur_off;
-			f->cur_off += bs;
-			if (f->cur_off + bs > f->max_size)
-				f->cur_off = 0;
-		}
-
 #ifdef ARCH_HAVE_CPU_CLOCK
 		if (stats)
 			s->clock_batch[s->clock_index] = get_cpu_clock();
@@ -1413,6 +1404,7 @@ static void *submitter_sync_fn(void *data)
 		s->inflight++;
 		s->calls++;
 
+		offset = get_offset(s, f);
 		if (polled)
 			ret = preadv2(f->real_fd, &s->iovecs[0], 1, offset, RWF_HIPRI);
 		else
