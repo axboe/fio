@@ -1218,7 +1218,7 @@ int iolog_file_inflate(const char *file)
 	void *buf;
 	FILE *f;
 
-	f = fopen(file, "r");
+	f = fopen(file, "rb");
 	if (!f) {
 		perror("fopen");
 		return 1;
@@ -1300,10 +1300,21 @@ void flush_log(struct io_log *log, bool do_append)
 	void *buf;
 	FILE *f;
 
+	/*
+	 * If log_gz_store is true, we are writing a binary file.
+	 * Set the mode appropriately (on all platforms) to avoid issues
+	 * on windows (line-ending conversions, etc.)
+	 */
 	if (!do_append)
-		f = fopen(log->filename, "w");
+		if (log->log_gz_store)
+			f = fopen(log->filename, "wb");
+		else
+			f = fopen(log->filename, "w");
 	else
-		f = fopen(log->filename, "a");
+		if (log->log_gz_store)
+			f = fopen(log->filename, "ab");
+		else
+			f = fopen(log->filename, "a");
 	if (!f) {
 		perror("fopen log");
 		return;
