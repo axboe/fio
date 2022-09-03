@@ -2269,7 +2269,7 @@ static void usage(const char *name)
 	printf("  --minimal\t\tMinimal (terse) output\n");
 	printf("  --output-format=type\tOutput format (terse,json,json+,normal)\n");
 	printf("  --terse-version=type\tSet terse version output format"
-		" (default 3, or 2 or 4)\n");
+		" (default 3, or 2 or 4 or 5)\n");
 	printf("  --version\t\tPrint version info and exit\n");
 	printf("  --help\t\tPrint this page\n");
 	printf("  --cpuclock-test\tPerform test/validation of CPU clock\n");
