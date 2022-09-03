@@ -650,6 +650,10 @@ static void init_io_pt(struct submitter *s, unsigned index)
 	cmd->cdw12 = nlb;
 	cmd->addr = (unsigned long) s->iovecs[index].iov_base;
 	cmd->data_len = bs;
+	if (fixedbufs) {
+		sqe->uring_cmd_flags = IORING_URING_CMD_FIXED;
+		sqe->buf_index = index;
+	}
 	cmd->nsid = f->nsid;
 	cmd->opcode = 2;
 }
