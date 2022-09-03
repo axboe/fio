@@ -2550,7 +2550,7 @@ with the caveat that when used on the command line, they must come after the
 
    [dfs]
 
-	Specificy a different chunk size (in bytes) for the dfs file.
+	Specify a different chunk size (in bytes) for the dfs file.
 	Use DAOS container's chunk size by default.
 
    [libhdfs]
@@ -2559,7 +2559,7 @@ with the caveat that when used on the command line, they must come after the
 
 .. option:: object_class=str : [dfs]
 
-	Specificy a different object class for the dfs file.
+	Specify a different object class for the dfs file.
 	Use DAOS container's object class by default.
 
 .. option:: skip_bad=bool : [mtd]
