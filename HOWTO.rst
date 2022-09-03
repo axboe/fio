@@ -167,9 +167,9 @@ Command line options
 	defined by `ioengine`.  If no `ioengine` is given, list all
 	available ioengines.
 
-.. option:: --showcmd=jobfile
+.. option:: --showcmd
 
-	Convert `jobfile` to a set of command-line options.
+	Convert given job files to a set of command-line options.
 
 .. option:: --readonly
 
