@@ -856,7 +856,10 @@ static int detect_node(struct submitter *s, const char *name)
 	char str[128];
 	int ret, fd, node;
 
-	sprintf(str, "/sys/block/%s/device/numa_node", base);
+	if (pt)
+		sprintf(str, "/sys/class/nvme-generic/%s/device/numa_node", base);
+	else
+		sprintf(str, "/sys/block/%s/device/numa_node", base);
 	fd = open(str, O_RDONLY);
 	if (fd < 0)
 		return -1;
