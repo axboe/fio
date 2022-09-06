@@ -2202,6 +2202,26 @@ fi
 print_config "libpmem1_5" "$libpmem1_5"
 
 ##########################################
+# Check whether we have libpmem2
+if test "$libpmem2" != "yes" ; then
+  libpmem2="no"
+fi
+cat > $TMPC << EOF
+#include <libpmem2.h>
+int main(int argc, char **argv)
+{
+  struct pmem2_config *cfg;
+  pmem2_config_new(&cfg);
+  pmem2_config_delete(&cfg);
+  return 0;
+}
+EOF
+if compile_prog "" "-lpmem2" "libpmem2"; then
+  libpmem2="yes"
+fi
+print_config "libpmem2" "$libpmem2"
+
+##########################################
 # Check whether we have libpmemblk
 # libpmem is a prerequisite
 if test "$libpmemblk" != "yes" ; then
@@ -2990,11 +3010,13 @@ if test "$libverbs" = "yes" -a "$rdmacm" = "yes" ; then
 fi
 # librpma is supported on the 'x86_64' architecture for now
 if test "$cpu" = "x86_64" -a "$libverbs" = "yes" -a "$rdmacm" = "yes" \
-    -a "$librpma" = "yes" -a "$libpmem" = "yes" ; then
+    -a "$librpma" = "yes" \
+    && test "$libpmem" = "yes" -o "$libpmem2" = "yes" ; then
   output_sym "CONFIG_LIBRPMA_APM"
 fi
 if test "$cpu" = "x86_64" -a "$libverbs" = "yes" -a "$rdmacm" = "yes" \
-    -a "$librpma" = "yes" -a "$libpmem" = "yes" -a "$libprotobuf_c" = "yes" ; then
+    -a "$librpma" = "yes" -a "$libprotobuf_c" = "yes" \
+    && test "$libpmem" = "yes" -o "$libpmem2" = "yes" ; then
   output_sym "CONFIG_LIBRPMA_GPSPM"
 fi
 if test "$clock_gettime" = "yes" ; then
@@ -3137,6 +3159,9 @@ if test "$devdax" = "yes" ; then
 fi
 if test "$pmem" = "yes" ; then
   output_sym "CONFIG_LIBPMEM"
+fi
+if test "$libpmem2" = "yes" ; then
+  output_sym "CONFIG_LIBPMEM2_INSTALLED"
 fi
 if test "$libime" = "yes" ; then
   output_sym "CONFIG_IME"

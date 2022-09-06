@@ -1,7 +1,7 @@
 /*
  * librpma_fio: librpma_apm and librpma_gpspm engines' common part.
  *
- * Copyright 2021, Intel Corporation
+ * Copyright 2021-2022, Intel Corporation
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License,
@@ -13,9 +13,11 @@
  * GNU General Public License for more details.
  */
 
-#include "librpma_fio.h"
-
-#include <libpmem.h>
+#ifdef CONFIG_LIBPMEM2_INSTALLED
+#include "librpma_fio_pmem2.h"
+#else
+#include "librpma_fio_pmem.h"
+#endif /* CONFIG_LIBPMEM2_INSTALLED */
 
 struct fio_option librpma_fio_options[] = {
 	{
@@ -111,10 +113,8 @@ char *librpma_fio_allocate_dram(struct thread_data *td, size_t size,
 char *librpma_fio_allocate_pmem(struct thread_data *td, struct fio_file *f,
 		size_t size, struct librpma_fio_mem *mem)
 {
-	size_t size_mmap = 0;
-	char *mem_ptr = NULL;
-	int is_pmem = 0;
 	size_t ws_offset;
+	mem->mem_ptr = NULL;
 
 	if (size % page_size) {
 		log_err("fio: size (%zu) is not aligned to page size (%zu)\n",
@@ -135,48 +135,24 @@ char *librpma_fio_allocate_pmem(struct thread_data *td, struct fio_file *f,
 		return NULL;
 	}
 
-	/* map the file */
-	mem_ptr = pmem_map_file(f->file_name, 0 /* len */, 0 /* flags */,
-			0 /* mode */, &size_mmap, &is_pmem);
-	if (mem_ptr == NULL) {
-		log_err("fio: pmem_map_file(%s) failed\n", f->file_name);
-		/* pmem_map_file() sets errno on failure */
-		td_verror(td, errno, "pmem_map_file");
+	if (librpma_fio_pmem_map_file(f, size, mem, ws_offset)) {
+		log_err("fio: librpma_fio_pmem_map_file(%s) failed\n",
+			f->file_name);
 		return NULL;
 	}
 
-	/* pmem is expected */
-	if (!is_pmem) {
-		log_err("fio: %s is not located in persistent memory\n",
-			f->file_name);
-		goto err_unmap;
-	}
-
-	/* check size of allocated persistent memory */
-	if (size_mmap < ws_offset + size) {
-		log_err(
-			"fio: %s is too small to handle so many threads (%zu < %zu)\n",
-			f->file_name, size_mmap, ws_offset + size);
-		goto err_unmap;
-	}
-
 	log_info("fio: size of memory mapped from the file %s: %zu\n",
-		f->file_name, size_mmap);
+		f->file_name, mem->size_mmap);
 
-	mem->mem_ptr = mem_ptr;
-	mem->size_mmap = size_mmap;
+	log_info("fio: library used to map PMem from file: %s\n", RPMA_PMEM_USED);
 
-	return mem_ptr + ws_offset;
-
-err_unmap:
-	(void) pmem_unmap(mem_ptr, size_mmap);
-	return NULL;
+	return mem->mem_ptr ? mem->mem_ptr + ws_offset : NULL;
 }
 
 void librpma_fio_free(struct librpma_fio_mem *mem)
 {
 	if (mem->size_mmap)
-		(void) pmem_unmap(mem->mem_ptr, mem->size_mmap);
+		librpma_fio_unmap(mem);
 	else
 		free(mem->mem_ptr);
 }
