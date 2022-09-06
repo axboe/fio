@@ -1,7 +1,6 @@
 #!/bin/bash -e
 
-# 11.02.2021 Merge pull request #866 from ldorau/rpma-mmap-memory-for-rpma_mr_reg-in-rpma_flush_apm_new
-LIBRPMA_VERSION=fbac593917e98f3f26abf14f4fad5a832b330f5c
+LIBRPMA_VERSION="1.0.0"
 ZIP_FILE=rpma.zip
 
 WORKDIR=$(pwd)
