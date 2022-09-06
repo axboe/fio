@@ -44,7 +44,9 @@ DPKGCFG
                 libiscsi-dev
                 libnbd-dev
                 libpmem-dev
+                libpmem2-dev
                 libpmemblk-dev
+                libprotobuf-c-dev
                 librbd-dev
                 libtcmalloc-minimal4
                 nvidia-cuda-dev
@@ -67,6 +69,10 @@ DPKGCFG
     sudo apt-get -qq update
     echo "Installing packages... ${pkgs[@]}"
     sudo apt-get install -o APT::Immediate-Configure=false --no-install-recommends -qq -y "${pkgs[@]}"
+    if [ "${CI_TARGET_ARCH}" == "x86_64" ]; then
+        # install librpma from sources
+        ci/actions-install-librpma.sh
+    fi
 }
 
 install_linux() {
