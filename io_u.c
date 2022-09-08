@@ -622,7 +622,7 @@ int io_u_quiesce(struct thread_data *td)
 	if (td->io_u_queued || td->cur_depth)
 		td_io_commit(td);
 
-	while (td->io_u_in_flight) {
+	while (td->io_u_in_flight > td->o.iodepth_batch_complete_omit) {
 		ret = io_u_queued_complete(td, 1);
 		if (ret > 0)
 			completed += ret;
