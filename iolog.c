@@ -1168,7 +1168,7 @@ static size_t inflate_chunk(struct iolog_compress *ic, int gz_hdr, FILE *f,
  */
 static int inflate_gz_chunks(struct io_log *log, FILE *f)
 {
-	struct inflate_chunk_iter iter = { .chunk_sz = log->log_gz, };
+	struct inflate_chunk_iter iter = { .chunk_sz = 64 * 1024 * 1024, };
 	z_stream stream;
 
 	while (!flist_empty(&log->chunk_list)) {

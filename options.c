@@ -4459,11 +4459,9 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	{
 		.name	= "log_compression",
 		.lname	= "Log compression",
-		.type	= FIO_OPT_INT,
+		.type	= FIO_OPT_BOOL,
 		.off1	= offsetof(struct thread_options, log_gz),
-		.help	= "Log in compressed chunks of this size",
-		.minval	= 1024ULL,
-		.maxval	= 512 * 1024 * 1024ULL,
+		.help	= "Compress in-memory logs",
 		.category = FIO_OPT_C_LOG,
 		.group	= FIO_OPT_G_INVALID,
 	},

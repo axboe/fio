@@ -110,7 +110,7 @@ struct io_log {
 	unsigned int log_prio;
 
 	/*
-	 * Max size of log entries before a chunk is compressed
+	 * Compress in-memory log entries
 	 */
 	unsigned int log_gz;
 
