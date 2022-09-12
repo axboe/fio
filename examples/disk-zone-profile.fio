@@ -10,6 +10,8 @@ iodepth=2
 zonemode=strided
 zonesize=256m
 zoneskip=2g
-write_bw_log
 
-[/dev/sdb]
+[disk-zone-profile]
+filename=/dev/sdb
+write_bw_log
+log_offset=1
