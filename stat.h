@@ -51,7 +51,7 @@ struct group_run_stats {
  *
  * FIO_IO_U_PLAT_GROUP_NR and FIO_IO_U_PLAT_BITS determine the memory
  * requirement of storing those aggregate counts. The memory used will
- * be (FIO_IO_U_PLAT_GROUP_NR * 2^FIO_IO_U_PLAT_BITS) * sizeof(int)
+ * be (FIO_IO_U_PLAT_GROUP_NR * 2^FIO_IO_U_PLAT_BITS) * sizeof(uint64_t)
  * bytes.
  *
  * FIO_IO_U_PLAT_NR is the total number of buckets.
