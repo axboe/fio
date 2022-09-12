@@ -1,4 +1,4 @@
-; Read disk in zones of 128m/2g, generating a plot of that afterwards
+; Read disk in zones of 256m/2g. Generating a plot of that afterwards
 ; should give a nice picture of the zoning of this drive
 
 [global]
@@ -7,6 +7,7 @@ direct=1
 rw=read
 ioengine=libaio
 iodepth=2
+zonemode=strided
 zonesize=256m
 zoneskip=2g
 write_bw_log
