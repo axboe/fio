@@ -1129,7 +1129,11 @@ I/O type
 				Random mixed reads and writes.
 		**trimwrite**
 				Sequential trim+write sequences. Blocks will be trimmed first,
-				then the same blocks will be written to.
+				then the same blocks will be written to. So if ``io_size=64K``
+				is specified, Fio will trim a total of 64K bytes and also
+				write 64K bytes on the same trimmed blocks. This behaviour
+				will be consistent with ``number_ios`` or other Fio options
+				limiting the total bytes or number of I/O's.
 
 	Fio defaults to read if the option is not specified.  For the mixed I/O
 	types, the default is to split them 50/50.  For certain types of I/O the

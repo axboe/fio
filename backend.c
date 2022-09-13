@@ -971,9 +971,11 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 		total_bytes += td->o.size;
 
 	/* In trimwrite mode, each byte is trimmed and then written, so
-	 * allow total_bytes to be twice as big */
-	if (td_trimwrite(td))
+	 * allow total_bytes or number of ios to be twice as big */
+	if (td_trimwrite(td)) {
 		total_bytes += td->total_io_size;
+		td->o.number_ios *= 2;
+	}
 
 	while ((td->o.read_iolog_file && !flist_empty(&td->io_log_list)) ||
 		(!flist_empty(&td->trim_list)) || !io_issue_bytes_exceeded(td) ||
