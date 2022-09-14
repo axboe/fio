@@ -313,7 +313,7 @@ static int calibrate_cpu_clock(void)
 
 	max_ticks = MAX_CLOCK_SEC * cycles_per_msec * 1000ULL;
 	max_mult = ULLONG_MAX / max_ticks;
-	dprint(FD_TIME, "\n\nmax_ticks=%llu, __builtin_clzll=%d, "
+	dprint(FD_TIME, "max_ticks=%llu, __builtin_clzll=%d, "
 			"max_mult=%llu\n", max_ticks,
 			__builtin_clzll(max_ticks), max_mult);
 
@@ -335,7 +335,7 @@ static int calibrate_cpu_clock(void)
 
 	/*
 	 * Find the greatest power of 2 clock ticks that is less than the
-	 * ticks in MAX_CLOCK_SEC_2STAGE
+	 * ticks in MAX_CLOCK_SEC
 	 */
 	max_cycles_shift = max_cycles_mask = 0;
 	tmp = MAX_CLOCK_SEC * 1000ULL * cycles_per_msec;
