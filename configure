@@ -117,7 +117,7 @@ has() {
 }
 
 num() {
-  echo "$1" | grep -P -q "^[0-9]+$"
+  echo "$1" | grep -E -q "^[0-9]+$"
 }
 
 check_define() {
