@@ -51,7 +51,7 @@ def run_fio(fio,log_store_compressed):
         '--write_bw_log=test',
         '--per_job_logs=0',
         '--log_offset=1',
-        '--log_compression=10K',
+        '--log_compression_on=1',
         ]
     if log_store_compressed:
         fio_args.append('--log_store_compressed=1')

@@ -3791,17 +3791,25 @@ Measurements and reporting
 	offsets are not present in logs. Also see `Log File Formats`_.
 
 .. option:: log_compression=int
+	
+    **Deprecated**, use :option:`log_compression_on` instead.
+
+    When set to a nonzero value, equivalent to setting `log_compression_on=1`.
+    The nonzero magnitude of the option used to have an effect, but no longer does;
+    hence, the option has been deprecated in favor of a boolean one.
+
+.. option:: log_compression_on=bool
 
 	If this is set, fio will compress the I/O logs as it goes, to keep the
-	memory footprint lower. When a log reaches the specified size, that chunk is
-	removed and compressed in the background. Given that I/O logs are fairly
-	highly compressible, this yields a nice memory savings for longer runs. The
-	downside is that the compression will consume some background CPU cycles, so
-	it may impact the run. This, however, is also true if the logging ends up
-	consuming most of the system memory.  So pick your poison. The I/O logs are
-	saved normally at the end of a run, by decompressing the chunks and storing
-	them in the specified log file. This feature depends on the availability of
-	zlib.
+	memory footprint lower. When a chunk of log entries is big enough, that
+	chunk is removed and compressed in the background. Given that I/O logs are
+	fairly highly compressible, this yields a nice memory savings for longer
+	runs. The downside is that the compression will consume some background CPU
+	cycles, so it may impact the run. This, however, is also true if the
+	logging ends up consuming most of the system memory.  So pick your poison.
+	The I/O logs are saved normally at the end of a run, by decompressing the
+	chunks and storing them in the specified log file. This feature depends on
+	the availability of zlib.
 
 .. option:: log_compression_cpus=str
 
