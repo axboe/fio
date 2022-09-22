@@ -27,10 +27,13 @@ static inline int arch_ffz(unsigned long bitmask)
 
 #define ARCH_HAVE_FFZ
 
+#define isb()	asm volatile("isb" : : : "memory")
+
 static inline unsigned long long get_cpu_clock(void)
 {
 	unsigned long val;
 
+	isb();
 	asm volatile("mrs %0, cntvct_el0" : "=r" (val));
 	return val;
 }
