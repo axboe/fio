@@ -7,45 +7,45 @@ fio - Flexible I/O tester rev. |version|
 
 .. include:: ../HOWTO.rst
 
+.. only:: not man
 
+        Examples
+        ========
 
-Examples
-========
-
-.. include:: fio_examples.rst
-
-
-
-TODO
-====
-
-
-GFIO TODO
----------
-
-.. include:: ../GFIO-TODO
-
-
-Server TODO
------------
-
-.. include:: ../SERVER-TODO
-
-
-Steady State TODO
------------------
-
-.. include:: ../STEADYSTATE-TODO
+        .. include:: fio_examples.rst
 
 
 
-Moral License
-=============
-
-.. include:: ../MORAL-LICENSE
+        TODO
+        ====
 
 
-License
-=======
+        GFIO TODO
+        ---------
 
-.. literalinclude:: ../COPYING
+        .. include:: ../GFIO-TODO
+
+
+        Server TODO
+        -----------
+
+        .. include:: ../SERVER-TODO
+
+
+        Steady State TODO
+        -----------------
+
+        .. include:: ../STEADYSTATE-TODO
+
+
+
+        Moral License
+        =============
+
+        .. include:: ../MORAL-LICENSE
+
+
+        License
+        =======
+
+        .. literalinclude:: ../COPYING
