@@ -661,8 +661,12 @@ static void init_io_pt(struct submitter *s, unsigned index)
 static int prep_more_ios_uring(struct submitter *s, int max_ios)
 {
 	struct io_sq_ring *ring = &s->sq_ring;
-	unsigned index, tail, next_tail, prepped = 0;
-	unsigned int head = atomic_load_acquire(ring->head);
+	unsigned head, index, tail, next_tail, prepped = 0;
+
+	if (sq_thread_poll)
+		head = atomic_load_acquire(ring->head);
+	else
+		head = *ring->head;
 
 	next_tail = tail = *ring->tail;
 	do {
@@ -741,7 +745,6 @@ static int reap_events_uring(struct submitter *s)
 	do {
 		struct file *f;
 
-		read_barrier();
 		if (head == atomic_load_acquire(ring->tail))
 			break;
 		cqe = &ring->cqes[head & cq_ring_mask];
@@ -796,7 +799,6 @@ static int reap_events_uring_pt(struct submitter *s)
 	do {
 		struct file *f;
 
-		read_barrier();
 		if (head == atomic_load_acquire(ring->tail))
 			break;
 		index = head & cq_ring_mask;
