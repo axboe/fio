@@ -1134,6 +1134,9 @@ I/O type
 				write 64K bytes on the same trimmed blocks. This behaviour
 				will be consistent with ``number_ios`` or other Fio options
 				limiting the total bytes or number of I/O's.
+		**randtrimwrite**
+				Like trimwrite, but uses random offsets rather
+				than sequential writes.
 
 	Fio defaults to read if the option is not specified.  For the mixed I/O
 	types, the default is to split them 50/50.  For certain types of I/O the
