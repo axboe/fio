@@ -417,7 +417,13 @@ static int get_next_block(struct thread_data *td, struct io_u *io_u,
 
 	b = offset = -1ULL;
 
-	if (rw_seq) {
+	if (td_randtrimwrite(td) && ddir == DDIR_WRITE) {
+		/* don't mark randommap for these writes */
+		io_u_set(td, io_u, IO_U_F_BUSY_OK);
+		offset = f->last_start[DDIR_TRIM];
+		*is_random = true;
+		ret = 0;
+	} else if (rw_seq) {
 		if (td_random(td)) {
 			if (should_do_random(td, ddir)) {
 				ret = get_next_rand_block(td, f, ddir, &b);
@@ -529,6 +535,12 @@ static unsigned long long get_next_buflen(struct thread_data *td, struct io_u *i
 	bool power_2;
 
 	assert(ddir_rw(ddir));
+
+	if (td_randtrimwrite(td) && ddir == DDIR_WRITE) {
+		struct fio_file *f = io_u->file;
+
+		return f->last_pos[DDIR_TRIM] - f->last_start[DDIR_TRIM];
+	}
 
 	if (td->o.bs_is_seq_rand)
 		ddir = is_random ? DDIR_WRITE : DDIR_READ;

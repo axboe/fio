@@ -52,6 +52,8 @@ enum td_ddir {
 #define file_randommap(td, f)	(!(td)->o.norandommap && fio_file_axmap((f)))
 #define td_trimwrite(td)	(((td)->o.td_ddir & TD_DDIR_TRIMWRITE) \
 					== TD_DDIR_TRIMWRITE)
+#define td_randtrimwrite(td)	(((td)->o.td_ddir & TD_DDIR_RANDTRIMWRITE) \
+					== TD_DDIR_RANDTRIMWRITE)
 
 static inline int ddir_sync(enum fio_ddir ddir)
 {
