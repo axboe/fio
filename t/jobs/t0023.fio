@@ -1,0 +1,75 @@
+# randtrimwrite data direction tests
+[global]
+filesize=1M
+ioengine=null
+rw=randtrimwrite
+log_offset=1
+per_job_logs=0
+randrepeat=0
+stonewall
+
+# Expected result: 	trim issued to random offset followed by write to same offset
+# 			all offsets touched
+# 			block sizes match
+# Buggy result: 	something else
+[basic]
+write_bw_log
+
+# Expected result: 	trim issued to random offset followed by write to same offset
+# 			all offsets trimmed
+# 			block sizes 8k for both write and trim
+# Buggy result: 	something else
+[bs]
+write_bw_log
+bs=4k,4k,8k
+
+# Expected result: 	trim issued to random offset followed by write to same offset
+# 			all offsets trimmed
+# 			block sizes match
+# Buggy result: 	something else
+[bsrange]
+write_bw_log
+bsrange=512-4k
+
+# Expected result: 	trim issued to random offset followed by write to same offset
+# 			all offsets trimmed
+# 			block sizes match
+# Buggy result: 	something else
+[bssplit]
+write_bw_log
+bsrange=512/25:1k:25:2k:25:4k/25
+
+# Expected result: 	trim issued to random offset followed by write to same offset
+# 			all offsets touched
+# 			block sizes match
+# Buggy result: 	something else
+[basic_no_rm]
+write_bw_log
+norandommap=1
+
+# Expected result: 	trim issued to random offset followed by write to same offset
+# 			all offsets trimmed
+# 			block sizes 8k for both write and trim
+# Buggy result: 	something else
+[bs_no_rm]
+write_bw_log
+bs=4k,4k,8k
+norandommap=1
+
+# Expected result: 	trim issued to random offset followed by write to same offset
+# 			all offsets trimmed
+# 			block sizes match
+# Buggy result: 	something else
+[bsrange_no_rm]
+write_bw_log
+bsrange=512-4k
+norandommap=1
+
+# Expected result: 	trim issued to random offset followed by write to same offset
+# 			all offsets trimmed
+# 			block sizes match
+# Buggy result: 	something else
+[bssplit_no_rm]
+write_bw_log
+bsrange=512/25:1k:25:2k:25:4k/25
+norandommap=1

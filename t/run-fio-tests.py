@@ -649,6 +649,61 @@ class FioJobTest_t0022(FioJobTest):
             self.failure_reason += " no duplicate offsets found with norandommap=1".format(len(offsets))
 
 
+class FioJobTest_t0023(FioJobTest):
+    """Test consists of fio test job t0023"""
+
+    def check_seq(self, filename):
+        bw_log_filename = os.path.join(self.test_dir, filename)
+        file_data, success = self.get_file(bw_log_filename)
+        log_lines = file_data.split('\n')
+
+        prev_ddir = 1
+        for line in log_lines:
+            if len(line.strip()) == 0:
+                continue
+            vals = line.split(',')
+            ddir = int(vals[2])
+            bs = int(vals[3])
+            offset = int(vals[4])
+            if prev_ddir == 1:
+                if ddir != 2:
+                    self.passed = False
+                    self.failure_reason += " {0}: write not preceeded by trim: {1}".format(bw_log_filename, line)
+                    break
+            else:
+                if ddir != 1:
+                    self.passed = False
+                    self.failure_reason += " {0}: trim not preceeded by write: {1}".format(bw_log_filename, line)
+                    break
+                else:
+                    if prev_bs != bs:
+                        self.passed = False
+                        self.failure_reason += " {0}: block size does not match: {1}".format(bw_log_filename, line)
+                        break
+                    if prev_offset != offset:
+                        self.passed = False
+                        self.failure_reason += " {0}: offset does not match: {1}".format(bw_log_filename, line)
+                        break
+            prev_ddir = ddir
+            prev_bs = bs
+            prev_offset = offset
+
+
+    def check_result(self):
+        super(FioJobTest_t0023, self).check_result()
+
+        self.check_seq("basic_bw.log")
+        self.check_seq("bs_bw.log")
+        self.check_seq("bsrange_bw.log")
+        self.check_seq("bssplit_bw.log")
+        self.check_seq("basic_no_rm_bw.log")
+        self.check_seq("bs_no_rm_bw.log")
+        self.check_seq("bsrange_no_rm_bw.log")
+        self.check_seq("bssplit_no_rm_bw.log")
+
+        # TODO make sure all offsets were touched
+
+
 class FioJobTest_iops_rate(FioJobTest):
     """Test consists of fio test job t0009
     Confirm that job0 iops == 1000
@@ -1021,6 +1076,15 @@ TEST_LIST = [
         'test_id':          22,
         'test_class':       FioJobTest_t0022,
         'job':              't0022.fio',
+        'success':          SUCCESS_DEFAULT,
+        'pre_job':          None,
+        'pre_success':      None,
+        'requirements':     [],
+    },
+    {
+        'test_id':          23,
+        'test_class':       FioJobTest_t0023,
+        'job':              't0023.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
         'pre_success':      None,
