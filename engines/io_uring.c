@@ -433,6 +433,10 @@ static int fio_ioring_cmd_prep(struct thread_data *td, struct io_u *io_u)
 		ld->prepped = 0;
 		sqe->flags |= IOSQE_ASYNC;
 	}
+	if (o->fixedbufs) {
+		sqe->uring_cmd_flags = IORING_URING_CMD_FIXED;
+		sqe->buf_index = io_u->index;
+	}
 
 	cmd = (struct nvme_uring_cmd *)sqe->cmd;
 	return fio_nvme_uring_cmd_prep(cmd, io_u,
