@@ -529,7 +529,7 @@ static int get_next_offset(struct thread_data *td, struct io_u *io_u,
 	 */
 	if (td_randtrimwrite(td) && ddir == DDIR_TRIM &&
 	    f->last_start[DDIR_TRIM] == io_u->offset)
-		f->last_pos[DDIR_WRITE]--;
+		f->last_start[DDIR_WRITE]--;
 
 	io_u->verify_offset = io_u->offset;
 	return 0;
@@ -798,7 +798,7 @@ static void set_rw_ddir(struct thread_data *td, struct io_u *io_u)
 
 	if (td_trimwrite(td)) {
 		struct fio_file *f = io_u->file;
-		if (f->last_pos[DDIR_WRITE] == f->last_pos[DDIR_TRIM])
+		if (f->last_start[DDIR_WRITE] == f->last_start[DDIR_TRIM])
 			ddir = DDIR_TRIM;
 		else
 			ddir = DDIR_WRITE;
