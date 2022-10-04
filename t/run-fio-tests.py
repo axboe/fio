@@ -652,7 +652,9 @@ class FioJobTest_t0022(FioJobTest):
 class FioJobTest_t0023(FioJobTest):
     """Test consists of fio test job t0023"""
 
-    def check_seq(self, filename):
+    def check_trimwrite(self, filename):
+        """Make sure that trims are followed by writes of the same size at the same offset."""
+
         bw_log_filename = os.path.join(self.test_dir, filename)
         file_data, success = self.get_file(bw_log_filename)
         log_lines = file_data.split('\n')
@@ -692,14 +694,14 @@ class FioJobTest_t0023(FioJobTest):
     def check_result(self):
         super(FioJobTest_t0023, self).check_result()
 
-        self.check_seq("basic_bw.log")
-        self.check_seq("bs_bw.log")
-        self.check_seq("bsrange_bw.log")
-        self.check_seq("bssplit_bw.log")
-        self.check_seq("basic_no_rm_bw.log")
-        self.check_seq("bs_no_rm_bw.log")
-        self.check_seq("bsrange_no_rm_bw.log")
-        self.check_seq("bssplit_no_rm_bw.log")
+        self.check_trimwrite("basic_bw.log")
+        self.check_trimwrite("bs_bw.log")
+        self.check_trimwrite("bsrange_bw.log")
+        self.check_trimwrite("bssplit_bw.log")
+        self.check_trimwrite("basic_no_rm_bw.log")
+        self.check_trimwrite("bs_no_rm_bw.log")
+        self.check_trimwrite("bsrange_no_rm_bw.log")
+        self.check_trimwrite("bssplit_no_rm_bw.log")
 
         # TODO make sure all offsets were touched
 
