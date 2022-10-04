@@ -1331,10 +1331,12 @@ static char *fio_sgio_errdetails(struct io_u *io_u)
 			strlcat(msg, ". ", MAXERRDETAIL);
 		}
 		if (hdr->sb_len_wr) {
+			const uint8_t *const sbp = hdr->sbp;
+
 			snprintf(msgchunk, MAXMSGCHUNK, "Sense Data (%d bytes):", hdr->sb_len_wr);
 			strlcat(msg, msgchunk, MAXERRDETAIL);
 			for (i = 0; i < hdr->sb_len_wr; i++) {
-				snprintf(msgchunk, MAXMSGCHUNK, " %02x", hdr->sbp[i]);
+				snprintf(msgchunk, MAXMSGCHUNK, " %02x", sbp[i]);
 				strlcat(msg, msgchunk, MAXERRDETAIL);
 			}
 			strlcat(msg, ". ", MAXERRDETAIL);
