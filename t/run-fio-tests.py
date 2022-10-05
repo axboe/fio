@@ -55,7 +55,7 @@ import multiprocessing
 from pathlib import Path
 
 
-class FioTest(object):
+class FioTest():
     """Base for all fio tests."""
 
     def __init__(self, exe_path, parameters, success):
@@ -427,8 +427,10 @@ class FioJobTest_t0012(FioJobTest):
             return
 
         iops_files = []
-        for i in range(1,4):
-            file_data, success = self.get_file(os.path.join(self.test_dir, "{0}_iops.{1}.log".format(os.path.basename(self.fio_job), i)))
+        for i in range(1, 4):
+            filename = os.path.join(self.test_dir, "{0}_iops.{1}.log".format(os.path.basename(
+                self.fio_job), i))
+            file_data, success = self.get_file(filename)
 
             if not success:
                 self.failure_reason = "{0} unable to open output file,".format(self.failure_reason)
@@ -448,17 +450,15 @@ class FioJobTest_t0012(FioJobTest):
 
             ratio1 = iops3/iops2
             ratio2 = iops3/iops1
-            logging.debug(
-                "sample {0}: job1 iops={1} job2 iops={2} job3 iops={3} job3/job2={4:.3f} job3/job1={5:.3f}".format(
-                    i, iops1, iops2, iops3, ratio1, ratio2
-                )
-            )
+            logging.debug("sample {0}: job1 iops={1} job2 iops={2} job3 iops={3} " \
+                "job3/job2={4:.3f} job3/job1={5:.3f}".format(i, iops1, iops2, iops3, ratio1,
+                                                             ratio2))
 
         # test job1 and job2 succeeded to recalibrate
         if ratio1 < 1 or ratio1 > 3 or ratio2 < 7 or ratio2 > 13:
-            self.failure_reason = "{0} iops ratio mismatch iops1={1} iops2={2} iops3={3} expected r1~2 r2~10 got r1={4:.3f} r2={5:.3f},".format(
-                self.failure_reason, iops1, iops2, iops3, ratio1, ratio2
-            )
+            self.failure_reason += " iops ratio mismatch iops1={0} iops2={1} iops3={2} " \
+                "expected r1~2 r2~10 got r1={3:.3f} r2={4:.3f},".format(iops1, iops2, iops3,
+                                                                        ratio1, ratio2)
             self.passed = False
             return
 
@@ -478,8 +478,10 @@ class FioJobTest_t0014(FioJobTest):
             return
 
         iops_files = []
-        for i in range(1,4):
-            file_data, success = self.get_file(os.path.join(self.test_dir, "{0}_iops.{1}.log".format(os.path.basename(self.fio_job), i)))
+        for i in range(1, 4):
+            filename = os.path.join(self.test_dir, "{0}_iops.{1}.log".format(os.path.basename(
+                self.fio_job), i))
+            file_data, success = self.get_file(filename)
 
             if not success:
                 self.failure_reason = "{0} unable to open output file,".format(self.failure_reason)
@@ -501,10 +503,9 @@ class FioJobTest_t0014(FioJobTest):
 
 
                 if ratio1 < 0.43 or ratio1 > 0.57 or ratio2 < 0.21 or ratio2 > 0.45:
-                    self.failure_reason = "{0} iops ratio mismatch iops1={1} iops2={2} iops3={3}\
-                                                expected r1~0.5 r2~0.33 got r1={4:.3f} r2={5:.3f},".format(
-                        self.failure_reason, iops1, iops2, iops3, ratio1, ratio2
-                    )
+                    self.failure_reason += " iops ratio mismatch iops1={0} iops2={1} iops3={2} " \
+                                           "expected r1~0.5 r2~0.33 got r1={3:.3f} r2={4:.3f},".format(
+                                               iops1, iops2, iops3, ratio1, ratio2)
                     self.passed = False
 
             iops1 = iops1 + float(iops_files[0][i].split(',')[1])
@@ -512,17 +513,14 @@ class FioJobTest_t0014(FioJobTest):
 
             ratio1 = iops1/iops2
             ratio2 = iops1/iops3
-            logging.debug(
-                "sample {0}: job1 iops={1} job2 iops={2} job3 iops={3} job1/job2={4:.3f} job1/job3={5:.3f}".format(
-                    i, iops1, iops2, iops3, ratio1, ratio2
-                )
-            )
+            logging.debug("sample {0}: job1 iops={1} job2 iops={2} job3 iops={3} " \
+                          "job1/job2={4:.3f} job1/job3={5:.3f}".format(i, iops1, iops2, iops3,
+                                                                       ratio1, ratio2))
 
         # test job1 and job2 succeeded to recalibrate
         if ratio1 < 0.43 or ratio1 > 0.57:
-            self.failure_reason = "{0} iops ratio mismatch iops1={1} iops2={2} expected ratio~0.5 got ratio={3:.3f},".format(
-                self.failure_reason, iops1, iops2, ratio1
-            )
+            self.failure_reason += " iops ratio mismatch iops1={0} iops2={1} expected ratio~0.5 " \
+                                   "got ratio={2:.3f},".format(iops1, iops2, ratio1)
             self.passed = False
             return
 
@@ -557,6 +555,11 @@ class FioJobTest_t0019(FioJobTest):
 
         bw_log_filename = os.path.join(self.test_dir, "test_bw.log")
         file_data, success = self.get_file(bw_log_filename)
+        if not success:
+            self.failure_reason += " unable to open output file {0}".format(bw_log_filename)
+            self.passed = False
+            return
+
         log_lines = file_data.split('\n')
 
         prev = -4096
@@ -584,6 +587,11 @@ class FioJobTest_t0020(FioJobTest):
 
         bw_log_filename = os.path.join(self.test_dir, "test_bw.log")
         file_data, success = self.get_file(bw_log_filename)
+        if not success:
+            self.failure_reason += " unable to open output file {0}".format(bw_log_filename)
+            self.passed = False
+            return
+
         log_lines = file_data.split('\n')
 
         seq_count = 0
@@ -622,6 +630,11 @@ class FioJobTest_t0022(FioJobTest):
 
         bw_log_filename = os.path.join(self.test_dir, "test_bw.log")
         file_data, success = self.get_file(bw_log_filename)
+        if not success:
+            self.failure_reason += " unable to open output file {0}".format(bw_log_filename)
+            self.passed = False
+            return
+
         log_lines = file_data.split('\n')
 
         filesize = 1024*1024
@@ -646,7 +659,7 @@ class FioJobTest_t0022(FioJobTest):
 
         if len(offsets) == filesize/bs:
             self.passed = False
-            self.failure_reason += " no duplicate offsets found with norandommap=1".format(len(offsets))
+            self.failure_reason += " no duplicate offsets found with norandommap=1"
 
 
 class FioJobTest_t0023(FioJobTest):
@@ -657,6 +670,11 @@ class FioJobTest_t0023(FioJobTest):
 
         bw_log_filename = os.path.join(self.test_dir, filename)
         file_data, success = self.get_file(bw_log_filename)
+        if not success:
+            self.failure_reason += " unable to open output file {0}".format(bw_log_filename)
+            self.passed = False
+            return
+
         log_lines = file_data.split('\n')
 
         prev_ddir = 1
@@ -803,7 +821,7 @@ class FioJobTest_iops_rate(FioJobTest):
             self.passed = False
 
 
-class Requirements(object):
+class Requirements():
     """Requirements consists of multiple run environment characteristics.
     These are to determine if a particular test can be run"""
 
