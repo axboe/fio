@@ -17,6 +17,7 @@ flow_id=1
 thread
 log_avg_msec=1000
 write_iops_log=t0014.fio
+time_based
 
 [flow1]
 flow=1
