@@ -6,7 +6,6 @@ rw=randtrimwrite
 log_offset=1
 per_job_logs=0
 randrepeat=0
-stonewall
 write_bw_log
 
 # Expected result: 	trim issued to random offset followed by write to same offset
@@ -20,7 +19,7 @@ write_bw_log
 # 			block sizes 8k for both write and trim
 # Buggy result: 	something else
 [bs]
-bs=4k,4k,8k
+bs=8k,8k,8k
 
 # Expected result: 	trim issued to random offset followed by write to same offset
 # 			all offsets trimmed

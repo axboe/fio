@@ -691,8 +691,45 @@ class FioJobTest_t0023(FioJobTest):
             prev_offset = offset
 
 
+    def check_all_offsets(self, filename, sectorsize, filesize):
+        file_data, success = self.get_file(os.path.join(self.test_dir, filename))
+        if not success:
+            self.passed = False
+            self.failure_reason = " could not open {0}".format(filename)
+            return
+
+        log_lines = file_data.split('\n')
+
+        offsets = set()
+
+        for line in log_lines:
+            if len(line.strip()) == 0:
+                continue
+            vals = line.split(',')
+            bs = int(vals[3])
+            offset = int(vals[4])
+            if offset % sectorsize != 0:
+                self.passed = False
+                self.failure_reason += " {0}: offset {1} not a multiple of sector size {2}".format(filename, offset, sectorsize)
+                break;
+            if bs % sectorsize != 0:
+                self.passed = False
+                self.failure_reason += " {0}: block size {1} not a multiple of sector size {2}".format(filename, bs, sectorsize)
+                break;
+            for i in range(int(bs/sectorsize)):
+                offsets.add(offset/sectorsize + i)
+
+        if len(offsets) != filesize/sectorsize:
+            self.passed = False
+            self.failure_reason += " {0}: only {1} offsets touched; expected {2}".format(filename, len(offsets), filesize/sectorsize)
+        else:
+            logging.debug("{0}: {1}  sectors touched".format(filename, len(offsets)))
+
+
     def check_result(self):
         super(FioJobTest_t0023, self).check_result()
+
+        filesize = 1024*1024
 
         self.check_trimwrite("basic_bw.log")
         self.check_trimwrite("bs_bw.log")
@@ -703,7 +740,10 @@ class FioJobTest_t0023(FioJobTest):
         self.check_trimwrite("bsrange_no_rm_bw.log")
         self.check_trimwrite("bssplit_no_rm_bw.log")
 
-        # TODO make sure all offsets were touched
+        self.check_all_offsets("basic_bw.log", 4096, filesize)
+        self.check_all_offsets("bs_bw.log", 8192, filesize)
+        self.check_all_offsets("bsrange_bw.log", 512, filesize)
+        self.check_all_offsets("bssplit_bw.log", 512, filesize)
 
 
 class FioJobTest_iops_rate(FioJobTest):
