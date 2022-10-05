@@ -755,6 +755,26 @@ class FioJobTest_t0023(FioJobTest):
         self.check_all_offsets("bssplit_bw.log", 512, filesize)
 
 
+class FioJobTest_t0024(FioJobTest_t0023):
+    """Test consists of fio test job t0024 trimwrite test."""
+
+    def check_result(self):
+        # call FioJobTest_t0023's parent to skip checks done by t0023
+        super(FioJobTest_t0023, self).check_result()
+
+        filesize = 1024*1024
+
+        self.check_trimwrite("basic_bw.log")
+        self.check_trimwrite("bs_bw.log")
+        self.check_trimwrite("bsrange_bw.log")
+        self.check_trimwrite("bssplit_bw.log")
+
+        self.check_all_offsets("basic_bw.log", 4096, filesize)
+        self.check_all_offsets("bs_bw.log", 8192, filesize)
+        self.check_all_offsets("bsrange_bw.log", 512, filesize)
+        self.check_all_offsets("bssplit_bw.log", 512, filesize)
+
+
 class FioJobTest_iops_rate(FioJobTest):
     """Test consists of fio test job t0009
     Confirm that job0 iops == 1000
@@ -1136,6 +1156,15 @@ TEST_LIST = [
         'test_id':          23,
         'test_class':       FioJobTest_t0023,
         'job':              't0023.fio',
+        'success':          SUCCESS_DEFAULT,
+        'pre_job':          None,
+        'pre_success':      None,
+        'requirements':     [],
+    },
+    {
+        'test_id':          24,
+        'test_class':       FioJobTest_t0024,
+        'job':              't0024.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
         'pre_success':      None,
