@@ -650,7 +650,7 @@ class FioJobTest_t0022(FioJobTest):
 
 
 class FioJobTest_t0023(FioJobTest):
-    """Test consists of fio test job t0023"""
+    """Test consists of fio test job t0023 randtrimwrite test."""
 
     def check_trimwrite(self, filename):
         """Make sure that trims are followed by writes of the same size at the same offset."""
@@ -670,21 +670,25 @@ class FioJobTest_t0023(FioJobTest):
             if prev_ddir == 1:
                 if ddir != 2:
                     self.passed = False
-                    self.failure_reason += " {0}: write not preceeded by trim: {1}".format(bw_log_filename, line)
+                    self.failure_reason += " {0}: write not preceeded by trim: {1}".format(
+                        bw_log_filename, line)
                     break
             else:
                 if ddir != 1:
                     self.passed = False
-                    self.failure_reason += " {0}: trim not preceeded by write: {1}".format(bw_log_filename, line)
+                    self.failure_reason += " {0}: trim not preceeded by write: {1}".format(
+                        bw_log_filename, line)
                     break
                 else:
                     if prev_bs != bs:
                         self.passed = False
-                        self.failure_reason += " {0}: block size does not match: {1}".format(bw_log_filename, line)
+                        self.failure_reason += " {0}: block size does not match: {1}".format(
+                            bw_log_filename, line)
                         break
                     if prev_offset != offset:
                         self.passed = False
-                        self.failure_reason += " {0}: offset does not match: {1}".format(bw_log_filename, line)
+                        self.failure_reason += " {0}: offset does not match: {1}".format(
+                            bw_log_filename, line)
                         break
             prev_ddir = ddir
             prev_bs = bs
@@ -692,6 +696,8 @@ class FioJobTest_t0023(FioJobTest):
 
 
     def check_all_offsets(self, filename, sectorsize, filesize):
+        """Make sure all offsets were touched."""
+
         file_data, success = self.get_file(os.path.join(self.test_dir, filename))
         if not success:
             self.passed = False
@@ -710,20 +716,23 @@ class FioJobTest_t0023(FioJobTest):
             offset = int(vals[4])
             if offset % sectorsize != 0:
                 self.passed = False
-                self.failure_reason += " {0}: offset {1} not a multiple of sector size {2}".format(filename, offset, sectorsize)
-                break;
+                self.failure_reason += " {0}: offset {1} not a multiple of sector size {2}".format(
+                    filename, offset, sectorsize)
+                break
             if bs % sectorsize != 0:
                 self.passed = False
-                self.failure_reason += " {0}: block size {1} not a multiple of sector size {2}".format(filename, bs, sectorsize)
-                break;
+                self.failure_reason += " {0}: block size {1} not a multiple of sector size " \
+                    "{2}".format(filename, bs, sectorsize)
+                break
             for i in range(int(bs/sectorsize)):
                 offsets.add(offset/sectorsize + i)
 
         if len(offsets) != filesize/sectorsize:
             self.passed = False
-            self.failure_reason += " {0}: only {1} offsets touched; expected {2}".format(filename, len(offsets), filesize/sectorsize)
+            self.failure_reason += " {0}: only {1} offsets touched; expected {2}".format(
+                filename, len(offsets), filesize/sectorsize)
         else:
-            logging.debug("{0}: {1}  sectors touched".format(filename, len(offsets)))
+            logging.debug("%s: %d sectors touched", filename, len(offsets))
 
 
     def check_result(self):
