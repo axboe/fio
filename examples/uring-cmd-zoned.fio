@@ -1,7 +1,11 @@
 # io_uring_cmd I/O engine for nvme-ns generic zoned character device
 #
-# NOTE: with write workload iodepth must be set to 1 as there is no IO
-# scheduler.
+# NOTE:
+# Regular writes against a zone should be limited to QD1, as the device can
+# reorder the requests.
+#
+# As the passthrough path do not use an IO scheduler (such as mq-deadline),
+# the queue depth should be limited to 1 to avoid zone invalid writes.
 
 [global]
 filename=/dev/ng0n1
