@@ -1791,6 +1791,11 @@ static void *thread_main(void *data)
 	if (td_io_init(td))
 		goto err;
 
+	if (td_ioengine_flagged(td, FIO_SYNCIO) && td->o.iodepth > 1) {
+		log_info("note: both iodepth >= 1 and synchronous I/O engine "
+			 "are selected, queue depth will be capped at 1\n");
+	}
+
 	if (init_io_u(td))
 		goto err;
 
