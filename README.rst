@@ -150,7 +150,7 @@ GNU make isn't the default, type ``gmake`` instead of ``make``.
 
 Configure will print the enabled options. Note that on Linux based platforms,
 the libaio development packages must be installed to use the libaio
-engine. Depending on distro, it is usually called libaio-devel or libaio-dev.
+engine. Depending on the distro, it is usually called libaio-devel or libaio-dev.
 
 For gfio, gtk 2.18 (or newer), associated glib threads, and cairo are required
 to be installed.  gfio isn't built automatically and can be enabled with a
@@ -170,7 +170,7 @@ configure.
 Windows
 ~~~~~~~
 
-The minimum versions of Windows for building/runing fio are Windows 7/Windows
+The minimum versions of Windows for building/running fio are Windows 7/Windows
 Server 2008 R2. On Windows, Cygwin (https://www.cygwin.com/) is required in
 order to build fio. To create an MSI installer package install WiX from
 https://wixtoolset.org and run :file:`dobuild.cmd` from the :file:`os/windows`
@@ -224,7 +224,7 @@ implemented, I'd be happy to take patches for that. An example of that is disk
 utility statistics and (I think) huge page support, support for that does exist
 in FreeBSD/Solaris.
 
-Fio uses pthread mutexes for signalling and locking and some platforms do not
+Fio uses pthread mutexes for signaling and locking and some platforms do not
 support process shared pthread mutexes. As a result, on such platforms only
 threads are supported. This could be fixed with sysv ipc locking or other
 locking alternatives.
