@@ -17,6 +17,7 @@ usage() {
 	echo -e "\t-t <test #> Run only a single test case with specified number"
 	echo -e "\t-q Quit the test run after any failed test"
 	echo -e "\t-z Run fio with debug=zbd option"
+	echo -e "\t-u Use io_uring ioengine in place of libaio"
 }
 
 max() {
@@ -38,6 +39,8 @@ min() {
 ioengine() {
 	if [ -n "$use_libzbc" ]; then
 		echo -n "--ioengine=libzbc"
+	elif [ "$1" = "libaio" -a -n "$force_io_uring" ]; then
+		echo -n "--ioengine=io_uring"
 	else
 		echo -n "--ioengine=$1"
 	fi
@@ -1275,6 +1278,7 @@ use_libzbc=
 zbd_debug=
 max_open_zones_opt=
 quit_on_err=
+force_io_uring=
 
 while [ "${1#-}" != "$1" ]; do
   case "$1" in
@@ -1292,6 +1296,7 @@ while [ "${1#-}" != "$1" ]; do
 	shift;;
     -q) quit_on_err=1; shift;;
     -z) zbd_debug=1; shift;;
+    -u) force_io_uring=1; shift;;
     --) shift; break;;
      *) usage; exit 1;;
   esac
@@ -1299,6 +1304,11 @@ done
 
 if [ $# != 1 ]; then
     usage
+    exit 1
+fi
+
+if [ -n "$use_libzbc" -a -n "$force_io_uring" ]; then
+    echo "Please specify only one of -l and -u options"
     exit 1
 fi
 
