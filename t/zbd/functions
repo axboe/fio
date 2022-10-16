@@ -230,9 +230,11 @@ max_open_zones() {
 		    echo ${max_nr_open_zones}
 		}
 	fi
-    else
+    elif [ -n "${use_libzbc}" ]; then
 	${zbc_report_zones} "$dev" |
 	    sed -n 's/^[[:blank:]]*Maximum number of open sequential write required zones:[[:blank:]]*//p'
+    else
+	echo 0
     fi
 }
 
