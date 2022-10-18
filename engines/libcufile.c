@@ -606,6 +606,7 @@ FIO_STATIC struct ioengine_ops ioengine = {
 	.version             = FIO_IOOPS_VERSION,
 	.init                = fio_libcufile_init,
 	.queue               = fio_libcufile_queue,
+	.get_file_size       = generic_get_file_size,
 	.open_file           = fio_libcufile_open_file,
 	.close_file          = fio_libcufile_close_file,
 	.iomem_alloc         = fio_libcufile_iomem_alloc,
