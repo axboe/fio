@@ -2723,9 +2723,9 @@ int main(int argc, char* argv[]) {
    return 0;
 }
 EOF
-  if compile_prog "" "-lcuda -lcudart -lcufile" "libcufile"; then
+  if compile_prog "" "-lcuda -lcudart -lcufile -ldl" "libcufile"; then
     libcufile="yes"
-    LIBS="-lcuda -lcudart -lcufile $LIBS"
+    LIBS="-lcuda -lcudart -lcufile -ldl $LIBS"
   else
     if test "$libcufile" = "yes" ; then
       feature_not_found "libcufile" ""
