@@ -1206,6 +1206,15 @@ TEST_LIST = [
         'requirements':     [],
     },
     {
+        'test_id':          26,
+        'test_class':       FioJobTest,
+        'job':              't0026.fio',
+        'success':          SUCCESS_DEFAULT,
+        'pre_job':          None,
+        'pre_success':      None,
+        'requirements':     [Requirements.not_windows],
+    },
+    {
         'test_id':          1000,
         'test_class':       FioExeTest,
         'exe':              't/axmap',
