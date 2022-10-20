@@ -94,6 +94,7 @@ static void reset_io_counters(struct thread_data *td, int all)
 			td->rate_next_io_time[ddir] = 0;
 			td->last_usec[ddir] = 0;
 		}
+		td->bytes_verified = 0;
 	}
 
 	td->zone_bytes = 0;

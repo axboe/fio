@@ -263,6 +263,8 @@ static void sum_ddir(struct thread_data *dst, struct thread_data *src,
 	sum_val(&dst->this_io_blocks[ddir], &src->this_io_blocks[ddir]);
 	sum_val(&dst->this_io_bytes[ddir], &src->this_io_bytes[ddir]);
 	sum_val(&dst->bytes_done[ddir], &src->bytes_done[ddir]);
+	if (ddir == DDIR_READ)
+		sum_val(&dst->bytes_verified, &src->bytes_verified);
 
 	pthread_double_unlock(&dst->io_wq.stat_lock, &src->io_wq.stat_lock);
 }
