@@ -1,0 +1,7 @@
+[job]
+filename=t0025file
+size=128k
+readwrite=write
+do_verify=1
+verify=md5
+experimental_verify=1

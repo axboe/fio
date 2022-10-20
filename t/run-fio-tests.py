@@ -788,6 +788,18 @@ class FioJobTest_t0024(FioJobTest_t0023):
         self.check_all_offsets("bssplit_bw.log", 512, filesize)
 
 
+class FioJobTest_t0025(FioJobTest):
+    """Test experimental verify read backs written data pattern."""
+    def check_result(self):
+        super(FioJobTest_t0025, self).check_result()
+
+        if not self.passed:
+            return
+
+        if self.json_data['jobs'][0]['read']['io_kbytes'] != 128:
+            self.passed = False
+
+
 class FioJobTest_iops_rate(FioJobTest):
     """Test consists of fio test job t0009
     Confirm that job0 iops == 1000
@@ -1181,6 +1193,16 @@ TEST_LIST = [
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
         'pre_success':      None,
+        'requirements':     [],
+    },
+    {
+        'test_id':          25,
+        'test_class':       FioJobTest_t0025,
+        'job':              't0025.fio',
+        'success':          SUCCESS_DEFAULT,
+        'pre_job':          None,
+        'pre_success':      None,
+        'output_format':    'json',
         'requirements':     [],
     },
     {
