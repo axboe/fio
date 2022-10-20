@@ -711,6 +711,8 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 					break;
 				} else if (io_u->ddir == DDIR_WRITE) {
 					io_u->ddir = DDIR_READ;
+					io_u->numberio = td->verify_read_issues;
+					td->verify_read_issues++;
 					populate_verify_io_u(td, io_u);
 					break;
 				} else {
@@ -1030,8 +1032,10 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 			break;
 		}
 
-		if (io_u->ddir == DDIR_WRITE && td->flags & TD_F_DO_VERIFY)
+		if (io_u->ddir == DDIR_WRITE && td->flags & TD_F_DO_VERIFY) {
+			io_u->numberio = td->io_issues[io_u->ddir];
 			populate_verify_io_u(td, io_u);
+		}
 
 		ddir = io_u->ddir;
 

@@ -1287,8 +1287,6 @@ void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 	if (td->o.verify == VERIFY_NULL)
 		return;
 
-	io_u->numberio = td->io_issues[io_u->ddir];
-
 	fill_pattern_headers(td, io_u, 0, 0);
 }
 
