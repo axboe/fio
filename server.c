@@ -999,7 +999,7 @@ static int handle_probe_cmd(struct fio_net_cmd *cmd)
 		.os		= FIO_OS,
 		.arch		= FIO_ARCH,
 		.bpp		= sizeof(void *),
-		.cpus		= __cpu_to_le32(cpus_online()),
+		.cpus		= __cpu_to_le32(cpus_configured()),
 	};
 
 	dprint(FD_NET, "server: sending probe reply\n");

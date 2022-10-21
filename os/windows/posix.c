@@ -216,10 +216,18 @@ long sysconf(int name)
 	MEMORYSTATUSEX status;
 
 	switch (name) {
-	case _SC_NPROCESSORS_ONLN:
-		val = GetNumLogicalProcessors();
+	case _SC_NPROCESSORS_CONF:
+		/*
+		 * Using GetMaximumProcessorCount introduces a problem in
+		 * gettime.c because Windows does not have
+		 * fio_get_thread_affinity. Log sample (see #1479):
+		 *
+		 *   CPU mask contains processor beyond last active processor index (2)
+		 *   clock setaffinity failed: No error
+		 */
+		val = GetActiveProcessorCount(ALL_PROCESSOR_GROUPS);
 		if (val == -1)
-			log_err("sysconf(_SC_NPROCESSORS_ONLN) failed\n");
+			log_err("sysconf(_SC_NPROCESSORS_CONF) failed\n");
 
 		break;
 

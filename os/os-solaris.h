@@ -119,7 +119,7 @@ static inline int fio_set_odirect(struct fio_file *f)
 
 static inline bool fio_cpu_isset(os_cpu_mask_t *mask, int cpu)
 {
-	const unsigned int max_cpus = sysconf(_SC_NPROCESSORS_ONLN);
+	const unsigned int max_cpus = sysconf(_SC_NPROCESSORS_CONF);
 	unsigned int num_cpus;
 	processorid_t *cpus;
 	bool ret;

@@ -189,7 +189,7 @@ void fio_idle_prof_init(void)
 	pthread_condattr_t cattr;
 	struct idle_prof_thread *ipt;
 
-	ipc.nr_cpus = cpus_online();
+	ipc.nr_cpus = cpus_configured();
 	ipc.status = IDLE_PROF_STATUS_OK;
 
 	if (ipc.opt == IDLE_PROF_OPT_NONE)
