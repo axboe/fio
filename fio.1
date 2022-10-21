@@ -2063,7 +2063,7 @@ release them when IO is done. If this option is set, the pages are pre-mapped
 before IO is started. This eliminates the need to map and release for each IO.
 This is more efficient, and reduces the IO latency as well.
 .TP
-.BI (io_uring,io_uring_cmd)nonvectored
+.BI (io_uring,io_uring_cmd)nonvectored \fR=\fPint
 With this option, fio will use non-vectored read/write commands, where address
 must contain the address directly. Default is -1.
 .TP
@@ -2092,7 +2092,7 @@ available items in the SQ ring. If this option is set, the act of submitting IO
 will be done by a polling thread in the kernel. This frees up cycles for fio, at
 the cost of using more CPU in the system.
 .TP
-.BI (io_uring,io_uring_cmd)sqthread_poll_cpu
+.BI (io_uring,io_uring_cmd)sqthread_poll_cpu \fR=\fPint
 When `sqthread_poll` is set, this option provides a way to define which CPU
 should be used for the polling thread.
 .TP
@@ -2115,7 +2115,7 @@ than normal.
 When hipri is set this determines the probability of a pvsync2 I/O being high
 priority. The default is 100%.
 .TP
-.BI (pvsync2,libaio,io_uring)nowait
+.BI (pvsync2,libaio,io_uring,io_uring_cmd)nowait \fR=\fPbool
 By default if a request cannot be executed immediately (e.g. resource starvation,
 waiting on locks) it is queued and the initiating process will be blocked until
 the required resource becomes free.

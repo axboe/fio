@@ -2274,7 +2274,7 @@ with the caveat that when used on the command line, they must come after the
 	map and release for each IO. This is more efficient, and reduces the
 	IO latency as well.
 
-.. option:: nonvectored : [io_uring] [io_uring_cmd]
+.. option:: nonvectored=int : [io_uring] [io_uring_cmd]
 
 	With this option, fio will use non-vectored read/write commands, where
 	address must contain the address directly. Default is -1.
@@ -2301,7 +2301,7 @@ with the caveat that when used on the command line, they must come after the
 	This frees up cycles for fio, at the cost of using more CPU in the
 	system.
 
-.. option:: sqthread_poll_cpu : [io_uring] [io_uring_cmd]
+.. option:: sqthread_poll_cpu=int : [io_uring] [io_uring_cmd]
 
 	When :option:`sqthread_poll` is set, this option provides a way to
 	define which CPU should be used for the polling thread.
@@ -2351,7 +2351,7 @@ with the caveat that when used on the command line, they must come after the
 	When hipri is set this determines the probability of a pvsync2 I/O being high
 	priority. The default is 100%.
 
-.. option:: nowait : [pvsync2] [libaio] [io_uring]
+.. option:: nowait=bool : [pvsync2] [libaio] [io_uring] [io_uring_cmd]
 
 	By default if a request cannot be executed immediately (e.g. resource starvation,
 	waiting on locks) it is queued and the initiating process will be blocked until

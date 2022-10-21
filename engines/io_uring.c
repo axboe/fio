@@ -226,7 +226,7 @@ static struct fio_option options[] = {
 	{
 		.name	= "sqthread_poll",
 		.lname	= "Kernel SQ thread polling",
-		.type	= FIO_OPT_INT,
+		.type	= FIO_OPT_STR_SET,
 		.off1	= offsetof(struct ioring_options, sqpoll_thread),
 		.help	= "Offload submission/completion to kernel thread",
 		.category = FIO_OPT_C_ENGINE,
