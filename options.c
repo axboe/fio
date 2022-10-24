@@ -627,7 +627,7 @@ static int str_exitall_cb(void)
 int fio_cpus_split(os_cpu_mask_t *mask, unsigned int cpu_index)
 {
 	unsigned int i, index, cpus_in_mask;
-	const long max_cpu = cpus_online();
+	const long max_cpu = cpus_configured();
 
 	cpus_in_mask = fio_cpu_count(mask);
 	if (!cpus_in_mask)
@@ -666,7 +666,7 @@ static int str_cpumask_cb(void *data, unsigned long long *val)
 		return 1;
 	}
 
-	max_cpu = cpus_online();
+	max_cpu = cpus_configured();
 
 	for (i = 0; i < sizeof(int) * 8; i++) {
 		if ((1 << i) & *val) {
@@ -702,7 +702,7 @@ static int set_cpus_allowed(struct thread_data *td, os_cpu_mask_t *mask,
 	strip_blank_front(&str);
 	strip_blank_end(str);
 
-	max_cpu = cpus_online();
+	max_cpu = cpus_configured();
 
 	while ((cpu = strsep(&str, ",")) != NULL) {
 		char *str2, *cpu2;
@@ -5305,7 +5305,7 @@ void fio_keywords_init(void)
 	sprintf(buf, "%llu", mb_memory);
 	fio_keywords[1].replace = strdup(buf);
 
-	l = cpus_online();
+	l = cpus_configured();
 	sprintf(buf, "%lu", l);
 	fio_keywords[2].replace = strdup(buf);
 }

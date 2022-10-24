@@ -671,7 +671,7 @@ static int clock_cmp(const void *p1, const void *p2)
 int fio_monotonic_clocktest(int debug)
 {
 	struct clock_thread *cthreads;
-	unsigned int seen_cpus, nr_cpus = cpus_online();
+	unsigned int seen_cpus, nr_cpus = cpus_configured();
 	struct clock_entry *entries;
 	unsigned long nr_entries, tentries, failed = 0;
 	struct clock_entry *prev, *this;

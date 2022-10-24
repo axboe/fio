@@ -688,7 +688,7 @@ int main(int argc, char *argv[])
 		use_bloom = 0;
 
 	if (!num_threads)
-		num_threads = cpus_online();
+		num_threads = cpus_configured();
 
 	if (argc == optind)
 		return usage(argv);

@@ -88,9 +88,9 @@ static inline unsigned long long os_phys_mem(void)
 	return ret;
 }
 
-#define FIO_HAVE_CPU_ONLINE_SYSCONF
+#define FIO_HAVE_CPU_CONF_SYSCONF
 
-static inline unsigned int cpus_online(void)
+static inline unsigned int cpus_configured(void)
 {
 	return mpctl(MPC_GETNUMSPUS, 0, NULL);
 }

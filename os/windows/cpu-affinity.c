@@ -2,12 +2,6 @@
 
 #include <windows.h>
 
-/* Return all processors regardless of processor group */
-unsigned int cpus_online(void)
-{
-	return GetActiveProcessorCount(ALL_PROCESSOR_GROUPS);
-}
-
 static void print_mask(os_cpu_mask_t *cpumask)
 {
 	for (int i = 0; i < FIO_CPU_MASK_ROWS; i++)

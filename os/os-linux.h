@@ -251,14 +251,6 @@ static inline int arch_cache_line_size(void)
 		return atoi(size);
 }
 
-#ifdef __powerpc64__
-#define FIO_HAVE_CPU_ONLINE_SYSCONF
-static inline unsigned int cpus_online(void)
-{
-        return sysconf(_SC_NPROCESSORS_CONF);
-}
-#endif
-
 static inline unsigned long long get_fs_free_size(const char *path)
 {
 	unsigned long long ret;

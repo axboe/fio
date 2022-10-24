@@ -44,7 +44,7 @@
 #define fio_swap64(x)	_byteswap_uint64(x)
 
 #define _SC_PAGESIZE			0x1
-#define _SC_NPROCESSORS_ONLN	0x2
+#define _SC_NPROCESSORS_CONF	0x2
 #define _SC_PHYS_PAGES			0x4
 
 #define SA_RESTART	0
@@ -218,9 +218,6 @@ static inline int fio_mkdir(const char *path, mode_t mode) {
 
 	return 0;
 }
-
-#define FIO_HAVE_CPU_ONLINE_SYSCONF
-unsigned int cpus_online(void);
 
 int first_set_cpu(os_cpu_mask_t *cpumask);
 int fio_setaffinity(int pid, os_cpu_mask_t cpumask);
