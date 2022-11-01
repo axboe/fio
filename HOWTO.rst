@@ -3329,13 +3329,13 @@ Threads, processes and job synchronization
 
 .. option:: flow=int
 
-	Weight in token-based flow control. If this value is used, then there is a
-	'flow counter' which is used to regulate the proportion of activity between
-	two or more jobs. Fio attempts to keep this flow counter near zero. The
-	``flow`` parameter stands for how much should be added or subtracted to the
-	flow counter on each iteration of the main I/O loop. That is, if one job has
-	``flow=8`` and another job has ``flow=-1``, then there will be a roughly 1:8
-	ratio in how much one runs vs the other.
+        Weight in token-based flow control. If this value is used, then fio
+        regulates the activity between two or more jobs sharing the same
+        flow_id. Fio attempts to keep each job activity proportional to other
+        jobs' activities in the same flow_id group, with respect to requested
+        weight per job. That is, if one job has `flow=3', another job has
+        `flow=2' and another with `flow=1`, then there will be a roughly 3:2:1
+        ratio in how much one runs vs the others.
 
 .. option:: flow_sleep=int
 
