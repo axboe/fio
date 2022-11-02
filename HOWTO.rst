@@ -3356,10 +3356,10 @@ Threads, processes and job synchronization
 	make fio terminate all jobs in the same group, as soon as one job of that
 	group finishes.
 
-.. option:: exit_what
+.. option:: exit_what=str
 
 	By default, fio will continue running all other jobs when one job finishes.
-	Sometimes this is not the desired action. Setting ``exit_all`` will
+	Sometimes this is not the desired action. Setting ``exitall`` will
 	instead make fio terminate all jobs in the same group. The option
         ``exit_what`` allows to control which jobs get terminated when ``exitall`` is
         enabled. The default is ``group`` and does not change the behaviour of
