@@ -11,12 +11,18 @@ void os_clk_tck(long *clk_tck)
 	 */
 	unsigned long minRes, maxRes, curRes;
 	HMODULE lib;
-	FARPROC queryTimer;
-	FARPROC setTimer;
+	NTSTATUS NTAPI (*queryTimer)
+		(OUT PULONG              MinimumResolution,
+		 OUT PULONG              MaximumResolution,
+		 OUT PULONG              CurrentResolution);
+	NTSTATUS NTAPI (*setTimer)
+		(IN ULONG                DesiredResolution,
+		 IN BOOLEAN              SetResolution,
+		 OUT PULONG              CurrentResolution);
 
 	if (!(lib = LoadLibrary(TEXT("ntdll.dll"))) ||
-		!(queryTimer = GetProcAddress(lib, "NtQueryTimerResolution")) ||
-		!(setTimer = GetProcAddress(lib, "NtSetTimerResolution"))) {
+		!(queryTimer = (void *)GetProcAddress(lib, "NtQueryTimerResolution")) ||
+		!(setTimer = (void *)GetProcAddress(lib, "NtSetTimerResolution"))) {
 		dprint(FD_HELPERTHREAD, 
 			"Failed to load ntdll library, set to lower bound 64 Hz\n");
 		*clk_tck = 64;

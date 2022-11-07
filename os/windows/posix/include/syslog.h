@@ -1,7 +1,7 @@
 #ifndef SYSLOG_H
 #define SYSLOG_H
 
-int syslog();
+int syslog(int priority, const char *format, ...);
 
 #define LOG_INFO	0x1
 #define LOG_ERROR	0x2
