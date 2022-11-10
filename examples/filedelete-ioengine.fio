@@ -5,6 +5,7 @@
 # 'unlink' is better set to 0, since the file is deleted in measurement.
 # the options disabled completion latency output such as 'disable_clat' and 'gtod_reduce' must not set.
 [global]
+rw=filedelete
 ioengine=filedelete
 filesize=4k
 nrfiles=200

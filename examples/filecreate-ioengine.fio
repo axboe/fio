@@ -10,6 +10,7 @@
 # IO will not really be done and the write latency numbers will only reflect the
 # open times.
 [global]
+rw=filecreate
 create_on_open=1
 nrfiles=31250
 ioengine=filecreate

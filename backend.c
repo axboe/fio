@@ -1937,6 +1937,9 @@ static void *thread_main(void *data)
 			update_runtime(td, elapsed_us, DDIR_WRITE);
 		if (td_trim(td) && td->io_bytes[DDIR_TRIM])
 			update_runtime(td, elapsed_us, DDIR_TRIM);
+		if (td_fileoperate(td) && td->io_bytes[DDIR_FILE_OP])
+			update_runtime(td, elapsed_us, DDIR_FILE_OP);
+
 		fio_gettime(&td->start, NULL);
 		fio_sem_up(stat_sem);
 

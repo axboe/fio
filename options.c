@@ -1979,6 +1979,18 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .oval = TD_DDIR_RANDTRIMWRITE,
 			    .help = "Randomly trim and write mix, trims preceding writes"
 			  },
+			  { .ival = "filecreate",
+			    .oval = TD_DDIR_FILECREATE,
+			    .help = "Create file with file size zero"
+			  },
+			  { .ival = "filestat",
+			    .oval = TD_DDIR_FILESTAT,
+			    .help = "Stat files"
+			  },
+			  { .ival = "filedelete",
+			    .oval = TD_DDIR_FILEDELETE,
+			    .help = "Delete files"
+			  },
 		},
 	},
 	{

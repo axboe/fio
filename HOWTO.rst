@@ -1149,6 +1149,12 @@ I/O type
 		**randtrimwrite**
 				Like trimwrite, but uses random offsets rather
 				than sequential writes.
+		**filecreate**
+				Create a batch of files. Must also set ``ioengine=filecreate``.
+		**filestat**
+				Stat a batch of files. Must also set ``ioengine=filestat``.
+		**filedelete**
+				Delete a batch of files. Must also set ``ioengine=filedelete``.
 
 	Fio defaults to read if the option is not specified.  For the mixed I/O
 	types, the default is to split them 50/50.  For certain types of I/O the
@@ -2155,18 +2161,21 @@ I/O engine
 			details of writing an external I/O engine.
 
 		**filecreate**
-			Simply create the files and do no I/O to them.  You still need to
-			set  `filesize` so that all the accounting still occurs, but no
-			actual I/O will be done other than creating the file.
+			Simply create the files and do no I/O to them. Must also set
+			``readwrite=filecreate``. You still need to set  `filesize` so
+			that all the accounting still occurs, but no actual I/O will
+			be done other than creating the file.
 
 		**filestat**
-			Simply do stat() and do no I/O to the file. You need to set 'filesize'
-			and 'nrfiles', so that files will be created.
+			Simply do stat() and do no I/O to the file. Must also set
+			``readwrite=filestat``. You need to set `filesize` and `nrfiles`,
+			so that files will be created.
 			This engine is to measure file lookup and meta data access.
 
 		**filedelete**
-			Simply delete the files by unlink() and do no I/O to them. You need to set 'filesize'
-			and 'nrfiles', so that the files will be created.
+			Simply delete the files by unlink() and do no I/O to them.
+			Must also set ``readwrite=filedelete``. You need to set `filesize`
+			and `nrfiles`, so that the files will be created.
 			This engine is to measure file delete.
 
 		**libpmem**

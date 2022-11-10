@@ -919,6 +919,16 @@ other Fio options limiting the total bytes or number of I/O's.
 Like
 .B trimwrite ,
 but uses random offsets rather than sequential writes.
+.TP
+.B filecreate
+Create a batch of files. Must also set `ioengine=filecreate`.
+.TP
+.B filestat
+Stat a batch of files. Must also set `ioengine=filestat`.
+.TP
+.B filedelete
+Delete a batch of files. Must also set `ioengine=filedelete`.
+.TP
 .RE
 .P
 Fio defaults to read if the option is not specified. For the mixed I/O
@@ -1968,18 +1978,18 @@ absolute or relative. See `engines/skeleton_external.c' in the fio source for
 details of writing an external I/O engine.
 .TP
 .B filecreate
-Simply create the files and do no I/O to them.  You still need to set
-\fBfilesize\fR so that all the accounting still occurs, but no actual I/O will be
-done other than creating the file.
+Simply create the files and do no I/O to them. Must also set `readwrite=filecreate`.
+You still need to set \fBfilesize\fR so that all the accounting still occurs,
+but no actual I/O will be done other than creating the file.
 .TP
 .B filestat
-Simply do stat() and do no I/O to the file. You need to set 'filesize'
-and 'nrfiles', so that files will be created.
+Simply do stat() and do no I/O to the file. Must also set `readwrite=filestat`.
+You need to set \fBfilesize\fR and \fBnrfiles\fR, so that files will be created.
 This engine is to measure file lookup and meta data access.
 .TP
 .B filedelete
-Simply delete files by unlink() and do no I/O to the file. You need to set 'filesize'
-and 'nrfiles', so that files will be created.
+Simply delete files by unlink() and do no I/O to the file. Must also set `readwrite=filedelete`.
+You need to set \fBfilesize\fR and \fBnrfiles\fR, so that files will be created.
 This engine is to measure file delete.
 .TP
 .B libpmem

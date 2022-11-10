@@ -49,7 +49,7 @@ void log_io_u(const struct thread_data *td, const struct io_u *io_u)
 	fio_gettime(&now, NULL);
 	fprintf(td->iolog_f, "%llu %s %s %llu %llu\n",
 		(unsigned long long) utime_since_now(&td->io_log_start_time),
-		io_u->file->file_name, io_ddir_name(io_u->ddir), io_u->offset,
+		io_u->file->file_name, io_ddir_name(io_u->ddir | td->file_op_flag), io_u->offset,
 		io_u->buflen);
 
 }

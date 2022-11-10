@@ -674,7 +674,6 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 	enum fio_ddir odir = ddir ^ 1;
 	uint64_t usec;
 	uint64_t now;
-
 	assert(ddir_rw(ddir));
 	now = utime_since_now(&td->epoch);
 
@@ -782,6 +781,8 @@ static enum fio_ddir get_rw_ddir(struct thread_data *td)
 		ddir = DDIR_WRITE;
 	else if (td_trim(td))
 		ddir = DDIR_TRIM;
+	else if (td_fileoperate(td))
+		ddir = DDIR_FILE_OP;
 	else
 		ddir = DDIR_INVAL;
 
@@ -1439,7 +1440,7 @@ static void lat_fatal(struct thread_data *td, struct io_u *io_u, struct io_compl
 		log_err("fio: latency of %llu nsec exceeds specified max (%llu nsec): %s %s %llu %llu\n",
 					tnsec, max_nsec,
 					io_u->file->file_name,
-					io_ddir_name(io_u->ddir),
+					io_ddir_name(io_u->ddir | td->file_op_flag),
 					io_u->offset, io_u->buflen);
 	}
 	td_verror(td, ETIMEDOUT, "max latency exceeded");
@@ -1875,7 +1876,7 @@ static void __io_u_log_error(struct thread_data *td, struct io_u *io_u)
 		io_u->file ? " on file " : "",
 		io_u->file ? io_u->file->file_name : "",
 		strerror(io_u->error),
-		io_ddir_name(io_u->ddir),
+		io_ddir_name(io_u->ddir | td->file_op_flag),
 		io_u->offset, io_u->xfer_buflen);
 
 	if (td->io_ops->errdetails) {

@@ -245,12 +245,11 @@ static int init(struct thread_data *td)
 
 	data = calloc(1, sizeof(*data));
 
-	if (td_read(td))
-		data->stat_ddir = DDIR_READ;
-	else if (td_write(td))
-		data->stat_ddir = DDIR_WRITE;
+	if (td_fileoperate(td))
+		data->stat_ddir = DDIR_FILE_OP;
 
 	td->io_ops_data = data;
+	td->file_op_flag = DDIR_FILE_OP_MASK;
 	return 0;
 }
 

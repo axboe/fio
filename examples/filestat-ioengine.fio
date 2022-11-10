@@ -4,6 +4,7 @@
 # 'filesize' must be set, then files will be created at setup stage.
 
 [global]
+rw=filestat
 ioengine=filestat
 numjobs=1
 filesize=4k

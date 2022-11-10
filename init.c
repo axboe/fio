@@ -603,6 +603,30 @@ static unsigned int gcd(unsigned int m, unsigned int n)
 	return gcd(n, m % n);
 }
 
+static int is_engine(struct thread_data *td, const char *engine)
+{
+	return !strcmp(td->o.ioengine, engine);
+}
+
+/*
+ * Check whether td->o.td_ddir and td->o.ioengine are paired
+ * td_ddir and ioengine must set to same if anyone is file
+ * operation.
+ */
+static int is_file_operation_options_correct(struct thread_data *td)
+{
+	if (((td_filecreate(td) && !is_engine(td, "filecreate")) ||
+	     (!td_filecreate(td) && is_engine(td, "filecreate"))) ||
+		 ((td_filestat(td) && !is_engine(td, "filestat")) ||
+		 (!td_filestat(td) && is_engine(td, "filestat"))) ||
+		 ((td_filedelete(td) && !is_engine(td, "filedelete")) ||
+		 (!td_filedelete(td) && is_engine(td, "filedelete")))) {
+		return 0;
+	}
+
+	return 1;
+}
+
 /*
  * Lazy way of fixing up options that depend on each other. We could also
  * define option callback handlers, but this is easier.
@@ -616,6 +640,15 @@ static int fixup_options(struct thread_data *td)
 		log_err("fio: trim and write operations are not allowed"
 			 " with the --readonly parameter.\n");
 		ret |= 1;
+	}
+
+    /*
+     * return error if readwrite and ioengine are not paired
+     */
+	if (!is_file_operation_options_correct(td)) {
+		log_err("ioengine and readwrite must set to same value if run file operation measurement.\n"
+				"current ioengine=%s, readwrite = %s\n", td->o.ioengine, ddir_str(td->o.td_ddir));
+		ret |=1;
 	}
 
 #ifndef CONFIG_PSHARED

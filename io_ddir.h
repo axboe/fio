@@ -14,7 +14,16 @@ enum fio_ddir {
 
 	DDIR_RWDIR_CNT = 3,
 	DDIR_RWDIR_SYNC_CNT = 4,
+
+	/*
+	 * file operation ddir 'borrows' DDIR_READ, then ts->clat_stat[0] is also borrowed
+	 * only when print by io_ddir_name(), DDIR_FILE_OP_MASK is set to print "file_operation"
+	 * string
+	 */
+	DDIR_FILE_OP = 0,
 };
+
+#define DDIR_FILE_OP_MASK	(1 << 4)
 
 #define for_each_rw_ddir(ddir)	for (enum fio_ddir ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++)
 
@@ -24,7 +33,10 @@ static inline const char *io_ddir_name(enum fio_ddir ddir)
 					"datasync", "sync_file_range",
 					"wait", };
 
-	if (ddir >= 0 && ddir < DDIR_LAST)
+
+	if (ddir & DDIR_FILE_OP_MASK)
+		return "file_operation";
+	else if (ddir >= 0 && ddir < DDIR_LAST)
 		return name[ddir];
 
 	return "invalid";
@@ -42,6 +54,12 @@ enum td_ddir {
 	TD_DDIR_RANDTRIM	= TD_DDIR_TRIM | TD_DDIR_RAND,
 	TD_DDIR_TRIMWRITE	= TD_DDIR_TRIM | TD_DDIR_WRITE,
 	TD_DDIR_RANDTRIMWRITE	= TD_DDIR_RANDTRIM | TD_DDIR_WRITE,
+
+	TD_DDIR_FILEOP		= 1 << 4,
+	TD_DDIR_FILEOP_MASK	= TD_DDIR_FILEOP | (TD_DDIR_FILEOP - 1),
+	TD_DDIR_FILECREATE	= TD_DDIR_FILEOP | 0,
+	TD_DDIR_FILESTAT	= TD_DDIR_FILEOP | 1,
+	TD_DDIR_FILEDELETE	= TD_DDIR_FILEOP | 2,
 };
 
 #define td_read(td)		((td)->o.td_ddir & TD_DDIR_READ)
@@ -54,6 +72,10 @@ enum td_ddir {
 					== TD_DDIR_TRIMWRITE)
 #define td_randtrimwrite(td)	(((td)->o.td_ddir & TD_DDIR_RANDTRIMWRITE) \
 					== TD_DDIR_RANDTRIMWRITE)
+#define td_filecreate(td)	(((td)->o.td_ddir & TD_DDIR_FILEOP_MASK) == TD_DDIR_FILECREATE)
+#define td_filestat(td)		(((td)->o.td_ddir & TD_DDIR_FILEOP_MASK) == TD_DDIR_FILESTAT)
+#define td_filedelete(td)	(((td)->o.td_ddir & TD_DDIR_FILEOP_MASK) == TD_DDIR_FILEDELETE)
+#define td_fileoperate(td)	((td)->o.td_ddir & TD_DDIR_FILEOP)
 
 static inline int ddir_sync(enum fio_ddir ddir)
 {
@@ -71,7 +93,7 @@ static inline const char *ddir_str(enum td_ddir ddir)
 	static const char *__str[] = { NULL, "read", "write", "rw", "rand",
 				"randread", "randwrite", "randrw",
 				"trim", NULL, "trimwrite", NULL, "randtrim",
-				NULL, "randtrimwrite" };
+				NULL, "randtrimwrite", NULL, "filecreate", "filestat", "filedelete" };
 
 	return __str[ddir];
 }

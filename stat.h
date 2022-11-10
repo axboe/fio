@@ -174,6 +174,7 @@ struct thread_stat {
 	uint32_t members;
 	uint32_t unified_rw_rep;
 	uint32_t disable_prio_stat;
+	uint32_t file_op_flag;
 
 	/*
 	 * bandwidth and latency stats

@@ -530,12 +530,12 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	if (ddir_sync(ddir)) {
 		if (calc_lat(&ts->sync_stat, &min, &max, &mean, &dev)) {
 			log_buf(out, "  %s:\n", "fsync/fdatasync/sync_file_range");
-			display_lat(io_ddir_name(ddir), min, max, mean, dev, out);
+			display_lat(io_ddir_name(ddir | ts->file_op_flag), min, max, mean, dev, out);
 			show_clat_percentiles(ts->io_u_sync_plat,
 						ts->sync_stat.samples,
 						ts->percentile_list,
 						ts->percentile_precision,
-						io_ddir_name(ddir), out);
+						io_ddir_name(ddir | ts->file_op_flag), out);
 		}
 		return;
 	}
@@ -569,7 +569,7 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	}
 
 	log_buf(out, "  %s: IOPS=%s, BW=%s (%s)(%s/%llumsec)%s\n",
-			(ts->unified_rw_rep == UNIFIED_MIXED) ? "mixed" : io_ddir_name(ddir),
+			(ts->unified_rw_rep == UNIFIED_MIXED) ? "mixed" : io_ddir_name(ddir | ts->file_op_flag),
 			iops_p, bw_p, bw_p_alt, io_p,
 			(unsigned long long) ts->runtime[ddir],
 			post_st ? : "");
@@ -1449,7 +1449,7 @@ static void add_ddir_status_json(struct thread_stat *ts,
 
 	dir_object = json_create_object();
 	json_object_add_value_object(parent,
-		(ts->unified_rw_rep == UNIFIED_MIXED) ? "mixed" : io_ddir_name(ddir), dir_object);
+		(ts->unified_rw_rep == UNIFIED_MIXED) ? "mixed" : io_ddir_name(ddir | ts->file_op_flag), dir_object);
 
 	if (ddir_rw(ddir)) {
 		bw_bytes = 0;
@@ -2484,6 +2484,8 @@ void __show_run_stats(void)
 		ts->percentile_precision = td->o.percentile_precision;
 		memcpy(ts->percentile_list, td->o.percentile_list, sizeof(td->o.percentile_list));
 		opt_lists[j] = &td->opt_list;
+
+		ts->file_op_flag = td->file_op_flag;
 
 		idx++;
 
