@@ -2638,8 +2638,6 @@ cat > $TMPC << EOF
 #include <linux/nvme_ioctl.h>
 int main(void)
 {
-  struct nvme_uring_cmd *cmd;
-
   return sizeof(struct nvme_uring_cmd);
 }
 EOF
