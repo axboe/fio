@@ -1172,7 +1172,9 @@ cat > $TMPC << EOF
 #include <time.h>
 int main(int argc, char **argv)
 {
-  return clock_gettime(0, NULL);
+  struct timespec ts;
+
+  return clock_gettime(0, &ts);
 }
 EOF
 if compile_prog "" "" "clock_gettime"; then
@@ -1194,7 +1196,9 @@ if test "$clock_gettime" = "yes" ; then
 #include <time.h>
 int main(int argc, char **argv)
 {
-  return clock_gettime(CLOCK_MONOTONIC, NULL);
+  struct timespec ts;
+
+  return clock_gettime(CLOCK_MONOTONIC, &ts);
 }
 EOF
   if compile_prog "" "$LIBS" "clock monotonic"; then
