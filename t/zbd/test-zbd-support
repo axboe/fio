@@ -826,17 +826,27 @@ test33() {
     check_written $((io_size / bs * bs)) || return $?
 }
 
-# Write to sequential zones with a block size that is not a divisor of the
-# zone size and with data verification enabled.
+# Test repeated async write job with verify using two unaligned block sizes.
 test34() {
-    local size
+	local bs off zone_capacity
+	local -a block_sizes
 
-    prep_write
-    size=$((2 * zone_size))
-    run_fio_on_seq "$(ioengine "psync")" --iodepth=1 --rw=write --size=$size \
-		   --do_verify=1 --verify=md5 --bs=$((3 * zone_size / 4)) \
-		   >> "${logfile}.${test_number}" 2>&1 && return 1
-    grep -q 'not a divisor of' "${logfile}.${test_number}"
+	require_zbd || return $SKIP_TESTCASE
+	prep_write
+
+	off=$((first_sequential_zone_sector * 512))
+	zone_capacity=$(total_zone_capacity 1 $off $dev)
+	block_sizes=($((4096 * 7)) $(($(min ${zone_capacity} 4194304) - 4096)))
+
+	for bs in ${block_sizes[@]}; do
+		run_fio --name=job --filename="${dev}" --rw=randwrite \
+			--bs="${bs}" --offset="${off}" \
+			--size=$((4 * zone_size)) --iodepth=256 \
+			"$(ioengine "libaio")" --time_based=1 --runtime=15s \
+			--zonemode=zbd --direct=1 --zonesize="${zone_size}" \
+			--verify=crc32c --do_verify=1 ${job_var_opts[@]} \
+			>> "${logfile}.${test_number}" 2>&1 || return $?
+	done
 }
 
 # Test 1/4 for the I/O boundary rounding code: $size < $zone_size.
