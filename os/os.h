@@ -355,7 +355,9 @@ static inline unsigned long long get_fs_free_size(const char *path)
 #ifndef FIO_HAVE_CPU_CONF_SYSCONF
 static inline unsigned int cpus_configured(void)
 {
-	return sysconf(_SC_NPROCESSORS_CONF);
+	int nr_cpus = sysconf(_SC_NPROCESSORS_CONF);
+
+	return nr_cpus >= 1 ? nr_cpus : 1;
 }
 #endif
 
