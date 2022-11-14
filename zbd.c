@@ -1249,6 +1249,7 @@ void zbd_file_reset(struct thread_data *td, struct fio_file *f)
 {
 	struct fio_zone_info *zb, *ze;
 	uint64_t swd;
+	bool verify_data_left = false;
 
 	if (!f->zbd_info || !td_write(td))
 		return;
@@ -1265,8 +1266,16 @@ void zbd_file_reset(struct thread_data *td, struct fio_file *f)
 	 * writing any data to avoid that a zone reset has to be issued while
 	 * writing data, which causes data loss.
 	 */
-	if (td->o.verify != VERIFY_NONE && td->runstate != TD_VERIFYING)
-		zbd_reset_zones(td, f, zb, ze);
+	if (td->o.verify != VERIFY_NONE) {
+		verify_data_left = td->runstate == TD_VERIFYING ||
+			td->io_hist_len || td->verify_batch;
+		if (td->io_hist_len && td->o.verify_backlog)
+			verify_data_left =
+				td->io_hist_len % td->o.verify_backlog;
+		if (!verify_data_left)
+			zbd_reset_zones(td, f, zb, ze);
+	}
+
 	zbd_reset_write_cnt(td, f);
 }
 
