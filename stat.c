@@ -1732,6 +1732,8 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 	json_object_add_value_int(root, "job_runtime", ts->total_run_time);
 	json_object_add_value_float(root, "usr_cpu", usr_cpu);
 	json_object_add_value_float(root, "sys_cpu", sys_cpu);
+	json_object_add_value_int(root, "usr_cpu_ms", ts->usr_time);
+	json_object_add_value_int(root, "sys_cpu_ms", ts->sys_time);
 	json_object_add_value_float(root, "cpu_usec_per_op", cpu_per_op);
 	json_object_add_value_int(root, "ctx", ts->ctx);
 	json_object_add_value_int(root, "majf", ts->majf);
