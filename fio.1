@@ -3854,6 +3854,7 @@ group) the output looks like:
 		  lat (msec)   : 2=4.16%, 4=1.84%, 10=4.90%, 20=11.33%, 50=5.37%
 		  lat (msec)   : 100=0.65%
 		  cpu          : usr=0.27%, sys=0.18%, ctx=12072, majf=0, minf=21
+		  cpu/op       : 42.70 (cpu usec/op)
 		  IO depths    : 1=85.0%, 2=13.1%, 4=1.8%, 8=0.1%, 16=0.0%, 32=0.0%, >=64=0.0%
 		     submit    : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
 		     complete  : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
@@ -3915,6 +3916,12 @@ read/write/trim sections above, the data here and in the remaining
 sections apply to all I/Os for the reporting group. 250=0.04% means that
 0.04% of the I/Os completed in under 250us. 500=64.11% means that 64.11%
 of the I/Os required 250 to 499us for completion.
+.TP
+.B cpu/op
+Average CPU time per operation. The CPU time includes user and system CPU times
+for this thread. All operations in this thread are included: read, write, and
+trims. The unit of the metric is the CPU time in microseconds per operation
+(usec/op).
 .TP
 .B cpu
 CPU usage. User and system time, along with the number of context

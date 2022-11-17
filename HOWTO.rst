@@ -4187,6 +4187,7 @@ group) the output looks like::
 	  lat (msec)   : 2=4.16%, 4=1.84%, 10=4.90%, 20=11.33%, 50=5.37%
 	  lat (msec)   : 100=0.65%
 	  cpu          : usr=0.27%, sys=0.18%, ctx=12072, majf=0, minf=21
+	  cpu/op       : 42.70 (cpu usec/op)
 	  IO depths    : 1=85.0%, 2=13.1%, 4=1.8%, 8=0.1%, 16=0.0%, 32=0.0%, >=64=0.0%
 	     submit    : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
 	     complete  : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
@@ -4260,6 +4261,11 @@ writes in the example above).  In the order listed, they denote:
 		finally the number of major and minor page faults. The CPU utilization
 		numbers are averages for the jobs in that reporting group, while the
 		context and fault counters are summed.
+**cpu/op**
+                Average CPU time per operation. The CPU time includes user and
+                system CPU times for this thread. All operations in this thread
+                are included: read, write, and trims. The unit of the metric is
+                the CPU time in microseconds per operation (usec/op).
 
 **IO depths**
 		The distribution of I/O depths over the job lifetime.  The numbers are

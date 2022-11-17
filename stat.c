@@ -1162,7 +1162,7 @@ static void show_thread_status_normal(struct thread_stat *ts,
 				      struct group_run_stats *rs,
 				      struct buf_output *out)
 {
-	double usr_cpu, sys_cpu;
+	double usr_cpu, sys_cpu, cpu_per_op;
 	unsigned long runtime;
 	double io_u_dist[FIO_IO_U_MAP_NR];
 	time_t time_p;
@@ -1214,11 +1214,15 @@ static void show_thread_status_normal(struct thread_stat *ts,
 		sys_cpu = 0;
 	}
 
+	cpu_per_op = (1000.0 * (ts->usr_time + ts->sys_time)) /
+			ddir_rw_sum(ts->total_io_u);
+
 	log_buf(out, "  cpu          : usr=%3.2f%%, sys=%3.2f%%, ctx=%llu,"
 		 " majf=%llu, minf=%llu\n", usr_cpu, sys_cpu,
 			(unsigned long long) ts->ctx,
 			(unsigned long long) ts->majf,
 			(unsigned long long) ts->minf);
+	log_buf(out, "  cpu/op       : %3.2f (cpu usec/op)\n", cpu_per_op);
 
 	stat_calc_dist(ts->io_u_map, ddir_rw_sum(ts->total_io_u), io_u_dist);
 	log_buf(out, "  IO depths    : 1=%3.1f%%, 2=%3.1f%%, 4=%3.1f%%, 8=%3.1f%%,"
@@ -1685,7 +1689,7 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 	double io_u_lat_n[FIO_IO_U_LAT_N_NR];
 	double io_u_lat_u[FIO_IO_U_LAT_U_NR];
 	double io_u_lat_m[FIO_IO_U_LAT_M_NR];
-	double usr_cpu, sys_cpu;
+	double usr_cpu, sys_cpu, cpu_per_op;
 	int i;
 	size_t size;
 
@@ -1723,9 +1727,12 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 		usr_cpu = 0;
 		sys_cpu = 0;
 	}
+	cpu_per_op = 1000.0 * (ts->usr_time + ts->sys_time) /
+			ddir_rw_sum(ts->total_io_u);
 	json_object_add_value_int(root, "job_runtime", ts->total_run_time);
 	json_object_add_value_float(root, "usr_cpu", usr_cpu);
 	json_object_add_value_float(root, "sys_cpu", sys_cpu);
+	json_object_add_value_float(root, "cpu_usec_per_op", cpu_per_op);
 	json_object_add_value_int(root, "ctx", ts->ctx);
 	json_object_add_value_int(root, "majf", ts->majf);
 	json_object_add_value_int(root, "minf", ts->minf);
