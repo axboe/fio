@@ -47,7 +47,11 @@ static const char *parse_file(const char *beg, char *out,
 	if (file == NULL)
 		goto err_out;
 
+#ifdef _WIN32
+	fd = open(file, O_RDONLY | O_BINARY);
+#else
 	fd = open(file, O_RDONLY);
+#endif
 	if (fd < 0)
 		goto err_free_out;
 
