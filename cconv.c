@@ -48,6 +48,9 @@ static void free_thread_options_to_cpu(struct thread_options *o)
 	free(o->profile);
 	free(o->cgroup);
 
+	free(o->verify_pattern);
+	free(o->buffer_pattern);
+
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		free(o->bssplit[i]);
 		free(o->zone_split[i]);
@@ -185,6 +188,10 @@ int convert_thread_options_to_cpu(struct thread_options *o,
 	    thread_options_pack_size(o) > top_sz)
 		return -EINVAL;
 
+	o->verify_pattern = realloc(o->verify_pattern,
+				    o->verify_pattern_bytes);
+	o->buffer_pattern = realloc(o->buffer_pattern,
+				    o->buffer_pattern_bytes);
 	memcpy(o->verify_pattern, top->patterns, o->verify_pattern_bytes);
 	memcpy(o->buffer_pattern, &top->patterns[o->verify_pattern_bytes],
 	       o->buffer_pattern_bytes);
@@ -651,8 +658,10 @@ int fio_test_cconv(struct thread_options *__o)
 	int ret;
 
 	o1.verify_pattern_bytes = 61;
+	o1.verify_pattern = malloc(o1.verify_pattern_bytes);
 	memset(o1.verify_pattern, 'V', o1.verify_pattern_bytes);
 	o1.buffer_pattern_bytes = 15;
+	o1.buffer_pattern = malloc(o1.buffer_pattern_bytes);
 	memset(o1.buffer_pattern, 'B', o1.buffer_pattern_bytes);
 
 	top_sz = thread_options_pack_size(&o1);
@@ -672,5 +681,7 @@ out:
 	free_thread_options_to_cpu(&o2);
 	free(top2);
 	free(top1);
+	free(o1.buffer_pattern);
+	free(o1.verify_pattern);
 	return ret;
 }

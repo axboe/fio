@@ -144,7 +144,7 @@ struct thread_options {
 	unsigned int do_verify;
 	unsigned int verify_interval;
 	unsigned int verify_offset;
-	char verify_pattern[MAX_PATTERN_SIZE];
+	char *verify_pattern;
 	unsigned int verify_pattern_bytes;
 	struct pattern_fmt verify_fmt[8];
 	unsigned int verify_fmt_sz;
@@ -256,7 +256,7 @@ struct thread_options {
 	unsigned int zero_buffers;
 	unsigned int refill_buffers;
 	unsigned int scramble_buffers;
-	char buffer_pattern[MAX_PATTERN_SIZE];
+	char *buffer_pattern;
 	unsigned int buffer_pattern_bytes;
 	unsigned int compress_percentage;
 	unsigned int compress_chunk;

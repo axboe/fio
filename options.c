@@ -1488,8 +1488,8 @@ static int str_buffer_pattern_cb(void *data, const char *input)
 	int ret;
 
 	/* FIXME: for now buffer pattern does not support formats */
-	ret = parse_and_fill_pattern(input, strlen(input), td->o.buffer_pattern,
-				     MAX_PATTERN_SIZE, NULL, NULL, NULL);
+	ret = parse_and_fill_pattern_alloc(input, strlen(input),
+				&td->o.buffer_pattern, NULL, NULL, NULL);
 	if (ret < 0)
 		return 1;
 
@@ -1537,9 +1537,9 @@ static int str_verify_pattern_cb(void *data, const char *input)
 	int ret;
 
 	td->o.verify_fmt_sz = FIO_ARRAY_SIZE(td->o.verify_fmt);
-	ret = parse_and_fill_pattern(input, strlen(input), td->o.verify_pattern,
-				     MAX_PATTERN_SIZE, fmt_desc,
-				     td->o.verify_fmt, &td->o.verify_fmt_sz);
+	ret = parse_and_fill_pattern_alloc(input, strlen(input),
+			&td->o.verify_pattern, fmt_desc, td->o.verify_fmt,
+			&td->o.verify_fmt_sz);
 	if (ret < 0)
 		return 1;
 

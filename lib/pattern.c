@@ -327,11 +327,11 @@ static const char *parse_format(const char *in, char *out, unsigned int parsed,
  *
  * Returns number of bytes filled or err < 0 in case of failure.
  */
-int parse_and_fill_pattern(const char *in, unsigned int in_len,
-			   char *out, unsigned int out_len,
-			   const struct pattern_fmt_desc *fmt_desc,
-			   struct pattern_fmt *fmt,
-			   unsigned int *fmt_sz_out)
+static int parse_and_fill_pattern(const char *in, unsigned int in_len,
+				  char *out, unsigned int out_len,
+				  const struct pattern_fmt_desc *fmt_desc,
+				  struct pattern_fmt *fmt,
+				  unsigned int *fmt_sz_out)
 {
 	const char *beg, *end, *out_beg = out;
 	unsigned int total = 0, fmt_rem = 0;
@@ -390,6 +390,48 @@ int parse_and_fill_pattern(const char *in, unsigned int in_len,
 	if (fmt_sz_out)
 		*fmt_sz_out -= fmt_rem;
 	return total;
+}
+
+/**
+ * parse_and_fill_pattern_alloc() - Parses combined input, which consists of
+ *				    strings, numbers and pattern formats and
+ *				    allocates a buffer for the result.
+ *
+ * @in - string input
+ * @in_len - size of the input string
+ * @out - pointer to the output buffer pointer, this will be set to the newly
+ *        allocated pattern buffer which must be freed by the caller
+ * @fmt_desc - array of pattern format descriptors [input]
+ * @fmt - array of pattern formats [output]
+ * @fmt_sz - pointer where the size of pattern formats array stored [input],
+ *           after successful parsing this pointer will contain the number
+ *           of parsed formats if any [output].
+ *
+ * See documentation on parse_and_fill_pattern() above for a description
+ * of the functionality.
+ *
+ * Returns number of bytes filled or err < 0 in case of failure.
+ */
+int parse_and_fill_pattern_alloc(const char *in, unsigned int in_len,
+		char **out, const struct pattern_fmt_desc *fmt_desc,
+		struct pattern_fmt *fmt, unsigned int *fmt_sz_out)
+{
+	int count;
+
+	count = parse_and_fill_pattern(in, in_len, NULL, MAX_PATTERN_SIZE,
+				       fmt_desc, fmt, fmt_sz_out);
+	if (count < 0)
+		return count;
+
+	*out = malloc(count);
+	count = parse_and_fill_pattern(in, in_len, *out, count, fmt_desc,
+				       fmt, fmt_sz_out);
+	if (count < 0) {
+		free(*out);
+		*out = NULL;
+	}
+
+	return count;
 }
 
 /**

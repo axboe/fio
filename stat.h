@@ -142,7 +142,6 @@ enum block_info_state {
 	BLOCK_STATE_COUNT,
 };
 
-#define MAX_PATTERN_SIZE	512
 #define FIO_JOBNAME_SIZE	128
 #define FIO_JOBDESC_SIZE	256
 #define FIO_VERROR_SIZE		128
