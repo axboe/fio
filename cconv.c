@@ -54,8 +54,15 @@ static void free_thread_options_to_cpu(struct thread_options *o)
 	}
 }
 
-void convert_thread_options_to_cpu(struct thread_options *o,
-				   struct thread_options_pack *top)
+size_t thread_options_pack_size(struct thread_options *o)
+{
+	return sizeof(struct thread_options_pack) + o->verify_pattern_bytes +
+		o->buffer_pattern_bytes;
+}
+
+int convert_thread_options_to_cpu(struct thread_options *o,
+				  struct thread_options_pack *top,
+				  size_t top_sz)
 {
 	int i, j;
 
@@ -171,10 +178,17 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->verify_interval = le32_to_cpu(top->verify_interval);
 	o->verify_offset = le32_to_cpu(top->verify_offset);
 
-	memcpy(o->verify_pattern, top->verify_pattern, MAX_PATTERN_SIZE);
-	memcpy(o->buffer_pattern, top->buffer_pattern, MAX_PATTERN_SIZE);
-
 	o->verify_pattern_bytes = le32_to_cpu(top->verify_pattern_bytes);
+	o->buffer_pattern_bytes = le32_to_cpu(top->buffer_pattern_bytes);
+	if (o->verify_pattern_bytes >= MAX_PATTERN_SIZE ||
+	    o->buffer_pattern_bytes >= MAX_PATTERN_SIZE ||
+	    thread_options_pack_size(o) > top_sz)
+		return -EINVAL;
+
+	memcpy(o->verify_pattern, top->patterns, o->verify_pattern_bytes);
+	memcpy(o->buffer_pattern, &top->patterns[o->verify_pattern_bytes],
+	       o->buffer_pattern_bytes);
+
 	o->verify_fatal = le32_to_cpu(top->verify_fatal);
 	o->verify_dump = le32_to_cpu(top->verify_dump);
 	o->verify_async = le32_to_cpu(top->verify_async);
@@ -268,7 +282,6 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->zero_buffers = le32_to_cpu(top->zero_buffers);
 	o->refill_buffers = le32_to_cpu(top->refill_buffers);
 	o->scramble_buffers = le32_to_cpu(top->scramble_buffers);
-	o->buffer_pattern_bytes = le32_to_cpu(top->buffer_pattern_bytes);
 	o->time_based = le32_to_cpu(top->time_based);
 	o->disable_lat = le32_to_cpu(top->disable_lat);
 	o->disable_clat = le32_to_cpu(top->disable_clat);
@@ -334,6 +347,8 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	uint8_t verify_cpumask[FIO_TOP_STR_MAX];
 	uint8_t log_gz_cpumask[FIO_TOP_STR_MAX];
 #endif
+
+	return 0;
 }
 
 void convert_thread_options_to_net(struct thread_options_pack *top,
@@ -572,8 +587,9 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 		top->max_latency[i] = __cpu_to_le64(o->max_latency[i]);
 	}
 
-	memcpy(top->verify_pattern, o->verify_pattern, MAX_PATTERN_SIZE);
-	memcpy(top->buffer_pattern, o->buffer_pattern, MAX_PATTERN_SIZE);
+	memcpy(top->patterns, o->verify_pattern, o->verify_pattern_bytes);
+	memcpy(&top->patterns[o->verify_pattern_bytes], o->buffer_pattern,
+	       o->buffer_pattern_bytes);
 
 	top->size = __cpu_to_le64(o->size);
 	top->io_size = __cpu_to_le64(o->io_size);
@@ -620,7 +636,6 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	uint8_t verify_cpumask[FIO_TOP_STR_MAX];
 	uint8_t log_gz_cpumask[FIO_TOP_STR_MAX];
 #endif
-
 }
 
 /*
@@ -630,18 +645,32 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
  */
 int fio_test_cconv(struct thread_options *__o)
 {
-	struct thread_options o;
-	struct thread_options_pack top1, top2;
+	struct thread_options o1 = *__o, o2;
+	struct thread_options_pack *top1, *top2;
+	size_t top_sz;
+	int ret;
 
-	memset(&top1, 0, sizeof(top1));
-	memset(&top2, 0, sizeof(top2));
+	o1.verify_pattern_bytes = 61;
+	memset(o1.verify_pattern, 'V', o1.verify_pattern_bytes);
+	o1.buffer_pattern_bytes = 15;
+	memset(o1.buffer_pattern, 'B', o1.buffer_pattern_bytes);
 
-	convert_thread_options_to_net(&top1, __o);
-	memset(&o, 0, sizeof(o));
-	convert_thread_options_to_cpu(&o, &top1);
-	convert_thread_options_to_net(&top2, &o);
+	top_sz = thread_options_pack_size(&o1);
+	top1 = calloc(1, top_sz);
+	top2 = calloc(1, top_sz);
 
-	free_thread_options_to_cpu(&o);
+	convert_thread_options_to_net(top1, &o1);
+	memset(&o2, 0, sizeof(o2));
+	ret = convert_thread_options_to_cpu(&o2, top1, top_sz);
+	if (ret)
+		goto out;
 
-	return memcmp(&top1, &top2, sizeof(top1));
+	convert_thread_options_to_net(top2, &o2);
+	ret = memcmp(top1, top2, top_sz);
+
+out:
+	free_thread_options_to_cpu(&o2);
+	free(top2);
+	free(top1);
+	return ret;
 }

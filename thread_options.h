@@ -464,7 +464,6 @@ struct thread_options_pack {
 	uint32_t do_verify;
 	uint32_t verify_interval;
 	uint32_t verify_offset;
-	uint8_t verify_pattern[MAX_PATTERN_SIZE];
 	uint32_t verify_pattern_bytes;
 	uint32_t verify_fatal;
 	uint32_t verify_dump;
@@ -572,7 +571,6 @@ struct thread_options_pack {
 	uint32_t zero_buffers;
 	uint32_t refill_buffers;
 	uint32_t scramble_buffers;
-	uint8_t buffer_pattern[MAX_PATTERN_SIZE];
 	uint32_t buffer_pattern_bytes;
 	uint32_t compress_percentage;
 	uint32_t compress_chunk;
@@ -699,9 +697,16 @@ struct thread_options_pack {
 
 	uint32_t log_entries;
 	uint32_t log_prio;
+
+	/*
+	 * verify_pattern followed by buffer_pattern from the unpacked struct
+	 */
+	uint8_t patterns[];
 } __attribute__((packed));
 
-extern void convert_thread_options_to_cpu(struct thread_options *o, struct thread_options_pack *top);
+extern int convert_thread_options_to_cpu(struct thread_options *o,
+		struct thread_options_pack *top, size_t top_sz);
+extern size_t thread_options_pack_size(struct thread_options *o);
 extern void convert_thread_options_to_net(struct thread_options_pack *top, struct thread_options *);
 extern int fio_test_cconv(struct thread_options *);
 extern void options_default_fill(struct thread_options *o);

@@ -553,12 +553,15 @@ static void gfio_quit_op(struct fio_client *client, struct fio_net_cmd *cmd)
 }
 
 static struct thread_options *gfio_client_add_job(struct gfio_client *gc,
-			struct thread_options_pack *top)
+			struct thread_options_pack *top, size_t top_sz)
 {
 	struct gfio_client_options *gco;
 
 	gco = calloc(1, sizeof(*gco));
-	convert_thread_options_to_cpu(&gco->o, top);
+	if (convert_thread_options_to_cpu(&gco->o, top, top_sz)) {
+		dprint(FD_NET, "client: failed parsing add_job command\n");
+		return NULL;
+	}
 	INIT_FLIST_HEAD(&gco->list);
 	flist_add_tail(&gco->list, &gc->o_list);
 	gc->o_list_nr = 1;
@@ -577,7 +580,10 @@ static void gfio_add_job_op(struct fio_client *client, struct fio_net_cmd *cmd)
 
 	p->thread_number = le32_to_cpu(p->thread_number);
 	p->groupid = le32_to_cpu(p->groupid);
-	o = gfio_client_add_job(gc, &p->top);
+	o = gfio_client_add_job(gc, &p->top,
+			cmd->pdu_len - offsetof(struct cmd_add_job_pdu, top));
+	if (o == NULL)
+		return;
 
 	gdk_threads_enter();
 

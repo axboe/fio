@@ -922,13 +922,20 @@ int fio_clients_send_ini(const char *filename)
 int fio_client_update_options(struct fio_client *client,
 			      struct thread_options *o, uint64_t *tag)
 {
-	struct cmd_add_job_pdu pdu;
+	size_t cmd_sz = offsetof(struct cmd_add_job_pdu, top) +
+		thread_options_pack_size(o);
+	struct cmd_add_job_pdu *pdu;
+	int ret;
 
-	pdu.thread_number = cpu_to_le32(client->thread_number);
-	pdu.groupid = cpu_to_le32(client->groupid);
-	convert_thread_options_to_net(&pdu.top, o);
+	pdu = malloc(cmd_sz);
+	pdu->thread_number = cpu_to_le32(client->thread_number);
+	pdu->groupid = cpu_to_le32(client->groupid);
+	convert_thread_options_to_net(&pdu->top, o);
 
-	return fio_net_send_cmd(client->fd, FIO_NET_CMD_UPDATE_JOB, &pdu, sizeof(pdu), tag, &client->cmd_list);
+	ret = fio_net_send_cmd(client->fd, FIO_NET_CMD_UPDATE_JOB, pdu,
+			       cmd_sz, tag, &client->cmd_list);
+	free(pdu);
+	return ret;
 }
 
 static void convert_io_stat(struct io_stat *dst, struct io_stat *src)

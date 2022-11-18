@@ -1082,6 +1082,7 @@ static int handle_update_job_cmd(struct fio_net_cmd *cmd)
 	struct cmd_add_job_pdu *pdu = (struct cmd_add_job_pdu *) cmd->payload;
 	struct thread_data *td;
 	uint32_t tnumber;
+	int ret;
 
 	tnumber = le32_to_cpu(pdu->thread_number);
 
@@ -1093,8 +1094,9 @@ static int handle_update_job_cmd(struct fio_net_cmd *cmd)
 	}
 
 	td = tnumber_to_td(tnumber);
-	convert_thread_options_to_cpu(&td->o, &pdu->top);
-	send_update_job_reply(cmd->tag, 0);
+	ret = convert_thread_options_to_cpu(&td->o, &pdu->top,
+			cmd->pdu_len - offsetof(struct cmd_add_job_pdu, top));
+	send_update_job_reply(cmd->tag, ret);
 	return 0;
 }
 
@@ -2323,15 +2325,18 @@ int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
 
 void fio_server_send_add_job(struct thread_data *td)
 {
-	struct cmd_add_job_pdu pdu = {
-		.thread_number = cpu_to_le32(td->thread_number),
-		.groupid = cpu_to_le32(td->groupid),
-	};
+	struct cmd_add_job_pdu *pdu;
+	size_t cmd_sz = offsetof(struct cmd_add_job_pdu, top) +
+		thread_options_pack_size(&td->o);
 
-	convert_thread_options_to_net(&pdu.top, &td->o);
+	pdu = malloc(cmd_sz);
+	pdu->thread_number = cpu_to_le32(td->thread_number);
+	pdu->groupid = cpu_to_le32(td->groupid);
 
-	fio_net_queue_cmd(FIO_NET_CMD_ADD_JOB, &pdu, sizeof(pdu), NULL,
-				SK_F_COPY);
+	convert_thread_options_to_net(&pdu->top, &td->o);
+
+	fio_net_queue_cmd(FIO_NET_CMD_ADD_JOB, pdu, cmd_sz, NULL, SK_F_COPY);
+	free(pdu);
 }
 
 void fio_server_send_start(struct thread_data *td)
