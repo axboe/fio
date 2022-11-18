@@ -799,6 +799,26 @@ class FioJobTest_t0025(FioJobTest):
         if self.json_data['jobs'][0]['read']['io_kbytes'] != 128:
             self.passed = False
 
+class FioJobTest_t0027(FioJobTest):
+    def setup(self, *args, **kws):
+        super(FioJobTest_t0027, self).setup(*args, **kws)
+        self.pattern_file = os.path.join(self.test_dir, "t0027.pattern")
+        self.output_file = os.path.join(self.test_dir, "t0027file")
+        self.pattern = os.urandom(16 << 10)
+        with open(self.pattern_file, "wb") as f:
+            f.write(self.pattern)
+
+    def check_result(self):
+        super(FioJobTest_t0027, self).check_result()
+
+        if not self.passed:
+            return
+
+        with open(self.output_file, "rb") as f:
+            data = f.read()
+
+        if data != self.pattern:
+            self.passed = False
 
 class FioJobTest_iops_rate(FioJobTest):
     """Test consists of fio test job t0009
@@ -1213,6 +1233,15 @@ TEST_LIST = [
         'pre_job':          None,
         'pre_success':      None,
         'requirements':     [Requirements.not_windows],
+    },
+    {
+        'test_id':          27,
+        'test_class':       FioJobTest_t0027,
+        'job':              't0027.fio',
+        'success':          SUCCESS_DEFAULT,
+        'pre_job':          None,
+        'pre_success':      None,
+        'requirements':     [],
     },
     {
         'test_id':          1000,
