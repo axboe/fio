@@ -32,7 +32,7 @@ static const char *parse_file(const char *beg, char *out,
 	const char *end;
 	char *file;
 	int fd;
-	ssize_t count;
+	ssize_t rc, count = 0;
 
 	if (!out_len)
 		goto err_out;
@@ -52,9 +52,16 @@ static const char *parse_file(const char *beg, char *out,
 		goto err_free_out;
 
 	if (out) {
-		count = read(fd, out, out_len);
-		if (count == -1)
-			goto err_free_close_out;
+		while (1) {
+			rc = read(fd, out, out_len - count);
+			if (rc == 0)
+				break;
+			if (rc == -1)
+				goto err_free_close_out;
+
+			count += rc;
+			out += rc;
+		}
 	} else {
 		count = lseek(fd, 0, SEEK_END);
 		if (count == -1)
