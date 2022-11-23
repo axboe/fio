@@ -2090,7 +2090,9 @@ sqthread_poll option.
 Normally fio will submit IO by issuing a system call to notify the kernel of
 available items in the SQ ring. If this option is set, the act of submitting IO
 will be done by a polling thread in the kernel. This frees up cycles for fio, at
-the cost of using more CPU in the system.
+the cost of using more CPU in the system. As submission is just the time it
+takes to fill in the sqe entries and any syscall required to wake up the idle
+kernel thread, fio will not report submission latencies.
 .TP
 .BI (io_uring,io_uring_cmd)sqthread_poll_cpu \fR=\fPint
 When `sqthread_poll` is set, this option provides a way to define which CPU

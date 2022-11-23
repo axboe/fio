@@ -2299,7 +2299,9 @@ with the caveat that when used on the command line, they must come after the
 	kernel of available items in the SQ ring. If this option is set, the
 	act of submitting IO will be done by a polling thread in the kernel.
 	This frees up cycles for fio, at the cost of using more CPU in the
-	system.
+	system. As submission is just the time it takes to fill in the sqe
+	entries and any syscall required to wake up the idle kernel thread,
+	fio will not report submission latencies.
 
 .. option:: sqthread_poll_cpu=int : [io_uring] [io_uring_cmd]
 
