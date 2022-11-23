@@ -4501,7 +4501,7 @@ Trace file format v2
 ~~~~~~~~~~~~~~~~~~~~
 
 The second version of the trace file format was added in fio version 1.17.  It
-allows to access more then one file per trace and has a bigger set of possible
+allows to access more than one file per trace and has a bigger set of possible
 file actions.
 
 The first line of the trace file has to be::
