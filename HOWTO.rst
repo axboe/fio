@@ -1054,7 +1054,7 @@ Target file/device
 
 	When running a random write test across an entire drive many more
 	zones will be open than in a typical application workload. Hence this
-	command line option that allows to limit the number of open zones. The
+	command line option that allows one to limit the number of open zones. The
 	number of open zones is defined as the number of zones to which write
 	commands are issued.
 
@@ -1446,7 +1446,7 @@ I/O type
 	supplied as a value between 0 and 100.
 
 	The second, optional float is allowed for **pareto**, **zipf** and **normal** distributions.
-	It allows to set base of distribution in non-default place, giving more control
+	It allows one to set base of distribution in non-default place, giving more control
 	over most probable outcome. This value is in range [0-1] which maps linearly to
 	range of possible random values.
 	Defaults are: random for **pareto** and **zipf**, and 0.5 for **normal**.
@@ -4503,7 +4503,7 @@ Trace file format v2
 ~~~~~~~~~~~~~~~~~~~~
 
 The second version of the trace file format was added in fio version 1.17.  It
-allows to access more than one file per trace and has a bigger set of possible
+allows one to access more than one file per trace and has a bigger set of possible
 file actions.
 
 The first line of the trace file has to be::
