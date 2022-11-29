@@ -3612,7 +3612,10 @@ Verification
 
 .. option:: experimental_verify=bool
 
-	Enable experimental verification.
+        Enable experimental verification. Standard verify records I/O metadata
+        for later use during the verification phase. Experimental verify
+        instead resets the file after the write phase and then replays I/Os for
+        the verification phase.
 
 Steady state
 ~~~~~~~~~~~~
