@@ -2616,20 +2616,36 @@ The libblkio driver to use. Different drivers access devices through different
 underlying interfaces. Available drivers depend on the libblkio version in use
 and are listed at \fIhttps://libblkio.gitlab.io/libblkio/blkio.html#drivers\fR
 .TP
+.BI (libblkio)libblkio_path \fR=\fPstr
+Sets the value of the driver-specific "path" property before connecting the
+libblkio instance, which identifies the target device or file on which to
+perform I/O. Its exact semantics are driver-dependent and not all drivers may
+support it; see \fIhttps://libblkio.gitlab.io/libblkio/blkio.html#drivers\fR
+.TP
 .BI (libblkio)libblkio_pre_connect_props \fR=\fPstr
-A colon-separated list of libblkio properties to be set after creating but
-before connecting the libblkio instance. Each property must have the format
-\fB<name>=<value>\fR. Colons can be escaped as \fB\\:\fR. These are set after
-the engine sets any other properties, so those can be overriden. Available
-properties depend on the libblkio version in use and are listed at
+A colon-separated list of additional libblkio properties to be set after
+creating but before connecting the libblkio instance. Each property must have
+the format \fB<name>=<value>\fR. Colons can be escaped as \fB\\:\fR. These are
+set after the engine sets any other properties, so those can be overriden.
+Available properties depend on the libblkio version in use and are listed at
 \fIhttps://libblkio.gitlab.io/libblkio/blkio.html#properties\fR
 .TP
+.BI (libblkio)libblkio_num_entries \fR=\fPint
+Sets the value of the driver-specific "num-entries" property before starting the
+libblkio instance. Its exact semantics are driver-dependent and not all drivers
+may support it; see \fIhttps://libblkio.gitlab.io/libblkio/blkio.html#drivers\fR
+.TP
+.BI (libblkio)libblkio_queue_size \fR=\fPint
+Sets the value of the driver-specific "queue-size" property before starting the
+libblkio instance. Its exact semantics are driver-dependent and not all drivers
+may support it; see \fIhttps://libblkio.gitlab.io/libblkio/blkio.html#drivers\fR
+.TP
 .BI (libblkio)libblkio_pre_start_props \fR=\fPstr
-A colon-separated list of libblkio properties to be set after connecting but
-before starting the libblkio instance. Each property must have the format
-\fB<name>=<value>\fR. Colons can be escaped as \fB\\:\fR. These are set after
-the engine sets any other properties, so those can be overriden. Available
-properties depend on the libblkio version in use and are listed at
+A colon-separated list of additional libblkio properties to be set after
+connecting but before starting the libblkio instance. Each property must have
+the format \fB<name>=<value>\fR. Colons can be escaped as \fB\\:\fR. These are
+set after the engine sets any other properties, so those can be overriden.
+Available properties depend on the libblkio version in use and are listed at
 \fIhttps://libblkio.gitlab.io/libblkio/blkio.html#properties\fR
 .TP
 .BI (libblkio)hipri

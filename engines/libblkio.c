@@ -43,7 +43,12 @@ struct fio_blkio_options {
 	void *pad; /* option fields must not have offset 0 */
 
 	char *driver;
+
+	char *path;
 	char *pre_connect_props;
+
+	int num_entries;
+	int queue_size;
 	char *pre_start_props;
 
 	unsigned int hipri;
@@ -64,8 +69,17 @@ static struct fio_option options[] = {
 		.group	= FIO_OPT_G_LIBBLKIO,
 	},
 	{
+		.name	= "libblkio_path",
+		.lname	= "libblkio \"path\" property",
+		.type	= FIO_OPT_STR_STORE,
+		.off1	= offsetof(struct fio_blkio_options, path),
+		.help	= "Value to set the \"path\" property to",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_LIBBLKIO,
+	},
+	{
 		.name	= "libblkio_pre_connect_props",
-		.lname	= "Properties to be set before blkio_connect()",
+		.lname	= "Additional properties to be set before blkio_connect()",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= offsetof(struct fio_blkio_options, pre_connect_props),
 		.help	= "",
@@ -73,8 +87,30 @@ static struct fio_option options[] = {
 		.group	= FIO_OPT_G_LIBBLKIO,
 	},
 	{
+		.name	= "libblkio_num_entries",
+		.lname	= "libblkio \"num-entries\" property",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct fio_blkio_options, num_entries),
+		.help	= "Value to set the \"num-entries\" property to",
+		.minval	= 1,
+		.interval = 1,
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_LIBBLKIO,
+	},
+	{
+		.name	= "libblkio_queue_size",
+		.lname	= "libblkio \"queue-size\" property",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct fio_blkio_options, queue_size),
+		.help	= "Value to set the \"queue-size\" property to",
+		.minval	= 1,
+		.interval = 1,
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_LIBBLKIO,
+	},
+	{
 		.name	= "libblkio_pre_start_props",
-		.lname	= "Properties to be set before blkio_start()",
+		.lname	= "Additional properties to be set before blkio_start()",
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= offsetof(struct fio_blkio_options, pre_start_props),
 		.help	= "",
@@ -245,6 +281,13 @@ static int fio_blkio_create_and_connect(struct thread_data *td,
 		goto err_blkio_destroy;
 	}
 
+	if (options->path) {
+		if (blkio_set_str(b, "path", options->path) != 0) {
+			fio_blkio_log_err(blkio_set_str);
+			goto err_blkio_destroy;
+		}
+	}
+
 	if (fio_blkio_set_props_from_str(b, "libblkio_pre_connect_props",
 					 options->pre_connect_props) != 0)
 		goto err_blkio_destroy;
@@ -252,6 +295,21 @@ static int fio_blkio_create_and_connect(struct thread_data *td,
 	if (blkio_connect(b) != 0) {
 		fio_blkio_log_err(blkio_connect);
 		goto err_blkio_destroy;
+	}
+
+	if (options->num_entries != 0) {
+		if (blkio_set_int(b, "num-entries",
+				  options->num_entries) != 0) {
+			fio_blkio_log_err(blkio_set_int);
+			goto err_blkio_destroy;
+		}
+	}
+
+	if (options->queue_size != 0) {
+		if (blkio_set_int(b, "queue-size", options->queue_size) != 0) {
+			fio_blkio_log_err(blkio_set_int);
+			goto err_blkio_destroy;
+		}
 	}
 
 	if (fio_blkio_set_props_from_str(b, "libblkio_pre_start_props",

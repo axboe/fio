@@ -2869,23 +2869,45 @@ with the caveat that when used on the command line, they must come after the
 	libblkio version in use and are listed at
 	https://libblkio.gitlab.io/libblkio/blkio.html#drivers
 
+.. option:: libblkio_path=str : [libblkio]
+
+	Sets the value of the driver-specific "path" property before connecting
+	the libblkio instance, which identifies the target device or file on
+	which to perform I/O. Its exact semantics are driver-dependent and not
+	all drivers may support it; see
+	https://libblkio.gitlab.io/libblkio/blkio.html#drivers
+
 .. option:: libblkio_pre_connect_props=str : [libblkio]
 
-	A colon-separated list of libblkio properties to be set after creating
-	but before connecting the libblkio instance. Each property must have the
-	format ``<name>=<value>``. Colons can be escaped as ``\:``. These are
-	set after the engine sets any other properties, so those can be
-	overriden. Available properties depend on the libblkio version in use
+	A colon-separated list of additional libblkio properties to be set after
+	creating but before connecting the libblkio instance. Each property must
+	have the format ``<name>=<value>``. Colons can be escaped as ``\:``.
+	These are set after the engine sets any other properties, so those can
+	be overriden. Available properties depend on the libblkio version in use
 	and are listed at
 	https://libblkio.gitlab.io/libblkio/blkio.html#properties
 
+.. option:: libblkio_num_entries=int : [libblkio]
+
+	Sets the value of the driver-specific "num-entries" property before
+	starting the libblkio instance. Its exact semantics are driver-dependent
+	and not all drivers may support it; see
+	https://libblkio.gitlab.io/libblkio/blkio.html#drivers
+
+.. option:: libblkio_queue_size=int : [libblkio]
+
+	Sets the value of the driver-specific "queue-size" property before
+	starting the libblkio instance. Its exact semantics are driver-dependent
+	and not all drivers may support it; see
+	https://libblkio.gitlab.io/libblkio/blkio.html#drivers
+
 .. option:: libblkio_pre_start_props=str : [libblkio]
 
-	A colon-separated list of libblkio properties to be set after connecting
-	but before starting the libblkio instance. Each property must have the
-	format ``<name>=<value>``. Colons can be escaped as ``\:``. These are
-	set after the engine sets any other properties, so those can be
-	overriden. Available properties depend on the libblkio version in use
+	A colon-separated list of additional libblkio properties to be set after
+	connecting but before starting the libblkio instance. Each property must
+	have the format ``<name>=<value>``. Colons can be escaped as ``\:``.
+	These are set after the engine sets any other properties, so those can
+	be overriden. Available properties depend on the libblkio version in use
 	and are listed at
 	https://libblkio.gitlab.io/libblkio/blkio.html#properties
 
