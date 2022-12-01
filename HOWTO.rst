@@ -2337,7 +2337,8 @@ with the caveat that when used on the command line, they must come after the
 
    [libblkio]
 
-	Use poll queues.
+	Use poll queues. This is incompatible with
+	:option:`libblkio_wait_mode=eventfd <libblkio_wait_mode>`.
 
    [pvsync2]
 
@@ -2894,6 +2895,17 @@ with the caveat that when used on the command line, they must come after the
 .. option:: libblkio_write_zeroes_on_trim : [libblkio]
 
 	Submit trims as "write zeroes" requests instead of discard requests.
+
+.. option:: libblkio_wait_mode=str : [libblkio]
+
+	How to wait for completions:
+
+	**block** (default)
+		Use a blocking call to ``blkioq_do_io()``.
+	**eventfd**
+		Use a blocking call to ``read()`` on the completion eventfd.
+	**loop**
+		Use a busy loop with a non-blocking call to ``blkioq_do_io()``.
 
 I/O depth
 ~~~~~~~~~

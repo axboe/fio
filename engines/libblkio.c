@@ -24,12 +24,19 @@
 struct fio_blkio_data {
 	struct blkio *b;
 	struct blkioq *q;
+	int completion_fd; /* -1 if not FIO_BLKIO_WAIT_MODE_EVENTFD */
 
 	bool has_mem_region; /* whether mem_region is valid */
 	struct blkio_mem_region mem_region; /* only if allocated by libblkio */
 
 	struct iovec *iovecs; /* for vectored requests */
 	struct blkio_completion *completions;
+};
+
+enum fio_blkio_wait_mode {
+	FIO_BLKIO_WAIT_MODE_BLOCK,
+	FIO_BLKIO_WAIT_MODE_EVENTFD,
+	FIO_BLKIO_WAIT_MODE_LOOP,
 };
 
 struct fio_blkio_options {
@@ -42,6 +49,7 @@ struct fio_blkio_options {
 	unsigned int hipri;
 	unsigned int vectored;
 	unsigned int write_zeroes_on_trim;
+	enum fio_blkio_wait_mode wait_mode;
 };
 
 static struct fio_option options[] = {
@@ -97,6 +105,30 @@ static struct fio_option options[] = {
 		.off1	= offsetof(struct fio_blkio_options,
 				   write_zeroes_on_trim),
 		.help	= "Use blkioq_write_zeroes() for TRIM instead of blkioq_discard()",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_LIBBLKIO,
+	},
+	{
+		.name	= "libblkio_wait_mode",
+		.lname	= "How to wait for completions",
+		.type	= FIO_OPT_STR,
+		.off1	= offsetof(struct fio_blkio_options, wait_mode),
+		.help	= "How to wait for completions",
+		.def	= "block",
+		.posval = {
+			  { .ival = "block",
+			    .oval = FIO_BLKIO_WAIT_MODE_BLOCK,
+			    .help = "Blocking blkioq_do_io()",
+			  },
+			  { .ival = "eventfd",
+			    .oval = FIO_BLKIO_WAIT_MODE_EVENTFD,
+			    .help = "Blocking read() on the completion eventfd",
+			  },
+			  { .ival = "loop",
+			    .oval = FIO_BLKIO_WAIT_MODE_LOOP,
+			    .help = "Busy loop with non-blocking blkioq_do_io()",
+			  },
+		},
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_LIBBLKIO,
 	},
@@ -231,11 +263,18 @@ err_blkio_destroy:
  */
 static int fio_blkio_setup(struct thread_data *td)
 {
+	const struct fio_blkio_options *options = td->eo;
 	struct blkio *b;
 	int ret = 0;
 	uint64_t capacity;
 
 	assert(td->files_index == 1);
+
+	if (options->hipri &&
+		options->wait_mode == FIO_BLKIO_WAIT_MODE_EVENTFD) {
+		log_err("fio: option hipri is incompatible with option libblkio_wait_mode=eventfd\n");
+		return 1;
+	}
 
 	if (fio_blkio_create_and_connect(td, &b) != 0)
 		return 1;
@@ -258,6 +297,7 @@ static int fio_blkio_init(struct thread_data *td)
 {
 	const struct fio_blkio_options *options = td->eo;
 	struct fio_blkio_data *data;
+	int flags;
 
 	/*
 	 * Request enqueueing is fast, and it's not possible to know exactly
@@ -301,6 +341,28 @@ static int fio_blkio_init(struct thread_data *td)
 		data->q = blkio_get_poll_queue(data->b, 0);
 	else
 		data->q = blkio_get_queue(data->b, 0);
+
+	if (options->wait_mode == FIO_BLKIO_WAIT_MODE_EVENTFD) {
+		/* enable completion fd and make it blocking */
+		blkioq_set_completion_fd_enabled(data->q, true);
+		data->completion_fd = blkioq_get_completion_fd(data->q);
+
+		flags = fcntl(data->completion_fd, F_GETFL);
+		if (flags < 0) {
+			log_err("fio: fcntl(F_GETFL) failed: %s\n",
+				strerror(errno));
+			goto err_blkio_destroy;
+		}
+
+		if (fcntl(data->completion_fd, F_SETFL,
+			  flags & ~O_NONBLOCK) != 0) {
+			log_err("fio: fcntl(F_SETFL) failed: %s\n",
+				strerror(errno));
+			goto err_blkio_destroy;
+		}
+	} else {
+		data->completion_fd = -1;
+	}
 
 	/* Set data last so cleanup() does nothing if init() fails. */
 	td->io_ops_data = data;
@@ -490,16 +552,59 @@ static enum fio_q_status fio_blkio_queue(struct thread_data *td,
 static int fio_blkio_getevents(struct thread_data *td, unsigned int min,
 			       unsigned int max, const struct timespec *t)
 {
+	const struct fio_blkio_options *options = td->eo;
 	struct fio_blkio_data *data = td->io_ops_data;
-	int n;
+	int ret, n;
+	uint64_t event;
 
-	n = blkioq_do_io(data->q, data->completions, (int)min, (int)max, NULL);
-	if (n < 0) {
-		fio_blkio_log_err(blkioq_do_io);
+	switch (options->wait_mode) {
+	case FIO_BLKIO_WAIT_MODE_BLOCK:
+		n = blkioq_do_io(data->q, data->completions, (int)min, (int)max,
+				 NULL);
+		if (n < 0) {
+			fio_blkio_log_err(blkioq_do_io);
+			return -1;
+		}
+		return n;
+	case FIO_BLKIO_WAIT_MODE_EVENTFD:
+		n = blkioq_do_io(data->q, data->completions, 0, (int)max, NULL);
+		if (n < 0) {
+			fio_blkio_log_err(blkioq_do_io);
+			return -1;
+		}
+		while (n < (int)min) {
+			ret = read(data->completion_fd, &event, sizeof(event));
+			if (ret != sizeof(event)) {
+				log_err("fio: read() on the completion fd returned %d\n",
+					ret);
+				return -1;
+			}
+
+			ret = blkioq_do_io(data->q, data->completions + n, 0,
+					   (int)max - n, NULL);
+			if (ret < 0) {
+				fio_blkio_log_err(blkioq_do_io);
+				return -1;
+			}
+
+			n += ret;
+		}
+		return n;
+	case FIO_BLKIO_WAIT_MODE_LOOP:
+		for (n = 0; n < (int)min; ) {
+			ret = blkioq_do_io(data->q, data->completions + n, 0,
+					   (int)max - n, NULL);
+			if (ret < 0) {
+				fio_blkio_log_err(blkioq_do_io);
+				return -1;
+			}
+
+			n += ret;
+		}
+		return n;
+	default:
 		return -1;
 	}
-
-	return n;
 }
 
 static struct io_u *fio_blkio_event(struct thread_data *td, int event)
