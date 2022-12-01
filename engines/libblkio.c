@@ -26,7 +26,7 @@ struct fio_blkio_data {
 	struct blkioq *q;
 
 	bool has_mem_region; /* whether mem_region is valid */
-	struct blkio_mem_region mem_region;
+	struct blkio_mem_region mem_region; /* only if allocated by libblkio */
 
 	struct blkio_completion *completions;
 };
@@ -271,6 +271,47 @@ err_free:
 	return 1;
 }
 
+static int fio_blkio_post_init(struct thread_data *td)
+{
+	struct fio_blkio_data *data = td->io_ops_data;
+
+	if (!data->has_mem_region) {
+		/*
+		 * Memory was allocated by the fio core and not iomem_alloc(),
+		 * so we need to register it as a memory region here.
+		 *
+		 * `td->orig_buffer_size` is computed like `len` below, but then
+		 * fio can add some padding to it to make sure it is
+		 * sufficiently aligned to the page size and the mem_align
+		 * option. However, this can make it become unaligned to the
+		 * "mem-region-alignment" property in ways that the user can't
+		 * control, so we essentially recompute `td->orig_buffer_size`
+		 * here but without adding that padding.
+		 */
+
+		unsigned long long max_block_size;
+		struct blkio_mem_region region;
+
+		max_block_size = max(td->o.max_bs[DDIR_READ],
+				     max(td->o.max_bs[DDIR_WRITE],
+					 td->o.max_bs[DDIR_TRIM]));
+
+		region = (struct blkio_mem_region) {
+			.addr	= td->orig_buffer,
+			.len	= (size_t)max_block_size *
+					(size_t)td->o.iodepth,
+			.fd	= -1,
+		};
+
+		if (blkio_map_mem_region(data->b, &region) != 0) {
+			fio_blkio_log_err(blkio_map_mem_region);
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
 static void fio_blkio_cleanup(struct thread_data *td)
 {
 	struct fio_blkio_data *data = td->io_ops_data;
@@ -403,10 +444,11 @@ FIO_STATIC struct ioengine_ops ioengine = {
 	.name			= "libblkio",
 	.version		= FIO_IOOPS_VERSION,
 	.flags			= FIO_DISKLESSIO | FIO_NOEXTEND |
-				  FIO_NO_OFFLOAD,
+				  FIO_NO_OFFLOAD | FIO_SKIPPABLE_IOMEM_ALLOC,
 
 	.setup			= fio_blkio_setup,
 	.init			= fio_blkio_init,
+	.post_init		= fio_blkio_post_init,
 	.cleanup		= fio_blkio_cleanup,
 
 	.iomem_alloc		= fio_blkio_iomem_alloc,

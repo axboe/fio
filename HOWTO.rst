@@ -2199,7 +2199,10 @@ I/O engine
 			Use the libblkio library
 			(https://gitlab.com/libblkio/libblkio). The specific
 			*driver* to use must be set using
-			:option:`libblkio_driver`.
+			:option:`libblkio_driver`. If
+			:option:`mem`/:option:`iomem` is not specified, memory
+			allocation is delegated to libblkio (and so is
+			guaranteed to work with the selected *driver*).
 
 I/O engine specific parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
