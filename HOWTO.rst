@@ -2887,6 +2887,10 @@ with the caveat that when used on the command line, they must come after the
 	and are listed at
 	https://libblkio.gitlab.io/libblkio/blkio.html#properties
 
+.. option:: libblkio_vectored : [libblkio]
+
+	Submit vectored read and write requests.
+
 I/O depth
 ~~~~~~~~~
 

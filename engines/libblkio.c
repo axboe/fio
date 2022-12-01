@@ -28,6 +28,7 @@ struct fio_blkio_data {
 	bool has_mem_region; /* whether mem_region is valid */
 	struct blkio_mem_region mem_region; /* only if allocated by libblkio */
 
+	struct iovec *iovecs; /* for vectored requests */
 	struct blkio_completion *completions;
 };
 
@@ -39,6 +40,7 @@ struct fio_blkio_options {
 	char *pre_start_props;
 
 	unsigned int hipri;
+	unsigned int vectored;
 };
 
 static struct fio_option options[] = {
@@ -75,6 +77,15 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_STR_SET,
 		.off1	= offsetof(struct fio_blkio_options, hipri),
 		.help	= "Use poll queues",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_LIBBLKIO,
+	},
+	{
+		.name	= "libblkio_vectored",
+		.lname	= "Use blkioq_{readv,writev}()",
+		.type	= FIO_OPT_STR_SET,
+		.off1	= offsetof(struct fio_blkio_options, vectored),
+		.help	= "Use blkioq_{readv,writev}() instead of blkioq_{read,write}()",
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_LIBBLKIO,
 	},
@@ -249,8 +260,9 @@ static int fio_blkio_init(struct thread_data *td)
 		return 1;
 	}
 
+	data->iovecs = calloc(td->o.iodepth, sizeof(data->iovecs[0]));
 	data->completions = calloc(td->o.iodepth, sizeof(data->completions[0]));
-	if (!data->completions) {
+	if (!data->iovecs || !data->completions) {
 		log_err("fio: calloc() failed\n");
 		goto err_free;
 	}
@@ -288,6 +300,7 @@ err_blkio_destroy:
 	blkio_destroy(&data->b);
 err_free:
 	free(data->completions);
+	free(data->iovecs);
 	free(data);
 	return 1;
 }
@@ -340,6 +353,7 @@ static void fio_blkio_cleanup(struct thread_data *td)
 	if (data) {
 		blkio_destroy(&data->b);
 		free(data->completions);
+		free(data->iovecs);
 		free(data);
 	}
 }
@@ -405,18 +419,40 @@ static int fio_blkio_open_file(struct thread_data *td, struct fio_file *f)
 static enum fio_q_status fio_blkio_queue(struct thread_data *td,
 					 struct io_u *io_u)
 {
+	const struct fio_blkio_options *options = td->eo;
 	struct fio_blkio_data *data = td->io_ops_data;
 
 	fio_ro_check(td, io_u);
 
 	switch (io_u->ddir) {
 		case DDIR_READ:
-			blkioq_read(data->q, io_u->offset, io_u->xfer_buf,
-				    (size_t)io_u->xfer_buflen, io_u, 0);
+			if (options->vectored) {
+				struct iovec *iov = &data->iovecs[io_u->index];
+				iov->iov_base = io_u->xfer_buf;
+				iov->iov_len = (size_t)io_u->xfer_buflen;
+
+				blkioq_readv(data->q, io_u->offset, iov, 1,
+					     io_u, 0);
+			} else {
+				blkioq_read(data->q, io_u->offset,
+					    io_u->xfer_buf,
+					    (size_t)io_u->xfer_buflen, io_u, 0);
+			}
 			break;
 		case DDIR_WRITE:
-			blkioq_write(data->q, io_u->offset, io_u->xfer_buf,
-				     (size_t)io_u->xfer_buflen, io_u, 0);
+			if (options->vectored) {
+				struct iovec *iov = &data->iovecs[io_u->index];
+				iov->iov_base = io_u->xfer_buf;
+				iov->iov_len = (size_t)io_u->xfer_buflen;
+
+				blkioq_writev(data->q, io_u->offset, iov, 1,
+					      io_u, 0);
+			} else {
+				blkioq_write(data->q, io_u->offset,
+					     io_u->xfer_buf,
+					     (size_t)io_u->xfer_buflen, io_u,
+					     0);
+			}
 			break;
 		case DDIR_TRIM:
 			blkioq_discard(data->q, io_u->offset, io_u->xfer_buflen,
