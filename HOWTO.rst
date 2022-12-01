@@ -1875,8 +1875,11 @@ I/O size
 .. option:: size=int
 
 	The total size of file I/O for each thread of this job. Fio will run until
-	this many bytes has been transferred, unless runtime is limited by other options
-	(such as :option:`runtime`, for instance, or increased/decreased by :option:`io_size`).
+	this many bytes has been transferred, unless runtime is altered by other means
+	such as (1) :option:`runtime`, (2) :option:`io_size` (3) :option:`number_ios`,
+	(4) gaps/holes while doing I/O's such as ``rw=read:16K``, or (5) sequential
+	I/O reaching end of the file which is possible when :option:`percentage_random`
+	is less than 100.
 	Fio will divide this size between the available files determined by options
 	such as :option:`nrfiles`, :option:`filename`, unless :option:`filesize` is
 	specified by the job. If the result of division happens to be 0, the size is

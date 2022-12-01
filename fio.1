@@ -1676,8 +1676,11 @@ simulate a smaller amount of memory. The amount specified is per worker.
 .TP
 .BI size \fR=\fPint[%|z]
 The total size of file I/O for each thread of this job. Fio will run until
-this many bytes has been transferred, unless runtime is limited by other options
-(such as \fBruntime\fR, for instance, or increased/decreased by \fBio_size\fR).
+this many bytes has been transferred, unless runtime is altered by other means
+such as (1) \fBruntime\fR, (2) \fBio_size\fR, (3) \fBnumber_ios\fR, (4)
+gaps/holes while doing I/O's such as `rw=read:16K', or (5) sequential I/O
+reaching end of the file which is possible when \fBpercentage_random\fR is
+less than 100.
 Fio will divide this size between the available files determined by options
 such as \fBnrfiles\fR, \fBfilename\fR, unless \fBfilesize\fR is
 specified by the job. If the result of division happens to be 0, the size is
