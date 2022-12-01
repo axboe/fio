@@ -37,6 +37,8 @@ struct fio_blkio_options {
 	char *driver;
 	char *pre_connect_props;
 	char *pre_start_props;
+
+	unsigned int hipri;
 };
 
 static struct fio_option options[] = {
@@ -64,6 +66,15 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_STR_STORE,
 		.off1	= offsetof(struct fio_blkio_options, pre_start_props),
 		.help	= "",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_LIBBLKIO,
+	},
+	{
+		.name	= "hipri",
+		.lname	= "Use poll queues",
+		.type	= FIO_OPT_STR_SET,
+		.off1	= offsetof(struct fio_blkio_options, hipri),
+		.help	= "Use poll queues",
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_LIBBLKIO,
 	},
@@ -223,6 +234,7 @@ out_blkio_destroy:
 
 static int fio_blkio_init(struct thread_data *td)
 {
+	const struct fio_blkio_options *options = td->eo;
 	struct fio_blkio_data *data;
 
 	/*
@@ -246,7 +258,13 @@ static int fio_blkio_init(struct thread_data *td)
 	if (fio_blkio_create_and_connect(td, &data->b) != 0)
 		goto err_free;
 
-	if (blkio_set_int(data->b, "num-queues", 1) != 0) {
+	if (blkio_set_int(data->b, "num-queues", options->hipri ? 0 : 1) != 0) {
+		fio_blkio_log_err(blkio_set_int);
+		goto err_blkio_destroy;
+	}
+
+	if (blkio_set_int(data->b, "num-poll-queues",
+			  options->hipri ? 1 : 0) != 0) {
 		fio_blkio_log_err(blkio_set_int);
 		goto err_blkio_destroy;
 	}
@@ -256,7 +274,10 @@ static int fio_blkio_init(struct thread_data *td)
 		goto err_blkio_destroy;
 	}
 
-	data->q = blkio_get_queue(data->b, 0);
+	if (options->hipri)
+		data->q = blkio_get_poll_queue(data->b, 0);
+	else
+		data->q = blkio_get_queue(data->b, 0);
 
 	/* Set data last so cleanup() does nothing if init() fails. */
 	td->io_ops_data = data;

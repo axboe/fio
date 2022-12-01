@@ -2335,6 +2335,10 @@ with the caveat that when used on the command line, they must come after the
         by the application. The benefits are more efficient IO for high IOPS
         scenarios, and lower latencies for low queue depth IO.
 
+   [libblkio]
+
+	Use poll queues.
+
    [pvsync2]
 
 	Set RWF_HIPRI on I/O, indicating to the kernel that it's of higher priority
