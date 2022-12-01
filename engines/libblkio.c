@@ -24,7 +24,7 @@
 struct fio_blkio_data {
 	struct blkio *b;
 	struct blkioq *q;
-	int completion_fd; /* -1 if not FIO_BLKIO_WAIT_MODE_EVENTFD */
+	int completion_fd; /* may be -1 if not FIO_BLKIO_WAIT_MODE_EVENTFD */
 
 	bool has_mem_region; /* whether mem_region is valid */
 	struct blkio_mem_region mem_region; /* only if allocated by libblkio */
@@ -50,6 +50,7 @@ struct fio_blkio_options {
 	unsigned int vectored;
 	unsigned int write_zeroes_on_trim;
 	enum fio_blkio_wait_mode wait_mode;
+	unsigned int force_enable_completion_eventfd;
 };
 
 static struct fio_option options[] = {
@@ -129,6 +130,16 @@ static struct fio_option options[] = {
 			    .help = "Busy loop with non-blocking blkioq_do_io()",
 			  },
 		},
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_LIBBLKIO,
+	},
+	{
+		.name	= "libblkio_force_enable_completion_eventfd",
+		.lname	= "Force enable the completion eventfd, even if unused",
+		.type	= FIO_OPT_STR_SET,
+		.off1	= offsetof(struct fio_blkio_options,
+				   force_enable_completion_eventfd),
+		.help	= "This can impact performance",
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_LIBBLKIO,
 	},
@@ -276,6 +287,11 @@ static int fio_blkio_setup(struct thread_data *td)
 		return 1;
 	}
 
+	if (options->hipri && options->force_enable_completion_eventfd) {
+		log_err("fio: option hipri is incompatible with option libblkio_force_enable_completion_eventfd\n");
+		return 1;
+	}
+
 	if (fio_blkio_create_and_connect(td, &b) != 0)
 		return 1;
 
@@ -342,7 +358,8 @@ static int fio_blkio_init(struct thread_data *td)
 	else
 		data->q = blkio_get_queue(data->b, 0);
 
-	if (options->wait_mode == FIO_BLKIO_WAIT_MODE_EVENTFD) {
+	if (options->wait_mode == FIO_BLKIO_WAIT_MODE_EVENTFD ||
+		options->force_enable_completion_eventfd) {
 		/* enable completion fd and make it blocking */
 		blkioq_set_completion_fd_enabled(data->q, true);
 		data->completion_fd = blkioq_get_completion_fd(data->q);

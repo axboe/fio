@@ -2633,7 +2633,8 @@ properties depend on the libblkio version in use and are listed at
 \fIhttps://libblkio.gitlab.io/libblkio/blkio.html#properties\fR
 .TP
 .BI (libblkio)hipri
-Use poll queues. This is incompatible with \fBlibblkio_wait_mode=eventfd\fR.
+Use poll queues. This is incompatible with \fBlibblkio_wait_mode=eventfd\fR and
+\fBlibblkio_force_enable_completion_eventfd\fR.
 .TP
 .BI (libblkio)libblkio_vectored
 Submit vectored read and write requests.
@@ -2654,6 +2655,13 @@ Use a blocking call to \fBread()\fR on the completion eventfd.
 .TP
 .B loop
 Use a busy loop with a non-blocking call to \fBblkioq_do_io()\fR.
+.RE
+.RE
+.TP
+.BI (libblkio)libblkio_force_enable_completion_eventfd
+Enable the queue's completion eventfd even when unused. This may impact
+performance. The default is to enable it only if
+\fBlibblkio_wait_mode=eventfd\fR.
 .SS "I/O depth"
 .TP
 .BI iodepth \fR=\fPint

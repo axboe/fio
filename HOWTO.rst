@@ -2338,7 +2338,8 @@ with the caveat that when used on the command line, they must come after the
    [libblkio]
 
 	Use poll queues. This is incompatible with
-	:option:`libblkio_wait_mode=eventfd <libblkio_wait_mode>`.
+	:option:`libblkio_wait_mode=eventfd <libblkio_wait_mode>` and
+	:option:`libblkio_force_enable_completion_eventfd`.
 
    [pvsync2]
 
@@ -2906,6 +2907,12 @@ with the caveat that when used on the command line, they must come after the
 		Use a blocking call to ``read()`` on the completion eventfd.
 	**loop**
 		Use a busy loop with a non-blocking call to ``blkioq_do_io()``.
+
+.. option:: libblkio_force_enable_completion_eventfd : [libblkio]
+
+	Enable the queue's completion eventfd even when unused. This may impact
+	performance. The default is to enable it only if
+	:option:`libblkio_wait_mode=eventfd <libblkio_wait_mode>`.
 
 I/O depth
 ~~~~~~~~~
