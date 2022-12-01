@@ -1997,7 +1997,11 @@ engine specific options. (See \fIhttps://xnvme.io/\fR).
 Use the libblkio library (\fIhttps://gitlab.com/libblkio/libblkio\fR). The
 specific driver to use must be set using \fBlibblkio_driver\fR. If
 \fBmem\fR/\fBiomem\fR is not specified, memory allocation is delegated to
-libblkio (and so is guaranteed to work with the selected driver).
+libblkio (and so is guaranteed to work with the selected driver). One libblkio
+instance is used per process, so all jobs setting option \fBthread\fR will share
+a single instance (with one queue per thread) and must specify compatible
+options. Note that some drivers don't allow several instances to access the same
+device or file simultaneously, but allow it for threads.
 .SS "I/O engine specific parameters"
 In addition, there are some parameters which are only valid when a specific
 \fBioengine\fR is in use. These are used identically to normal parameters,

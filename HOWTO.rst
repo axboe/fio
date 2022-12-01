@@ -2202,7 +2202,13 @@ I/O engine
 			:option:`libblkio_driver`. If
 			:option:`mem`/:option:`iomem` is not specified, memory
 			allocation is delegated to libblkio (and so is
-			guaranteed to work with the selected *driver*).
+			guaranteed to work with the selected *driver*). One
+			libblkio instance is used per process, so all jobs
+			setting option :option:`thread` will share a single
+			instance (with one queue per thread) and must specify
+			compatible options. Note that some drivers don't allow
+			several instances to access the same device or file
+			simultaneously, but allow it for threads.
 
 I/O engine specific parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

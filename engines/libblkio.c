@@ -20,9 +20,28 @@
 #include "../options.h"
 #include "../parse.h"
 
+/* per-process state */
+static struct {
+	pthread_mutex_t mutex;
+	int initted_threads;
+	int initted_hipri_threads;
+	struct blkio *b;
+} proc_state = { PTHREAD_MUTEX_INITIALIZER, 0, 0, NULL };
+
+static void fio_blkio_proc_lock(void) {
+	int ret;
+	ret = pthread_mutex_lock(&proc_state.mutex);
+	assert(ret == 0);
+}
+
+static void fio_blkio_proc_unlock(void) {
+	int ret;
+	ret = pthread_mutex_unlock(&proc_state.mutex);
+	assert(ret == 0);
+}
+
 /* per-thread state */
 struct fio_blkio_data {
-	struct blkio *b;
 	struct blkioq *q;
 	int completion_fd; /* may be -1 if not FIO_BLKIO_WAIT_MODE_EVENTFD */
 
@@ -252,6 +271,106 @@ static int fio_blkio_set_props_from_str(struct blkio *b, const char *opt_name,
 			blkio_get_error_msg()); \
 	})
 
+static bool possibly_null_strs_equal(const char *a, const char *b)
+{
+	return (!a && !b) || (a && b && strcmp(a, b) == 0);
+}
+
+/*
+ * Returns the total number of subjobs using the 'libblkio' ioengine and setting
+ * the 'thread' option in the entire workload that have the given value for the
+ * 'hipri' option.
+ */
+static int total_threaded_subjobs(bool hipri)
+{
+	struct thread_data *td;
+	unsigned int i;
+	int count = 0;
+
+	for_each_td(td, i) {
+		const struct fio_blkio_options *options = td->eo;
+		if (strcmp(td->o.ioengine, "libblkio") == 0 &&
+		    td->o.use_thread && (bool)options->hipri == hipri)
+			++count;
+	}
+
+	return count;
+}
+
+static struct {
+	bool set_up;
+	bool direct;
+	struct fio_blkio_options opts;
+} first_threaded_subjob = { 0 };
+
+static void fio_blkio_log_opt_compat_err(const char *option_name)
+{
+	log_err("fio: jobs using engine libblkio and sharing a process must agree on the %s option\n",
+		option_name);
+}
+
+/*
+ * If td represents a subjob with option 'thread', check if its options are
+ * compatible with those of other threaded subjobs that were already set up.
+ */
+static int fio_blkio_check_opt_compat(struct thread_data *td)
+{
+	const struct fio_blkio_options *options = td->eo, *prev_options;
+
+	if (!td->o.use_thread)
+		return 0; /* subjob doesn't use 'thread' */
+
+	if (!first_threaded_subjob.set_up) {
+		/* first subjob using 'thread', store options for later */
+		first_threaded_subjob.set_up	= true;
+		first_threaded_subjob.direct	= td->o.odirect;
+		first_threaded_subjob.opts	= *options;
+		return 0;
+	}
+
+	/* not first subjob using 'thread', check option compatibility */
+	prev_options = &first_threaded_subjob.opts;
+
+	if (td->o.odirect != first_threaded_subjob.direct) {
+		fio_blkio_log_opt_compat_err("direct/buffered");
+		return 1;
+	}
+
+	if (strcmp(options->driver, prev_options->driver) != 0) {
+		fio_blkio_log_opt_compat_err("libblkio_driver");
+		return 1;
+	}
+
+	if (!possibly_null_strs_equal(options->path, prev_options->path)) {
+		fio_blkio_log_opt_compat_err("libblkio_path");
+		return 1;
+	}
+
+	if (!possibly_null_strs_equal(options->pre_connect_props,
+				      prev_options->pre_connect_props)) {
+		fio_blkio_log_opt_compat_err("libblkio_pre_connect_props");
+		return 1;
+	}
+
+	if (options->num_entries != prev_options->num_entries) {
+		fio_blkio_log_opt_compat_err("libblkio_num_entries");
+		return 1;
+	}
+
+	if (options->queue_size != prev_options->queue_size) {
+		fio_blkio_log_opt_compat_err("libblkio_queue_size");
+		return 1;
+	}
+
+	if (!possibly_null_strs_equal(options->pre_start_props,
+				      prev_options->pre_start_props)) {
+		fio_blkio_log_opt_compat_err("libblkio_pre_start_props");
+		return 1;
+	}
+
+	return 0;
+}
+
 static int fio_blkio_create_and_connect(struct thread_data *td,
 					struct blkio **out_blkio)
 {
@@ -324,6 +443,8 @@ err_blkio_destroy:
 	return 1;
 }
 
+static bool incompatible_threaded_subjob_options = false;
+
 /*
  * This callback determines the device/file size, so it creates and connects a
  * blkio instance. But it is invoked from the main thread in the original fio
@@ -338,6 +459,11 @@ static int fio_blkio_setup(struct thread_data *td)
 	uint64_t capacity;
 
 	assert(td->files_index == 1);
+
+	if (fio_blkio_check_opt_compat(td) != 0) {
+		incompatible_threaded_subjob_options = true;
+		return 1;
+	}
 
 	if (options->hipri &&
 		options->wait_mode == FIO_BLKIO_WAIT_MODE_EVENTFD) {
@@ -373,6 +499,15 @@ static int fio_blkio_init(struct thread_data *td)
 	struct fio_blkio_data *data;
 	int flags;
 
+	if (td->o.use_thread && incompatible_threaded_subjob_options) {
+		/*
+		 * Different subjobs using option 'thread' specified
+		 * incompatible options. We don't know which configuration
+		 * should win, so we just fail all such subjobs.
+		 */
+		return 1;
+	}
+
 	/*
 	 * Request enqueueing is fast, and it's not possible to know exactly
 	 * when a request is submitted, so never report submission latencies.
@@ -392,29 +527,49 @@ static int fio_blkio_init(struct thread_data *td)
 		goto err_free;
 	}
 
-	if (fio_blkio_create_and_connect(td, &data->b) != 0)
-		goto err_free;
+	fio_blkio_proc_lock();
 
-	if (blkio_set_int(data->b, "num-queues", options->hipri ? 0 : 1) != 0) {
-		fio_blkio_log_err(blkio_set_int);
-		goto err_blkio_destroy;
+	if (proc_state.initted_threads == 0) {
+		/* initialize per-process blkio */
+		int num_queues, num_poll_queues;
+
+		if (td->o.use_thread) {
+			num_queues 	= total_threaded_subjobs(false);
+			num_poll_queues = total_threaded_subjobs(true);
+		} else {
+			num_queues 	= options->hipri ? 0 : 1;
+			num_poll_queues = options->hipri ? 1 : 0;
+		}
+
+		if (fio_blkio_create_and_connect(td, &proc_state.b) != 0)
+			goto err_unlock;
+
+		if (blkio_set_int(proc_state.b, "num-queues",
+				  num_queues) != 0) {
+			fio_blkio_log_err(blkio_set_int);
+			goto err_blkio_destroy;
+		}
+
+		if (blkio_set_int(proc_state.b, "num-poll-queues",
+				  num_poll_queues) != 0) {
+			fio_blkio_log_err(blkio_set_int);
+			goto err_blkio_destroy;
+		}
+
+		if (blkio_start(proc_state.b) != 0) {
+			fio_blkio_log_err(blkio_start);
+			goto err_blkio_destroy;
+		}
 	}
 
-	if (blkio_set_int(data->b, "num-poll-queues",
-			  options->hipri ? 1 : 0) != 0) {
-		fio_blkio_log_err(blkio_set_int);
-		goto err_blkio_destroy;
+	if (options->hipri) {
+		int i = proc_state.initted_hipri_threads;
+		data->q = blkio_get_poll_queue(proc_state.b, i);
+	} else {
+		int i = proc_state.initted_threads -
+				proc_state.initted_hipri_threads;
+		data->q = blkio_get_queue(proc_state.b, i);
 	}
-
-	if (blkio_start(data->b) != 0) {
-		fio_blkio_log_err(blkio_start);
-		goto err_blkio_destroy;
-	}
-
-	if (options->hipri)
-		data->q = blkio_get_poll_queue(data->b, 0);
-	else
-		data->q = blkio_get_queue(data->b, 0);
 
 	if (options->wait_mode == FIO_BLKIO_WAIT_MODE_EVENTFD ||
 		options->force_enable_completion_eventfd) {
@@ -439,13 +594,24 @@ static int fio_blkio_init(struct thread_data *td)
 		data->completion_fd = -1;
 	}
 
+	++proc_state.initted_threads;
+	if (options->hipri)
+		++proc_state.initted_hipri_threads;
+
 	/* Set data last so cleanup() does nothing if init() fails. */
 	td->io_ops_data = data;
+
+	fio_blkio_proc_unlock();
 
 	return 0;
 
 err_blkio_destroy:
-	blkio_destroy(&data->b);
+	if (proc_state.initted_threads == 0)
+		blkio_destroy(&proc_state.b);
+err_unlock:
+	if (proc_state.initted_threads == 0)
+		proc_state.b = NULL;
+	fio_blkio_proc_unlock();
 err_free:
 	free(data->completions);
 	free(data->iovecs);
@@ -485,7 +651,7 @@ static int fio_blkio_post_init(struct thread_data *td)
 			.fd	= -1,
 		};
 
-		if (blkio_map_mem_region(data->b, &region) != 0) {
+		if (blkio_map_mem_region(proc_state.b, &region) != 0) {
 			fio_blkio_log_err(blkio_map_mem_region);
 			return 1;
 		}
@@ -498,11 +664,25 @@ static void fio_blkio_cleanup(struct thread_data *td)
 {
 	struct fio_blkio_data *data = td->io_ops_data;
 
+	/*
+	 * Subjobs from different jobs can be terminated at different times, so
+	 * this callback may be invoked for one subjob while another is still
+	 * doing I/O. Those subjobs may share the process, so we must wait until
+	 * the last subjob in the process wants to clean up to actually destroy
+	 * the blkio.
+	 */
+
 	if (data) {
-		blkio_destroy(&data->b);
 		free(data->completions);
 		free(data->iovecs);
 		free(data);
+
+		fio_blkio_proc_lock();
+		if (--proc_state.initted_threads == 0) {
+			blkio_destroy(&proc_state.b);
+			proc_state.b = NULL;
+		}
+		fio_blkio_proc_unlock();
 	}
 }
 
@@ -514,7 +694,7 @@ static int fio_blkio_iomem_alloc(struct thread_data *td, size_t size)
 	int ret;
 	uint64_t mem_region_alignment;
 
-	if (blkio_get_uint64(data->b, "mem-region-alignment",
+	if (blkio_get_uint64(proc_state.b, "mem-region-alignment",
 			     &mem_region_alignment) != 0) {
 		fio_blkio_log_err(blkio_get_uint64);
 		return 1;
@@ -523,13 +703,16 @@ static int fio_blkio_iomem_alloc(struct thread_data *td, size_t size)
 	/* round up size to satisfy mem-region-alignment */
 	size = align_up(size, (size_t)mem_region_alignment);
 
-	if (blkio_alloc_mem_region(data->b, &data->mem_region, size) != 0) {
+	fio_blkio_proc_lock();
+
+	if (blkio_alloc_mem_region(proc_state.b, &data->mem_region,
+				   size) != 0) {
 		fio_blkio_log_err(blkio_alloc_mem_region);
 		ret = 1;
 		goto out;
 	}
 
-	if (blkio_map_mem_region(data->b, &data->mem_region) != 0) {
+	if (blkio_map_mem_region(proc_state.b, &data->mem_region) != 0) {
 		fio_blkio_log_err(blkio_map_mem_region);
 		ret = 1;
 		goto out_free;
@@ -542,8 +725,9 @@ static int fio_blkio_iomem_alloc(struct thread_data *td, size_t size)
 	goto out;
 
 out_free:
-	blkio_free_mem_region(data->b, &data->mem_region);
+	blkio_free_mem_region(proc_state.b, &data->mem_region);
 out:
+	fio_blkio_proc_unlock();
 	return ret;
 }
 
@@ -552,8 +736,10 @@ static void fio_blkio_iomem_free(struct thread_data *td)
 	struct fio_blkio_data *data = td->io_ops_data;
 
 	if (data && data->has_mem_region) {
-		blkio_unmap_mem_region(data->b, &data->mem_region);
-		blkio_free_mem_region(data->b, &data->mem_region);
+		fio_blkio_proc_lock();
+		blkio_unmap_mem_region(proc_state.b, &data->mem_region);
+		blkio_free_mem_region(proc_state.b, &data->mem_region);
+		fio_blkio_proc_unlock();
 
 		data->has_mem_region = false;
 	}
