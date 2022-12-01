@@ -2891,6 +2891,10 @@ with the caveat that when used on the command line, they must come after the
 
 	Submit vectored read and write requests.
 
+.. option:: libblkio_write_zeroes_on_trim : [libblkio]
+
+	Submit trims as "write zeroes" requests instead of discard requests.
+
 I/O depth
 ~~~~~~~~~
 

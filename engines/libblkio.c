@@ -41,6 +41,7 @@ struct fio_blkio_options {
 
 	unsigned int hipri;
 	unsigned int vectored;
+	unsigned int write_zeroes_on_trim;
 };
 
 static struct fio_option options[] = {
@@ -86,6 +87,16 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_STR_SET,
 		.off1	= offsetof(struct fio_blkio_options, vectored),
 		.help	= "Use blkioq_{readv,writev}() instead of blkioq_{read,write}()",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_LIBBLKIO,
+	},
+	{
+		.name	= "libblkio_write_zeroes_on_trim",
+		.lname	= "Use blkioq_write_zeroes() for TRIM",
+		.type	= FIO_OPT_STR_SET,
+		.off1	= offsetof(struct fio_blkio_options,
+				   write_zeroes_on_trim),
+		.help	= "Use blkioq_write_zeroes() for TRIM instead of blkioq_discard()",
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_LIBBLKIO,
 	},
@@ -455,8 +466,13 @@ static enum fio_q_status fio_blkio_queue(struct thread_data *td,
 			}
 			break;
 		case DDIR_TRIM:
-			blkioq_discard(data->q, io_u->offset, io_u->xfer_buflen,
-				       io_u, 0);
+			if (options->write_zeroes_on_trim) {
+				blkioq_write_zeroes(data->q, io_u->offset,
+						    io_u->xfer_buflen, io_u, 0);
+			} else {
+				blkioq_discard(data->q, io_u->offset,
+					       io_u->xfer_buflen, io_u, 0);
+			}
 		        break;
 		case DDIR_SYNC:
 		case DDIR_DATASYNC:
