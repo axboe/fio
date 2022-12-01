@@ -2195,6 +2195,12 @@ I/O engine
 			the SPDK NVMe driver, or your own custom NVMe driver. The xnvme engine includes
 			engine specific options. (See https://xnvme.io).
 
+		**libblkio**
+			Use the libblkio library
+			(https://gitlab.com/libblkio/libblkio). The specific
+			*driver* to use must be set using
+			:option:`libblkio_driver`.
+
 I/O engine specific parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -2846,6 +2852,33 @@ with the caveat that when used on the command line, they must come after the
 .. option:: xnvme_iovec=int : [xnvme]
 
 	If this option is set. xnvme will use vectored read/write commands.
+
+.. option:: libblkio_driver=str : [libblkio]
+
+	The libblkio *driver* to use. Different drivers access devices through
+	different underlying interfaces. Available drivers depend on the
+	libblkio version in use and are listed at
+	https://libblkio.gitlab.io/libblkio/blkio.html#drivers
+
+.. option:: libblkio_pre_connect_props=str : [libblkio]
+
+	A colon-separated list of libblkio properties to be set after creating
+	but before connecting the libblkio instance. Each property must have the
+	format ``<name>=<value>``. Colons can be escaped as ``\:``. These are
+	set after the engine sets any other properties, so those can be
+	overriden. Available properties depend on the libblkio version in use
+	and are listed at
+	https://libblkio.gitlab.io/libblkio/blkio.html#properties
+
+.. option:: libblkio_pre_start_props=str : [libblkio]
+
+	A colon-separated list of libblkio properties to be set after connecting
+	but before starting the libblkio instance. Each property must have the
+	format ``<name>=<value>``. Colons can be escaped as ``\:``. These are
+	set after the engine sets any other properties, so those can be
+	overriden. Available properties depend on the libblkio version in use
+	and are listed at
+	https://libblkio.gitlab.io/libblkio/blkio.html#properties
 
 I/O depth
 ~~~~~~~~~

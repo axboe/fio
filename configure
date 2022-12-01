@@ -176,6 +176,7 @@ libiscsi="no"
 libnbd="no"
 libnfs=""
 xnvme=""
+libblkio=""
 libzbc=""
 dfs=""
 seed_buckets=""
@@ -248,6 +249,8 @@ for opt do
   ;;
   --disable-xnvme) xnvme="no"
   ;;
+  --disable-libblkio) libblkio="no"
+  ;;
   --disable-tcmalloc) disable_tcmalloc="yes"
   ;;
   --disable-libnfs) libnfs="no"
@@ -304,6 +307,7 @@ if test "$show_help" = "yes" ; then
   echo "--enable-libiscsi       Enable iscsi support"
   echo "--enable-libnbd         Enable libnbd (NBD engine) support"
   echo "--disable-xnvme         Disable xnvme support even if found"
+  echo "--disable-libblkio      Disable libblkio support even if found"
   echo "--disable-libzbc        Disable libzbc even if found"
   echo "--disable-tcmalloc      Disable tcmalloc support"
   echo "--dynamic-libengines    Lib-based ioengines as dynamic libraries"
@@ -2664,6 +2668,22 @@ fi
 print_config "xnvme engine" "$xnvme"
 
 ##########################################
+# Check if we have libblkio
+if test "$libblkio" != "no" ; then
+  if check_min_lib_version blkio 1.0.0; then
+    libblkio="yes"
+    libblkio_cflags=$(pkg-config --cflags blkio)
+    libblkio_libs=$(pkg-config --libs blkio)
+  else
+    if test "$libblkio" = "yes" ; then
+      feature_not_found "libblkio" "libblkio-dev or libblkio-devel"
+    fi
+    libblkio="no"
+  fi
+fi
+print_config "libblkio engine" "$libblkio"
+
+##########################################
 # check march=armv8-a+crc+crypto
 if test "$march_armv8_a_crc_crypto" != "yes" ; then
   march_armv8_a_crc_crypto="no"
@@ -3275,6 +3295,11 @@ if test "$xnvme" = "yes" ; then
   output_sym "CONFIG_LIBXNVME"
   echo "LIBXNVME_CFLAGS=$xnvme_cflags" >> $config_host_mak
   echo "LIBXNVME_LIBS=$xnvme_libs" >> $config_host_mak
+fi
+if test "$libblkio" = "yes" ; then
+  output_sym "CONFIG_LIBBLKIO"
+  echo "LIBBLKIO_CFLAGS=$libblkio_cflags" >> $config_host_mak
+  echo "LIBBLKIO_LIBS=$libblkio_libs" >> $config_host_mak
 fi
 if test "$dynamic_engines" = "yes" ; then
   output_sym "CONFIG_DYNAMIC_ENGINES"

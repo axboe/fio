@@ -237,6 +237,12 @@ ifdef CONFIG_LIBXNVME
   xnvme_CFLAGS = $(LIBXNVME_CFLAGS)
   ENGINES += xnvme
 endif
+ifdef CONFIG_LIBBLKIO
+  libblkio_SRCS = engines/libblkio.c
+  libblkio_LIBS = $(LIBBLKIO_LIBS)
+  libblkio_CFLAGS = $(LIBBLKIO_CFLAGS)
+  ENGINES += libblkio
+endif
 ifeq ($(CONFIG_TARGET_OS), Linux)
   SOURCE += diskutil.c fifo.c blktrace.c cgroup.c trim.c engines/sg.c \
 		oslib/linux-dev-lookup.c engines/io_uring.c engines/nvme.c
