@@ -156,7 +156,7 @@ static float plist[] = { 1.0, 5.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0,
 static int plist_len = 17;
 
 #ifndef IORING_REGISTER_MAP_BUFFERS
-#define IORING_REGISTER_MAP_BUFFERS	22
+#define IORING_REGISTER_MAP_BUFFERS	26
 struct io_uring_map_buffers {
 	__s32	fd;
 	__u32	buf_start;
