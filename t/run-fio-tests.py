@@ -387,10 +387,13 @@ class FioJobTest_t0007(FioJobTest):
 class FioJobTest_t0008(FioJobTest):
     """Test consists of fio test job t0008
     Confirm that read['io_kbytes'] = 32768 and that
-                write['io_kbytes'] ~ 16568
+                write['io_kbytes'] ~ 16384
 
-    I did runs with fio-ae2fafc8 and saw write['io_kbytes'] values of
-    16585, 16588. With two runs of fio-3.16 I obtained 16568"""
+    This is a 50/50 seq read/write workload. Since fio flips a coin to
+    determine whether to issue a read or a write, total bytes written will not
+    be exactly 16384K. But total bytes read will be exactly 32768K because
+    reads will include the initial phase as well as the verify phase where all
+    the blocks originally written will be read."""
 
     def check_result(self):
         super(FioJobTest_t0008, self).check_result()
@@ -398,10 +401,10 @@ class FioJobTest_t0008(FioJobTest):
         if not self.passed:
             return
 
-        ratio = self.json_data['jobs'][0]['write']['io_kbytes'] / 16568
+        ratio = self.json_data['jobs'][0]['write']['io_kbytes'] / 16384
         logging.debug("Test %d: ratio: %f", self.testnum, ratio)
 
-        if ratio < 0.99 or ratio > 1.01:
+        if ratio < 0.97 or ratio > 1.03:
             self.failure_reason = "{0} bytes written mismatch,".format(self.failure_reason)
             self.passed = False
         if self.json_data['jobs'][0]['read']['io_kbytes'] != 32768:
