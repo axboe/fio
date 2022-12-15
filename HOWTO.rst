@@ -1052,16 +1052,29 @@ Target file/device
 
 .. option:: max_open_zones=int
 
-	When running a random write test across an entire drive many more
-	zones will be open than in a typical application workload. Hence this
-	command line option that allows one to limit the number of open zones. The
-	number of open zones is defined as the number of zones to which write
-	commands are issued.
+	A zone of a zoned block device is in the open state when it is partially
+	written (i.e. not all sectors of the zone have been written). Zoned
+	block devices may have a limit on the total number of zones that can
+	be simultaneously in the open state, that is, the number of zones that
+	can be written to simultaneously. The :option:`max_open_zones` parameter
+	limits the number of zones to which write commands are issued by all fio
+	jobs, that is, limits the number of zones that will be in the open
+	state. This parameter is relevant only if the :option:`zonemode` =zbd is
+	used. The default value is always equal to maximum number of open zones
+	of the target zoned block device and a value higher than this limit
+	cannot be specified by users unless the option
+	:option:`ignore_zone_limits` is specified. When
+	:option:`ignore_zone_limits` is specified or the target device has no
+	limit on the number of zones that can be in an open state,
+	:option:`max_open_zones` can specify 0 to disable any limit on the
+	number of zones that can be simultaneously written to by all jobs.
 
 .. option:: job_max_open_zones=int
 
-	Limit on the number of simultaneously opened zones per single
-	thread/process.
+	In the same manner as :option:`max_open_zones`, limit the number of open
+	zones per fio job, that is, the number of zones that a single job can
+	simultaneously write to. A value of zero indicates no limit.
+	Default: zero.
 
 .. option:: ignore_zone_limits=bool
 
