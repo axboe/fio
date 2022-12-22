@@ -2845,6 +2845,9 @@ with the caveat that when used on the command line, they must come after the
 	**posix**
 		Use the posix asynchronous I/O interface to perform one or
 		more I/O operations asynchronously.
+	**vfio**
+		Use the user-space VFIO-based backend, implemented using
+		libvfn instead of SPDK.
 	**nil**
 		Do not transfer any data; just pretend to. This is mainly used
 		for introspective performance evaluation.
@@ -2875,7 +2878,7 @@ with the caveat that when used on the command line, they must come after the
 
 .. option:: xnvme_dev_nsid=int : [xnvme]
 
-	xnvme namespace identifier for userspace NVMe driver, such as SPDK.
+	xnvme namespace identifier for userspace NVMe driver, SPDK or vfio.
 
 .. option:: xnvme_iovec=int : [xnvme]
 

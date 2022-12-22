@@ -2584,6 +2584,10 @@ Use Linux aio for Asynchronous I/O
 Use the posix asynchronous I/O interface to perform one or more I/O operations
 asynchronously.
 .TP
+.BI vfio
+Use the user-space VFIO-based backend, implemented using libvfn instead of
+SPDK.
+.TP
 .BI nil
 Do not transfer any data; just pretend to. This is mainly used for
 introspective performance evaluation.
@@ -2621,7 +2625,7 @@ Use Linux Block Layer ioctl() and sysfs for admin commands.
 .RE
 .TP
 .BI (xnvme)xnvme_dev_nsid\fR=\fPint
-xnvme namespace identifier for userspace NVMe driver such as SPDK.
+xnvme namespace identifier for userspace NVMe driver SPDK or vfio.
 .TP
 .BI (xnvme)xnvme_iovec
 If this option is set, xnvme will use vectored read/write commands.
