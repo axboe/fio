@@ -2885,6 +2885,23 @@ with the caveat that when used on the command line, they must come after the
 	Sets the subsystem NQN for fabrics. This is for xNVMe to utilize a
 	fabrics target with multiple systems.
 
+.. option:: xnvme_mem=str : [xnvme]
+
+	Select the xnvme memory backend. This can take these values.
+
+	**posix**
+		This is the default posix memory backend for linux NVMe driver.
+	**hugepage**
+		Use hugepages, instead of existing posix memory backend. The
+		memory backend uses hugetlbfs. This require users to allocate
+		hugepages, mount hugetlbfs and set an enviornment variable for
+		XNVME_HUGETLB_PATH.
+	**spdk**
+		Uses SPDK's memory allocator.
+	**vfio**
+		Uses libvfn's memory allocator. This also specifies the use
+		of libvfn backend instead of SPDK.
+
 .. option:: xnvme_iovec=int : [xnvme]
 
 	If this option is set. xnvme will use vectored read/write commands.

@@ -75,6 +75,7 @@ struct xnvme_fioe_options {
 	unsigned int xnvme_dev_nsid;
 	unsigned int xnvme_iovec;
 	char *xnvme_be;
+	char *xnvme_mem;
 	char *xnvme_async;
 	char *xnvme_sync;
 	char *xnvme_admin;
@@ -106,6 +107,15 @@ static struct fio_option options[] = {
 		.type = FIO_OPT_STR_STORE,
 		.off1 = offsetof(struct xnvme_fioe_options, xnvme_be),
 		.help = "Select xNVMe backend [spdk,linux,fbsd]",
+		.category = FIO_OPT_C_ENGINE,
+		.group = FIO_OPT_G_XNVME,
+	},
+	{
+		.name = "xnvme_mem",
+		.lname = "xNVMe Memory Backend",
+		.type = FIO_OPT_STR_STORE,
+		.off1 = offsetof(struct xnvme_fioe_options, xnvme_mem),
+		.help = "Select xNVMe memory backend",
 		.category = FIO_OPT_C_ENGINE,
 		.group = FIO_OPT_G_XNVME,
 	},
@@ -193,6 +203,7 @@ static struct xnvme_opts xnvme_opts_from_fioe(struct thread_data *td)
 	opts.nsid = o->xnvme_dev_nsid;
 	opts.subnqn = o->xnvme_dev_subnqn;
 	opts.be = o->xnvme_be;
+	opts.mem = o->xnvme_mem;
 	opts.async = o->xnvme_async;
 	opts.sync = o->xnvme_sync;
 	opts.admin = o->xnvme_admin;
