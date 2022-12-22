@@ -322,12 +322,15 @@ static int xnvme_fioe_init(struct thread_data *td)
 
 	xd->iocq = calloc(td->o.iodepth, sizeof(struct io_u *));
 	if (!xd->iocq) {
-		log_err("ioeng->init(): !calloc(), err(%d)\n", errno);
+		free(xd);
+		log_err("ioeng->init(): !calloc(xd->iocq), err(%d)\n", errno);
 		return 1;
 	}
 
 	xd->iovec = calloc(td->o.iodepth, sizeof(*xd->iovec));
 	if (!xd->iovec) {
+		free(xd->iocq);
+		free(xd);
 		log_err("ioeng->init(): !calloc(xd->iovec), err(%d)\n", errno);
 		return 1;
 	}
@@ -338,6 +341,10 @@ static int xnvme_fioe_init(struct thread_data *td)
 	for_each_file(td, f, i)
 	{
 		if (_dev_open(td, f)) {
+			/*
+			 * Note: We are not freeing xd, iocq and iovec. This
+			 * will be done as part of cleanup routine.
+			 */
 			log_err("ioeng->init(): failed; _dev_open(%s)\n", f->file_name);
 			return 1;
 		}
@@ -506,9 +513,11 @@ static enum fio_q_status xnvme_fioe_queue(struct thread_data *td, struct io_u *i
 
 	default:
 		log_err("ioeng->queue(): ENOSYS: %u\n", io_u->ddir);
-		err = -1;
+		xnvme_queue_put_cmd_ctx(ctx->async.queue, ctx);
+
+		io_u->error = ENOSYS;
 		assert(false);
-		break;
+		return FIO_Q_COMPLETED;
 	}
 
 	if (vectored_io) {
