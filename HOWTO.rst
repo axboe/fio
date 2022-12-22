@@ -2880,6 +2880,11 @@ with the caveat that when used on the command line, they must come after the
 
 	xnvme namespace identifier for userspace NVMe driver, SPDK or vfio.
 
+.. option:: xnvme_dev_subnqn=str : [xnvme]
+
+	Sets the subsystem NQN for fabrics. This is for xNVMe to utilize a
+	fabrics target with multiple systems.
+
 .. option:: xnvme_iovec=int : [xnvme]
 
 	If this option is set. xnvme will use vectored read/write commands.

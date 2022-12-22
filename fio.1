@@ -2627,6 +2627,10 @@ Use Linux Block Layer ioctl() and sysfs for admin commands.
 .BI (xnvme)xnvme_dev_nsid\fR=\fPint
 xnvme namespace identifier for userspace NVMe driver SPDK or vfio.
 .TP
+.BI (xnvme)xnvme_dev_subnqn\fR=\fPstr
+Sets the subsystem NQN for fabrics. This is for xNVMe to utilize a fabrics
+target with multiple systems.
+.TP
 .BI (xnvme)xnvme_iovec
 If this option is set, xnvme will use vectored read/write commands.
 .TP

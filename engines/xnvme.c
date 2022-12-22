@@ -78,6 +78,7 @@ struct xnvme_fioe_options {
 	char *xnvme_async;
 	char *xnvme_sync;
 	char *xnvme_admin;
+	char *xnvme_dev_subnqn;
 };
 
 static struct fio_option options[] = {
@@ -146,6 +147,15 @@ static struct fio_option options[] = {
 		.group = FIO_OPT_G_XNVME,
 	},
 	{
+		.name = "xnvme_dev_subnqn",
+		.lname = "Subsystem nqn for Fabrics",
+		.type = FIO_OPT_STR_STORE,
+		.off1 = offsetof(struct xnvme_fioe_options, xnvme_dev_subnqn),
+		.help = "Subsystem NQN for Fabrics",
+		.category = FIO_OPT_C_ENGINE,
+		.group = FIO_OPT_G_XNVME,
+	},
+	{
 		.name = "xnvme_iovec",
 		.lname = "Vectored IOs",
 		.type = FIO_OPT_STR_SET,
@@ -181,6 +191,7 @@ static struct xnvme_opts xnvme_opts_from_fioe(struct thread_data *td)
 	struct xnvme_opts opts = xnvme_opts_default();
 
 	opts.nsid = o->xnvme_dev_nsid;
+	opts.subnqn = o->xnvme_dev_subnqn;
 	opts.be = o->xnvme_be;
 	opts.async = o->xnvme_async;
 	opts.sync = o->xnvme_sync;
