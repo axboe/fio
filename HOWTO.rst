@@ -1176,13 +1176,34 @@ I/O type
 			Generate the same offset.
 
 	``sequential`` is only useful for random I/O, where fio would normally
-	generate a new random offset for every I/O. If you append e.g. 8 to randread,
-	you would get a new random offset for every 8 I/Os. The result would be a
-	seek for only every 8 I/Os, instead of for every I/O. Use ``rw=randread:8``
-	to specify that. As sequential I/O is already sequential, setting
-	``sequential`` for that would not result in any differences.  ``identical``
-	behaves in a similar fashion, except it sends the same offset 8 number of
-	times before generating a new offset.
+	generate a new random offset for every I/O. If you append e.g. 8 to
+	randread, i.e. ``rw=randread:8`` you would get a new random offset for
+	every 8 I/Os. The result would be a sequence of 8 sequential offsets
+	with a random starting point. However this behavior may change if a
+	sequential I/O reaches end of the file. As sequential I/O is already
+	sequential, setting ``sequential`` for that would not result in any
+	difference. ``identical`` behaves in a similar fashion, except it sends
+	the same offset 8 number of times before generating a new offset.
+
+	Example #1::
+
+		rw=randread:8
+		rw_sequencer=sequential
+		bs=4k
+
+	The generated sequence of offsets will look like this:
+	4k, 8k, 12k, 16k, 20k, 24k, 28k, 32k, 92k, 96k, 100k, 104k, 108k,
+	112k, 116k, 120k, 48k, 52k ...
+
+	Example #2::
+
+		rw=randread:8
+		rw_sequencer=identical
+		bs=4k
+
+	The generated sequence of offsets will look like this:
+	4k, 4k, 4k, 4k, 4k, 4k, 4k, 4k, 92k, 92k, 92k, 92k, 92k, 92k, 92k, 92k,
+	48k, 48k, 48k ...
 
 .. option:: unified_rw_reporting=str
 
