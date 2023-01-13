@@ -848,8 +848,9 @@ static int parse_zone_info(struct thread_data *td, struct fio_file *f)
 			p->cond = z->cond;
 
 			if (j > 0 && p->start != p[-1].start + zone_size) {
-				log_info("%s: invalid zone data\n",
-					 f->file_name);
+				log_info("%s: invalid zone data [%d:%d]: %"PRIu64" + %"PRIu64" != %"PRIu64"\n",
+					 f->file_name, j, i,
+					 p[-1].start, zone_size, p->start);
 				ret = -EINVAL;
 				goto out;
 			}
