@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import errno
 from graphviz import Digraph
 import argparse
 import configparser
@@ -283,7 +284,6 @@ def setup_commandline():
                         help='keep the graphviz script file')
     parser.add_argument('--config', action='store',
                         type=str,
-                        default='fiograph.conf',
                         help='the configuration filename')
     args = parser.parse_args()
     return args
@@ -292,14 +292,26 @@ def setup_commandline():
 def main():
     global config_file
     args = setup_commandline()
+
     if args.output is None:
         output_file = args.file
         if output_file.endswith('.fio'):
             output_file = output_file[:-4]
     else:
         output_file = args.output
+
+    if args.config is None:
+        if os.path.exists('fiograph.conf'):
+            config_filename = 'fiograph.conf'
+        else:
+            config_filename = os.path.join(os.path.dirname(__file__), 'fiograph.conf')
+            if not os.path.exists(config_filename):
+                raise FileNotFoundError("Cannot locate configuration file")
+    else:
+        config_filename = args.config
     config_file = configparser.RawConfigParser(allow_no_value=True)
-    config_file.read(args.config)
+    config_file.read(config_filename)
+
     fio_to_graphviz(args.file, args.format).render(output_file, view=args.view)
     if not args.keep:
         os.remove(output_file)
