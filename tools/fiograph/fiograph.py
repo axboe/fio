@@ -294,7 +294,8 @@ def main():
     args = setup_commandline()
     if args.output is None:
         output_file = args.file
-        output_file = output_file.replace('.fio', '')
+        if output_file.endswith('.fio'):
+            output_file = output_file[:-4]
     else:
         output_file = args.output
     config_file = configparser.RawConfigParser(allow_no_value=True)
