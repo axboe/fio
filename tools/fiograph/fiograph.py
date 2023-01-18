@@ -274,7 +274,7 @@ def setup_commandline():
     parser.add_argument('--format', action='store',
                         type=str,
                         default='png',
-                        help='the output format')
+                        help='the output format (see https://graphviz.org/docs/outputs/)')
     parser.add_argument('--view', action='store_true',
                         default=False,
                         help='view the graph')
