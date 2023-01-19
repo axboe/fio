@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import uuid
+import time
 import errno
 from graphviz import Digraph
 import argparse
@@ -293,13 +295,6 @@ def main():
     global config_file
     args = setup_commandline()
 
-    if args.output is None:
-        output_file = args.file
-        if output_file.endswith('.fio'):
-            output_file = output_file[:-4]
-    else:
-        output_file = args.output
-
     if args.config is None:
         if os.path.exists('fiograph.conf'):
             config_filename = 'fiograph.conf'
@@ -312,9 +307,25 @@ def main():
     config_file = configparser.RawConfigParser(allow_no_value=True)
     config_file.read(config_filename)
 
-    fio_to_graphviz(args.file, args.format).render(output_file, view=args.view)
+    temp_filename = uuid.uuid4().hex
+    image_filename = fio_to_graphviz(args.file, args.format).render(temp_filename, view=args.view)
+
+    if args.output:
+        output_filename = args.output
+    else:
+        output_filename_stub = args.file
+        if output_filename_stub.endswith('.fio'):
+            output_filename_stub = output_filename_stub[:-4]
+        output_filename = image_filename.replace(temp_filename, output_filename_stub)
+    if args.view:
+        time.sleep(1)
+        # allow time for the file to be opened before renaming it
+    os.rename(image_filename, output_filename)
+
     if not args.keep:
-        os.remove(output_file)
+        os.remove(temp_filename)
+    else:
+        os.rename(temp_filename, output_filename_stub + '.graphviz')
 
 
 main()
