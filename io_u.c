@@ -2069,6 +2069,10 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 				icd->error = ret;
 		}
 	} else if (io_u->error) {
+		if (io_u->error == EAGAIN) {
+			requeue_io_u(td, io_u_ptr);
+			return;
+		}
 		icd->error = io_u->error;
 		io_u_log_error(td, io_u);
 	}
