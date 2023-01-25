@@ -554,11 +554,15 @@ ifneq (,$(findstring -Wimplicit-fallthrough,$(CFLAGS)))
 LEX_YY_CFLAGS := -Wno-implicit-fallthrough
 endif
 
+ifdef CONFIG_HAVE_NO_STRINGOP
+YTAB_YY_CFLAGS := -Wno-stringop-truncation
+endif
+
 lex.yy.o: lex.yy.c y.tab.h
 	$(QUIET_CC)$(CC) -o $@ $(CFLAGS) $(CPPFLAGS) $(LEX_YY_CFLAGS) -c $<
 
 y.tab.o: y.tab.c y.tab.h
-	$(QUIET_CC)$(CC) -o $@ $(CFLAGS) $(CPPFLAGS) -c $<
+	$(QUIET_CC)$(CC) -o $@ $(CFLAGS) $(CPPFLAGS) $(YTAB_YY_CFLAGS) -c $<
 
 y.tab.c: exp/expression-parser.y
 	$(QUIET_YACC)$(YACC) -o $@ -l -d -b y $<

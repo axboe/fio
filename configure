@@ -2827,6 +2827,22 @@ fi
 print_config "-Wimplicit-fallthrough=2" "$fallthrough"
 
 ##########################################
+# check if the compiler has -Wno-stringop-concatenation
+no_stringop="no"
+cat > $TMPC << EOF
+#include <stdio.h>
+
+int main(int argc, char **argv)
+{
+	return printf("%s\n", argv[0]);
+}
+EOF
+if compile_prog "-Wno-stringop-truncation -Werror" "" "no_stringop"; then
+  no_stringop="yes"
+fi
+print_config "-Wno-stringop-truncation" "$no_stringop"
+
+##########################################
 # check for MADV_HUGEPAGE support
 if test "$thp" != "yes" ; then
   thp="no"
@@ -3270,6 +3286,9 @@ if test "$timerfd_create" = "yes"; then
 fi
 if test "$fallthrough" = "yes"; then
   CFLAGS="$CFLAGS -Wimplicit-fallthrough"
+fi
+if test "$no_stringop" = "yes"; then
+  output_sym "CONFIG_HAVE_NO_STRINGOP"
 fi
 if test "$thp" = "yes" ; then
   output_sym "CONFIG_HAVE_THP"
