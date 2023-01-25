@@ -2685,20 +2685,22 @@ print_config "libblkio engine" "$libblkio"
 
 ##########################################
 # check march=armv8-a+crc+crypto
-if test "$march_armv8_a_crc_crypto" != "yes" ; then
-  march_armv8_a_crc_crypto="no"
-fi
+march_armv8_a_crc_crypto="no"
 if test "$cpu" = "arm64" ; then
   cat > $TMPC <<EOF
+#if __linux__
 #include <arm_acle.h>
 #include <arm_neon.h>
 #include <sys/auxv.h>
+#endif
 
 int main(void)
 {
   /* Can we also do a runtime probe? */
 #if __linux__
   return getauxval(AT_HWCAP);
+#elif defined(__APPLE__)
+  return 0;
 #else
 # error "Don't know how to do runtime probe for ARM CRC32c"
 #endif

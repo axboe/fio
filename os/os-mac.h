@@ -14,12 +14,14 @@
 #include <machine/endian.h>
 #include <libkern/OSByteOrder.h>
 
+#include "../arch/arch.h"
 #include "../file.h"
 
 #define FIO_USE_GENERIC_INIT_RANDOM_STATE
 #define FIO_HAVE_GETTID
 #define FIO_HAVE_CHARDEV_SIZE
 #define FIO_HAVE_NATIVE_FALLOCATE
+#define FIO_HAVE_CPU_HAS
 
 #define OS_MAP_ANON		MAP_ANON
 
@@ -104,6 +106,14 @@ static inline bool fio_fallocate(struct fio_file *f, uint64_t offset, uint64_t l
 	}
 
 	return false;
+}
+
+static inline bool os_cpu_has(cpu_features feature)
+{
+	/* just check for arm on OSX for now, we know that has it */
+	if (feature != CPU_ARM64_CRC32C)
+		return false;
+	return FIO_ARCH == arch_aarch64;
 }
 
 #endif
