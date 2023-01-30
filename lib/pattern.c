@@ -386,7 +386,8 @@ static int parse_and_fill_pattern(const char *in, unsigned int in_len,
 		assert(filled);
 		assert(filled <= out_len);
 		out_len -= filled;
-		out     += filled;
+		if (out)
+			out     += filled;
 		total   += filled;
 
 	} while (in_len);
