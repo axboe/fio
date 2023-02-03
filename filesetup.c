@@ -768,7 +768,7 @@ open_again:
 		else
 			from_hash = file_lookup_open(f, flags);
 	} else if (td_read(td)) {
-		if (f->filetype == FIO_TYPE_CHAR && !read_only)
+		if (td_ioengine_flagged(td, FIO_RO_NEEDS_RW_OPEN) && !read_only)
 			flags |= O_RDWR;
 		else
 			flags |= O_RDONLY;
