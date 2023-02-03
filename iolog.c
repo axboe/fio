@@ -492,17 +492,25 @@ static bool read_iolog(struct thread_data *td)
 			 */
 			if (!strcmp(act, "wait"))
 				rw = DDIR_WAIT;
-			else if (!strcmp(act, "read"))
+			else if (!strcmp(act, "read")) {
+				if (td->o.replay_skip & (1u << DDIR_READ))
+					continue;
 				rw = DDIR_READ;
-			else if (!strcmp(act, "write"))
+			} else if (!strcmp(act, "write")) {
+				if (td->o.replay_skip & (1u << DDIR_WRITE))
+					continue;
 				rw = DDIR_WRITE;
-			else if (!strcmp(act, "sync"))
+			} else if (!strcmp(act, "sync")) {
+				if (td->o.replay_skip & (1u << DDIR_SYNC))
+					continue;
 				rw = DDIR_SYNC;
-			else if (!strcmp(act, "datasync"))
+			} else if (!strcmp(act, "datasync"))
 				rw = DDIR_DATASYNC;
-			else if (!strcmp(act, "trim"))
+			else if (!strcmp(act, "trim")) {
+				if (td->o.replay_skip & (1u << DDIR_TRIM))
+					continue;
 				rw = DDIR_TRIM;
-			else {
+			} else {
 				log_err("fio: bad iolog file action: %s\n",
 									act);
 				continue;
