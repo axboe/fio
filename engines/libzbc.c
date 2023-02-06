@@ -469,7 +469,8 @@ FIO_STATIC struct ioengine_ops ioengine = {
 	.get_max_open_zones	= libzbc_get_max_open_zones,
 	.finish_zone		= libzbc_finish_zone,
 	.queue			= libzbc_queue,
-	.flags			= FIO_SYNCIO | FIO_NOEXTEND | FIO_RAWIO,
+	.flags			= FIO_SYNCIO | FIO_NOEXTEND | FIO_RAWIO |
+				  FIO_RO_NEEDS_RW_OPEN,
 };
 
 static void fio_init fio_libzbc_register(void)
