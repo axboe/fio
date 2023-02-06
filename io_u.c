@@ -785,7 +785,15 @@ static enum fio_ddir get_rw_ddir(struct thread_data *td)
 	else
 		ddir = DDIR_INVAL;
 
-	td->rwmix_ddir = rate_ddir(td, ddir);
+	if (!should_check_rate(td)) {
+		/*
+		 * avoid time-consuming call to utime_since_now() if rate checking
+		 * isn't being used. this imrpoves IOPs 50%. See:
+		 * https://github.com/axboe/fio/issues/1501#issuecomment-1418327049
+		 */
+		td->rwmix_ddir = ddir;
+	} else
+		td->rwmix_ddir = rate_ddir(td, ddir);
 	return td->rwmix_ddir;
 }
 
