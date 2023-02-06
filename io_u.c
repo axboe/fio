@@ -676,6 +676,13 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 	uint64_t now;
 
 	assert(ddir_rw(ddir));
+	if (!should_check_rate(td))
+		/*
+		 * avoid time-consuing call to utime_since_now() if rate checking
+		 * isn't being used. this imrpoves IOPs 50%. See:
+		 * https://github.com/axboe/fio/issues/1501#issuecomment-1418327049
+		 */
+		return ddir;
 	now = utime_since_now(&td->epoch);
 
 	/*
