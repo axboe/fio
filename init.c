@@ -981,6 +981,25 @@ static int fixup_options(struct thread_data *td)
 		}
 	}
 
+	for_each_td(td2) {
+		if (td->o.ss_check_interval != td2->o.ss_check_interval) {
+			log_err("fio: conflicting ss_check_interval: %llu and %llu, must be globally equal\n",
+					td->o.ss_check_interval, td2->o.ss_check_interval);
+			ret |= 1;
+		}
+	} end_for_each();
+	if (td->o.ss_dur && td->o.ss_check_interval / 1000L < 1000) {
+		log_err("fio: ss_check_interval must be at least 1s\n");
+		ret |= 1;
+
+	}
+	if (td->o.ss_dur && (td->o.ss_dur % td->o.ss_check_interval != 0 || td->o.ss_dur <= td->o.ss_check_interval)) {
+		log_err("fio: ss_duration %lluus must be multiple of ss_check_interval %lluus\n",
+				td->o.ss_dur, td->o.ss_check_interval);
+		ret |= 1;
+	}
+
+
 	return ret;
 }
 
