@@ -90,7 +90,8 @@ enum fio_ioengine_flags {
 	FIO_SKIPPABLE_IOMEM_ALLOC
 			= 1 << 17,	/* skip iomem_alloc & iomem_free if job sets mem/iomem */
 	FIO_RO_NEEDS_RW_OPEN
-			= 1 << 18,	/* open files in rw mode even if we have a read job */
+			= 1 << 18,	/* open files in rw mode even if we have a read job; only
+					   affects ioengines using generic_open_file */
 };
 
 /*
