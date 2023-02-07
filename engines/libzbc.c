@@ -68,9 +68,6 @@ static int libzbc_open_dev(struct thread_data *td, struct fio_file *f,
 		if (!read_only)
 			flags |= O_RDWR;
 	} else if (td_read(td)) {
-		if (f->filetype == FIO_TYPE_CHAR && !read_only)
-			flags |= O_RDWR;
-		else
 			flags |= O_RDONLY;
 	}
 
