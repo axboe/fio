@@ -11,6 +11,7 @@ extern uint64_t steadystate_bw_mean(struct thread_stat *);
 extern uint64_t steadystate_iops_mean(struct thread_stat *);
 
 extern bool steadystate_enabled;
+extern unsigned int ss_check_interval;
 
 struct steadystate_data {
 	double limit;
@@ -63,7 +64,5 @@ enum {
 	FIO_SS_IOPS_SLOPE	= FIO_SS_IOPS | FIO_SS_SLOPE,
 	FIO_SS_BW_SLOPE		= FIO_SS_BW | FIO_SS_SLOPE,
 };
-
-#define STEADYSTATE_MSEC	1000
 
 #endif

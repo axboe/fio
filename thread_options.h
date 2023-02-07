@@ -211,6 +211,7 @@ struct thread_options {
 	fio_fp64_t ss_limit;
 	unsigned long long ss_dur;
 	unsigned long long ss_ramp_time;
+	unsigned long long ss_check_interval;
 	unsigned int overwrite;
 	unsigned int bw_avg_time;
 	unsigned int iops_avg_time;
@@ -533,6 +534,7 @@ struct thread_options_pack {
 	uint64_t ss_ramp_time;
 	uint32_t ss_state;
 	fio_fp64_t ss_limit;
+	uint64_t ss_check_interval;
 	uint32_t overwrite;
 	uint32_t bw_avg_time;
 	uint32_t iops_avg_time;

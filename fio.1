@@ -3540,6 +3540,12 @@ value is interpreted in seconds.
 Allow the job to run for the specified duration before beginning data
 collection for checking the steady state job termination criterion. The
 default is 0. When the unit is omitted, the value is interpreted in seconds.
+.TP
+.BI steadystate_check_interval \fR=\fPtime "\fR,\fP ss_interval" \fR=\fPtime
+The values suring the rolling window will be collected with a period of this
+value. Default is 1s but that might not converge, especially for slower cards,
+so set this accordingly. When the unit is omitted, the value is interpreted
+in seconds.
 .SS "Measurements and reporting"
 .TP
 .BI per_job_logs \fR=\fPbool

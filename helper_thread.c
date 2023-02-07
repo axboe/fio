@@ -281,7 +281,7 @@ static void *helper_thread_main(void *data)
 		},
 		{
 			.name = "steadystate",
-			.interval_ms = steadystate_enabled ? STEADYSTATE_MSEC :
+			.interval_ms = steadystate_enabled ? ss_check_interval :
 				0,
 			.func = steadystate_check,
 		}

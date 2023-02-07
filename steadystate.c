@@ -4,6 +4,7 @@
 #include "steadystate.h"
 
 bool steadystate_enabled = false;
+unsigned int ss_check_interval = 1000;
 
 void steadystate_free(struct thread_data *td)
 {
@@ -15,8 +16,10 @@ void steadystate_free(struct thread_data *td)
 
 static void steadystate_alloc(struct thread_data *td)
 {
-	td->ss.bw_data = calloc(td->ss.dur, sizeof(uint64_t));
-	td->ss.iops_data = calloc(td->ss.dur, sizeof(uint64_t));
+	int intervals = td->ss.dur / (ss_check_interval / 1000L);
+
+	td->ss.bw_data = calloc(intervals, sizeof(uint64_t));
+	td->ss.iops_data = calloc(intervals, sizeof(uint64_t));
 
 	td->ss.state |= FIO_SS_DATA;
 }
@@ -64,6 +67,7 @@ static bool steadystate_slope(uint64_t iops, uint64_t bw,
 	double result;
 	struct steadystate_data *ss = &td->ss;
 	uint64_t new_val;
+	int intervals = ss->dur / (ss_check_interval / 1000L);
 
 	ss->bw_data[ss->tail] = bw;
 	ss->iops_data[ss->tail] = iops;
@@ -73,10 +77,10 @@ static bool steadystate_slope(uint64_t iops, uint64_t bw,
 	else
 		new_val = bw;
 
-	if (ss->state & FIO_SS_BUFFER_FULL || ss->tail - ss->head == ss->dur - 1) {
+	if (ss->state & FIO_SS_BUFFER_FULL || ss->tail - ss->head == intervals - 1) {
 		if (!(ss->state & FIO_SS_BUFFER_FULL)) {
 			/* first time through */
-			for(i = 0, ss->sum_y = 0; i < ss->dur; i++) {
+			for (i = 0, ss->sum_y = 0; i < intervals; i++) {
 				if (ss->state & FIO_SS_IOPS)
 					ss->sum_y += ss->iops_data[i];
 				else
@@ -123,9 +127,9 @@ static bool steadystate_slope(uint64_t iops, uint64_t bw,
 			return true;
 	}
 
-	ss->tail = (ss->tail + 1) % ss->dur;
+	ss->tail = (ss->tail + 1) % intervals;
 	if (ss->tail <= ss->head)
-		ss->head = (ss->head + 1) % ss->dur;
+		ss->head = (ss->head + 1) % intervals;
 
 	return false;
 }
@@ -138,18 +142,20 @@ static bool steadystate_deviation(uint64_t iops, uint64_t bw,
 	double mean;
 
 	struct steadystate_data *ss = &td->ss;
+	int intervals = ss->dur / (ss_check_interval / 1000L);
 
 	ss->bw_data[ss->tail] = bw;
 	ss->iops_data[ss->tail] = iops;
 
-	if (ss->state & FIO_SS_BUFFER_FULL || ss->tail - ss->head == ss->dur - 1) {
+	if (ss->state & FIO_SS_BUFFER_FULL || ss->tail - ss->head == intervals  - 1) {
 		if (!(ss->state & FIO_SS_BUFFER_FULL)) {
 			/* first time through */
-			for(i = 0, ss->sum_y = 0; i < ss->dur; i++)
+			for (i = 0, ss->sum_y = 0; i < intervals; i++) {
 				if (ss->state & FIO_SS_IOPS)
 					ss->sum_y += ss->iops_data[i];
 				else
 					ss->sum_y += ss->bw_data[i];
+			}
 			ss->state |= FIO_SS_BUFFER_FULL;
 		} else {		/* easy to update the sum */
 			ss->sum_y -= ss->oldest_y;
@@ -164,10 +170,10 @@ static bool steadystate_deviation(uint64_t iops, uint64_t bw,
 		else
 			ss->oldest_y = ss->bw_data[ss->head];
 
-		mean = (double) ss->sum_y / ss->dur;
+		mean = (double) ss->sum_y / intervals;
 		ss->deviation = 0.0;
 
-		for (i = 0; i < ss->dur; i++) {
+		for (i = 0; i < intervals; i++) {
 			if (ss->state & FIO_SS_IOPS)
 				diff = ss->iops_data[i] - mean;
 			else
@@ -180,8 +186,9 @@ static bool steadystate_deviation(uint64_t iops, uint64_t bw,
 		else
 			ss->criterion = ss->deviation;
 
-		dprint(FD_STEADYSTATE, "sum_y: %llu, mean: %f, max diff: %f, "
+		dprint(FD_STEADYSTATE, "intervals: %d, sum_y: %llu, mean: %f, max diff: %f, "
 					"objective: %f, limit: %f\n",
+					intervals,
 					(unsigned long long) ss->sum_y, mean,
 					ss->deviation, ss->criterion, ss->limit);
 
@@ -189,9 +196,9 @@ static bool steadystate_deviation(uint64_t iops, uint64_t bw,
 			return true;
 	}
 
-	ss->tail = (ss->tail + 1) % ss->dur;
-	if (ss->tail <= ss->head)
-		ss->head = (ss->head + 1) % ss->dur;
+	ss->tail = (ss->tail + 1) % intervals;
+	if (ss->tail == ss->head)
+		ss->head = (ss->head + 1) % intervals;
 
 	return false;
 }
@@ -228,10 +235,10 @@ int steadystate_check(void)
 		fio_gettime(&now, NULL);
 		if (ss->ramp_time && !(ss->state & FIO_SS_RAMP_OVER)) {
 			/*
-			 * Begin recording data one second after ss->ramp_time
+			 * Begin recording data one check interval after ss->ramp_time
 			 * has elapsed
 			 */
-			if (utime_since(&td->epoch, &now) >= (ss->ramp_time + 1000000L))
+			if (utime_since(&td->epoch, &now) >= (ss->ramp_time + ss_check_interval * 1000L))
 				ss->state |= FIO_SS_RAMP_OVER;
 		}
 
@@ -250,8 +257,10 @@ int steadystate_check(void)
 		memcpy(&ss->prev_time, &now, sizeof(now));
 
 		if (ss->state & FIO_SS_RAMP_OVER) {
-			group_bw += 1000 * (td_bytes - ss->prev_bytes) / rate_time;
-			group_iops += 1000 * (td_iops - ss->prev_iops) / rate_time;
+			group_bw += rate_time * (td_bytes - ss->prev_bytes) /
+				(ss_check_interval * ss_check_interval / 1000L);
+			group_iops += rate_time * (td_iops - ss->prev_iops) /
+				(ss_check_interval * ss_check_interval / 1000L);
 			++group_ramp_time_over;
 		}
 		ss->prev_iops = td_iops;
@@ -312,6 +321,7 @@ int td_steadystate_init(struct thread_data *td)
 		ss->dur = o->ss_dur;
 		ss->limit = o->ss_limit.u.f;
 		ss->ramp_time = o->ss_ramp_time;
+		ss_check_interval = o->ss_check_interval / 1000L;
 
 		ss->state = o->ss_state;
 		if (!td->ss.ramp_time)
@@ -345,26 +355,28 @@ uint64_t steadystate_bw_mean(struct thread_stat *ts)
 {
 	int i;
 	uint64_t sum;
-
+	int intervals = ts->ss_dur / (ss_check_interval / 1000L);
+	
 	if (!ts->ss_dur)
 		return 0;
 
-	for (i = 0, sum = 0; i < ts->ss_dur; i++)
+	for (i = 0, sum = 0; i < intervals; i++)
 		sum += ts->ss_bw_data[i];
 
-	return sum / ts->ss_dur;
+	return sum / intervals;
 }
 
 uint64_t steadystate_iops_mean(struct thread_stat *ts)
 {
 	int i;
 	uint64_t sum;
+	int intervals = ts->ss_dur / (ss_check_interval / 1000L);
 
 	if (!ts->ss_dur)
 		return 0;
 
-	for (i = 0, sum = 0; i < ts->ss_dur; i++)
+	for (i = 0, sum = 0; i < intervals; i++)
 		sum += ts->ss_iops_data[i];
 
-	return sum / ts->ss_dur;
+	return sum / intervals;
 }

@@ -1874,6 +1874,7 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 		struct json_array *iops, *bw;
 		int j, k, l;
 		char ss_buf[64];
+		int intervals = ts->ss_dur / (ss_check_interval / 1000L);
 
 		snprintf(ss_buf, sizeof(ss_buf), "%s%s:%f%s",
 			ts->ss_state & FIO_SS_IOPS ? "iops" : "bw",
@@ -1907,9 +1908,9 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 		if ((ts->ss_state & FIO_SS_ATTAINED) || !(ts->ss_state & FIO_SS_BUFFER_FULL))
 			j = ts->ss_head;
 		else
-			j = ts->ss_head == 0 ? ts->ss_dur - 1 : ts->ss_head - 1;
-		for (l = 0; l < ts->ss_dur; l++) {
-			k = (j + l) % ts->ss_dur;
+			j = ts->ss_head == 0 ? intervals - 1 : ts->ss_head - 1;
+		for (l = 0; l < intervals; l++) {
+			k = (j + l) % intervals;
 			json_array_add_value_int(bw, ts->ss_bw_data[k]);
 			json_array_add_value_int(iops, ts->ss_iops_data[k]);
 		}
