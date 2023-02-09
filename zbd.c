@@ -147,6 +147,11 @@ zbd_offset_to_zone(const struct fio_file *f,  uint64_t offset)
 	return zbd_get_zone(f, zbd_offset_to_zone_idx(f, offset));
 }
 
+static bool accounting_vdb(struct thread_data *td, const struct fio_file *f)
+{
+	return td->o.zrt.u.f && td_write(td);
+}
+
 /**
  * zbd_get_zoned_model - Get a device zoned model
  * @td: FIO thread data
@@ -285,9 +290,11 @@ static int zbd_reset_zone(struct thread_data *td, struct fio_file *f,
 		break;
 	}
 
-	pthread_mutex_lock(&f->zbd_info->mutex);
-	f->zbd_info->wp_valid_data_bytes -= data_in_zone;
-	pthread_mutex_unlock(&f->zbd_info->mutex);
+	if (accounting_vdb(td, f)) {
+		pthread_mutex_lock(&f->zbd_info->mutex);
+		f->zbd_info->wp_valid_data_bytes -= data_in_zone;
+		pthread_mutex_unlock(&f->zbd_info->mutex);
+	}
 
 	z->wp = z->start;
 
@@ -1195,6 +1202,9 @@ static uint64_t zbd_set_vdb(struct thread_data *td, const struct fio_file *f)
 	struct fio_zone_info *zb, *ze, *z;
 	uint64_t wp_vdb = 0;
 
+	if (!accounting_vdb(td, f))
+		return 0;
+
 	zb = zbd_get_zone(f, f->min_zone);
 	ze = zbd_get_zone(f, f->max_zone);
 	for (z = zb; z < ze; z++) {
@@ -1605,10 +1615,11 @@ static void zbd_queue_io(struct thread_data *td, struct io_u *io_u, int q,
 		 * z->wp > zone_end means that one or more I/O errors
 		 * have occurred.
 		 */
-		pthread_mutex_lock(&zbd_info->mutex);
-		if (z->wp <= zone_end)
+		if (accounting_vdb(td, f) && z->wp <= zone_end) {
+			pthread_mutex_lock(&zbd_info->mutex);
 			zbd_info->wp_valid_data_bytes += zone_end - z->wp;
-		pthread_mutex_unlock(&zbd_info->mutex);
+			pthread_mutex_unlock(&zbd_info->mutex);
+		}
 		z->wp = zone_end;
 		break;
 	default:
