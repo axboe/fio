@@ -154,6 +154,7 @@ static int io_workqueue_init_worker_fn(struct submit_worker *sw)
 	dup_files(td, parent);
 	td->eo = parent->eo;
 	fio_options_mem_dupe(td);
+	td->iolog_f = parent->iolog_f;
 
 	if (ioengine_load(td))
 		goto err;
