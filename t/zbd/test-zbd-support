@@ -1305,6 +1305,62 @@ test60() {
 	grep -q 'not support experimental verify' "${logfile}.${test_number}"
 }
 
+# Test fio errors out zone_reset_threshold option for multiple jobs with
+# different write ranges.
+test61() {
+	run_fio_on_seq "$(ioengine "psync")" --rw=write --size="$zone_size" \
+		       --numjobs=2 --offset_increment="$zone_size" \
+		       --zone_reset_threshold=0.1 --zone_reset_frequency=1 \
+		       --exitall_on_error=1 \
+		       >> "${logfile}.${test_number}" 2>&1 && return 1
+	grep -q 'different write ranges' "${logfile}.${test_number}"
+}
+
+# Test zone_reset_threshold option works for multiple jobs with same write
+# range.
+test62() {
+	local bs loops=2 size=$((zone_size))
+
+	[ -n "$is_zbd" ] && reset_zone "$dev" -1
+
+	# Two jobs write to single zone twice. Reset zone happens at next write
+	# after half of the zone gets filled. So 2 * 2 * 2 - 1 = 7 times zone
+	# resets are expected.
+	bs=$(min $((256*1024)) $((zone_size / 4)))
+	run_fio_on_seq "$(ioengine "psync")" --rw=write --bs="$bs" \
+		       --size=$size --loops=$loops --numjobs=2 \
+		       --zone_reset_frequency=1 --zone_reset_threshold=.5 \
+		       --group_reporting=1 \
+		       >> "${logfile}.${test_number}" 2>&1 || return $?
+	check_written $((size * loops * 2)) || return $?
+	check_reset_count -eq 7 || return $?
+}
+
+# Test zone_reset_threshold option works for a read job and a write job with
+# different IO range.
+test63() {
+	local bs loops=2 size=$((zone_size)) off1 off2
+
+	[ -n "$is_zbd" ] && reset_zone "$dev" -1
+
+	off1=$((first_sequential_zone_sector * 512))
+	off2=$((off1 + zone_size))
+	bs=$(min $((256*1024)) $((zone_size / 4)))
+
+	# One job writes to single zone twice. Reset zone happens at next write
+	# after half of the zone gets filled. So 2 * 2 - 1 = 3 times zone resets
+	# are expected.
+	run_fio "$(ioengine "psync")" --bs="$bs" --size=$size --loops=$loops \
+		--filename="$dev" --group_reporting=1 \
+		--zonemode=zbd --zonesize="$zone_size" --direct=1 \
+		--zone_reset_frequency=1 --zone_reset_threshold=.5 \
+		--name=r --rw=read --offset=$off1 "${job_var_opts[@]}" \
+		--name=w --rw=write --offset=$off2 "${job_var_opts[@]}" \
+		       >> "${logfile}.${test_number}" 2>&1 || return $?
+	check_written $((size * loops)) || return $?
+	check_reset_count -eq 3 || return $?
+}
+
 SECONDS=0
 tests=()
 dynamic_analyzer=()
