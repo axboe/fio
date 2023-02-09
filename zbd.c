@@ -286,7 +286,6 @@ static int zbd_reset_zone(struct thread_data *td, struct fio_file *f,
 	}
 
 	pthread_mutex_lock(&f->zbd_info->mutex);
-	f->zbd_info->sectors_with_data -= data_in_zone;
 	f->zbd_info->wp_sectors_with_data -= data_in_zone;
 	pthread_mutex_unlock(&f->zbd_info->mutex);
 
@@ -1201,7 +1200,6 @@ static uint64_t zbd_process_swd(struct thread_data *td,
 				const struct fio_file *f, enum swd_action a)
 {
 	struct fio_zone_info *zb, *ze, *z;
-	uint64_t swd = 0;
 	uint64_t wp_swd = 0;
 
 	zb = zbd_get_zone(f, f->min_zone);
@@ -1211,17 +1209,14 @@ static uint64_t zbd_process_swd(struct thread_data *td,
 			zone_lock(td, f, z);
 			wp_swd += z->wp - z->start;
 		}
-		swd += z->wp - z->start;
 	}
 
 	pthread_mutex_lock(&f->zbd_info->mutex);
 	switch (a) {
 	case CHECK_SWD:
-		assert(f->zbd_info->sectors_with_data == swd);
 		assert(f->zbd_info->wp_sectors_with_data == wp_swd);
 		break;
 	case SET_SWD:
-		f->zbd_info->sectors_with_data = swd;
 		f->zbd_info->wp_sectors_with_data = wp_swd;
 		break;
 	}
@@ -1231,7 +1226,7 @@ static uint64_t zbd_process_swd(struct thread_data *td,
 		if (z->has_wp)
 			zone_unlock(z);
 
-	return swd;
+	return wp_swd;
 }
 
 /*
@@ -1640,10 +1635,8 @@ static void zbd_queue_io(struct thread_data *td, struct io_u *io_u, int q,
 		 * have occurred.
 		 */
 		pthread_mutex_lock(&zbd_info->mutex);
-		if (z->wp <= zone_end) {
-			zbd_info->sectors_with_data += zone_end - z->wp;
+		if (z->wp <= zone_end)
 			zbd_info->wp_sectors_with_data += zone_end - z->wp;
-		}
 		pthread_mutex_unlock(&zbd_info->mutex);
 		z->wp = zone_end;
 		break;
@@ -1801,8 +1794,7 @@ enum fio_ddir zbd_adjust_ddir(struct thread_data *td, struct io_u *io_u,
 	if (ddir != DDIR_READ || !td_rw(td))
 		return ddir;
 
-	if (io_u->file->zbd_info->sectors_with_data ||
-	    td->o.read_beyond_wp)
+	if (io_u->file->last_start[DDIR_WRITE] != -1ULL || td->o.read_beyond_wp)
 		return DDIR_READ;
 
 	return DDIR_WRITE;
