@@ -857,7 +857,8 @@ value to be larger than the device reported limit. Default: false.
 A number between zero and one that indicates the ratio of written bytes in the
 zones with write pointers in the IO range to the size of the IO range. When
 current ratio is above this ratio, zones are reset periodically as
-\fBzone_reset_frequency\fR specifies.
+\fBzone_reset_frequency\fR specifies. If there are multiple jobs when using this
+option, the IO range for all write jobs has to be the same.
 .TP
 .BI zone_reset_frequency \fR=\fPfloat
 A number between zero and one that indicates how often a zone reset should be
