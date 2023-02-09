@@ -1074,6 +1074,52 @@ void zbd_recalc_options_with_zone_granularity(struct thread_data *td)
 	}
 }
 
+static uint64_t zbd_verify_and_set_vdb(struct thread_data *td,
+				       const struct fio_file *f)
+{
+	struct fio_zone_info *zb, *ze, *z;
+	uint64_t wp_vdb = 0;
+	struct zoned_block_device_info *zbdi = f->zbd_info;
+
+	assert(td->runstate < TD_RUNNING);
+	assert(zbdi);
+
+	if (!accounting_vdb(td, f))
+		return 0;
+
+	/*
+	 * Ensure that the I/O range includes one or more sequential zones so
+	 * that f->min_zone and f->max_zone have different values.
+	 */
+	if (!zbd_is_seq_job(f))
+		return 0;
+
+	if (zbdi->write_min_zone != zbdi->write_max_zone) {
+		if (zbdi->write_min_zone != f->min_zone ||
+		    zbdi->write_max_zone != f->max_zone) {
+			td_verror(td, EINVAL,
+				  "multi-jobs with different write ranges are "
+				  "not supported with zone_reset_threshold");
+			log_err("multi-jobs with different write ranges are "
+				"not supported with zone_reset_threshold\n");
+		}
+		return 0;
+	}
+
+	zbdi->write_min_zone = f->min_zone;
+	zbdi->write_max_zone = f->max_zone;
+
+	zb = zbd_get_zone(f, f->min_zone);
+	ze = zbd_get_zone(f, f->max_zone);
+	for (z = zb; z < ze; z++)
+		if (z->has_wp)
+			wp_vdb += z->wp - z->start;
+
+	zbdi->wp_valid_data_bytes = wp_vdb;
+
+	return wp_vdb;
+}
+
 int zbd_setup_files(struct thread_data *td)
 {
 	struct fio_file *f;
@@ -1099,12 +1145,18 @@ int zbd_setup_files(struct thread_data *td)
 		struct zoned_block_device_info *zbd = f->zbd_info;
 		struct fio_zone_info *z;
 		int zi;
+		uint64_t vdb;
 
 		assert(zbd);
 
 		f->min_zone = zbd_offset_to_zone_idx(f, f->file_offset);
 		f->max_zone =
 			zbd_offset_to_zone_idx(f, f->file_offset + f->io_size);
+
+		vdb = zbd_verify_and_set_vdb(td, f);
+
+		dprint(FD_ZBD, "%s(%s): valid data bytes = %" PRIu64 "\n",
+		       __func__, f->file_name, vdb);
 
 		/*
 		 * When all zones in the I/O range are conventional, io_size
@@ -1197,61 +1249,9 @@ static bool zbd_dec_and_reset_write_cnt(const struct thread_data *td,
 	return write_cnt == 0;
 }
 
-static uint64_t zbd_set_vdb(struct thread_data *td, const struct fio_file *f)
-{
-	struct fio_zone_info *zb, *ze, *z;
-	uint64_t wp_vdb = 0;
-	struct zoned_block_device_info *zbdi = f->zbd_info;
-
-	if (!accounting_vdb(td, f))
-		return 0;
-
-	/*
-	 * Ensure that the I/O range includes one or more sequential zones so
-	 * that f->min_zone and f->max_zone have different values.
-	 */
-	if (!zbd_is_seq_job(f))
-		return 0;
-
-	if (zbdi->write_min_zone != zbdi->write_max_zone) {
-		if (zbdi->write_min_zone != f->min_zone ||
-		    zbdi->write_max_zone != f->max_zone) {
-			td_verror(td, EINVAL,
-				  "multi-jobs with different write ranges are "
-				  "not supported with zone_reset_threshold");
-			log_err("multi-jobs with different write ranges are "
-				"not supported with zone_reset_threshold\n");
-		}
-		return 0;
-	}
-
-	zbdi->write_min_zone = f->min_zone;
-	zbdi->write_max_zone = f->max_zone;
-
-	zb = zbd_get_zone(f, f->min_zone);
-	ze = zbd_get_zone(f, f->max_zone);
-	for (z = zb; z < ze; z++) {
-		if (z->has_wp) {
-			zone_lock(td, f, z);
-			wp_vdb += z->wp - z->start;
-		}
-	}
-
-	pthread_mutex_lock(&zbdi->mutex);
-	zbdi->wp_valid_data_bytes = wp_vdb;
-	pthread_mutex_unlock(&zbdi->mutex);
-
-	for (z = zb; z < ze; z++)
-		if (z->has_wp)
-			zone_unlock(z);
-
-	return wp_vdb;
-}
-
 void zbd_file_reset(struct thread_data *td, struct fio_file *f)
 {
 	struct fio_zone_info *zb, *ze;
-	uint64_t vdb;
 	bool verify_data_left = false;
 
 	if (!f->zbd_info || !td_write(td))
@@ -1259,10 +1259,6 @@ void zbd_file_reset(struct thread_data *td, struct fio_file *f)
 
 	zb = zbd_get_zone(f, f->min_zone);
 	ze = zbd_get_zone(f, f->max_zone);
-	vdb = zbd_set_vdb(td, f);
-
-	dprint(FD_ZBD, "%s(%s): valid data bytes = %" PRIu64 "\n",
-	       __func__, f->file_name, vdb);
 
 	/*
 	 * If data verification is enabled reset the affected zones before
