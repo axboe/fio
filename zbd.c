@@ -286,7 +286,7 @@ static int zbd_reset_zone(struct thread_data *td, struct fio_file *f,
 	}
 
 	pthread_mutex_lock(&f->zbd_info->mutex);
-	f->zbd_info->wp_sectors_with_data -= data_in_zone;
+	f->zbd_info->wp_valid_data_bytes -= data_in_zone;
 	pthread_mutex_unlock(&f->zbd_info->mutex);
 
 	z->wp = z->start;
@@ -1190,35 +1190,35 @@ static bool zbd_dec_and_reset_write_cnt(const struct thread_data *td,
 	return write_cnt == 0;
 }
 
-static uint64_t zbd_set_swd(struct thread_data *td, const struct fio_file *f)
+static uint64_t zbd_set_vdb(struct thread_data *td, const struct fio_file *f)
 {
 	struct fio_zone_info *zb, *ze, *z;
-	uint64_t wp_swd = 0;
+	uint64_t wp_vdb = 0;
 
 	zb = zbd_get_zone(f, f->min_zone);
 	ze = zbd_get_zone(f, f->max_zone);
 	for (z = zb; z < ze; z++) {
 		if (z->has_wp) {
 			zone_lock(td, f, z);
-			wp_swd += z->wp - z->start;
+			wp_vdb += z->wp - z->start;
 		}
 	}
 
 	pthread_mutex_lock(&f->zbd_info->mutex);
-	f->zbd_info->wp_sectors_with_data = wp_swd;
+	f->zbd_info->wp_valid_data_bytes = wp_vdb;
 	pthread_mutex_unlock(&f->zbd_info->mutex);
 
 	for (z = zb; z < ze; z++)
 		if (z->has_wp)
 			zone_unlock(z);
 
-	return wp_swd;
+	return wp_vdb;
 }
 
 void zbd_file_reset(struct thread_data *td, struct fio_file *f)
 {
 	struct fio_zone_info *zb, *ze;
-	uint64_t swd;
+	uint64_t vdb;
 	bool verify_data_left = false;
 
 	if (!f->zbd_info || !td_write(td))
@@ -1226,10 +1226,10 @@ void zbd_file_reset(struct thread_data *td, struct fio_file *f)
 
 	zb = zbd_get_zone(f, f->min_zone);
 	ze = zbd_get_zone(f, f->max_zone);
-	swd = zbd_set_swd(td, f);
+	vdb = zbd_set_vdb(td, f);
 
-	dprint(FD_ZBD, "%s(%s): swd = %" PRIu64 "\n",
-	       __func__, f->file_name, swd);
+	dprint(FD_ZBD, "%s(%s): valid data bytes = %" PRIu64 "\n",
+	       __func__, f->file_name, vdb);
 
 	/*
 	 * If data verification is enabled reset the affected zones before
@@ -1607,7 +1607,7 @@ static void zbd_queue_io(struct thread_data *td, struct io_u *io_u, int q,
 		 */
 		pthread_mutex_lock(&zbd_info->mutex);
 		if (z->wp <= zone_end)
-			zbd_info->wp_sectors_with_data += zone_end - z->wp;
+			zbd_info->wp_valid_data_bytes += zone_end - z->wp;
 		pthread_mutex_unlock(&zbd_info->mutex);
 		z->wp = zone_end;
 		break;
@@ -1960,7 +1960,8 @@ retry:
 
 		/* Check whether the zone reset threshold has been exceeded */
 		if (td->o.zrf.u.f) {
-			if (zbdi->wp_sectors_with_data >= f->io_size * td->o.zrt.u.f &&
+			if (zbdi->wp_valid_data_bytes >=
+			    f->io_size * td->o.zrt.u.f &&
 			    zbd_dec_and_reset_write_cnt(td, f))
 				zb->reset_zone = 1;
 		}

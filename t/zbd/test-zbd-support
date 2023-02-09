@@ -1110,8 +1110,8 @@ test51() {
 	run_fio "${opts[@]}" >> "${logfile}.${test_number}" 2>&1 || return $?
 }
 
-# Verify that zone_reset_threshold only takes logical blocks from seq
-# zones into account, and logical blocks of conv zones are not counted.
+# Verify that zone_reset_threshold only accounts written bytes in seq
+# zones, and written data bytes of conv zones are not counted.
 test52() {
 	local off io_size
 
