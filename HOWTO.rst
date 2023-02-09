@@ -1085,9 +1085,10 @@ Target file/device
 
 .. option:: zone_reset_threshold=float
 
-	A number between zero and one that indicates the ratio of logical
-	blocks with data to the total number of logical blocks in the test
-	above which zones should be reset periodically.
+	A number between zero and one that indicates the ratio of written bytes
+	in the zones with write pointers in the IO range to the size of the IO
+	range. When current ratio is above this ratio, zones are reset
+	periodically as :option:`zone_reset_frequency` specifies.
 
 .. option:: zone_reset_frequency=float
 

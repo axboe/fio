@@ -854,9 +854,10 @@ of the zoned block device in use, thus allowing the option \fBmax_open_zones\fR
 value to be larger than the device reported limit. Default: false.
 .TP
 .BI zone_reset_threshold \fR=\fPfloat
-A number between zero and one that indicates the ratio of logical blocks with
-data to the total number of logical blocks in the test above which zones
-should be reset periodically.
+A number between zero and one that indicates the ratio of written bytes in the
+zones with write pointers in the IO range to the size of the IO range. When
+current ratio is above this ratio, zones are reset periodically as
+\fBzone_reset_frequency\fR specifies.
 .TP
 .BI zone_reset_frequency \fR=\fPfloat
 A number between zero and one that indicates how often a zone reset should be
