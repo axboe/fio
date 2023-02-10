@@ -439,7 +439,7 @@ static bool read_iolog(struct thread_data *td)
 	unsigned long long offset;
 	unsigned int bytes;
 	unsigned long long delay = 0;
-	int reads, writes, waits, fileno = 0, file_action = 0; /* stupid gcc */
+	int reads, writes, trims, waits, fileno = 0, file_action = 0; /* stupid gcc */
 	char *rfname, *fname, *act;
 	char *str, *p;
 	enum fio_ddir rw;
@@ -461,7 +461,7 @@ static bool read_iolog(struct thread_data *td)
 	rfname = fname = malloc(256+16);
 	act = malloc(256+16);
 
-	syncs = reads = writes = waits = 0;
+	syncs = reads = writes = trims = waits = 0;
 	while ((p = fgets(str, 4096, td->io_log_rfile)) != NULL) {
 		struct io_piece *ipo;
 		int r;
@@ -552,6 +552,13 @@ static bool read_iolog(struct thread_data *td)
 			if (read_only)
 				continue;
 			writes++;
+		} else if (rw == DDIR_TRIM) {
+			/*
+			 * Don't add a trim for ro mode
+			 */
+			if (read_only)
+				continue;
+			trims++;
 		} else if (rw == DDIR_WAIT) {
 			if (td->o.no_stall)
 				continue;
@@ -634,14 +641,16 @@ static bool read_iolog(struct thread_data *td)
 		return true;
 	}
 
-	if (!reads && !writes && !waits)
+	if (!reads && !writes && !waits && !trims)
 		return false;
-	else if (reads && !writes)
-		td->o.td_ddir = TD_DDIR_READ;
-	else if (!reads && writes)
-		td->o.td_ddir = TD_DDIR_WRITE;
-	else
-		td->o.td_ddir = TD_DDIR_RW;
+
+	td->o.td_ddir = 0;
+	if (reads)
+		td->o.td_ddir |= TD_DDIR_READ;
+	if (writes)
+		td->o.td_ddir |= TD_DDIR_WRITE;
+	if (trims)
+		td->o.td_ddir |= TD_DDIR_TRIM;
 
 	return true;
 }
