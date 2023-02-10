@@ -686,10 +686,12 @@ Time related parameters
 
 .. option:: runtime=time
 
-	Tell fio to terminate processing after the specified period of time.  It
-	can be quite hard to determine for how long a specified job will run, so
-	this parameter is handy to cap the total runtime to a given time.  When
-	the unit is omitted, the value is interpreted in seconds.
+	Limit runtime. The test will run until it completes the configured I/O
+	workload or until it has run for this specified amount of time, whichever
+	occurs first. It can be quite hard to determine for how long a specified
+	job will run, so this parameter is handy to cap the total runtime to a
+	given time.  When the unit is omitted, the value is interpreted in
+	seconds.
 
 .. option:: time_based
 
