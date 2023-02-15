@@ -1919,7 +1919,8 @@ static void *thread_main(void *data)
 			}
 		} while (1);
 
-		if (td_read(td) && td->io_bytes[DDIR_READ])
+		if (td->io_bytes[DDIR_READ] && (td_read(td) ||
+			((td->flags & TD_F_VER_BACKLOG) && td_write(td))))
 			update_runtime(td, elapsed_us, DDIR_READ);
 		if (td_write(td) && td->io_bytes[DDIR_WRITE])
 			update_runtime(td, elapsed_us, DDIR_WRITE);
