@@ -295,7 +295,7 @@ int allocate_io_mem(struct thread_data *td)
 
 	total_mem = td->orig_buffer_size;
 
-	if (td->o.odirect || td->o.mem_align || td->o.oatomic ||
+	if (td->o.odirect || td->o.mem_align ||
 	    td_ioengine_flagged(td, FIO_MEMALIGN)) {
 		total_mem += page_mask;
 		if (td->o.mem_align && td->o.mem_align > page_size)
@@ -341,7 +341,7 @@ void free_io_mem(struct thread_data *td)
 	unsigned int total_mem;
 
 	total_mem = td->orig_buffer_size;
-	if (td->o.odirect || td->o.oatomic)
+	if (td->o.odirect)
 		total_mem += page_mask;
 
 	if (td->io_ops->iomem_alloc && !fio_option_is_set(&td->o, mem_type)) {

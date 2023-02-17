@@ -205,12 +205,6 @@ static inline unsigned long long os_phys_mem(void)
 #define FIO_O_NOATIME	0
 #endif
 
-#ifdef O_ATOMIC
-#define OS_O_ATOMIC	O_ATOMIC
-#else
-#define OS_O_ATOMIC	040000000
-#endif
-
 #ifdef MADV_REMOVE
 #define FIO_MADV_FREE	MADV_REMOVE
 #endif

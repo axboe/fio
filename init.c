@@ -917,12 +917,6 @@ static int fixup_options(struct thread_data *td)
 	}
 
 	/*
-	 * O_ATOMIC implies O_DIRECT
-	 */
-	if (o->oatomic)
-		o->odirect = 1;
-
-	/*
 	 * If randseed is set, that overrides randrepeat
 	 */
 	if (fio_option_is_set(o, rand_seed))

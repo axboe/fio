@@ -1110,12 +1110,6 @@ I/O type
 	OpenBSD and ZFS on Solaris don't support direct I/O.  On Windows the synchronous
 	ioengines don't support direct I/O.  Default: false.
 
-.. option:: atomic=bool
-
-	If value is true, attempt to use atomic direct I/O. Atomic writes are
-	guaranteed to be stable once acknowledged by the operating system. Only
-	Linux supports O_ATOMIC right now.
-
 .. option:: buffered=bool
 
 	If value is true, use buffered I/O. This is the opposite of the

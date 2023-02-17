@@ -1333,7 +1333,7 @@ int init_io_u_buffers(struct thread_data *td)
 	 * overflow later. this adjustment may be too much if we get
 	 * lucky and the allocator gives us an aligned address.
 	 */
-	if (td->o.odirect || td->o.mem_align || td->o.oatomic ||
+	if (td->o.odirect || td->o.mem_align ||
 	    td_ioengine_flagged(td, FIO_RAWIO))
 		td->orig_buffer_size += page_mask + td->o.mem_align;
 
@@ -1352,7 +1352,7 @@ int init_io_u_buffers(struct thread_data *td)
 	if (data_xfer && allocate_io_mem(td))
 		return 1;
 
-	if (td->o.odirect || td->o.mem_align || td->o.oatomic ||
+	if (td->o.odirect || td->o.mem_align ||
 	    td_ioengine_flagged(td, FIO_RAWIO))
 		p = PTR_ALIGN(td->orig_buffer, page_mask) + td->o.mem_align;
 	else

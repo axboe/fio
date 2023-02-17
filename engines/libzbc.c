@@ -71,12 +71,6 @@ static int libzbc_open_dev(struct thread_data *td, struct fio_file *f,
 			flags |= O_RDONLY;
 	}
 
-	if (td->o.oatomic) {
-		td_verror(td, EINVAL, "libzbc does not support O_ATOMIC");
-		log_err("%s: libzbc does not support O_ATOMIC\n", f->file_name);
-		return -EINVAL;
-	}
-
 	ld = calloc(1, sizeof(*ld));
 	if (!ld)
 		return -ENOMEM;

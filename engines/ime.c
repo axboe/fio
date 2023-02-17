@@ -188,10 +188,6 @@ static int fio_ime_open_file(struct thread_data *td, struct fio_file *f)
 		return 1;
 	}
 
-	if (td->o.oatomic) {
-		td_verror(td, EINVAL, "IME does not support atomic IO");
-		return 1;
-	}
 	if (td->o.odirect)
 		flags |= O_DIRECT;
 	flags |= td->o.sync_io;
