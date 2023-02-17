@@ -866,6 +866,7 @@ static void handle_thinktime(struct thread_data *td, enum fio_ddir ddir,
 			     struct timespec *time)
 {
 	unsigned long long b;
+	unsigned long long runtime_left;
 	uint64_t total;
 	int left;
 	struct timespec now;
@@ -874,7 +875,7 @@ static void handle_thinktime(struct thread_data *td, enum fio_ddir ddir,
 	if (td->o.thinktime_iotime) {
 		fio_gettime(&now, NULL);
 		if (utime_since(&td->last_thinktime, &now)
-		    >= td->o.thinktime_iotime + td->o.thinktime) {
+		    >= td->o.thinktime_iotime) {
 			stall = true;
 		} else if (!fio_option_is_set(&td->o, thinktime_blocks)) {
 			/*
@@ -897,11 +898,24 @@ static void handle_thinktime(struct thread_data *td, enum fio_ddir ddir,
 
 	io_u_quiesce(td);
 
+	left = td->o.thinktime_spin;
+	if (td->o.timeout) {
+		runtime_left = td->o.timeout - utime_since_now(&td->epoch);
+		if (runtime_left < (unsigned long long)left)
+			left = runtime_left;
+	}
+
 	total = 0;
-	if (td->o.thinktime_spin)
-		total = usec_spin(td->o.thinktime_spin);
+	if (left)
+		total = usec_spin(left);
 
 	left = td->o.thinktime - total;
+	if (td->o.timeout) {
+		runtime_left = td->o.timeout - utime_since_now(&td->epoch);
+		if (runtime_left < (unsigned long long)left)
+			left = runtime_left;
+	}
+
 	if (left)
 		total += usec_sleep(td, left);
 
@@ -930,8 +944,10 @@ static void handle_thinktime(struct thread_data *td, enum fio_ddir ddir,
 		fio_gettime(time, NULL);
 
 	td->last_thinktime_blocks = b;
-	if (td->o.thinktime_iotime)
+	if (td->o.thinktime_iotime) {
+		fio_gettime(&now, NULL);
 		td->last_thinktime = now;
+	}
 }
 
 /*
