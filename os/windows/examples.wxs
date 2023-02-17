@@ -126,9 +126,6 @@
                   <File Source="..\..\examples\numa.fio" />
                 </Component>
                 <Component>
-                  <File Source="..\..\examples\pmemblk.fio" />
-                </Component>
-                <Component>
                   <File Source="..\..\examples\poisson-rate-submission.fio" />
                 </Component>
                 <Component>
@@ -212,7 +209,6 @@
             <ComponentRef Id="netio_multicast.fio" />
             <ComponentRef Id="null.fio" />
             <ComponentRef Id="numa.fio" />
-            <ComponentRef Id="pmemblk.fio" />
             <ComponentRef Id="poisson_rate_submission.fio" />
             <ComponentRef Id="rados.fio"/>
             <ComponentRef Id="rand_zones.fio" />

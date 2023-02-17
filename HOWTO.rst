@@ -2141,11 +2141,6 @@ I/O engine
 			before overwriting. The `trimwrite` mode works well for this
 			constraint.
 
-		**pmemblk**
-			Read and write using filesystem DAX to a file on a filesystem
-			mounted with DAX on a persistent memory device through the PMDK
-			libpmemblk library.
-
 		**dev-dax**
 			Read and write using device DAX to a persistent memory device (e.g.,
 			/dev/dax0.0) through the PMDK libpmem library.

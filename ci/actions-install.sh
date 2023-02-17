@@ -45,7 +45,6 @@ DPKGCFG
                 libnbd-dev
                 libpmem-dev
                 libpmem2-dev
-                libpmemblk-dev
                 libprotobuf-c-dev
                 librbd-dev
                 libtcmalloc-minimal4

@@ -208,11 +208,6 @@ ifdef CONFIG_MTD
   SOURCE += oslib/libmtd.c
   SOURCE += oslib/libmtd_legacy.c
 endif
-ifdef CONFIG_PMEMBLK
-  pmemblk_SRCS = engines/pmemblk.c
-  pmemblk_LIBS = -lpmemblk
-  ENGINES += pmemblk
-endif
 ifdef CONFIG_LINUX_DEVDAX
   dev-dax_SRCS = engines/dev-dax.c
   dev-dax_LIBS = -lpmem
