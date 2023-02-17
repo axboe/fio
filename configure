@@ -163,7 +163,6 @@ show_help="no"
 exit_val=0
 gfio_check="no"
 libhdfs="no"
-pmemblk="no"
 devdax="no"
 pmem="no"
 cuda="no"
@@ -2230,43 +2229,6 @@ fi
 print_config "libpmem2" "$libpmem2"
 
 ##########################################
-# Check whether we have libpmemblk
-# libpmem is a prerequisite
-if test "$libpmemblk" != "yes" ; then
-  libpmemblk="no"
-fi
-if test "$libpmem" = "yes"; then
-  cat > $TMPC << EOF
-#include <libpmemblk.h>
-int main(int argc, char **argv)
-{
-  PMEMblkpool *pbp;
-  pbp = pmemblk_open("", 0);
-  return 0;
-}
-EOF
-  if compile_prog "" "-lpmemblk" "libpmemblk"; then
-    libpmemblk="yes"
-  fi
-fi
-print_config "libpmemblk" "$libpmemblk"
-
-# Choose libpmem-based ioengines
-if test "$libpmem" = "yes" && test "$disable_pmem" = "no"; then
-  devdax="yes"
-  if test "$libpmem1_5" = "yes"; then
-    pmem="yes"
-  fi
-  if test "$libpmemblk" = "yes"; then
-    pmemblk="yes"
-  fi
-fi
-
-##########################################
-# Report whether pmemblk engine is enabled
-print_config "PMDK pmemblk engine" "$pmemblk"
-
-##########################################
 # Report whether dev-dax engine is enabled
 print_config "PMDK dev-dax engine" "$devdax"
 
@@ -3190,9 +3152,6 @@ if test "$libhdfs" = "yes" ; then
 fi
 if test "$mtd" = "yes" ; then
   output_sym "CONFIG_MTD"
-fi
-if test "$pmemblk" = "yes" ; then
-  output_sym "CONFIG_PMEMBLK"
 fi
 if test "$devdax" = "yes" ; then
   output_sym "CONFIG_LINUX_DEVDAX"
