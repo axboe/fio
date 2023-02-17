@@ -737,14 +737,11 @@ int generic_open_file(struct thread_data *td, struct fio_file *f)
 			f_out = stderr;
 	}
 
-	if (td_trim(td))
-		goto skip_flags;
 	if (td->o.odirect)
 		flags |= OS_O_DIRECT;
 	flags |= td->o.sync_io;
 	if (td->o.create_on_open && td->o.allow_create)
 		flags |= O_CREAT;
-skip_flags:
 	if (f->filetype != FIO_TYPE_FILE)
 		flags |= FIO_O_NOATIME;
 
