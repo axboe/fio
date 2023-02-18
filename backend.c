@@ -637,15 +637,6 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 	if (td->error)
 		return;
 
-	/*
-	 * verify_state needs to be reset before verification
-	 * proceeds so that expected random seeds match actual
-	 * random seeds in headers. The main loop will reset
-	 * all random number generators if randrepeat is set.
-	 */
-	if (!td->o.rand_repeatable)
-		td_fill_verify_state_seed(td);
-
 	td_set_runstate(td, TD_VERIFYING);
 
 	io_u = NULL;
@@ -1878,8 +1869,12 @@ static void *thread_main(void *data)
 		if (td->o.verify_only && td_write(td))
 			verify_bytes = do_dry_run(td);
 		else {
+			if (!td->o.rand_repeatable)
+				/* save verify rand state to replay hdr seeds later at verify */
+				frand_copy(&td->verify_state_last_do_io, &td->verify_state);
 			do_io(td, bytes_done);
-
+			if (!td->o.rand_repeatable)
+				frand_copy(&td->verify_state, &td->verify_state_last_do_io);
 			if (!ddir_rw_sum(bytes_done)) {
 				fio_mark_td_terminate(td);
 				verify_bytes = 0;
