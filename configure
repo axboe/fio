@@ -2228,6 +2228,14 @@ if compile_prog "" "-lpmem2" "libpmem2"; then
 fi
 print_config "libpmem2" "$libpmem2"
 
+# Choose libpmem-based ioengines
+if test "$libpmem" = "yes" && test "$disable_pmem" = "no"; then
+  devdax="yes"
+  if test "$libpmem1_5" = "yes"; then
+    pmem="yes"
+  fi
+fi
+
 ##########################################
 # Report whether dev-dax engine is enabled
 print_config "PMDK dev-dax engine" "$devdax"
