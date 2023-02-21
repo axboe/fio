@@ -258,6 +258,7 @@ struct thread_data {
 
 	struct frand_state bsrange_state[DDIR_RWDIR_CNT];
 	struct frand_state verify_state;
+	struct frand_state verify_state_last_do_io;
 	struct frand_state trim_state;
 	struct frand_state delay_state;
 
