@@ -984,8 +984,10 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	offset = io_u->offset;
 	if (td->o.zone_mode == ZONE_MODE_ZBD) {
 		ret = zbd_adjust_block(td, io_u);
-		if (ret == io_u_eof)
+		if (ret == io_u_eof) {
+			dprint(FD_IO, "zbd_adjust_block() returned io_u_eof\n");
 			return 1;
+		}
 	}
 
 	if (io_u->offset + io_u->buflen > io_u->file->real_file_size) {
