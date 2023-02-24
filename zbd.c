@@ -807,8 +807,8 @@ static int parse_zone_info(struct thread_data *td, struct fio_file *f)
 		goto out;
 	}
 
-	dprint(FD_ZBD, "Device %s has %d zones of size %"PRIu64" KB\n",
-	       f->file_name, nr_zones, zone_size / 1024);
+	dprint(FD_ZBD, "Device %s has %d zones of size %"PRIu64" KB and capacity %"PRIu64" KB\n",
+	       f->file_name, nr_zones, zone_size / 1024, zones[0].capacity / 1024);
 
 	zbd_info = scalloc(1, sizeof(*zbd_info) +
 			   (nr_zones + 1) * sizeof(zbd_info->zone_info[0]));
@@ -848,8 +848,9 @@ static int parse_zone_info(struct thread_data *td, struct fio_file *f)
 			p->cond = z->cond;
 
 			if (j > 0 && p->start != p[-1].start + zone_size) {
-				log_info("%s: invalid zone data\n",
-					 f->file_name);
+				log_info("%s: invalid zone data [%d:%d]: %"PRIu64" + %"PRIu64" != %"PRIu64"\n",
+					 f->file_name, j, i,
+					 p[-1].start, zone_size, p->start);
 				ret = -EINVAL;
 				goto out;
 			}
