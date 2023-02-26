@@ -1040,8 +1040,11 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 		}
 
 		if (io_u->ddir == DDIR_WRITE && td->flags & TD_F_DO_VERIFY) {
-			io_u->numberio = td->io_issues[io_u->ddir];
-			populate_verify_io_u(td, io_u);
+			if (!(io_u->flags & IO_U_F_PATTERN_DONE)) {
+				io_u_set(td, io_u, IO_U_F_PATTERN_DONE);
+				io_u->numberio = td->io_issues[io_u->ddir];
+				populate_verify_io_u(td, io_u);
+			}
 		}
 
 		ddir = io_u->ddir;
