@@ -1262,6 +1262,29 @@ static int fio_ioring_cmd_get_max_open_zones(struct thread_data *td,
 	return fio_nvme_get_max_open_zones(td, f, max_open_zones);
 }
 
+static int fio_ioring_cmd_fetch_ruhs(struct thread_data *td, struct fio_file *f,
+				     struct fio_ruhs_info *fruhs_info)
+{
+	struct nvme_fdp_ruh_status *ruhs;
+	int bytes, ret, i;
+
+	bytes = sizeof(*ruhs) + 128 * sizeof(struct nvme_fdp_ruh_status_desc);
+	ruhs = scalloc(1, bytes);
+	if (!ruhs)
+		return -ENOMEM;
+
+	ret = fio_nvme_iomgmt_ruhs(td, f, ruhs, bytes);
+	if (ret)
+		goto free;
+
+	fruhs_info->nr_ruhs = le16_to_cpu(ruhs->nruhsd);
+	for (i = 0; i < fruhs_info->nr_ruhs; i++)
+		fruhs_info->plis[i] = le16_to_cpu(ruhs->ruhss[i].pid);
+free:
+	sfree(ruhs);
+	return ret;
+}
+
 static struct ioengine_ops ioengine_uring = {
 	.name			= "io_uring",
 	.version		= FIO_IOOPS_VERSION,
@@ -1307,6 +1330,7 @@ static struct ioengine_ops ioengine_uring_cmd = {
 	.get_max_open_zones	= fio_ioring_cmd_get_max_open_zones,
 	.options		= options,
 	.option_struct_size	= sizeof(struct ioring_options),
+	.fdp_fetch_ruhs		= fio_ioring_cmd_fetch_ruhs,
 };
 
 static void fio_init fio_ioring_register(void)

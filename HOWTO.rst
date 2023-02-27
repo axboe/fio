@@ -2423,6 +2423,18 @@ with the caveat that when used on the command line, they must come after the
 	For direct I/O, requests will only succeed if cache invalidation isn't required,
 	file blocks are fully allocated and the disk request could be issued immediately.
 
+.. option:: fdp=bool : [io_uring_cmd]
+
+	Enable Flexible Data Placement mode for write commands.
+
+.. option:: fdp_pli=str : [io_uring_cmd]
+
+	Select which Placement ID Index/Indicies this job is allowed to use for
+	writes. By default, the job will cycle through all available Placement
+        IDs, so use this to isolate these identifiers to specific jobs. If you
+        want fio to use placement identifier only at indices 0, 2 and 5 specify
+        ``fdp_pli=0,2,5``.
+
 .. option:: cpuload=int : [cpuio]
 
 	Attempt to use the specified percentage of CPU cycles. This is a mandatory

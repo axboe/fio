@@ -67,6 +67,7 @@ enum nvme_admin_opcode {
 enum nvme_io_opcode {
 	nvme_cmd_write			= 0x01,
 	nvme_cmd_read			= 0x02,
+	nvme_cmd_io_mgmt_recv		= 0x12,
 	nvme_zns_cmd_mgmt_send		= 0x79,
 	nvme_zns_cmd_mgmt_recv		= 0x7a,
 };
@@ -191,6 +192,23 @@ struct nvme_zone_report {
 	__u8			rsvd8[56];
 	struct nvme_zns_desc	entries[];
 };
+
+struct nvme_fdp_ruh_status_desc {
+	__u16 pid;
+	__u16 ruhid;
+	__u32 earutr;
+	__u64 ruamw;
+	__u8  rsvd16[16];
+};
+
+struct nvme_fdp_ruh_status {
+	__u8  rsvd0[14];
+	__le16 nruhsd;
+	struct nvme_fdp_ruh_status_desc ruhss[];
+};
+
+int fio_nvme_iomgmt_ruhs(struct thread_data *td, struct fio_file *f,
+			 struct nvme_fdp_ruh_status *ruhs, __u32 bytes);
 
 int fio_nvme_get_info(struct fio_file *f, __u32 *nsid, __u32 *lba_sz,
 		      __u64 *nlba);

@@ -12,6 +12,7 @@
 
 /* Forward declarations */
 struct zoned_block_device_info;
+struct fdp_ruh_info;
 
 /*
  * The type of object we are working on
@@ -100,6 +101,8 @@ struct fio_file {
 	uint64_t real_file_size;
 	uint64_t file_offset;
 	uint64_t io_size;
+
+	struct fio_ruhs_info *ruhs_info;
 
 	/*
 	 * Zoned block device information. See also zonemode=zbd.

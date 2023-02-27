@@ -119,6 +119,9 @@ struct io_u {
 	 */
 	int (*end_io)(struct thread_data *, struct io_u **);
 
+	uint32_t dtype;
+	uint32_t dspec;
+
 	union {
 #ifdef CONFIG_LIBAIO
 		struct iocb iocb;

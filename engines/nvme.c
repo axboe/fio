@@ -28,7 +28,8 @@ int fio_nvme_uring_cmd_prep(struct nvme_uring_cmd *cmd, struct io_u *io_u,
 	cmd->cdw10 = slba & 0xffffffff;
 	cmd->cdw11 = slba >> 32;
 	/* cdw12 represent number of lba's for read/write */
-	cmd->cdw12 = nlb;
+	cmd->cdw12 = nlb | (io_u->dtype << 20);
+	cmd->cdw13 = io_u->dspec << 16;
 	if (iov) {
 		iov->iov_base = io_u->xfer_buf;
 		iov->iov_len = io_u->xfer_buflen;
@@ -344,4 +345,41 @@ int fio_nvme_get_max_open_zones(struct thread_data *td, struct fio_file *f,
 out:
 	close(fd);
 	return ret;
+}
+
+static inline int nvme_fdp_reclaim_unit_handle_status(int fd, __u32 nsid,
+						      __u32 data_len, void *data)
+{
+	struct nvme_passthru_cmd cmd = {
+		.opcode		= nvme_cmd_io_mgmt_recv,
+		.nsid		= nsid,
+		.addr		= (__u64)(uintptr_t)data,
+		.data_len 	= data_len,
+		.cdw10		= 1,
+		.cdw11		= (data_len >> 2) - 1,
+	};
+
+	return ioctl(fd, NVME_IOCTL_IO_CMD, &cmd);
+}
+
+int fio_nvme_iomgmt_ruhs(struct thread_data *td, struct fio_file *f,
+			 struct nvme_fdp_ruh_status *ruhs, __u32 bytes)
+{
+	struct nvme_data *data = FILE_ENG_DATA(f);
+	int fd, ret;
+
+	fd = open(f->file_name, O_RDONLY | O_LARGEFILE);
+	if (fd < 0)
+		return -errno;
+
+	ret = nvme_fdp_reclaim_unit_handle_status(fd, data->nsid, bytes, ruhs);
+	if (ret) {
+		log_err("%s: nvme_fdp_reclaim_unit_handle_status failed, err=%d\n",
+			f->file_name, ret);
+		errno = ENOTSUP;
+	} else
+		errno = 0;
+
+	close(fd);
+	return -errno;
 }

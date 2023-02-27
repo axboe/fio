@@ -251,6 +251,34 @@ int str_split_parse(struct thread_data *td, char *str,
 	return ret;
 }
 
+static int fio_fdp_cmp(const void *p1, const void *p2)
+{
+	const uint16_t *t1 = p1;
+	const uint16_t *t2 = p2;
+
+	return *t1 - *t2;
+}
+
+static int str_fdp_pli_cb(void *data, const char *input)
+{
+	struct thread_data *td = cb_data_to_td(data);
+	char *str, *p, *v;
+	int i = 0;
+
+	p = str = strdup(input);
+	strip_blank_front(&str);
+	strip_blank_end(str);
+
+	while ((v = strsep(&str, ",")) != NULL && i < FIO_MAX_PLIS)
+		td->o.fdp_plis[i++] = strtoll(v, NULL, 0);
+	free(p);
+
+	qsort(td->o.fdp_plis, i, sizeof(*td->o.fdp_plis), fio_fdp_cmp);
+	td->o.fdp_nrpli = i;
+
+	return 0;
+}
+
 static int str_bssplit_cb(void *data, const char *input)
 {
 	struct thread_data *td = cb_data_to_td(data);
@@ -3642,6 +3670,27 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.maxfp	= 1,
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_ZONE,
+	},
+	{
+		.name   = "fdp",
+		.lname  = "Flexible data placement",
+		.type   = FIO_OPT_BOOL,
+		.off1   = offsetof(struct thread_options, fdp),
+		.help   = "Use Data placement directive (FDP)",
+		.def	= "0",
+		.category = FIO_OPT_C_IO,
+		.group  = FIO_OPT_G_INVALID,
+	},
+	{
+		.name	= "fdp_pli",
+		.lname	= "FDP Placement ID indicies",
+		.type	= FIO_OPT_STR,
+		.cb	= str_fdp_pli_cb,
+		.off1	= offsetof(struct thread_options, fdp_plis),
+		.help	= "Sets which placement ids to use (defaults to all)",
+		.hide	= 1,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_INVALID,
 	},
 	{
 		.name	= "lockmem",
