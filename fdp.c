@@ -20,16 +20,22 @@ static int fdp_ruh_info(struct thread_data *td, struct fio_file *f,
 {
 	int ret = -EINVAL;
 
-	if (td->io_ops && td->io_ops->fdp_fetch_ruhs) {
+	if (!td->io_ops) {
+		log_err("fio: no ops set in fdp init?!\n");
+		return ret;
+	}
+
+	if (td->io_ops->fdp_fetch_ruhs) {
 		ret = td->io_ops->fdp_fetch_ruhs(td, f, ruhs);
 		if (ret < 0) {
 			td_verror(td, errno, "fdp fetch ruhs failed");
 			log_err("%s: fdp fetch ruhs failed (%d)\n",
 				f->file_name, errno);
 		}
-	} else
+	} else {
 		log_err("%s: engine (%s) lacks fetch ruhs\n",
 			f->file_name, td->io_ops->name);
+	}
 
 	return ret;
 }
