@@ -47,6 +47,7 @@ retry:
 		assert(res == 0);
 		goto retry;
 	}
+	io_u_set(td, io_u, IO_U_F_OVERLAP_LOCK);
 }
 
 static int io_workqueue_fn(struct submit_worker *sw,
