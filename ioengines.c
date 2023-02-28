@@ -341,10 +341,9 @@ enum fio_q_status td_io_queue(struct thread_data *td, struct io_u *io_u)
 	 * started the overlap check because the IO_U_F_FLIGHT
 	 * flag is now set
 	 */
-	if (io_u->flags & IO_U_F_OVERLAP_LOCK) {
+	if (td_offload_overlap(td)) {
 		int res = pthread_mutex_unlock(&overlap_check);
 		assert(res == 0);
-		io_u_clear(td, io_u, IO_U_F_OVERLAP_LOCK);
 	}
 
 	assert(fio_file_open(io_u->file));

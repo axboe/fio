@@ -22,7 +22,6 @@ enum {
 	IO_U_F_BARRIER		= 1 << 6,
 	IO_U_F_VER_LIST		= 1 << 7,
 	IO_U_F_PATTERN_DONE	= 1 << 8,
-	IO_U_F_OVERLAP_LOCK	= 1 << 9,
 };
 
 /*
