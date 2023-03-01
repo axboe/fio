@@ -181,6 +181,8 @@ dfs=""
 seed_buckets=""
 dynamic_engines="no"
 prefix=/usr/local
+spdk="no"
+spdk_dir=""
 
 # parse options
 for opt do
@@ -264,6 +266,10 @@ for opt do
   ;;
   --seed-buckets=*) seed_buckets="$optarg"
   ;;
+  --enable-spdk) spdk="yes"
+  ;;
+  --with-spdk=*) spdk_dir="$optarg"
+  ;;
   --help)
     show_help="yes"
     ;;
@@ -313,6 +319,8 @@ if test "$show_help" = "yes" ; then
   echo "--disable-dfs           Disable DAOS File System support even if found"
   echo "--enable-asan           Enable address sanitizer"
   echo "--seed-buckets=         Number of seed buckets for the refill-buffer"
+  echo "--enable-spdk           Enable SPDK support"
+  echo "--with-spdk=            SPDK source directory"
   exit $exit_val
 fi
 
@@ -2266,6 +2274,39 @@ if compile_prog "-I${ime_path}/include" "-L${ime_path}/lib -lim_client" "libime"
   LIBS="-lim_client $LIBS"
 fi
 print_config "DDN's Infinite Memory Engine" "$libime"
+
+##########################################
+# Check whether SPDK library is available
+if [ "$spdk" != "no" ] && [ -d "$spdk_dir" ] ; then
+  spdk_pkg_config_path=${spdk_dir}/build/lib/pkgconfig
+  spdk_mods="spdk_env_dpdk spdk_bdev spdk_event spdk_event_bdev spdk_nvme spdk_nvme spdk_accel \
+    spdk_nvmf spdk_event_nvmf spdk_iscsi spdk_event_iscsi"
+  spdk_libs="$(PKG_CONFIG_PATH="$spdk_pkg_config_path" pkg-config --libs $spdk_mods)"
+  spdk_sys=$(PKG_CONFIG_PATH="$spdk_pkg_config_path" pkg-config --libs --static spdk_syslibs)
+  spdk_ldflags="-Wl,--whole-archive,-Bstatic $spdk_libs -Wl,--no-whole-archive,-Bdynamic $spdk_sys"
+  spdk_cflags=$(PKG_CONFIG_PATH="$spdk_pkg_config_path" pkg-config --cflags $spdk_mods)
+  cat > $TMPC << EOF
+#include "spdk/event.h"
+#include "spdk/bdev.h"
+int main(int argc, char **argv)
+{
+  int rc;
+  rc = spdk_app_start(NULL, NULL, NULL);
+  return 0;
+}
+EOF
+  if compile_prog "$spdk_cflags" "$spdk_ldflags" "spdk"; then
+    CFLAGS="${spdk_cflags} $CFLAGS"
+    LDFLAGS="${spdk_ldflags} $LDFLAGS"
+    spdk="yes"
+    output_sym "CONFIG_HAVE_SPDK"
+  else
+    spdk="no"
+  fi
+else
+  spdk="no"
+fi
+print_config "SPDK engine" "$spdk"
 
 ##########################################
 # Check if we have libiscsi
