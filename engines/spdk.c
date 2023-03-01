@@ -42,6 +42,13 @@ struct spdk_fio_job {
 	struct spdk_ring	*cq;
 };
 
+struct spdk_fio_file {
+	struct thread_data	*td;
+	struct spdk_bdev	*bdev;
+	struct spdk_bdev_desc	*desc;
+	struct spdk_io_channel	*ch;
+};
+
 static void app_lock(void)
 {
 	if (pthread_mutex_lock(&ctrl.app_mutex)) {
@@ -485,19 +492,114 @@ static void cleanup(struct thread_data *td)
 	shutdown_app(td);
 }
 
-static int open_file(struct thread_data *td, struct fio_file *f)
+static void bdev_event_cb(enum spdk_bdev_event_type type, struct spdk_bdev *bdev, void *event_ctx)
 {
-	return -1;
+	log_err("Unhandled SPDK BDEV event\n");
+	abort();
 }
 
-static int close_file(struct thread_data *td, struct fio_file *f)
+static void open_file_msg(void *ctx)
 {
-	return -1;
+	struct fio_file *fio_file = ctx;
+	struct spdk_fio_file *spdk_file = fio_file->engine_data;
+	struct thread_data *td = spdk_file->td;
+	struct spdk_fio_job *job = td->io_ops_data;
+	int rc;
+
+	rc = spdk_bdev_open_ext(fio_file->file_name, true, bdev_event_cb, NULL, &spdk_file->desc);
+	if (rc) {
+		log_err("Cannot open SPDK BDEV %s\n", fio_file->file_name);
+		goto end;
+	}
+	spdk_file->bdev = spdk_bdev_desc_get_bdev(spdk_file->desc);
+
+	spdk_file->ch = spdk_bdev_get_io_channel(spdk_file->desc);
+	if (!spdk_file->ch) {
+		rc = -ENODEV;
+		log_err("Cannot get I/O channel of SPDK BDEV %s\n", fio_file->file_name);
+		spdk_bdev_close(spdk_file->desc);
+		goto end;
+	}
+end:
+	fio_complete(&job->cmpl, rc);
+}
+
+static int open_file(struct thread_data *td, struct fio_file *fio_file)
+{
+	struct spdk_fio_job *job = td->io_ops_data;
+	struct spdk_fio_file *spdk_file = calloc(1, sizeof(*spdk_file));
+
+	if (!spdk_file) {
+		log_err("Cannot allocate memory to open file\n");
+		return -ENOMEM;
+	}
+	spdk_file->td = td;
+	fio_file->engine_data = spdk_file;
+
+	fio_init_completion(&job->cmpl);
+	if (spdk_thread_send_msg(job->thread, open_file_msg, fio_file)) {
+		log_err("Cannot send message to open file\n");
+		goto error;
+	}
+	if (fio_wait_for_completion(&job->cmpl)) {
+		goto error;
+	}
+
+	return 0;
+error:
+	fio_file->engine_data = NULL;
+	free(spdk_file);
+	return -EINVAL;
+}
+
+static void close_file_msg(void *ctx)
+{
+	struct fio_file *fio_file = ctx;
+	struct spdk_fio_file *spdk_file = fio_file->engine_data;
+	struct thread_data *td = spdk_file->td;
+	struct spdk_fio_job *job = td->io_ops_data;
+
+	if (spdk_file->ch) {
+		spdk_put_io_channel(spdk_file->ch);
+		spdk_file->ch = NULL;
+	}
+
+	if (spdk_file->desc) {
+		spdk_bdev_close(spdk_file->desc);
+		spdk_file->desc = NULL;
+		spdk_file->bdev = NULL;
+	}
+
+	fio_complete(&job->cmpl, 0);
+}
+
+static int close_file(struct thread_data *td, struct fio_file *fio_file)
+{
+	struct spdk_fio_file *spdk_file = fio_file->engine_data;
+	struct spdk_fio_job *job = td->io_ops_data;
+	int rc;
+
+	if (!spdk_file) {
+		return 0;
+	}
+
+	fio_init_completion(&job->cmpl);
+
+	rc = spdk_thread_send_msg(job->thread, close_file_msg, fio_file);
+	if (!rc) {
+		rc = fio_wait_for_completion(&job->cmpl);
+		if (!rc) {
+			fio_file->engine_data = NULL;
+			free(spdk_file);
+		}
+	}
+
+	return rc;
 }
 
 static int iomem_alloc(struct thread_data *td, size_t total_mem)
 {
-	return -1;
+	return 0;
 }
 
 static void iomem_free(struct thread_data *td)
@@ -506,7 +608,7 @@ static void iomem_free(struct thread_data *td)
 
 static int io_u_init(struct thread_data *td, struct io_u *io_u)
 {
-	return -1;
+	return 0;
 }
 
 static void io_u_free(struct thread_data *td, struct io_u *io_u)
