@@ -13,7 +13,8 @@
 #include <spdk/bdev.h>
 
 struct spdk_fio_opts {
-	const char		*cpu_mask;
+	void*			reserved;
+	uint32_t		cpu;
 	char			*json_conf;
 	struct thread_data 	*td;
 	struct fio_completion	cmpl;
@@ -26,6 +27,8 @@ struct spdk_fio_ctrl {
 	pthread_mutex_t		app_mutex;
 	struct fio_completion	app_cmpl;
 	int			app_rc;
+	struct spdk_cpuset 	app_cpuset;
+	int			app_cpu_idx;
 } ctrl = { .app_mutex = PTHREAD_MUTEX_INITIALIZER };
 
 static void app_lock(void)
@@ -57,36 +60,66 @@ static struct fio_option fio_opts[] = {
 	},
 };
 
+static uint32_t prepare_opts_cpu_select(void)
+{
+	const uint32_t max_cpu = cpus_configured();
+	uint32_t selected_cpu = max_cpu;
+
+	while (true) {
+		if (spdk_cpuset_get_cpu(&ctrl.app_cpuset, ctrl.app_cpu_idx)) {
+			/* CPU selected */
+			selected_cpu = ctrl.app_cpu_idx;
+		}
+
+		ctrl.app_cpu_idx++;
+		if (ctrl.app_cpu_idx >= max_cpu) {
+			ctrl.app_cpu_idx = 0;
+		}
+
+		if (selected_cpu != max_cpu) {
+			break;
+		}
+	}
+
+	return selected_cpu;
+}
+
 static int prepare_opts_cpu_mask(struct thread_data *td)
 {
 	struct spdk_fio_opts *opts = td->eo;
-	struct spdk_cpuset cpuset = {};
 	int cpu = 0, i = 0, count = fio_cpu_count(&td->o.cpumask);
+	int rc = 0;
 
 	if (!fio_option_is_set(&td->o, cpumask)) {
 		log_err("SPDK engine requires specifying CPUs (set cpus_allowed)\n");
 		return -1;
 	}
 
-	if (opts->cpu_mask) {
-		/* Already configured */
-		return 0;
+	app_lock();
+
+	if (spdk_cpuset_count(&ctrl.app_cpuset)) {
+		/* Already configured, just select CPU for this job */
+		opts->cpu = prepare_opts_cpu_select();
+		goto end;
 	}
 
 	while (i < count) {
 		if (fio_cpu_isset(&td->o.cpumask, cpu)) {
-			spdk_cpuset_set_cpu(&cpuset, cpu, true);
+			spdk_cpuset_set_cpu(&ctrl.app_cpuset, cpu, true);
 			i++;
 		}
 		cpu++;
 	}
-	if (0 == spdk_cpuset_count(&cpuset)) {
+	if (0 == spdk_cpuset_count(&ctrl.app_cpuset)) {
 		log_err("SPDK cannot detect CPU cores to work on\n");
-		return -1;
+		rc = -1;
+		goto end;
 	}
-	opts->cpu_mask = strdup(spdk_cpuset_fmt(&cpuset));
+	opts->cpu = prepare_opts_cpu_select();
 
-	return 0;
+end:
+	app_unlock();
+	return rc;
 }
 
 static int prepare_opts_json_conf(struct thread_data *td)
@@ -166,7 +199,7 @@ static int prepare_app(struct thread_data *td)
 	spdk_app_opts_init(&ctrl.app_opts, sizeof(ctrl.app_opts));
 	ctrl.app_opts.name = "FIO SPDK Engine";
 	ctrl.app_opts.json_config_file = fio_opts->json_conf;
-	ctrl.app_opts.reactor_mask = fio_opts->cpu_mask;
+	ctrl.app_opts.reactor_mask = spdk_cpuset_fmt(&ctrl.app_cpuset);
 	ctrl.app_opts.disable_signal_handlers = true;
 
 	fio_init_completion(&ctrl.app_cmpl);
