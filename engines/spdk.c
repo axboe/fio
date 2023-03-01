@@ -12,6 +12,8 @@
 #include <spdk/event.h>
 #include <spdk/bdev.h>
 
+#define FIO_SPDK_RING_QUEUE_MAX 8
+
 struct spdk_fio_opts {
 	void*			reserved;
 	uint32_t		cpu;
@@ -40,13 +42,20 @@ struct spdk_fio_job {
 	struct spdk_poller	*poller;
 	struct spdk_ring	*sq;
 	struct spdk_ring	*cq;
+	void			*ios[FIO_SPDK_RING_QUEUE_MAX];
+	size_t			ios_count;
 };
 
 struct spdk_fio_file {
 	struct thread_data	*td;
+	struct spdk_fio_job	*job;
 	struct spdk_bdev	*bdev;
 	struct spdk_bdev_desc	*desc;
 	struct spdk_io_channel	*ch;
+};
+
+struct spdk_fio_io {
+	struct spdk_bdev_io_wait_entry io_wait;
 };
 
 static void app_lock(void)
@@ -317,16 +326,98 @@ error:
 	return -1;
 }
 
+static void submit_io_resume(void *ctx);
+
+static void submit_io_cb(struct spdk_bdev_io *bdev_io, bool success, void *ctx)
+{
+	struct io_u *io = ctx;
+	struct spdk_fio_file *file = io->file->engine_data;
+	struct spdk_fio_job *job = file->job;
+
+	if (!success) {
+		io->error = -EIO;
+	}
+
+	if (1 != spdk_ring_enqueue(job->cq, (void **)&io, 1, NULL)) {
+		/* Ring is enough big to enqueue all IOs, so this an error */
+		log_err("Cannot queue IO completion in the SPDK ring\n");
+		abort();
+	}
+
+	spdk_bdev_free_io(bdev_io);
+}
+
+static void submit_io(struct io_u *io)
+{
+	struct spdk_fio_file *file = io->file->engine_data;
+	int rc;
+
+	switch (io->ddir) {
+	case DDIR_READ:
+		rc = spdk_bdev_read(file->desc, file->ch, io->buf, io->offset, io->xfer_buflen,
+				    submit_io_cb, io);
+		break;
+	case DDIR_WRITE:
+		rc = spdk_bdev_write(file->desc, file->ch, io->buf, io->offset, io->xfer_buflen,
+				    submit_io_cb, io);
+		break;
+	case DDIR_TRIM:
+		rc = spdk_bdev_unmap(file->desc, file->ch, io->offset, io->xfer_buflen,
+				     submit_io_cb, io);
+		break;
+	case DDIR_SYNC:
+		rc = spdk_bdev_flush(file->desc, file->ch, io->offset, io->xfer_buflen,
+				     submit_io_cb, io);
+		break;
+	default:
+		rc = - ENOTSUP;
+		break;
+	}
+
+	if (!rc) {
+		return;
+	} else if (rc == -ENOMEM) {
+		/* The system is busy, register to wait until IO can be sent */
+		struct spdk_fio_io *spdk_io = io->engine_data;
+		struct spdk_bdev_io_wait_entry *io_wait = &spdk_io->io_wait;
+
+		io_wait->bdev = file->bdev;
+		io_wait->cb_fn = submit_io_resume;
+		io_wait->cb_arg = io;
+	} else if (rc) {
+		/* Unknow error, fail IO*/
+	}
+}
+
+static void submit_io_resume(void *ctx)
+{
+	submit_io(ctx);
+}
+
 static int poller(void *ctx)
 {
 	struct spdk_fio_job *job = ctx;
+	void *ios[FIO_SPDK_RING_QUEUE_MAX];
+	size_t count, i;
 
 	if (fio_unlikely(job->halt)) {
 		spdk_poller_unregister(&job->poller);
 		return SPDK_POLLER_IDLE;
 	}
 
-	return SPDK_POLLER_IDLE;
+	count = spdk_ring_dequeue(job->sq, ios, FIO_SPDK_RING_QUEUE_MAX);
+	if (count) {
+		for (i = 0; i < count; i++) {
+			struct io_u *io = ios[i];
+			submit_io(io);
+		}
+	}
+
+	if (count) {
+		return SPDK_POLLER_BUSY;
+	} else {
+		return SPDK_POLLER_IDLE;
+	}
 }
 
 static void init_thread(void *ctx)
@@ -469,19 +560,40 @@ error:
 
 static enum fio_q_status queue(struct thread_data *td, struct io_u *io_u)
 {
-	io_u->error = -EINVAL;
-	return FIO_Q_COMPLETED;
+	struct spdk_fio_job *job = td->io_ops_data;
+
+	if (1 == spdk_ring_enqueue(job->sq, (void **)&io_u, 1, NULL)) {
+		return FIO_Q_QUEUED;
+	} else {
+		/* Ring is enough big to enqueue all IOs, so this an error */
+		log_err("Cannot queue IO in the SPDK ring\n");
+		io_u->error = -EINVAL;
+		return FIO_Q_COMPLETED;
+	}
 }
 
 static int get_events(struct thread_data *td, unsigned int min,
 	unsigned int max, const struct timespec *t)
 {
-	return 0;
+	struct spdk_fio_job *job = td->io_ops_data;
+
+	do {
+		job->ios_count = spdk_ring_dequeue(job->cq, job->ios, FIO_SPDK_RING_QUEUE_MAX);
+	} while (job->ios_count == 0);
+
+	return job->ios_count;
 }
 
 static struct io_u *event(struct thread_data *td, int event)
 {
-	return NULL;
+	struct spdk_fio_job *job = td->io_ops_data;
+
+	if (event >= 0 && event < job->ios_count) {
+		struct io_u *io = job->ios[event];
+		return io;
+	} else {
+		return NULL;
+	}
 }
 
 static void cleanup(struct thread_data *td)
@@ -495,7 +607,6 @@ static void cleanup(struct thread_data *td)
 static void bdev_event_cb(enum spdk_bdev_event_type type, struct spdk_bdev *bdev, void *event_ctx)
 {
 	log_err("Unhandled SPDK BDEV event\n");
-	abort();
 }
 
 static void open_file_msg(void *ctx)
@@ -534,6 +645,7 @@ static int open_file(struct thread_data *td, struct fio_file *fio_file)
 		return -ENOMEM;
 	}
 	spdk_file->td = td;
+	spdk_file->job = job;
 	fio_file->engine_data = spdk_file;
 
 	fio_init_completion(&job->cmpl);
@@ -599,26 +711,44 @@ static int close_file(struct thread_data *td, struct fio_file *fio_file)
 
 static int iomem_alloc(struct thread_data *td, size_t total_mem)
 {
-	return 0;
+	td->orig_buffer = spdk_dma_zmalloc(total_mem, 4096, NULL);
+	if (td->orig_buffer) {
+		return 0;
+	} else {
+		return -ENOMEM;
+	}
 }
 
 static void iomem_free(struct thread_data *td)
 {
+	if (td->orig_buffer) {
+		spdk_dma_free(td->orig_buffer);
+		td->orig_buffer = NULL;
+	}
 }
 
 static int io_u_init(struct thread_data *td, struct io_u *io_u)
 {
+	struct spdk_fio_io *spdk_io = calloc(1, sizeof(*spdk_io));
+
+	if (!spdk_io) {
+		return -ENOMEM;
+	}
+
+	io_u->engine_data = spdk_io;
 	return 0;
 }
 
 static void io_u_free(struct thread_data *td, struct io_u *io_u)
 {
+	free(io_u->engine_data);
+	io_u->engine_data = NULL;
 }
 
 FIO_STATIC struct ioengine_ops ioengine = {
 	.name			= "spdk",
 	.version		= FIO_IOOPS_VERSION,
-	.flags			= FIO_RAWIO | FIO_NOEXTEND | FIO_NODISKUTIL | FIO_MEMALIGN,
+	.flags			= FIO_RAWIO | FIO_NOEXTEND | FIO_NODISKUTIL | FIO_MEMALIGN | FIO_DISKLESSIO,
 
 	.setup			= setup,
 	.init			= init,
