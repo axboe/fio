@@ -31,6 +31,17 @@ struct spdk_fio_ctrl {
 	int			app_cpu_idx;
 } ctrl = { .app_mutex = PTHREAD_MUTEX_INITIALIZER };
 
+struct spdk_fio_job {
+	int			halt;
+	struct thread_data	*td;
+	struct spdk_cpuset 	cpuset;
+	struct fio_completion	cmpl;
+	struct spdk_thread	*thread;
+	struct spdk_poller	*poller;
+	struct spdk_ring	*sq;
+	struct spdk_ring	*cq;
+};
+
 static void app_lock(void)
 {
 	if (pthread_mutex_lock(&ctrl.app_mutex)) {
@@ -299,8 +310,153 @@ error:
 	return -1;
 }
 
+static int poller(void *ctx)
+{
+	struct spdk_fio_job *job = ctx;
+
+	if (fio_unlikely(job->halt)) {
+		spdk_poller_unregister(&job->poller);
+		return SPDK_POLLER_IDLE;
+	}
+
+	return SPDK_POLLER_IDLE;
+}
+
+static void init_thread(void *ctx)
+{
+	int rc = 0;
+	struct spdk_fio_job *job = ctx;
+	struct thread_data *td = job->td;
+
+	/* Create submission ring */
+	job->sq = spdk_ring_create(SPDK_RING_TYPE_SP_SC, spdk_align64pow2(td->o.iodepth * 2),
+				    SPDK_ENV_SOCKET_ID_ANY);
+	if (!job->sq) {
+		log_err("Cannot create SPDK thread submission ring\n");
+		rc = -ENOMEM;
+		goto end;
+	}
+
+	/* Create completion ring */
+	job->cq = spdk_ring_create(SPDK_RING_TYPE_SP_SC, spdk_align64pow2(td->o.iodepth * 2),
+				    SPDK_ENV_SOCKET_ID_ANY);
+	if (!job->cq) {
+		log_err("Cannot create SPDK thread completion ring\n");
+		rc = -ENOMEM;
+		goto end;
+	}
+
+	/* Create the SPDK poller working within the thread */
+	job->poller = SPDK_POLLER_REGISTER(poller, job, 0);
+	if (!job->poller) {
+		goto end;
+	}
+
+end:
+	if (rc) {
+		if (job->sq) {
+			spdk_ring_free(job->sq);
+			job->sq = NULL;
+		}
+		if (job->cq) {
+			spdk_ring_free(job->cq);
+			job->cq = NULL;
+		}
+	}
+
+	fio_complete(&job->cmpl, rc);
+}
+
+static void stop_thread_msg(void *ctx)
+{
+	struct spdk_fio_job *job = ctx;
+	int rc;
+
+	job->halt = 1;
+	if (job->poller) {
+		rc = spdk_thread_send_msg(job->thread, stop_thread_msg, job);
+		if (rc) {
+			abort();
+		}
+	} else {
+		spdk_thread_exit(job->thread);
+		job->thread = NULL;
+		fio_complete(&job->cmpl, 0);
+	}
+}
+
+
+static void stop_thread(struct spdk_fio_job *job)
+{
+	int rc;
+
+	if (job && job->thread) {
+		fio_init_completion(&job->cmpl);
+		rc = spdk_thread_send_msg(job->thread, stop_thread_msg, job);
+		if (rc) {
+			abort();
+		}
+
+		if (fio_wait_for_completion(&job->cmpl)) {
+			abort();
+		}
+
+		if (job->sq) {
+			spdk_ring_free(job->sq);
+			job->sq = NULL;
+		}
+		if (job->cq) {
+			spdk_ring_free(job->cq);
+			job->cq = NULL;
+		}
+	}
+}
+
 static int init(struct thread_data *td)
 {
+	struct spdk_fio_opts *fio_opts = td->eo;
+	struct spdk_fio_job *job;
+	char thread_name[256] = { '\0' };
+	int rc;
+
+	job = calloc(1, sizeof(*job));
+	if (!job) {
+		log_err("Memory allocation error when initializing SPDK thread\n");
+		return -1;
+	}
+	job->td = td;
+
+	rc = snprintf(thread_name, sizeof(thread_name), "fio_%s/%u", td->o.name, fio_opts->cpu);
+	if (rc < 0 || rc >= sizeof(thread_name)) {
+		log_err("Cannot format SPDK thread name\n");
+		goto error;
+	}
+
+	/* Create SPDK thread working on the specific SPDK CPU core */
+	spdk_cpuset_set_cpu(&job->cpuset, fio_opts->cpu, true);
+	job->thread = spdk_thread_create(thread_name, &job->cpuset);
+	if (!job->thread) {
+		log_err("Cannot create SPDK thread\n");
+		goto error;
+	}
+
+	fio_init_completion(&job->cmpl);
+	if (spdk_thread_send_msg(job->thread, init_thread, job)) {
+		log_err("Cannot start initialization of SPDK thread\n");
+		goto error;
+	}
+	rc = fio_wait_for_completion(&job->cmpl);
+	if (rc) {
+		goto error;
+	}
+
+	td->io_ops_data = job;
+	return 0;
+error:
+	if (job) {
+		stop_thread(job);
+		free(job);
+	}
 	return -1;
 }
 
@@ -323,6 +479,9 @@ static struct io_u *event(struct thread_data *td, int event)
 
 static void cleanup(struct thread_data *td)
 {
+	struct spdk_fio_job *job = td->io_ops_data;
+
+	stop_thread(job);
 	shutdown_app(td);
 }
 
