@@ -6,13 +6,41 @@
 #include "optgroup.h"
 #include "options.h"
 #include "os/os.h"
+#include "lib/async.h"
 
 #include <spdk/cpuset.h>
+#include <spdk/event.h>
+#include <spdk/bdev.h>
 
 struct spdk_fio_opts {
-	const char *cpu_mask;
-	char *json_conf;
+	const char		*cpu_mask;
+	char			*json_conf;
+	struct thread_data 	*td;
+	struct fio_completion	cmpl;
 };
+
+struct spdk_fio_ctrl {
+	bool			app_initialized;
+	struct spdk_app_opts	app_opts;
+	pthread_t		app_thread;
+	pthread_mutex_t		app_mutex;
+	struct fio_completion	app_cmpl;
+	int			app_rc;
+} ctrl = { .app_mutex = PTHREAD_MUTEX_INITIALIZER };
+
+static void app_lock(void)
+{
+	if (pthread_mutex_lock(&ctrl.app_mutex)) {
+		abort();
+	}
+}
+
+static void app_unlock(void)
+{
+	if (pthread_mutex_unlock(&ctrl.app_mutex)) {
+		abort();
+	}
+}
 
 static struct fio_option fio_opts[] = {
 	{
@@ -44,19 +72,19 @@ static int prepare_opts_cpu_mask(struct thread_data *td)
 		/* Already configured */
 		return 0;
 	}
-	
+
 	while (i < count) {
 		if (fio_cpu_isset(&td->o.cpumask, cpu)) {
 			spdk_cpuset_set_cpu(&cpuset, cpu, true);
 			i++;
-		} 
+		}
 		cpu++;
 	}
 	if (0 == spdk_cpuset_count(&cpuset)) {
 		log_err("SPDK cannot detect CPU cores to work on\n");
 		return -1;
 	}
-	opts->cpu_mask = spdk_cpuset_fmt(&cpuset);
+	opts->cpu_mask = strdup(spdk_cpuset_fmt(&cpuset));
 
 	return 0;
 }
@@ -65,10 +93,10 @@ static int prepare_opts_json_conf(struct thread_data *td)
 {
 	struct spdk_fio_opts *opts = td->eo;
 	FILE *file;
-	
+
 	if (!opts->json_conf || !opts->json_conf[0]) {
 		log_err("SPDK engine requires configuration JSON file (set spdk_json_conf)\n");
-		return -1;	
+		return -1;
 	}
 
 	/* Test if file exist */
@@ -100,22 +128,142 @@ static int prepare_opts(struct thread_data *td)
 	return 0;
 }
 
-static int setup(struct thread_data *td)
+static void app_start_cb(void *ctx)
 {
-	unsigned int i;
-	struct fio_file *f;
+	/* SPDK application started correctly */
+	fio_complete(&ctrl.app_cmpl, 0);
+}
 
-	if (prepare_opts(td)) {
-		return -1;
+static void *app_thread_fn(void *ctx)
+{
+	int rc;
+
+	rc = spdk_app_start(&ctrl.app_opts, app_start_cb, NULL);
+	if (rc) {
+		log_err("SPDK application start ERROR\n");
+		spdk_app_fini();
+		fio_complete(&ctrl.app_cmpl, rc);
+	} else {
+		/* SPDK has been stoped successfully*/
+		spdk_app_fini();
+		fio_complete(&ctrl.app_cmpl, 0);
 	}
 
+	return NULL;
+}
+
+static int prepare_app(struct thread_data *td)
+{
+	struct spdk_fio_opts *fio_opts = td->eo;
+
+	app_lock();
+
+	if (ctrl.app_initialized || ctrl.app_rc) {
+		goto end;
+	}
+	ctrl.app_initialized = true;
+
+	spdk_app_opts_init(&ctrl.app_opts, sizeof(ctrl.app_opts));
+	ctrl.app_opts.name = "FIO SPDK Engine";
+	ctrl.app_opts.json_config_file = fio_opts->json_conf;
+	ctrl.app_opts.reactor_mask = fio_opts->cpu_mask;
+	ctrl.app_opts.disable_signal_handlers = true;
+
+	fio_init_completion(&ctrl.app_cmpl);
+	ctrl.app_rc = pthread_create(&ctrl.app_thread, NULL, app_thread_fn, NULL);
+	if (ctrl.app_rc) {
+		log_err("Cannot create SPDK application thread\n");
+		goto end;
+	}
+
+	ctrl.app_rc = fio_wait_for_completion(&ctrl.app_cmpl);
+	if (ctrl.app_rc) {
+		/* An error occurred, wait for the thread */
+		pthread_join(ctrl.app_thread, NULL);
+	}
+
+end:
+	app_unlock();
+	return ctrl.app_rc;
+}
+
+static void shutdown_app(struct thread_data *td)
+{
+	app_lock();
+	if (ctrl.app_initialized) {
+		if (!ctrl.app_rc) {
+			fio_init_completion(&ctrl.app_cmpl);
+			spdk_app_start_shutdown();
+			fio_wait_for_completion(&ctrl.app_cmpl);
+		}
+		ctrl.app_initialized = 0;
+		ctrl.app_rc = -EINVAL;
+		pthread_join(ctrl.app_thread, NULL);
+	}
+	app_unlock();
+}
+
+
+static void prepare_files_cb(void *ctx)
+{
+	struct spdk_fio_opts *fio_opts = ctx;
+	struct thread_data *td = fio_opts->td;
+	struct fio_file *f;
+	unsigned int i, rc = 0;
+
 	for_each_file(td, f, i) {
-		f->real_file_size = 512 * 10000;
+		struct spdk_bdev *bdev;
+
+		bdev = spdk_bdev_get_by_name(f->file_name);
+		if (!bdev) {
+			log_err("Cannot open file %s\n", f->file_name);
+			rc = -ENODEV;
+			break;
+		}
+
+		f->real_file_size = spdk_bdev_get_num_blocks(bdev) *
+				    spdk_bdev_get_block_size(bdev);
 		f->filetype = FIO_TYPE_BLOCK;
 		fio_file_set_size_known(f);
 	}
 
+	fio_complete(&fio_opts->cmpl, rc);
+}
+
+static int prepare_files(struct thread_data *td)
+{
+	struct spdk_fio_opts *fio_opts = td->eo;
+	int rc;
+
+	fio_init_completion(&fio_opts->cmpl);
+	spdk_thread_send_msg(spdk_thread_get_app_thread(), prepare_files_cb, fio_opts);
+	rc = fio_wait_for_completion(&fio_opts->cmpl);
+
+	return rc;
+}
+
+static int setup(struct thread_data *td)
+{
+	struct spdk_fio_opts *fio_opts = td->eo;
+
+	fio_opts->td = td;
+
+	if (prepare_opts(td)) {
+		goto error;
+	}
+
+	if (prepare_app(td)) {
+		goto error;
+	}
+
+	if (prepare_files(td)) {
+		goto error;
+	}
 	return 0;
+error:
+
+	shutdown_app(td);
+	return -1;
 }
 
 static int init(struct thread_data *td)
@@ -142,6 +290,7 @@ static struct io_u *event(struct thread_data *td, int event)
 
 static void cleanup(struct thread_data *td)
 {
+	shutdown_app(td);
 }
 
 static int open_file(struct thread_data *td, struct fio_file *f)
@@ -176,7 +325,7 @@ FIO_STATIC struct ioengine_ops ioengine = {
 	.name			= "spdk",
 	.version		= FIO_IOOPS_VERSION,
 	.flags			= FIO_RAWIO | FIO_NOEXTEND | FIO_NODISKUTIL | FIO_MEMALIGN,
-	
+
 	.setup			= setup,
 	.init			= init,
 	.queue			= queue,
@@ -189,7 +338,7 @@ FIO_STATIC struct ioengine_ops ioengine = {
 	.iomem_free		= iomem_free,
 	.io_u_init		= io_u_init,
 	.io_u_free		= io_u_free,
-	
+
 	.option_struct_size	= sizeof(struct spdk_fio_opts),
 	.options		= fio_opts,
 };
