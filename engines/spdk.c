@@ -247,7 +247,7 @@ end:
 	return ctrl.app_rc;
 }
 
-static void shutdown_app(struct thread_data *td)
+static void shutdown_app(void)
 {
 	app_lock();
 	if (ctrl.app_initialized) {
@@ -322,7 +322,7 @@ static int setup(struct thread_data *td)
 	return 0;
 error:
 
-	shutdown_app(td);
+	shutdown_app();
 	return -1;
 }
 
@@ -601,7 +601,6 @@ static void cleanup(struct thread_data *td)
 	struct spdk_fio_job *job = td->io_ops_data;
 
 	stop_thread(job);
-	shutdown_app(td);
 }
 
 static void bdev_event_cb(enum spdk_bdev_event_type type, struct spdk_bdev *bdev, void *event_ctx)
@@ -749,7 +748,6 @@ FIO_STATIC struct ioengine_ops ioengine = {
 	.name			= "spdk",
 	.version		= FIO_IOOPS_VERSION,
 	.flags			= FIO_RAWIO | FIO_NOEXTEND | FIO_NODISKUTIL | FIO_MEMALIGN | FIO_DISKLESSIO,
-
 	.setup			= setup,
 	.init			= init,
 	.queue			= queue,
@@ -762,7 +760,6 @@ FIO_STATIC struct ioengine_ops ioengine = {
 	.iomem_free		= iomem_free,
 	.io_u_init		= io_u_init,
 	.io_u_free		= io_u_free,
-
 	.option_struct_size	= sizeof(struct spdk_fio_opts),
 	.options		= fio_opts,
 };
@@ -774,6 +771,7 @@ static void fio_init fio_spdk_register(void)
 
 static void fio_exit fio_spdk_unregister(void)
 {
+	shutdown_app();
 	unregister_ioengine(&ioengine);
 }
 
