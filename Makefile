@@ -103,6 +103,10 @@ ifdef CONFIG_LIBAIO
   libaio_LIBS = -laio
   ENGINES += libaio
 endif
+ifdef CONFIG_HAVE_SPDK
+  SOURCE += engines/spdk.c
+  ENGINES += spdk
+endif
 ifdef CONFIG_RDMA
   rdma_SRCS = engines/rdma.c
   rdma_LIBS = -libverbs -lrdmacm
