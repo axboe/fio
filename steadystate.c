@@ -23,7 +23,7 @@ static void steadystate_alloc(struct thread_data *td)
 
 void steadystate_setup(void)
 {
-	struct thread_data *td, *prev_td;
+	struct thread_data *prev_td;
 	int i, prev_groupid;
 
 	if (!steadystate_enabled)
@@ -200,7 +200,6 @@ int steadystate_check(void)
 {
 	int i, j, ddir, prev_groupid, group_ramp_time_over = 0;
 	unsigned long rate_time;
-	struct thread_data *td, *td2;
 	struct timespec now;
 	uint64_t group_bw = 0, group_iops = 0;
 	uint64_t td_iops, td_bytes;
@@ -302,7 +301,6 @@ int td_steadystate_init(struct thread_data *td)
 {
 	struct steadystate_data *ss = &td->ss;
 	struct thread_options *o = &td->o;
-	struct thread_data *td2;
 	int j;
 
 	memset(ss, 0, sizeof(*ss));

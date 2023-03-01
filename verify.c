@@ -1568,7 +1568,6 @@ static int fill_file_completions(struct thread_data *td,
 struct all_io_list *get_all_io_list(int save_mask, size_t *sz)
 {
 	struct all_io_list *rep;
-	struct thread_data *td;
 	size_t depth;
 	void *next;
 	int i, nr;

@@ -13,7 +13,6 @@
 static void check_overlap(struct io_u *io_u)
 {
 	int i, res;
-	struct thread_data *td;
 
 	/*
 	 * Allow only one thread to check for overlap at a time to prevent two

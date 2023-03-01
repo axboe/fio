@@ -240,7 +240,6 @@ void fio_mark_td_terminate(struct thread_data *td)
 
 void fio_terminate_threads(unsigned int group_id, unsigned int terminate)
 {
-	struct thread_data *td;
 	pid_t pid = getpid();
 	int i;
 
@@ -279,7 +278,6 @@ void fio_terminate_threads(unsigned int group_id, unsigned int terminate)
 
 int fio_running_or_pending_io_threads(void)
 {
-	struct thread_data *td;
 	int i;
 	int nr_io_threads = 0;
 

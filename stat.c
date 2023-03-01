@@ -2366,7 +2366,6 @@ void init_thread_stat(struct thread_stat *ts)
 
 static void init_per_prio_stats(struct thread_stat *threadstats, int nr_ts)
 {
-	struct thread_data *td;
 	struct thread_stat *ts;
 	int i, j, last_ts, idx;
 	enum fio_ddir ddir;
@@ -2419,7 +2418,6 @@ static void init_per_prio_stats(struct thread_stat *threadstats, int nr_ts)
 void __show_run_stats(void)
 {
 	struct group_run_stats *runstats, *rs;
-	struct thread_data *td;
 	struct thread_stat *threadstats, *ts;
 	int i, j, k, nr_ts, last_ts, idx;
 	bool kb_base_warned = false;
@@ -2722,7 +2720,6 @@ void __show_run_stats(void)
 
 int __show_running_run_stats(void)
 {
-	struct thread_data *td;
 	unsigned long long *rt;
 	struct timespec ts;
 	int i;
@@ -3554,7 +3551,6 @@ static int add_iops_samples(struct thread_data *td, struct timespec *t)
  */
 int calc_log_samples(void)
 {
-	struct thread_data *td;
 	unsigned int next = ~0U, tmp = 0, next_mod = 0, log_avg_msec_min = -1U;
 	struct timespec now;
 	int i;

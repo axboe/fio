@@ -283,7 +283,6 @@ static bool possibly_null_strs_equal(const char *a, const char *b)
  */
 static int total_threaded_subjobs(bool hipri)
 {
-	struct thread_data *td;
 	unsigned int i;
 	int count = 0;
 

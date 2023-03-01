@@ -381,7 +381,6 @@ bool eta_time_within_slack(unsigned int time)
  */
 bool calc_thread_status(struct jobs_eta *je, int force)
 {
-	struct thread_data *td;
 	int i, unified_rw_rep;
 	uint64_t rate_time, disp_time, bw_avg_time, *eta_secs;
 	unsigned long long io_bytes[DDIR_RWDIR_CNT] = {};
@@ -392,6 +391,7 @@ bool calc_thread_status(struct jobs_eta *je, int force)
 	static unsigned long long disp_io_bytes[DDIR_RWDIR_CNT];
 	static unsigned long long disp_io_iops[DDIR_RWDIR_CNT];
 	static struct timespec rate_prev_time, disp_prev_time;
+	bool all_in_ramp = false;
 
 	if (!force) {
 		if (!(output_format & FIO_OUTPUT_NORMAL) &&
@@ -417,6 +417,7 @@ bool calc_thread_status(struct jobs_eta *je, int force)
 	bw_avg_time = ULONG_MAX;
 	unified_rw_rep = 0;
 	for_each_td(td, i) {
+		all_in_ramp |= in_ramp_time(td);
 		unified_rw_rep += td->o.unified_rw_rep;
 		if (is_power_of_2(td->o.kb_base))
 			je->is_pow2 = 1;
@@ -481,10 +482,8 @@ bool calc_thread_status(struct jobs_eta *je, int force)
 
 	if (exitall_on_terminate) {
 		je->eta_sec = INT_MAX;
-		for_each_td(td, i) {
-			if (eta_secs[i] < je->eta_sec)
-				je->eta_sec = eta_secs[i];
-		}
+		if (eta_secs[i] < je->eta_sec)
+			je->eta_sec = eta_secs[i];
 	} else {
 		unsigned long eta_stone = 0;
 
@@ -505,7 +504,7 @@ bool calc_thread_status(struct jobs_eta *je, int force)
 	fio_gettime(&now, NULL);
 	rate_time = mtime_since(&rate_prev_time, &now);
 
-	if (write_bw_log && rate_time > bw_avg_time && !in_ramp_time(td)) {
+	if (write_bw_log && rate_time > bw_avg_time && !all_in_ramp) {
 		calc_rate(unified_rw_rep, rate_time, io_bytes, rate_io_bytes,
 				je->rate);
 		memcpy(&rate_prev_time, &now, sizeof(now));

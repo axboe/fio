@@ -93,7 +93,6 @@ static void sig_int(int sig)
 #ifdef WIN32
 static void sig_break(int sig)
 {
-	struct thread_data *td;
 	int i;
 
 	sig_int(sig);
@@ -2056,7 +2055,6 @@ err:
 static void reap_threads(unsigned int *nr_running, uint64_t *t_rate,
 			 uint64_t *m_rate)
 {
-	struct thread_data *td;
 	unsigned int cputhreads, realthreads, pending;
 	int i, status, ret;
 
@@ -2284,7 +2282,6 @@ static bool waitee_running(struct thread_data *me)
 {
 	const char *waitee = me->o.wait_for;
 	const char *self = me->o.name;
-	struct thread_data *td;
 	int i;
 
 	if (!waitee)
@@ -2311,7 +2308,6 @@ static bool waitee_running(struct thread_data *me)
  */
 static void run_threads(struct sk_out *sk_out)
 {
-	struct thread_data *td;
 	unsigned int i, todo, nr_running, nr_started;
 	uint64_t m_rate, t_rate;
 	uint64_t spent;
@@ -2519,7 +2515,7 @@ reap:
 			do_usleep(100000);
 
 			for (i = 0; i < this_jobs; i++) {
-				td = map[i];
+				struct thread_data *td = map[i];
 				if (!td)
 					continue;
 				if (td->runstate == TD_INITIALIZED) {
@@ -2538,7 +2534,7 @@ reap:
 			log_err("fio: %d job%s failed to start\n", left,
 					left > 1 ? "s" : "");
 			for (i = 0; i < this_jobs; i++) {
-				td = map[i];
+				struct thread_data *td = map[i];
 				if (!td)
 					continue;
 				kill(td->pid, SIGTERM);
@@ -2589,7 +2585,6 @@ static void free_disk_util(void)
 
 int fio_backend(struct sk_out *sk_out)
 {
-	struct thread_data *td;
 	int i;
 
 	if (exec_profile) {

@@ -524,7 +524,6 @@ out:
 /* Verify whether direct I/O is used for all host-managed zoned block drives. */
 static bool zbd_using_direct_io(void)
 {
-	struct thread_data *td;
 	struct fio_file *f;
 	int i, j;
 
@@ -639,7 +638,6 @@ static bool zbd_zone_align_file_sizes(struct thread_data *td,
  */
 static bool zbd_verify_sizes(void)
 {
-	struct thread_data *td;
 	struct fio_file *f;
 	int i, j;
 
@@ -655,7 +653,6 @@ static bool zbd_verify_sizes(void)
 
 static bool zbd_verify_bs(void)
 {
-	struct thread_data *td;
 	struct fio_file *f;
 	int i, j;
 
@@ -1010,7 +1007,6 @@ void zbd_free_zone_info(struct fio_file *f)
  */
 static int zbd_init_zone_info(struct thread_data *td, struct fio_file *file)
 {
-	struct thread_data *td2;
 	struct fio_file *f2;
 	int i, j, ret;
 
@@ -1289,7 +1285,6 @@ static uint32_t pick_random_zone_idx(const struct fio_file *f,
 
 static bool any_io_in_flight(void)
 {
-	struct thread_data *td;
 	int i;
 
 	for_each_td(td, i) {

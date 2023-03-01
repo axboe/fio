@@ -8,7 +8,6 @@
 int init_global_dedupe_working_set_seeds(void)
 {
 	int i;
-	struct thread_data *td;
 
 	for_each_td(td, i) {
 		if (!td->o.dedupe_global)
