@@ -753,9 +753,24 @@ extern void lat_target_reset(struct thread_data *);
 
 /*
  * Iterates all threads/processes within all the defined jobs
+ * Usage:
+ *		for_each_td(var_name_for_td) {
+ *			<< bodoy of your loop >>
+ *			 Note: internally-scoped loop index availble as __td_index
+ *		} end_for_each_td()
  */
-#define for_each_td(td, i)	\
-	for ((i) = 0, (td) = &segments[0].threads[0]; (i) < (int) thread_number; (i)++, (td) = tnumber_to_td((i)))
+#define for_each_td(td)			\
+{								\
+	int __td_index;				\
+	struct thread_data *(td);	\
+	for (__td_index = 0, (td) = &segments[0].threads[0];\
+		__td_index < (int) thread_number; __td_index++, (td) = tnumber_to_td(__td_index))
+#define for_each_td_index()	    \
+{								\
+	int __td_index;				\
+	for (__td_index = 0; __td_index < (int) thread_number; __td_index++)
+#define	end_for_each()	}
+
 #define for_each_file(td, f, i)	\
 	if ((td)->files_index)						\
 		for ((i) = 0, (f) = (td)->files[0];			\

@@ -524,11 +524,10 @@ out:
 /* Verify whether direct I/O is used for all host-managed zoned block drives. */
 static bool zbd_using_direct_io(void)
 {
-	struct thread_data *td;
 	struct fio_file *f;
-	int i, j;
+	int j;
 
-	for_each_td(td, i) {
+	for_each_td(td) {
 		if (td->o.odirect || !(td->o.td_ddir & TD_DDIR_WRITE))
 			continue;
 		for_each_file(td, f, j) {
@@ -536,7 +535,7 @@ static bool zbd_using_direct_io(void)
 			    f->zbd_info->model == ZBD_HOST_MANAGED)
 				return false;
 		}
-	}
+	} end_for_each();
 
 	return true;
 }
@@ -639,27 +638,25 @@ static bool zbd_zone_align_file_sizes(struct thread_data *td,
  */
 static bool zbd_verify_sizes(void)
 {
-	struct thread_data *td;
 	struct fio_file *f;
-	int i, j;
+	int j;
 
-	for_each_td(td, i) {
+	for_each_td(td) {
 		for_each_file(td, f, j) {
 			if (!zbd_zone_align_file_sizes(td, f))
 				return false;
 		}
-	}
+	} end_for_each();
 
 	return true;
 }
 
 static bool zbd_verify_bs(void)
 {
-	struct thread_data *td;
 	struct fio_file *f;
-	int i, j;
+	int j;
 
-	for_each_td(td, i) {
+	for_each_td(td) {
 		if (td_trim(td) &&
 		    (td->o.min_bs[DDIR_TRIM] != td->o.max_bs[DDIR_TRIM] ||
 		     td->o.bssplit_nr[DDIR_TRIM])) {
@@ -680,7 +677,7 @@ static bool zbd_verify_bs(void)
 				return false;
 			}
 		}
-	}
+	} end_for_each();
 	return true;
 }
 
@@ -1010,11 +1007,10 @@ void zbd_free_zone_info(struct fio_file *f)
  */
 static int zbd_init_zone_info(struct thread_data *td, struct fio_file *file)
 {
-	struct thread_data *td2;
 	struct fio_file *f2;
-	int i, j, ret;
+	int j, ret;
 
-	for_each_td(td2, i) {
+	for_each_td(td2) {
 		for_each_file(td2, f2, j) {
 			if (td2 == td && f2 == file)
 				continue;
@@ -1025,7 +1021,7 @@ static int zbd_init_zone_info(struct thread_data *td, struct fio_file *file)
 			file->zbd_info->refcount++;
 			return 0;
 		}
-	}
+	} end_for_each();
 
 	ret = zbd_create_zone_info(td, file);
 	if (ret < 0)
@@ -1289,13 +1285,10 @@ static uint32_t pick_random_zone_idx(const struct fio_file *f,
 
 static bool any_io_in_flight(void)
 {
-	struct thread_data *td;
-	int i;
-
-	for_each_td(td, i) {
+	for_each_td(td) {
 		if (td->io_u_in_flight)
 			return true;
-	}
+	} end_for_each();
 
 	return false;
 }

@@ -1875,9 +1875,7 @@ void td_writeout_logs(struct thread_data *td, bool unit_logs)
 
 void fio_writeout_logs(bool unit_logs)
 {
-	struct thread_data *td;
-	int i;
-
-	for_each_td(td, i)
+	for_each_td(td) {
 		td_writeout_logs(td, unit_logs);
+	} end_for_each();
 }

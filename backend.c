@@ -93,19 +93,16 @@ static void sig_int(int sig)
 #ifdef WIN32
 static void sig_break(int sig)
 {
-	struct thread_data *td;
-	int i;
-
 	sig_int(sig);
 
 	/**
 	 * Windows terminates all job processes on SIGBREAK after the handler
 	 * returns, so give them time to wrap-up and give stats
 	 */
-	for_each_td(td, i) {
+	for_each_td(td) {
 		while (td->runstate < TD_EXITED)
 			sleep(1);
-	}
+	} end_for_each();
 }
 #endif
 
@@ -2056,15 +2053,14 @@ err:
 static void reap_threads(unsigned int *nr_running, uint64_t *t_rate,
 			 uint64_t *m_rate)
 {
-	struct thread_data *td;
 	unsigned int cputhreads, realthreads, pending;
-	int i, status, ret;
+	int status, ret;
 
 	/*
 	 * reap exited threads (TD_EXITED -> TD_REAPED)
 	 */
 	realthreads = pending = cputhreads = 0;
-	for_each_td(td, i) {
+	for_each_td(td) {
 		int flags = 0;
 
 		if (!strcmp(td->o.ioengine, "cpuio"))
@@ -2157,7 +2153,7 @@ reaped:
 		done_secs += mtime_since_now(&td->epoch) / 1000;
 		profile_td_exit(td);
 		flow_exit_job(td);
-	}
+	} end_for_each();
 
 	if (*nr_running == cputhreads && !pending && realthreads)
 		fio_terminate_threads(TERMINATE_ALL, TERMINATE_ALL);
@@ -2284,13 +2280,11 @@ static bool waitee_running(struct thread_data *me)
 {
 	const char *waitee = me->o.wait_for;
 	const char *self = me->o.name;
-	struct thread_data *td;
-	int i;
 
 	if (!waitee)
 		return false;
 
-	for_each_td(td, i) {
+	for_each_td(td) {
 		if (!strcmp(td->o.name, self) || strcmp(td->o.name, waitee))
 			continue;
 
@@ -2300,7 +2294,7 @@ static bool waitee_running(struct thread_data *me)
 					runstate_to_name(td->runstate));
 			return true;
 		}
-	}
+	} end_for_each();
 
 	dprint(FD_PROCESS, "%s: %s completed, can run\n", self, waitee);
 	return false;
@@ -2324,14 +2318,14 @@ static void run_threads(struct sk_out *sk_out)
 	set_sig_handlers();
 
 	nr_thread = nr_process = 0;
-	for_each_td(td, i) {
+	for_each_td(td) {
 		if (check_mount_writes(td))
 			return;
 		if (td->o.use_thread)
 			nr_thread++;
 		else
 			nr_process++;
-	}
+	} end_for_each();
 
 	if (output_format & FIO_OUTPUT_NORMAL) {
 		struct buf_output out;
@@ -2357,7 +2351,7 @@ static void run_threads(struct sk_out *sk_out)
 	nr_started = 0;
 	m_rate = t_rate = 0;
 
-	for_each_td(td, i) {
+	for_each_td(td) {
 		print_status_init(td->thread_number - 1);
 
 		if (!td->o.create_serialize)
@@ -2393,7 +2387,7 @@ reap:
 					td_io_close_file(td, f);
 			}
 		}
-	}
+	} end_for_each();
 
 	/* start idle threads before io threads start to run */
 	fio_idle_prof_start();
@@ -2409,7 +2403,7 @@ reap:
 		/*
 		 * create threads (TD_NOT_CREATED -> TD_CREATED)
 		 */
-		for_each_td(td, i) {
+		for_each_td(td) {
 			if (td->runstate != TD_NOT_CREATED)
 				continue;
 
@@ -2488,7 +2482,7 @@ reap:
 
 					ret = (int)(uintptr_t)thread_main(fd);
 					_exit(ret);
-				} else if (i == fio_debug_jobno)
+				} else if (__td_index == fio_debug_jobno)
 					*fio_debug_jobp = pid;
 				free(eo);
 				free(fd);
@@ -2504,7 +2498,7 @@ reap:
 				break;
 			}
 			dprint(FD_MUTEX, "done waiting on startup_sem\n");
-		}
+		} end_for_each();
 
 		/*
 		 * Wait for the started threads to transition to
@@ -2549,7 +2543,7 @@ reap:
 		/*
 		 * start created threads (TD_INITIALIZED -> TD_RUNNING).
 		 */
-		for_each_td(td, i) {
+		for_each_td(td) {
 			if (td->runstate != TD_INITIALIZED)
 				continue;
 
@@ -2563,7 +2557,7 @@ reap:
 			t_rate += ddir_rw_sum(td->o.rate);
 			todo--;
 			fio_sem_up(td->sem);
-		}
+		} end_for_each();
 
 		reap_threads(&nr_running, &t_rate, &m_rate);
 
@@ -2589,9 +2583,7 @@ static void free_disk_util(void)
 
 int fio_backend(struct sk_out *sk_out)
 {
-	struct thread_data *td;
 	int i;
-
 	if (exec_profile) {
 		if (load_profile(exec_profile))
 			return 1;
@@ -2647,7 +2639,7 @@ int fio_backend(struct sk_out *sk_out)
 		}
 	}
 
-	for_each_td(td, i) {
+	for_each_td(td) {
 		struct thread_stat *ts = &td->ts;
 
 		free_clat_prio_stats(ts);
@@ -2660,7 +2652,7 @@ int fio_backend(struct sk_out *sk_out)
 		}
 		fio_sem_remove(td->sem);
 		td->sem = NULL;
-	}
+	} end_for_each();
 
 	free_disk_util();
 	if (cgroup_list) {

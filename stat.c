@@ -2366,7 +2366,6 @@ void init_thread_stat(struct thread_stat *ts)
 
 static void init_per_prio_stats(struct thread_stat *threadstats, int nr_ts)
 {
-	struct thread_data *td;
 	struct thread_stat *ts;
 	int i, j, last_ts, idx;
 	enum fio_ddir ddir;
@@ -2380,7 +2379,7 @@ static void init_per_prio_stats(struct thread_stat *threadstats, int nr_ts)
 	 * store a 1 in ts->disable_prio_stat, and then do an additional
 	 * loop at the end where we invert the ts->disable_prio_stat values.
 	 */
-	for_each_td(td, i) {
+	for_each_td(td) {
 		if (!td->o.stats)
 			continue;
 		if (idx &&
@@ -2407,7 +2406,7 @@ static void init_per_prio_stats(struct thread_stat *threadstats, int nr_ts)
 		}
 
 		idx++;
-	}
+	} end_for_each();
 
 	/* Loop through all dst threadstats and fixup the values. */
 	for (i = 0; i < nr_ts; i++) {
@@ -2419,7 +2418,6 @@ static void init_per_prio_stats(struct thread_stat *threadstats, int nr_ts)
 void __show_run_stats(void)
 {
 	struct group_run_stats *runstats, *rs;
-	struct thread_data *td;
 	struct thread_stat *threadstats, *ts;
 	int i, j, k, nr_ts, last_ts, idx;
 	bool kb_base_warned = false;
@@ -2440,7 +2438,7 @@ void __show_run_stats(void)
 	 */
 	nr_ts = 0;
 	last_ts = -1;
-	for_each_td(td, i) {
+	for_each_td(td) {
 		if (!td->o.group_reporting) {
 			nr_ts++;
 			continue;
@@ -2452,7 +2450,7 @@ void __show_run_stats(void)
 
 		last_ts = td->groupid;
 		nr_ts++;
-	}
+	} end_for_each();
 
 	threadstats = malloc(nr_ts * sizeof(struct thread_stat));
 	opt_lists = malloc(nr_ts * sizeof(struct flist_head *));
@@ -2467,7 +2465,7 @@ void __show_run_stats(void)
 	j = 0;
 	last_ts = -1;
 	idx = 0;
-	for_each_td(td, i) {
+	for_each_td(td) {
 		if (!td->o.stats)
 			continue;
 		if (idx && (!td->o.group_reporting ||
@@ -2569,7 +2567,7 @@ void __show_run_stats(void)
 		}
 		else
 			ts->ss_dur = ts->ss_state = 0;
-	}
+	} end_for_each();
 
 	for (i = 0; i < nr_ts; i++) {
 		unsigned long long bw;
@@ -2722,17 +2720,15 @@ void __show_run_stats(void)
 
 int __show_running_run_stats(void)
 {
-	struct thread_data *td;
 	unsigned long long *rt;
 	struct timespec ts;
-	int i;
 
 	fio_sem_down(stat_sem);
 
 	rt = malloc(thread_number * sizeof(unsigned long long));
 	fio_gettime(&ts, NULL);
 
-	for_each_td(td, i) {
+	for_each_td(td) {
 		if (td->runstate >= TD_EXITED)
 			continue;
 
@@ -2742,16 +2738,16 @@ int __show_running_run_stats(void)
 		}
 		td->ts.total_run_time = mtime_since(&td->epoch, &ts);
 
-		rt[i] = mtime_since(&td->start, &ts);
+		rt[__td_index] = mtime_since(&td->start, &ts);
 		if (td_read(td) && td->ts.io_bytes[DDIR_READ])
-			td->ts.runtime[DDIR_READ] += rt[i];
+			td->ts.runtime[DDIR_READ] += rt[__td_index];
 		if (td_write(td) && td->ts.io_bytes[DDIR_WRITE])
-			td->ts.runtime[DDIR_WRITE] += rt[i];
+			td->ts.runtime[DDIR_WRITE] += rt[__td_index];
 		if (td_trim(td) && td->ts.io_bytes[DDIR_TRIM])
-			td->ts.runtime[DDIR_TRIM] += rt[i];
-	}
+			td->ts.runtime[DDIR_TRIM] += rt[__td_index];
+	} end_for_each();
 
-	for_each_td(td, i) {
+	for_each_td(td) {
 		if (td->runstate >= TD_EXITED)
 			continue;
 		if (td->rusage_sem) {
@@ -2759,21 +2755,21 @@ int __show_running_run_stats(void)
 			fio_sem_down(td->rusage_sem);
 		}
 		td->update_rusage = 0;
-	}
+	} end_for_each();
 
 	__show_run_stats();
 
-	for_each_td(td, i) {
+	for_each_td(td) {
 		if (td->runstate >= TD_EXITED)
 			continue;
 
 		if (td_read(td) && td->ts.io_bytes[DDIR_READ])
-			td->ts.runtime[DDIR_READ] -= rt[i];
+			td->ts.runtime[DDIR_READ] -= rt[__td_index];
 		if (td_write(td) && td->ts.io_bytes[DDIR_WRITE])
-			td->ts.runtime[DDIR_WRITE] -= rt[i];
+			td->ts.runtime[DDIR_WRITE] -= rt[__td_index];
 		if (td_trim(td) && td->ts.io_bytes[DDIR_TRIM])
-			td->ts.runtime[DDIR_TRIM] -= rt[i];
-	}
+			td->ts.runtime[DDIR_TRIM] -= rt[__td_index];
+	} end_for_each();
 
 	free(rt);
 	fio_sem_up(stat_sem);
@@ -3554,15 +3550,13 @@ static int add_iops_samples(struct thread_data *td, struct timespec *t)
  */
 int calc_log_samples(void)
 {
-	struct thread_data *td;
 	unsigned int next = ~0U, tmp = 0, next_mod = 0, log_avg_msec_min = -1U;
 	struct timespec now;
-	int i;
 	long elapsed_time = 0;
 
 	fio_gettime(&now, NULL);
 
-	for_each_td(td, i) {
+	for_each_td(td) {
 		elapsed_time = mtime_since_now(&td->epoch);
 
 		if (!td->o.stats)
@@ -3589,7 +3583,7 @@ int calc_log_samples(void)
 
 		if (tmp < next)
 			next = tmp;
-	}
+	} end_for_each();
 
 	/* if log_avg_msec_min has not been changed, set it to 0 */
 	if (log_avg_msec_min == -1U)
