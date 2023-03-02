@@ -177,6 +177,16 @@ static int prepare_opts(struct thread_data *td)
 		return -1;
 	}
 
+	if (fio_option_is_set(&td->o, cpus_allowed_policy)) {
+		/* In SPDK engine, SPDK threads are created using specified CPU mask.
+		 * The SPDK threads handle job afinitiazation itself. Therefore,
+		 * this option would conflict with the config.
+		 */
+		log_err("SPDK engine does not support cpus_allowed_policy option, "
+			"The engine handles job afinitiazation itself\n");
+		return -1;
+	}
+
 	if (prepare_opts_cpu_mask(td)) {
 		return -1;
 	}
