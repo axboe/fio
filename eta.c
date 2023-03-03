@@ -383,6 +383,7 @@ bool calc_thread_status(struct jobs_eta *je, int force)
 {
 	struct thread_data *td;
 	int i, unified_rw_rep;
+	bool any_td_in_ramp;
 	uint64_t rate_time, disp_time, bw_avg_time, *eta_secs;
 	unsigned long long io_bytes[DDIR_RWDIR_CNT] = {};
 	unsigned long long io_iops[DDIR_RWDIR_CNT] = {};
@@ -505,7 +506,11 @@ bool calc_thread_status(struct jobs_eta *je, int force)
 	fio_gettime(&now, NULL);
 	rate_time = mtime_since(&rate_prev_time, &now);
 
-	if (write_bw_log && rate_time > bw_avg_time && !in_ramp_time(td)) {
+	any_td_in_ramp = false;
+	for_each_td(td, i) {
+		any_td_in_ramp |= in_ramp_time(td);
+	}
+	if (write_bw_log && rate_time > bw_avg_time && !any_td_in_ramp) {
 		calc_rate(unified_rw_rep, rate_time, io_bytes, rate_io_bytes,
 				je->rate);
 		memcpy(&rate_prev_time, &now, sizeof(now));
