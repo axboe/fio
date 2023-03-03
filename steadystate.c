@@ -23,8 +23,8 @@ static void steadystate_alloc(struct thread_data *td)
 
 void steadystate_setup(void)
 {
-	struct thread_data *td, *prev_td;
-	int i, prev_groupid;
+	struct thread_data *prev_td;
+	int prev_groupid;
 
 	if (!steadystate_enabled)
 		return;
@@ -36,7 +36,7 @@ void steadystate_setup(void)
 	 */
 	prev_groupid = -1;
 	prev_td = NULL;
-	for_each_td(td, i) {
+	for_each_td(td) {
 		if (!td->ss.dur)
 			continue;
 
@@ -51,7 +51,7 @@ void steadystate_setup(void)
 			prev_groupid = td->groupid;
 		}
 		prev_td = td;
-	}
+	} end_for_each();
 
 	if (prev_td && prev_td->o.group_reporting)
 		steadystate_alloc(prev_td);
@@ -198,16 +198,15 @@ static bool steadystate_deviation(uint64_t iops, uint64_t bw,
 
 int steadystate_check(void)
 {
-	int i, j, ddir, prev_groupid, group_ramp_time_over = 0;
+	int  ddir, prev_groupid, group_ramp_time_over = 0;
 	unsigned long rate_time;
-	struct thread_data *td, *td2;
 	struct timespec now;
 	uint64_t group_bw = 0, group_iops = 0;
 	uint64_t td_iops, td_bytes;
 	bool ret;
 
 	prev_groupid = -1;
-	for_each_td(td, i) {
+	for_each_td(td) {
 		const bool needs_lock = td_async_processing(td);
 		struct steadystate_data *ss = &td->ss;
 
@@ -271,7 +270,7 @@ int steadystate_check(void)
 		dprint(FD_STEADYSTATE, "steadystate_check() thread: %d, "
 					"groupid: %u, rate_msec: %ld, "
 					"iops: %llu, bw: %llu, head: %d, tail: %d\n",
-					i, td->groupid, rate_time,
+					__td_index, td->groupid, rate_time,
 					(unsigned long long) group_iops,
 					(unsigned long long) group_bw,
 					ss->head, ss->tail);
@@ -283,18 +282,18 @@ int steadystate_check(void)
 
 		if (ret) {
 			if (td->o.group_reporting) {
-				for_each_td(td2, j) {
+				for_each_td(td2) {
 					if (td2->groupid == td->groupid) {
 						td2->ss.state |= FIO_SS_ATTAINED;
 						fio_mark_td_terminate(td2);
 					}
-				}
+				} end_for_each();
 			} else {
 				ss->state |= FIO_SS_ATTAINED;
 				fio_mark_td_terminate(td);
 			}
 		}
-	}
+	} end_for_each();
 	return 0;
 }
 
@@ -302,8 +301,6 @@ int td_steadystate_init(struct thread_data *td)
 {
 	struct steadystate_data *ss = &td->ss;
 	struct thread_options *o = &td->o;
-	struct thread_data *td2;
-	int j;
 
 	memset(ss, 0, sizeof(*ss));
 
@@ -325,7 +322,7 @@ int td_steadystate_init(struct thread_data *td)
 	}
 
 	/* make sure that ss options are consistent within reporting group */
-	for_each_td(td2, j) {
+	for_each_td(td2) {
 		if (td2->groupid == td->groupid) {
 			struct steadystate_data *ss2 = &td2->ss;
 
@@ -339,7 +336,7 @@ int td_steadystate_init(struct thread_data *td)
 				return 1;
 			}
 		}
-	}
+	} end_for_each();
 
 	return 0;
 }

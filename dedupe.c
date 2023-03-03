@@ -7,16 +7,13 @@
  */
 int init_global_dedupe_working_set_seeds(void)
 {
-	int i;
-	struct thread_data *td;
-
-	for_each_td(td, i) {
+	for_each_td(td) {
 		if (!td->o.dedupe_global)
 			continue;
 
 		if (init_dedupe_working_set_seeds(td, 1))
 			return 1;
-	}
+	} end_for_each();
 
 	return 0;
 }

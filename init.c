@@ -1405,15 +1405,14 @@ static void gen_log_name(char *name, size_t size, const char *logtype,
 
 static int check_waitees(char *waitee)
 {
-	struct thread_data *td;
-	int i, ret = 0;
+	int ret = 0;
 
-	for_each_td(td, i) {
+	for_each_td(td) {
 		if (td->subjob_number)
 			continue;
 
 		ret += !strcmp(td->o.name, waitee);
-	}
+	} end_for_each();
 
 	return ret;
 }
@@ -1448,10 +1447,7 @@ static bool wait_for_ok(const char *jobname, struct thread_options *o)
 
 static int verify_per_group_options(struct thread_data *td, const char *jobname)
 {
-	struct thread_data *td2;
-	int i;
-
-	for_each_td(td2, i) {
+	for_each_td(td2) {
 		if (td->groupid != td2->groupid)
 			continue;
 
@@ -1461,7 +1457,7 @@ static int verify_per_group_options(struct thread_data *td, const char *jobname)
 				jobname);
 			return 1;
 		}
-	}
+	} end_for_each();
 
 	return 0;
 }

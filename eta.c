@@ -381,8 +381,7 @@ bool eta_time_within_slack(unsigned int time)
  */
 bool calc_thread_status(struct jobs_eta *je, int force)
 {
-	struct thread_data *td;
-	int i, unified_rw_rep;
+	int unified_rw_rep;
 	bool any_td_in_ramp;
 	uint64_t rate_time, disp_time, bw_avg_time, *eta_secs;
 	unsigned long long io_bytes[DDIR_RWDIR_CNT] = {};
@@ -417,7 +416,7 @@ bool calc_thread_status(struct jobs_eta *je, int force)
 
 	bw_avg_time = ULONG_MAX;
 	unified_rw_rep = 0;
-	for_each_td(td, i) {
+	for_each_td(td) {
 		unified_rw_rep += td->o.unified_rw_rep;
 		if (is_power_of_2(td->o.kb_base))
 			je->is_pow2 = 1;
@@ -459,9 +458,9 @@ bool calc_thread_status(struct jobs_eta *je, int force)
 			je->nr_pending++;
 
 		if (je->elapsed_sec >= 3)
-			eta_secs[i] = thread_eta(td);
+			eta_secs[__td_index] = thread_eta(td);
 		else
-			eta_secs[i] = INT_MAX;
+			eta_secs[__td_index] = INT_MAX;
 
 		check_str_update(td);
 
@@ -478,26 +477,26 @@ bool calc_thread_status(struct jobs_eta *je, int force)
 				}
 			}
 		}
-	}
+	} end_for_each();
 
 	if (exitall_on_terminate) {
 		je->eta_sec = INT_MAX;
-		for_each_td(td, i) {
-			if (eta_secs[i] < je->eta_sec)
-				je->eta_sec = eta_secs[i];
-		}
+		for_each_td_index() {
+			if (eta_secs[__td_index] < je->eta_sec)
+				je->eta_sec = eta_secs[__td_index];
+		} end_for_each();
 	} else {
 		unsigned long eta_stone = 0;
 
 		je->eta_sec = 0;
-		for_each_td(td, i) {
+		for_each_td(td) {
 			if ((td->runstate == TD_NOT_CREATED) && td->o.stonewall)
-				eta_stone += eta_secs[i];
+				eta_stone += eta_secs[__td_index];
 			else {
-				if (eta_secs[i] > je->eta_sec)
-					je->eta_sec = eta_secs[i];
+				if (eta_secs[__td_index] > je->eta_sec)
+					je->eta_sec = eta_secs[__td_index];
 			}
-		}
+		} end_for_each();
 		je->eta_sec += eta_stone;
 	}
 
@@ -507,9 +506,9 @@ bool calc_thread_status(struct jobs_eta *je, int force)
 	rate_time = mtime_since(&rate_prev_time, &now);
 
 	any_td_in_ramp = false;
-	for_each_td(td, i) {
+	for_each_td(td) {
 		any_td_in_ramp |= in_ramp_time(td);
-	}
+	} end_for_each();
 	if (write_bw_log && rate_time > bw_avg_time && !any_td_in_ramp) {
 		calc_rate(unified_rw_rep, rate_time, io_bytes, rate_io_bytes,
 				je->rate);

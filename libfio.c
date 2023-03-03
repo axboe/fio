@@ -240,13 +240,11 @@ void fio_mark_td_terminate(struct thread_data *td)
 
 void fio_terminate_threads(unsigned int group_id, unsigned int terminate)
 {
-	struct thread_data *td;
 	pid_t pid = getpid();
-	int i;
 
 	dprint(FD_PROCESS, "terminate group_id=%d\n", group_id);
 
-	for_each_td(td, i) {
+	for_each_td(td) {
 		if ((terminate == TERMINATE_GROUP && group_id == TERMINATE_ALL) ||
 		    (terminate == TERMINATE_GROUP && group_id == td->groupid) ||
 		    (terminate == TERMINATE_STONEWALL && td->runstate >= TD_RUNNING) ||
@@ -274,22 +272,20 @@ void fio_terminate_threads(unsigned int group_id, unsigned int terminate)
 					ops->terminate(td);
 			}
 		}
-	}
+	} end_for_each();
 }
 
 int fio_running_or_pending_io_threads(void)
 {
-	struct thread_data *td;
-	int i;
 	int nr_io_threads = 0;
 
-	for_each_td(td, i) {
+	for_each_td(td) {
 		if (td->io_ops_init && td_ioengine_flagged(td, FIO_NOIO))
 			continue;
 		nr_io_threads++;
 		if (td->runstate < TD_EXITED)
 			return 1;
-	}
+	} end_for_each();
 
 	if (!nr_io_threads)
 		return -1; /* we only had cpuio threads to begin with */

@@ -12,8 +12,7 @@
 
 static void check_overlap(struct io_u *io_u)
 {
-	int i, res;
-	struct thread_data *td;
+	int res;
 
 	/*
 	 * Allow only one thread to check for overlap at a time to prevent two
@@ -31,7 +30,7 @@ static void check_overlap(struct io_u *io_u)
 	assert(res == 0);
 
 retry:
-	for_each_td(td, i) {
+	for_each_td(td) {
 		if (td->runstate <= TD_SETTING_UP ||
 		    td->runstate >= TD_FINISHING ||
 		    !td->o.serialize_overlap ||
@@ -46,7 +45,7 @@ retry:
 		res = pthread_mutex_lock(&overlap_check);
 		assert(res == 0);
 		goto retry;
-	}
+	} end_for_each();
 }
 
 static int io_workqueue_fn(struct submit_worker *sw,

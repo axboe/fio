@@ -283,16 +283,14 @@ static bool possibly_null_strs_equal(const char *a, const char *b)
  */
 static int total_threaded_subjobs(bool hipri)
 {
-	struct thread_data *td;
-	unsigned int i;
 	int count = 0;
 
-	for_each_td(td, i) {
+	for_each_td(td) {
 		const struct fio_blkio_options *options = td->eo;
 		if (strcmp(td->o.ioengine, "libblkio") == 0 &&
 		    td->o.use_thread && (bool)options->hipri == hipri)
 			++count;
-	}
+	} end_for_each();
 
 	return count;
 }
