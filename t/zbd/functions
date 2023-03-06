@@ -238,18 +238,40 @@ max_open_zones() {
     fi
 }
 
+# Get minimum block size to write to seq zones. Refer the sysfs attribute
+# zone_write_granularity which shows the valid minimum size regardless of zoned
+# block device type. If the sysfs attribute is not available, refer physical
+# block size for rotational SMR drives. For non-rotational devices such as ZNS
+# devices, refer logical block size.
+min_seq_write_size() {
+	local sys_path="/sys/block/$1/queue"
+	local -i size=0
+
+	if [[ -r "$sys_path/zone_write_granularity" ]]; then
+		size=$(<"$sys_path/zone_write_granularity")
+	fi
+
+	if ((size)); then
+		echo "$size"
+	elif (($(<"$sys_path/rotational"))); then
+		cat "$sys_path/physical_block_size"
+	else
+		cat "$sys_path/logical_block_size"
+	fi
+}
+
 is_zbc() {
 	local dev=$1
 
 	[[ -z "$(${zbc_info} "$dev" | grep "is not a zoned block device")" ]]
 }
 
-zbc_logical_block_size() {
+zbc_physical_block_size() {
 	local dev=$1
 
 	${zbc_info} "$dev" |
-		grep "logical blocks" |
-		sed -n 's/^[[:blank:]]*[0-9]* logical blocks of[[:blank:]]*//p' |
+		grep "physical blocks" |
+		sed -n 's/^[[:blank:]]*[0-9]* physical blocks of[[:blank:]]*//p' |
 		sed 's/ B//'
 }
 

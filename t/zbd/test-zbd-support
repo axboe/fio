@@ -1427,7 +1427,7 @@ if [[ -b "$realdev" ]]; then
 		realsysfs=$(readlink "/sys/dev/block/$major:$minor")
 		basename=$(basename "${realsysfs%/*}")
 	fi
-	min_seq_write_size=$(<"/sys/block/$basename/queue/logical_block_size")
+	min_seq_write_size=$(min_seq_write_size "$basename")
 	case "$(<"/sys/class/block/$basename/queue/zoned")" in
 	host-managed|host-aware)
 		is_zbd=true
@@ -1476,8 +1476,8 @@ elif [[ -c "$realdev" ]]; then
 		echo "Failed to determine disk size"
 		exit 1
 	fi
-	if ! min_seq_write_size=($(zbc_logical_block_size "$dev")); then
-		echo "Failed to determine logical block size"
+	if ! min_seq_write_size=($(zbc_physical_block_size "$dev")); then
+		echo "Failed to determine physical block size"
 		exit 1
 	fi
 	if ! result=($(first_sequential_zone "$dev")); then
