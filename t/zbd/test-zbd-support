@@ -166,7 +166,7 @@ write_and_run_one_fio_job() {
     shift 2
     r=$(((RANDOM << 16) | RANDOM))
     write_opts=(--name="write_job" --rw=write "$(ioengine "psync")" \
-		      --bs="${logical_block_size}" --zonemode=zbd \
+		      --bs="${min_seq_write_size}" --zonemode=zbd \
 		      --zonesize="${zone_size}" --thread=1 --direct=1 \
 		      --offset="${write_offset}" --size="${write_size}")
     write_opts+=("${job_var_opts[@]}")
@@ -335,7 +335,7 @@ test4() {
     size=$((zone_size))
     [ -n "$is_zbd" ] && reset_zone "$dev" $((off / 512))
     opts+=("--name=$dev" "--filename=$dev" "--offset=$off")
-    opts+=(--bs="$(min $((logical_block_size * 256)) $size)")
+    opts+=(--bs="$(min $((min_seq_write_size * 256)) $size)")
     opts+=("--size=$size" "--thread=1" "--read_beyond_wp=1")
     opts+=("$(ioengine "psync")" "--rw=read" "--direct=1" "--disable_lat=1")
     opts+=("--zonemode=zbd" "--zonesize=${zone_size}")
@@ -351,7 +351,7 @@ test5() {
     off=$((first_sequential_zone_sector * 512))
     capacity=$(total_zone_capacity 4 $off $dev)
     size=$((4 * zone_size))
-    bs=$(min "$(max $((zone_size / 64)) "$logical_block_size")" "$zone_cap_bs")
+    bs=$(min "$(max $((zone_size / 64)) "$min_seq_write_size")" "$zone_cap_bs")
     run_fio_on_seq "$(ioengine "psync")" --iodepth=1 --rw=write	\
 		   --bs="$bs" --do_verify=1 --verify=md5 \
 		   >>"${logfile}.${test_number}" 2>&1 || return $?
@@ -367,7 +367,7 @@ test6() {
     off=$((first_sequential_zone_sector * 512))
     capacity=$(total_zone_capacity 4 $off $dev)
     size=$((4 * zone_size))
-    bs=$(min "$(max $((zone_size / 64)) "$logical_block_size")" "$zone_cap_bs")
+    bs=$(min "$(max $((zone_size / 64)) "$min_seq_write_size")" "$zone_cap_bs")
     write_and_run_one_fio_job \
 	    $((first_sequential_zone_sector * 512)) "${size}" \
 	    --offset="${off}" \
@@ -748,7 +748,7 @@ test30() {
     prep_write
     off=$((first_sequential_zone_sector * 512))
     run_one_fio_job "$(ioengine "libaio")" --iodepth=8 --rw=randrw	\
-		    --bs="$(max $((zone_size / 128)) "$logical_block_size")"\
+		    --bs="$(max $((zone_size / 128)) "$min_seq_write_size")"\
 		    --zonemode=zbd --zonesize="${zone_size}" --offset=$off\
 		    --loops=2 --time_based --runtime=30s --norandommap=1\
 		    >>"${logfile}.${test_number}" 2>&1
@@ -904,9 +904,9 @@ test38() {
     local bs off size
 
     prep_write
-    size=$((logical_block_size))
-    off=$((disk_size - logical_block_size))
-    bs=$((logical_block_size))
+    size=$((min_seq_write_size))
+    off=$((disk_size - min_seq_write_size))
+    bs=$((min_seq_write_size))
     run_one_fio_job --offset=$off --size=$size "$(ioengine "psync")"	\
 		    --iodepth=1 --rw=write --do_verify=1 --verify=md5	\
 		    --bs=$bs --zonemode=zbd --zonesize="${zone_size}"	\
@@ -924,7 +924,7 @@ read_one_block() {
 	exit 1
     fi
     off=${result[0]}
-    bs=$((logical_block_size))
+    bs=$((min_seq_write_size))
     run_one_fio_job --rw=read "$(ioengine "psync")" --offset=$off --bs=$bs \
 		    --size=$bs "$@" 2>&1 |
 	tee -a "${logfile}.${test_number}"
@@ -934,14 +934,14 @@ read_one_block() {
 test39() {
     require_zbd || return $SKIP_TESTCASE
     read_one_block --zonemode=none >/dev/null || return $?
-    check_read $((logical_block_size)) || return $?
+    check_read $((min_seq_write_size)) || return $?
 }
 
 # Check whether fio accepts --zonemode=strided for zoned block devices.
 test40() {
     local bs
 
-    bs=$((logical_block_size))
+    bs=$((min_seq_write_size))
     require_zbd || return $SKIP_TESTCASE
     read_one_block --zonemode=strided |
 	grep -q 'fio: --zonesize must be specified when using --zonemode=strided' ||
@@ -982,7 +982,7 @@ test45() {
 
     require_zbd || return $SKIP_TESTCASE
     prep_write
-    bs=$((logical_block_size))
+    bs=$((min_seq_write_size))
     run_one_fio_job "$(ioengine "psync")" --iodepth=1 --rw=randwrite --bs=$bs\
 		    --offset=$((first_sequential_zone_sector * 512)) \
 		    --size="$zone_size" --do_verify=1 --verify=md5 2>&1 |
@@ -1007,7 +1007,7 @@ test47() {
     local bs
 
     prep_write
-    bs=$((logical_block_size))
+    bs=$((min_seq_write_size))
     run_fio_on_seq "$(ioengine "psync")" --rw=write --bs=$bs --zoneskip=1 \
 		    >> "${logfile}.${test_number}" 2>&1 && return 1
     grep -q 'zoneskip 1 is not a multiple of the device zone size' "${logfile}.${test_number}"
@@ -1190,7 +1190,7 @@ test54() {
 # test 'z' suffix parsing only
 test55() {
 	local bs
-	bs=$((logical_block_size))
+	bs=$((min_seq_write_size))
 
 	require_zbd || return $SKIP_TESTCASE
 	# offset=1z + offset_increment=10z + size=2z
@@ -1216,7 +1216,7 @@ test55() {
 # test 'z' suffix parsing only
 test56() {
 	local bs
-	bs=$((logical_block_size))
+	bs=$((min_seq_write_size))
 
 	require_regular_block_dev || return $SKIP_TESTCASE
 	require_seq_zones 10 || return $SKIP_TESTCASE
@@ -1260,7 +1260,7 @@ test58() {
     require_seq_zones 128 || return $SKIP_TESTCASE
 
     size=$((zone_size * 128))
-    bs="$(max $((zone_size / 128)) "$logical_block_size")"
+    bs="$(max $((zone_size / 128)) "$min_seq_write_size")"
     prep_write
     off=$((first_sequential_zone_sector * 512))
     run_fio --zonemode=zbd --direct=1 --zonesize="${zone_size}" --thread=1 \
@@ -1427,7 +1427,7 @@ if [[ -b "$realdev" ]]; then
 		realsysfs=$(readlink "/sys/dev/block/$major:$minor")
 		basename=$(basename "${realsysfs%/*}")
 	fi
-	logical_block_size=$(<"/sys/block/$basename/queue/logical_block_size")
+	min_seq_write_size=$(<"/sys/block/$basename/queue/logical_block_size")
 	case "$(<"/sys/class/block/$basename/queue/zoned")" in
 	host-managed|host-aware)
 		is_zbd=true
@@ -1452,8 +1452,8 @@ if [[ -b "$realdev" ]]; then
 		;;
 	*)
 		first_sequential_zone_sector=$(((disk_size / 2) &
-						(logical_block_size - 1)))
-		zone_size=$(max 65536 "$logical_block_size")
+						(min_seq_write_size - 1)))
+		zone_size=$(max 65536 "$min_seq_write_size")
 		sectors_per_zone=$((zone_size / 512))
 		max_open_zones=128
 		set_io_scheduler "$basename" none || exit $?
@@ -1476,7 +1476,7 @@ elif [[ -c "$realdev" ]]; then
 		echo "Failed to determine disk size"
 		exit 1
 	fi
-	if ! logical_block_size=($(zbc_logical_block_size "$dev")); then
+	if ! min_seq_write_size=($(zbc_logical_block_size "$dev")); then
 		echo "Failed to determine logical block size"
 		exit 1
 	fi
