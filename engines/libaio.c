@@ -368,12 +368,6 @@ static void fio_libaio_queued(struct thread_data *td, struct io_u **io_us,
 		memcpy(&io_u->issue_time, &now, sizeof(now));
 		io_u_queued(td, io_u);
 	}
-
-	/*
-	 * only used for iolog
-	 */
-	if (td->o.read_iolog_file)
-		memcpy(&td->last_issue, &now, sizeof(now));
 }
 
 static int fio_libaio_commit(struct thread_data *td)
