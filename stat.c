@@ -590,17 +590,18 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	/* Only print per prio stats if there are >= 2 prios with samples */
 	if (get_nr_prios_with_samples(ts, ddir) >= 2) {
 		for (i = 0; i < ts->nr_clat_prio[ddir]; i++) {
-			if (calc_lat(&ts->clat_prio[ddir][i].clat_stat, &min,
-				     &max, &mean, &dev)) {
-				char buf[64];
+			char buf[64];
 
-				snprintf(buf, sizeof(buf),
-					 "%s prio %u/%u",
-					 clat_type,
-					 ts->clat_prio[ddir][i].ioprio >> 13,
-					 ts->clat_prio[ddir][i].ioprio & 7);
-				display_lat(buf, min, max, mean, dev, out);
-			}
+			if (!calc_lat(&ts->clat_prio[ddir][i].clat_stat, &min,
+				      &max, &mean, &dev))
+				continue;
+
+			snprintf(buf, sizeof(buf),
+				 "%s prio %u/%u",
+				 clat_type,
+				 ioprio_class(ts->clat_prio[ddir][i].ioprio),
+				 ioprio(ts->clat_prio[ddir][i].ioprio));
+			display_lat(buf, min, max, mean, dev, out);
 		}
 	}
 
@@ -632,20 +633,22 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 		/* Only print per prio stats if there are >= 2 prios with samples */
 		if (get_nr_prios_with_samples(ts, ddir) >= 2) {
 			for (i = 0; i < ts->nr_clat_prio[ddir]; i++) {
-				uint64_t prio_samples = ts->clat_prio[ddir][i].clat_stat.samples;
+				uint64_t prio_samples =
+					ts->clat_prio[ddir][i].clat_stat.samples;
 
-				if (prio_samples > 0) {
-					snprintf(prio_name, sizeof(prio_name),
-						 "%s prio %u/%u (%.2f%% of IOs)",
-						 clat_type,
-						 ts->clat_prio[ddir][i].ioprio >> 13,
-						 ts->clat_prio[ddir][i].ioprio & 7,
-						 100. * (double) prio_samples / (double) samples);
-					show_clat_percentiles(ts->clat_prio[ddir][i].io_u_plat,
-							      prio_samples, ts->percentile_list,
-							      ts->percentile_precision,
-							      prio_name, out);
-				}
+				if (!prio_samples)
+					continue;
+
+				snprintf(prio_name, sizeof(prio_name),
+					 "%s prio %u/%u (%.2f%% of IOs)",
+					 clat_type,
+					 ioprio_class(ts->clat_prio[ddir][i].ioprio),
+					 ioprio(ts->clat_prio[ddir][i].ioprio),
+					 100. * (double) prio_samples / (double) samples);
+				show_clat_percentiles(ts->clat_prio[ddir][i].io_u_plat,
+						prio_samples, ts->percentile_list,
+						ts->percentile_precision,
+						prio_name, out);
 			}
 		}
 	}
@@ -1508,22 +1511,24 @@ static void add_ddir_status_json(struct thread_stat *ts,
 		json_object_add_value_array(dir_object, "prios", array);
 
 		for (i = 0; i < ts->nr_clat_prio[ddir]; i++) {
-			if (ts->clat_prio[ddir][i].clat_stat.samples > 0) {
-				struct json_object *obj = json_create_object();
-				unsigned long long class, level;
+			struct json_object *obj;
 
-				class = ts->clat_prio[ddir][i].ioprio >> 13;
-				json_object_add_value_int(obj, "prioclass", class);
-				level = ts->clat_prio[ddir][i].ioprio & 7;
-				json_object_add_value_int(obj, "prio", level);
+			if (!ts->clat_prio[ddir][i].clat_stat.samples)
+				continue;
 
-				tmp_object = add_ddir_lat_json(ts,
-							       ts->clat_percentiles | ts->lat_percentiles,
-							       &ts->clat_prio[ddir][i].clat_stat,
-							       ts->clat_prio[ddir][i].io_u_plat);
-				json_object_add_value_object(obj, obj_name, tmp_object);
-				json_array_add_value_object(array, obj);
-			}
+			obj = json_create_object();
+
+			json_object_add_value_int(obj, "prioclass",
+				ioprio_class(ts->clat_prio[ddir][i].ioprio));
+			json_object_add_value_int(obj, "prio",
+				ioprio(ts->clat_prio[ddir][i].ioprio));
+
+			tmp_object = add_ddir_lat_json(ts,
+					ts->clat_percentiles | ts->lat_percentiles,
+					&ts->clat_prio[ddir][i].clat_stat,
+					ts->clat_prio[ddir][i].io_u_plat);
+			json_object_add_value_object(obj, obj_name, tmp_object);
+			json_array_add_value_object(array, obj);
 		}
 	}
 

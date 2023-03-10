@@ -153,6 +153,9 @@ static inline int ioprio_set(int which, int who, int ioprio_class, int ioprio)
 		       ioprio_value(ioprio_class, ioprio));
 }
 
+#define ioprio_class(ioprio)	((ioprio) >> IOPRIO_CLASS_SHIFT)
+#define ioprio(ioprio)		((ioprio) & 7)
+
 #ifndef CONFIG_HAVE_GETTID
 static inline int gettid(void)
 {

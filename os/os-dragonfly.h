@@ -175,6 +175,8 @@ static inline int fio_getaffinity(int pid, os_cpu_mask_t *mask)
 #define ioprio_set(which, who, ioprio_class, ioprio)	\
 	ioprio_set(which, who, ioprio)
 
+#define ioprio(ioprio)		(ioprio)
+
 static inline int blockdev_size(struct fio_file *f, unsigned long long *bytes)
 {
 	struct partinfo pi;
