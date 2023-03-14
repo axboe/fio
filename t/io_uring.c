@@ -545,15 +545,9 @@ static unsigned long long get_offset(struct submitter *s, struct file *f)
 	return offset;
 }
 
-static void init_io(struct submitter *s, unsigned index)
+static struct file *init_new_io(struct submitter *s)
 {
-	struct io_uring_sqe *sqe = &s->sqes[index];
 	struct file *f;
-
-	if (do_nop) {
-		sqe->opcode = IORING_OP_NOP;
-		return;
-	}
 
 	if (s->nr_files == 1) {
 		f = &s->files[0];
@@ -566,7 +560,22 @@ static void init_io(struct submitter *s, unsigned index)
 			f = &s->files[s->cur_file];
 		}
 	}
+
 	f->pending_ios++;
+	return f;
+}
+
+static void init_io(struct submitter *s, unsigned index)
+{
+	struct io_uring_sqe *sqe = &s->sqes[index];
+	struct file *f;
+
+	if (do_nop) {
+		sqe->opcode = IORING_OP_NOP;
+		return;
+	}
+
+	f = init_new_io(s);
 
 	if (register_files) {
 		sqe->flags = IOSQE_FIXED_FILE;
@@ -607,18 +616,7 @@ static void init_io_pt(struct submitter *s, unsigned index)
 	unsigned long long slba;
 	unsigned long long nlb;
 
-	if (s->nr_files == 1) {
-		f = &s->files[0];
-	} else {
-		f = &s->files[s->cur_file];
-		if (f->pending_ios >= file_depth(s)) {
-			s->cur_file++;
-			if (s->cur_file == s->nr_files)
-				s->cur_file = 0;
-			f = &s->files[s->cur_file];
-		}
-	}
-	f->pending_ios++;
+	f = init_new_io(s);
 
 	offset = get_offset(s, f);
 
@@ -1115,18 +1113,7 @@ static int prep_more_ios_aio(struct submitter *s, int max_ios, struct iocb *iocb
 	while (index < max_ios) {
 		struct iocb *iocb = &iocbs[index];
 
-		if (s->nr_files == 1) {
-			f = &s->files[0];
-		} else {
-			f = &s->files[s->cur_file];
-			if (f->pending_ios >= file_depth(s)) {
-				s->cur_file++;
-				if (s->cur_file == s->nr_files)
-					s->cur_file = 0;
-				f = &s->files[s->cur_file];
-			}
-		}
-		f->pending_ios++;
+		f = init_new_io(s);
 
 		io_prep_pread(iocb, f->real_fd, s->iovecs[index].iov_base,
 				s->iovecs[index].iov_len, get_offset(s, f));
@@ -1413,18 +1400,7 @@ static void *submitter_sync_fn(void *data)
 		uint64_t offset;
 		struct file *f;
 
-		if (s->nr_files == 1) {
-			f = &s->files[0];
-		} else {
-			f = &s->files[s->cur_file];
-			if (f->pending_ios >= file_depth(s)) {
-				s->cur_file++;
-				if (s->cur_file == s->nr_files)
-					s->cur_file = 0;
-				f = &s->files[s->cur_file];
-			}
-		}
-		f->pending_ios++;
+		f = init_new_io(s);
 
 #ifdef ARCH_HAVE_CPU_CLOCK
 		if (stats)
