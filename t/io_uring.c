@@ -606,7 +606,6 @@ static void init_io_pt(struct submitter *s, unsigned index)
 	struct nvme_uring_cmd *cmd;
 	unsigned long long slba;
 	unsigned long long nlb;
-	long r;
 
 	if (s->nr_files == 1) {
 		f = &s->files[0];
@@ -621,15 +620,7 @@ static void init_io_pt(struct submitter *s, unsigned index)
 	}
 	f->pending_ios++;
 
-	if (random_io) {
-		r = __rand64(&s->rand_state);
-		offset = (r % (f->max_blocks - 1)) * bs;
-	} else {
-		offset = f->cur_off;
-		f->cur_off += bs;
-		if (f->cur_off + bs > f->max_size)
-			f->cur_off = 0;
-	}
+	offset = get_offset(s, f);
 
 	if (register_files) {
 		sqe->fd = f->fixed_fd;
