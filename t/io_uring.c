@@ -530,8 +530,11 @@ static unsigned long long get_offset(struct submitter *s, struct file *f)
 	long r;
 
 	if (random_io) {
+		unsigned long long block;
+
 		r = __rand64(&s->rand_state);
-		offset = (r % (f->max_blocks - 1)) * bs;
+		block = r % f->max_blocks;
+		offset = block * (unsigned long long) bs;
 	} else {
 		offset = f->cur_off;
 		f->cur_off += bs;
