@@ -119,7 +119,10 @@ void fdp_fill_dspec_data(struct thread_data *td, struct io_u *io_u)
 		return;
 	}
 
-	dspec = ruhs->plis[ruhs->pli_loc++ % ruhs->nr_ruhs];
+	if (ruhs->pli_loc >= ruhs->nr_ruhs)
+		ruhs->pli_loc = 0;
+
+	dspec = ruhs->plis[ruhs->pli_loc++];
 	io_u->dtype = 2;
 	io_u->dspec = dspec;
 }
