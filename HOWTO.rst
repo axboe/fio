@@ -3821,10 +3821,11 @@ Steady state
 
 .. option:: steadystate_duration=time, ss_dur=time
 
-	A rolling window of this duration will be used to judge whether steady state
-	has been reached. Data will be collected every ss_check_interval.
-	The default is 0 which disables steady state detection.  When the unit is omitted,
-	the value is interpreted in seconds.
+        A rolling window of this duration will be used to judge whether steady
+        state has been reached. Data will be collected every
+        :option:`ss_interval`.  The default is 0 which disables steady state
+        detection.  When the unit is omitted, the value is interpreted in
+        seconds.
 
 .. option:: steadystate_ramp_time=time, ss_ramp=time
 
@@ -3834,11 +3835,11 @@ Steady state
 
 .. option:: steadystate_check_interval=time, ss_interval=time
 
-	The values during the rolling window will be collected with a period
-	of this value. If ss_interval is 30s and ss_dur is 300s, 10 measurements will
-	be taken. Default is 1s but that might not converge, especially for
-	slower cards, so set this accordingly. When the unit is omitted,
-	the value is interpreted in seconds.
+        The values during the rolling window will be collected with a period of
+        this value. If :option:`ss_interval` is 30s and :option:`ss_dur` is
+        300s, 10 measurements will be taken. Default is 1s but that might not
+        converge, especially for slower devices, so set this accordingly. When
+        the unit is omitted, the value is interpreted in seconds.
 
 
 Measurements and reporting

@@ -3532,9 +3532,9 @@ slope. Stop the job if the slope falls below the specified limit.
 .TP
 .BI steadystate_duration \fR=\fPtime "\fR,\fP ss_dur" \fR=\fPtime
 A rolling window of this duration will be used to judge whether steady state
-has been reached. Data will be collected once per second. The default is 0
-which disables steady state detection. When the unit is omitted, the
-value is interpreted in seconds.
+has been reached. Data will be collected every \fBss_interval\fR. The default
+is 0 which disables steady state detection. When the unit is omitted, the value
+is interpreted in seconds.
 .TP
 .BI steadystate_ramp_time \fR=\fPtime "\fR,\fP ss_ramp" \fR=\fPtime
 Allow the job to run for the specified duration before beginning data
@@ -3543,9 +3543,10 @@ default is 0. When the unit is omitted, the value is interpreted in seconds.
 .TP
 .BI steadystate_check_interval \fR=\fPtime "\fR,\fP ss_interval" \fR=\fPtime
 The values suring the rolling window will be collected with a period of this
-value. Default is 1s but that might not converge, especially for slower cards,
-so set this accordingly. When the unit is omitted, the value is interpreted
-in seconds.
+value. If \fBss_interval\fR is 30s and \fBss_dur\fR is 300s, 10 measurements
+will be taken. Default is 1s but that might not converge, especially for slower
+devices, so set this accordingly. When the unit is omitted, the value is
+interpreted in seconds.
 .SS "Measurements and reporting"
 .TP
 .BI per_job_logs \fR=\fPbool
