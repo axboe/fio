@@ -85,7 +85,7 @@ static bool steadystate_slope(uint64_t iops, uint64_t bw,
 					ss->sum_y += ss->iops_data[i];
 				else
 					ss->sum_y += ss->bw_data[i];
-				j = (ss->head + i) % ss->dur;
+				j = (ss->head + i) % intervals;
 				if (ss->state & FIO_SS_IOPS)
 					ss->sum_xy += i * ss->iops_data[j];
 				else
@@ -95,7 +95,7 @@ static bool steadystate_slope(uint64_t iops, uint64_t bw,
 		} else {		/* easy to update the sums */
 			ss->sum_y -= ss->oldest_y;
 			ss->sum_y += new_val;
-			ss->sum_xy = ss->sum_xy - ss->sum_y + ss->dur * new_val;
+			ss->sum_xy = ss->sum_xy - ss->sum_y + intervals * new_val;
 		}
 
 		if (ss->state & FIO_SS_IOPS)
@@ -109,10 +109,10 @@ static bool steadystate_slope(uint64_t iops, uint64_t bw,
 		 * equally spaced when they are often off by a few milliseconds.
 		 * This assumption greatly simplifies the calculations.
 		 */
-		ss->slope = (ss->sum_xy - (double) ss->sum_x * ss->sum_y / ss->dur) /
-				(ss->sum_x_sq - (double) ss->sum_x * ss->sum_x / ss->dur);
+		ss->slope = (ss->sum_xy - (double) ss->sum_x * ss->sum_y / intervals) /
+				(ss->sum_x_sq - (double) ss->sum_x * ss->sum_x / intervals);
 		if (ss->state & FIO_SS_PCT)
-			ss->criterion = 100.0 * ss->slope / (ss->sum_y / ss->dur);
+			ss->criterion = 100.0 * ss->slope / (ss->sum_y / intervals);
 		else
 			ss->criterion = ss->slope;
 
@@ -310,6 +310,7 @@ int td_steadystate_init(struct thread_data *td)
 {
 	struct steadystate_data *ss = &td->ss;
 	struct thread_options *o = &td->o;
+	int intervals;
 
 	memset(ss, 0, sizeof(*ss));
 
@@ -327,8 +328,9 @@ int td_steadystate_init(struct thread_data *td)
 		if (!td->ss.ramp_time)
 			ss->state |= FIO_SS_RAMP_OVER;
 
-		ss->sum_x = o->ss_dur * (o->ss_dur - 1) / 2;
-		ss->sum_x_sq = (o->ss_dur - 1) * (o->ss_dur) * (2*o->ss_dur - 1) / 6;
+		intervals = ss->dur / (ss_check_interval / 1000L);
+		ss->sum_x = intervals * (intervals - 1) / 2;
+		ss->sum_x_sq = (intervals - 1) * (intervals) * (2*intervals - 1) / 6;
 	}
 
 	/* make sure that ss options are consistent within reporting group */
