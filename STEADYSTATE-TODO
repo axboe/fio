@@ -1,5 +1,15 @@
 Known issues/TODO (for steady-state)
 
+- Replace the test script with a better one
+  - Add test cases for the new check_interval option
+  - Parse debug=steadystate output to check calculations
+
+- Instead of calculating `intervals` every time, calculate it once and stash it
+  somewhere
+
+- Add the time unit to the ss_dur and check_interval variable names to reduce
+  possible confusion
+
 - Better documentation for output
 
 - Report read, write, trim IOPS/BW separately
