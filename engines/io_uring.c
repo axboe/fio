@@ -1148,7 +1148,7 @@ static int fio_ioring_cmd_open_file(struct thread_data *td, struct fio_file *f)
 	if (o->cmd_type == FIO_URING_CMD_NVME) {
 		struct nvme_data *data = NULL;
 		unsigned int nsid, lba_size = 0;
-		unsigned long long nlba = 0;
+		__u64 nlba = 0;
 		int ret;
 
 		/* Store the namespace-id and lba size. */
@@ -1214,7 +1214,7 @@ static int fio_ioring_cmd_get_file_size(struct thread_data *td,
 	if (o->cmd_type == FIO_URING_CMD_NVME) {
 		struct nvme_data *data = NULL;
 		unsigned int nsid, lba_size = 0;
-		unsigned long long nlba = 0;
+		__u64 nlba = 0;
 		int ret;
 
 		ret = fio_nvme_get_info(f, &nsid, &lba_size, &nlba);
