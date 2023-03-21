@@ -241,7 +241,7 @@ int fio_nvme_report_zones(struct thread_data *td, struct fio_file *f,
 				break;
 			default:
 				log_err("%s: invalid type for zone at offset %llu.\n",
-					f->file_name, desc->zslba);
+					f->file_name, (unsigned long long) desc->zslba);
 				ret = -EIO;
 				goto out;
 			}
