@@ -62,6 +62,7 @@ DPKGCFG
     pkgs+=(
         python3-scipy
 	python3-sphinx
+	python3-statsmodels
     )
 
     echo "Updating APT..."
@@ -85,7 +86,7 @@ install_macos() {
     echo "Installing packages..."
     HOMEBREW_NO_AUTO_UPDATE=1 brew install cunit libnfs sphinx-doc
     brew link sphinx-doc --force
-    pip3 install scipy six 
+    pip3 install scipy six statsmodels
 }
 
 main() {
