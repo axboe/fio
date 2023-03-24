@@ -162,7 +162,6 @@ struct thread_options {
 	unsigned int do_disk_util;
 	unsigned int override_sync;
 	unsigned int rand_repeatable;
-	unsigned int allrand_repeatable;
 	unsigned long long rand_seed;
 	unsigned int log_avg_msec;
 	unsigned int log_hist_msec;
@@ -485,8 +484,6 @@ struct thread_options_pack {
 	uint32_t do_disk_util;
 	uint32_t override_sync;
 	uint32_t rand_repeatable;
-	uint32_t allrand_repeatable;
-	uint32_t pad2;
 	uint64_t rand_seed;
 	uint32_t log_avg_msec;
 	uint32_t log_hist_msec;
