@@ -37,7 +37,7 @@ case "${DISTRO}" in
         ;;
 esac
 
-python.exe -m pip install scipy six
+python.exe -m pip install scipy six statsmodels
 
 echo "Python3 path: $(type -p python3 2>&1)"
 echo "Python3 version: $(python3 -V 2>&1)"

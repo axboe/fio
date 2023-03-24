@@ -53,6 +53,7 @@ import traceback
 import subprocess
 import multiprocessing
 from pathlib import Path
+from statsmodels.sandbox.stats.runs import runstest_1samp
 
 
 class FioTest():
@@ -598,23 +599,15 @@ class FioJobTest_t0020(FioJobTest):
 
         log_lines = file_data.split('\n')
 
-        seq_count = 0
-        offsets = set()
+        offsets = []
 
         prev = int(log_lines[0].split(',')[4])
         for line in log_lines[1:]:
-            offsets.add(prev/4096)
+            offsets.append(prev/4096)
             if len(line.strip()) == 0:
                 continue
             cur = int(line.split(',')[4])
-            if cur - prev == 4096:
-                seq_count += 1
             prev = cur
-
-        # 10 is an arbitrary threshold
-        if seq_count > 10:
-            self.passed = False
-            self.failure_reason = "too many ({0}) consecutive offsets".format(seq_count)
 
         if len(offsets) != 256:
             self.passed = False
@@ -624,6 +617,11 @@ class FioJobTest_t0020(FioJobTest):
             if not i in offsets:
                 self.passed = False
                 self.failure_reason += " missing offset {0}".format(i*4096)
+
+        (z, p) = runstest_1samp(list(offsets))
+        if p < 0.05:
+            self.passed = False
+            self.failure_reason += f" runs test failed with p = {p}"
 
 
 class FioJobTest_t0022(FioJobTest):
