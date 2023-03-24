@@ -1020,12 +1020,18 @@ static void init_rand_file_service(struct thread_data *td)
 	}
 }
 
-static void td_fill_rand_seeds_internal(struct thread_data *td, bool use64)
+void td_fill_rand_seeds(struct thread_data *td)
 {
 	uint64_t read_seed = td->rand_seeds[FIO_RAND_BS_OFF];
 	uint64_t write_seed = td->rand_seeds[FIO_RAND_BS1_OFF];
 	uint64_t trim_seed = td->rand_seeds[FIO_RAND_BS2_OFF];
 	int i;
+	bool use64;
+
+	if (td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE64)
+		use64 = true;
+	else
+		use64 = false;
 
 	/*
 	 * trimwrite is special in that we need to generate the same
@@ -1075,22 +1081,6 @@ static void td_fill_rand_seeds_internal(struct thread_data *td, bool use64)
 	frand_copy(&td->buf_state_prev, &td->buf_state);
 }
 
-void td_fill_rand_seeds(struct thread_data *td)
-{
-	bool use64;
-
-	if (td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE64)
-		use64 = true;
-	else
-		use64 = false;
-
-	td_fill_rand_seeds_internal(td, use64);
-
-	dprint(FD_RANDOM, "FIO_RAND_NR_OFFS=%d\n", FIO_RAND_NR_OFFS);
-	for (int i = 0; i < FIO_RAND_NR_OFFS; i++)
-		dprint(FD_RANDOM, "rand_seeds[%d]=%" PRIu64 "\n", i, td->rand_seeds[i]);
-}
-
 static int setup_random_seeds(struct thread_data *td)
 {
 	uint64_t seed;
@@ -1122,6 +1112,11 @@ static int setup_random_seeds(struct thread_data *td)
 		td->rand_seeds[FIO_RAND_BLOCK_OFF] = FIO_RANDSEED * td->thread_number;
 
 	td_fill_rand_seeds(td);
+
+	dprint(FD_RANDOM, "FIO_RAND_NR_OFFS=%d\n", FIO_RAND_NR_OFFS);
+	for (int i = 0; i < FIO_RAND_NR_OFFS; i++)
+		dprint(FD_RANDOM, "rand_seeds[%d]=%" PRIu64 "\n", i, td->rand_seeds[i]);
+
 	return 0;
 }
 
