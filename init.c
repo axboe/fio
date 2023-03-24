@@ -1088,6 +1088,7 @@ static int setup_random_seeds(struct thread_data *td)
 
 	if (!td->o.rand_repeatable && !fio_option_is_set(&td->o, rand_seed)) {
 		int ret = init_random_seeds(td->rand_seeds, sizeof(td->rand_seeds));
+		dprint(FD_RANDOM, "using system RNG for random seeds\n");
 		if (ret)
 			return ret;
 	} else {
@@ -1100,16 +1101,6 @@ static int setup_random_seeds(struct thread_data *td)
 			seed *= 0x9e370001UL;
 		}
 	}
-
-	if (td->o.allrand_repeatable) {
-		unsigned int i;
-
-		for (i = 0; i < FIO_RAND_NR_OFFS; i++)
-			td->rand_seeds[i] = FIO_RANDSEED * td->thread_number + i;
-	}
-
-	if (td->o.rand_repeatable)
-		td->rand_seeds[FIO_RAND_BLOCK_OFF] = FIO_RANDSEED * td->thread_number;
 
 	td_fill_rand_seeds(td);
 
