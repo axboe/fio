@@ -1022,12 +1022,11 @@ Alias for \fBboth\fR.
 .RE
 .TP
 .BI randrepeat \fR=\fPbool
-Seed the random number generator used for random I/O patterns in a
-predictable way so the pattern is repeatable across runs. Default: true.
+Seed all random number generators in a predictable way so the pattern is
+repeatable across runs. Default: true.
 .TP
 .BI allrandrepeat \fR=\fPbool
-Seed all random number generators in a predictable way so results are
-repeatable across runs. Default: false.
+Alias for \fBrandrepeat\fR. Default: true.
 .TP
 .BI randseed \fR=\fPint
 Seed the random number generators based on this seed value, to be able to

@@ -1232,13 +1232,12 @@ I/O type
 
 .. option:: randrepeat=bool
 
-	Seed the random number generator used for random I/O patterns in a
-	predictable way so the pattern is repeatable across runs. Default: true.
+        Seed all random number generators in a predictable way so the pattern
+        is repeatable across runs. Default: true.
 
 .. option:: allrandrepeat=bool
 
-	Seed all random number generators in a predictable way so results are
-	repeatable across runs.  Default: false.
+	Alias for :option:`randrepeat`. Default: true.
 
 .. option:: randseed=int
 
