@@ -638,7 +638,6 @@ extern void fio_options_dup_and_init(struct option *);
 extern char *fio_option_dup_subs(const char *);
 extern void fio_options_mem_dupe(struct thread_data *);
 extern void td_fill_rand_seeds(struct thread_data *);
-extern void td_fill_verify_state_seed(struct thread_data *);
 extern void add_job_opts(const char **, int);
 extern int ioengine_load(struct thread_data *);
 extern bool parse_dryrun(void);
