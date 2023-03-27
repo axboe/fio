@@ -24,6 +24,7 @@
 #include "../lib/types.h"
 #include "../os/linux/io_uring.h"
 #include "cmdprio.h"
+#include "zbd.h"
 #include "nvme.h"
 
 #include <sys/stat.h>
@@ -409,6 +410,9 @@ static int fio_ioring_cmd_prep(struct thread_data *td, struct io_u *io_u)
 	if (o->cmd_type != FIO_URING_CMD_NVME)
 		return -EINVAL;
 
+	if (io_u->ddir == DDIR_TRIM)
+		return 0;
+
 	sqe = &ld->sqes[(io_u->index) << 1];
 
 	if (o->registerfiles) {
@@ -556,6 +560,27 @@ static inline void fio_ioring_cmdprio_prep(struct thread_data *td,
 		ld->sqes[io_u->index].ioprio = io_u->ioprio;
 }
 
+static int fio_ioring_cmd_io_u_trim(const struct thread_data *td,
+				    struct io_u *io_u)
+{
+	struct fio_file *f = io_u->file;
+	int ret;
+
+	if (td->o.zone_mode == ZONE_MODE_ZBD) {
+		ret = zbd_do_io_u_trim(td, io_u);
+		if (ret == io_u_completed)
+			return io_u->xfer_buflen;
+		if (ret)
+			goto err;
+	}
+
+	return fio_nvme_trim(td, f, io_u->offset, io_u->xfer_buflen);
+
+err:
+	io_u->error = ret;
+	return 0;
+}
+
 static enum fio_q_status fio_ioring_queue(struct thread_data *td,
 					  struct io_u *io_u)
 {
@@ -572,7 +597,11 @@ static enum fio_q_status fio_ioring_queue(struct thread_data *td,
 		if (ld->queued)
 			return FIO_Q_BUSY;
 
-		do_io_u_trim(td, io_u);
+		if (!strcmp(td->io_ops->name, "io_uring_cmd"))
+			fio_ioring_cmd_io_u_trim(td, io_u);
+		else
+			do_io_u_trim(td, io_u);
+
 		io_u_mark_submit(td, 1);
 		io_u_mark_complete(td, 1);
 		return FIO_Q_COMPLETED;

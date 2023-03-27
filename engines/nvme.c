@@ -43,6 +43,40 @@ int fio_nvme_uring_cmd_prep(struct nvme_uring_cmd *cmd, struct io_u *io_u,
 	return 0;
 }
 
+static int nvme_trim(int fd, __u32 nsid, __u32 nr_range, __u32 data_len,
+		     void *data)
+{
+	struct nvme_passthru_cmd cmd = {
+		.opcode		= nvme_cmd_dsm,
+		.nsid		= nsid,
+		.addr		= (__u64)(uintptr_t)data,
+		.data_len 	= data_len,
+		.cdw10		= nr_range - 1,
+		.cdw11		= NVME_ATTRIBUTE_DEALLOCATE,
+	};
+
+	return ioctl(fd, NVME_IOCTL_IO_CMD, &cmd);
+}
+
+int fio_nvme_trim(const struct thread_data *td, struct fio_file *f,
+		  unsigned long long offset, unsigned long long len)
+{
+	struct nvme_data *data = FILE_ENG_DATA(f);
+	struct nvme_dsm_range dsm;
+	int ret;
+
+	dsm.nlb = (len >> data->lba_shift);
+	dsm.slba = (offset >> data->lba_shift);
+
+	ret = nvme_trim(f->fd, data->nsid, 1, sizeof(struct nvme_dsm_range),
+			&dsm);
+	if (ret)
+		log_err("%s: nvme_trim failed for offset %llu and len %llu, err=%d\n",
+			f->file_name, offset, len, ret);
+
+	return ret;
+}
+
 static int nvme_identify(int fd, __u32 nsid, enum nvme_identify_cns cns,
 			 enum nvme_csi csi, void *data)
 {
