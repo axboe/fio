@@ -565,8 +565,10 @@ int td_io_open_file(struct thread_data *td, struct fio_file *f)
 			flags = POSIX_FADV_RANDOM;
 		else if (td->o.fadvise_hint == F_ADV_SEQUENTIAL)
 			flags = POSIX_FADV_SEQUENTIAL;
+#ifdef POSIX_FADV_NOREUSE
 		else if (td->o.fadvise_hint == F_ADV_NOREUSE)
 			flags = POSIX_FADV_NOREUSE;
+#endif
 		else {
 			log_err("fio: unknown fadvise type %d\n",
 							td->o.fadvise_hint);

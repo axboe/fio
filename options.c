@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <assert.h>
+#include <fcntl.h>
 #include <sys/stat.h>
 #include <netinet/in.h>
 
@@ -2740,10 +2741,12 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .oval = F_ADV_SEQUENTIAL,
 			    .help = "Advise using FADV_SEQUENTIAL",
 			  },
+#ifdef POSIX_FADV_NOREUSE
 			  { .ival = "noreuse",
 			    .oval = F_ADV_NOREUSE,
 			    .help = "Advise using FADV_NOREUSE",
 			  },
+#endif
 		},
 		.help	= "Use fadvise() to advise the kernel on IO pattern",
 		.def	= "1",
