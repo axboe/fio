@@ -376,7 +376,7 @@ struct thread_data {
 
 	uint64_t *thinktime_blocks_counter;
 	struct timespec last_thinktime;
-	uint64_t last_thinktime_blocks;
+	int64_t last_thinktime_blocks;
 
 	/*
 	 * State for random io, a bitmap of blocks done vs not done
