@@ -163,6 +163,7 @@ enum {
 	F_ADV_TYPE,
 	F_ADV_RANDOM,
 	F_ADV_SEQUENTIAL,
+	F_ADV_NOREUSE,
 };
 
 /*
