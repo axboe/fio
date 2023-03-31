@@ -1308,6 +1308,11 @@ I/O type
 		**random**
 			Advise using **FADV_RANDOM**.
 
+		**noreuse**
+			Advise using **FADV_NOREUSE**. This may be a no-op on older Linux
+			kernels. Since Linux 6.3, it provides a hint to the LRU algorithm.
+			See the :manpage:`posix_fadvise(2)` man page.
+
 .. option:: write_hint=str
 
 	Use :manpage:`fcntl(2)` to advise the kernel what life time to expect

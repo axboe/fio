@@ -1098,6 +1098,11 @@ Advise using FADV_SEQUENTIAL.
 .TP
 .B random
 Advise using FADV_RANDOM.
+.TP
+.B noreuse
+Advise using FADV_NOREUSE. This may be a no-op on older Linux
+kernels. Since Linux 6.3, it provides a hint to the LRU algorithm.
+See the \fBposix_fadvise\fR\|(2) man page.
 .RE
 .RE
 .TP
