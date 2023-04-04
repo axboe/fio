@@ -112,9 +112,10 @@ int fio_nvme_get_info(struct fio_file *f, __u32 *nsid, __u32 *lba_sz,
 
 	namespace_id = ioctl(fd, NVME_IOCTL_ID);
 	if (namespace_id < 0) {
+		err = -errno;
 		log_err("failed to fetch namespace-id");
 		close(fd);
-		return -errno;
+		return err;
 	}
 
 	/*
@@ -414,6 +415,7 @@ int fio_nvme_iomgmt_ruhs(struct thread_data *td, struct fio_file *f,
 	} else
 		errno = 0;
 
+	ret = -errno;
 	close(fd);
-	return -errno;
+	return ret;
 }
