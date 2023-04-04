@@ -2510,7 +2510,7 @@ reap:
 			if (mtime_since_now(&this_start) > JOB_START_TIMEOUT)
 				break;
 
-			do_usleep(100000);
+			do_usleep(300000);
 
 			for (i = 0; i < this_jobs; i++) {
 				td = map[i];
