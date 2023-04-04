@@ -131,9 +131,13 @@ void clear_io_state(struct thread_data *td, int all)
 
 void reset_all_stats(struct thread_data *td)
 {
+	unsigned long long b;
 	int i;
 
 	reset_io_counters(td, 1);
+
+	b = ddir_rw_sum(td->thinktime_blocks_counter);
+	td->last_thinktime_blocks -= b;
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		td->io_bytes[i] = 0;
@@ -148,6 +152,8 @@ void reset_all_stats(struct thread_data *td)
 	memcpy(&td->iops_sample_time, &td->epoch, sizeof(td->epoch));
 	memcpy(&td->bw_sample_time, &td->epoch, sizeof(td->epoch));
 	memcpy(&td->ss.prev_time, &td->epoch, sizeof(td->epoch));
+
+	td->last_thinktime = td->epoch;
 
 	lat_target_reset(td);
 	clear_rusage_stat(td);
