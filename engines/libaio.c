@@ -288,14 +288,16 @@ static int fio_libaio_getevents(struct thread_data *td, unsigned int min,
 		    && actual_min == 0
 		    && ((struct aio_ring *)(ld->aio_ctx))->magic
 				== AIO_RING_MAGIC) {
-			r = user_io_getevents(ld->aio_ctx, max,
+			r = user_io_getevents(ld->aio_ctx, max - events,
 				ld->aio_events + events);
 		} else {
 			r = io_getevents(ld->aio_ctx, actual_min,
-				max, ld->aio_events + events, lt);
+				max - events, ld->aio_events + events, lt);
 		}
-		if (r > 0)
+		if (r > 0) {
 			events += r;
+			actual_min = actual_min > events ? actual_min - events : 0;
+		}
 		else if ((min && r == 0) || r == -EAGAIN) {
 			fio_libaio_commit(td);
 			if (actual_min)
