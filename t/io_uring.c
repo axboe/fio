@@ -704,7 +704,7 @@ static int get_file_size(struct file *f)
 					bs, lbs);
 			return -1;
 		}
-		f->max_blocks = nlba / bs;
+		f->max_blocks = nlba;
 		f->max_size = nlba;
 		f->lba_shift = ilog2(lbs);
 		return 0;
