@@ -487,11 +487,10 @@ static void io_uring_probe(int fd)
 	struct io_uring_probe *p;
 	int ret;
 
-	p = malloc(sizeof(*p) + 256 * sizeof(struct io_uring_probe_op));
+	p = calloc(1, sizeof(*p) + 256 * sizeof(struct io_uring_probe_op));
 	if (!p)
 		return;
 
-	memset(p, 0, sizeof(*p) + 256 * sizeof(struct io_uring_probe_op));
 	ret = syscall(__NR_io_uring_register, fd, IORING_REGISTER_PROBE, p, 256);
 	if (ret < 0)
 		goto out;

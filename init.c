@@ -1946,8 +1946,7 @@ static int __parse_jobs_ini(struct thread_data *td,
 	 * it's really 256 + small bit, 280 should suffice
 	 */
 	if (!nested) {
-		name = malloc(280);
-		memset(name, 0, 280);
+		name = calloc(1, 280);
 	}
 
 	opts = NULL;

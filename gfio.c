@@ -730,8 +730,7 @@ static struct gui_entry *alloc_new_gui_entry(struct gui *ui)
 {
 	struct gui_entry *ge;
 
-	ge = malloc(sizeof(*ge));
-	memset(ge, 0, sizeof(*ge));
+	ge = calloc(1, sizeof(*ge));
 	ge->state = GE_STATE_NEW;
 	ge->ui = ui;
 	return ge;

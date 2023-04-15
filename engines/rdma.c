@@ -1296,23 +1296,18 @@ static int fio_rdmaio_init(struct thread_data *td)
 
 	if ((rd->rdma_protocol == FIO_RDMA_MEM_WRITE) ||
 	    (rd->rdma_protocol == FIO_RDMA_MEM_READ)) {
-		rd->rmt_us =
-			malloc(FIO_RDMA_MAX_IO_DEPTH * sizeof(struct remote_u));
-		memset(rd->rmt_us, 0,
-			FIO_RDMA_MAX_IO_DEPTH * sizeof(struct remote_u));
+		rd->rmt_us = calloc(FIO_RDMA_MAX_IO_DEPTH,
+				    sizeof(struct remote_u));
 		rd->rmt_nr = 0;
 	}
 
-	rd->io_us_queued = malloc(td->o.iodepth * sizeof(struct io_u *));
-	memset(rd->io_us_queued, 0, td->o.iodepth * sizeof(struct io_u *));
+	rd->io_us_queued = calloc(td->o.iodepth, sizeof(struct io_u *));
 	rd->io_u_queued_nr = 0;
 
-	rd->io_us_flight = malloc(td->o.iodepth * sizeof(struct io_u *));
-	memset(rd->io_us_flight, 0, td->o.iodepth * sizeof(struct io_u *));
+	rd->io_us_flight = calloc(td->o.iodepth, sizeof(struct io_u *));
 	rd->io_u_flight_nr = 0;
 
-	rd->io_us_completed = malloc(td->o.iodepth * sizeof(struct io_u *));
-	memset(rd->io_us_completed, 0, td->o.iodepth * sizeof(struct io_u *));
+	rd->io_us_completed = calloc(td->o.iodepth, sizeof(struct io_u *));
 	rd->io_u_completed_nr = 0;
 
 	if (td_read(td)) {	/* READ as the server */
@@ -1339,8 +1334,7 @@ static int fio_rdmaio_post_init(struct thread_data *td)
 	for (i = 0; i < td->io_u_freelist.nr; i++) {
 		struct io_u *io_u = td->io_u_freelist.io_us[i];
 
-		io_u->engine_data = malloc(sizeof(struct rdma_io_u_data));
-		memset(io_u->engine_data, 0, sizeof(struct rdma_io_u_data));
+		io_u->engine_data = calloc(1, sizeof(struct rdma_io_u_data));
 		((struct rdma_io_u_data *)io_u->engine_data)->wr_id = i;
 
 		io_u->mr = ibv_reg_mr(rd->pd, io_u->buf, max_bs,
@@ -1386,9 +1380,7 @@ static int fio_rdmaio_setup(struct thread_data *td)
 	}
 
 	if (!td->io_ops_data) {
-		rd = malloc(sizeof(*rd));
-
-		memset(rd, 0, sizeof(*rd));
+		rd = calloc(1, sizeof(*rd));
 		init_rand_seed(&rd->rand_state, (unsigned int) GOLDEN_RATIO_64, 0);
 		td->io_ops_data = rd;
 	}

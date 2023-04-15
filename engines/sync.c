@@ -402,8 +402,7 @@ static int fio_vsyncio_init(struct thread_data *td)
 {
 	struct syncio_data *sd;
 
-	sd = malloc(sizeof(*sd));
-	memset(sd, 0, sizeof(*sd));
+	sd = calloc(1, sizeof(*sd));
 	sd->last_offset = -1ULL;
 	sd->iovecs = malloc(td->o.iodepth * sizeof(struct iovec));
 	sd->io_us = malloc(td->o.iodepth * sizeof(struct io_u *));

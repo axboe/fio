@@ -713,8 +713,7 @@ static void graph_label_add_value(struct graph_label *i, void *value,
 	struct graph *g = i->parent;
 	struct graph_value *x;
 
-	x = malloc(sizeof(*x));
-	memset(x, 0, sizeof(*x));
+	x = calloc(1, sizeof(*x));
 	INIT_FLIST_HEAD(&x->alias);
 	INIT_FLIST_HEAD(&x->list);
 	flist_add_tail(&x->list, &i->value_list);

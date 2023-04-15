@@ -187,8 +187,7 @@ static int fio_solarisaio_init(struct thread_data *td)
 {
 	unsigned int max_depth;
 	struct solarisaio_data *sd;
-	sd = malloc(sizeof(*sd));
-	memset(sd, 0, sizeof(*sd));
+	sd = calloc(1, sizeof(*sd));
 
 	max_depth = td->o.iodepth;
 	if (max_depth > MAXASYNCHIO) {
@@ -197,8 +196,7 @@ static int fio_solarisaio_init(struct thread_data *td)
 							max_depth);
 	}
 
-	sd->aio_events = malloc(max_depth * sizeof(struct io_u *));
-	memset(sd->aio_events, 0, max_depth * sizeof(struct io_u *));
+	sd->aio_events = calloc(max_depth, sizeof(struct io_u *));
 	sd->max_depth = max_depth;
 
 #ifdef USE_SIGNAL_COMPLETIONS

@@ -303,13 +303,12 @@ static bool pre_read_file(struct thread_data *td, struct fio_file *f)
 	if (bs > left)
 		bs = left;
 
-	b = malloc(bs);
+	b = calloc(1, bs);
 	if (!b) {
 		td_verror(td, errno, "malloc");
 		ret = false;
 		goto error;
 	}
-	memset(b, 0, bs);
 
 	if (lseek(f->fd, f->file_offset, SEEK_SET) < 0) {
 		td_verror(td, errno, "lseek");

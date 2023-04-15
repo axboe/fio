@@ -68,8 +68,7 @@ static int fio_iscsi_setup_lun(struct iscsi_info *iscsi_info,
 	struct scsi_readcapacity16	*rc16	    = NULL;
 	int				 ret	    = 0;
 
-	iscsi_lun = malloc(sizeof(struct iscsi_lun));
-	memset(iscsi_lun, 0, sizeof(struct iscsi_lun));
+	iscsi_lun = calloc(1, sizeof(struct iscsi_lun));
 
 	iscsi_lun->iscsi_info = iscsi_info;
 

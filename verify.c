@@ -1595,8 +1595,7 @@ struct all_io_list *get_all_io_list(int save_mask, size_t *sz)
 	*sz = sizeof(*rep);
 	*sz += nr * sizeof(struct thread_io_list);
 	*sz += depth * sizeof(struct file_comp);
-	rep = malloc(*sz);
-	memset(rep, 0, *sz);
+	rep = calloc(1, *sz);
 
 	rep->threads = cpu_to_le64((uint64_t) nr);
 

@@ -77,12 +77,11 @@ static int fio_e4defrag_init(struct thread_data *td)
 		return 1;
 	}
 
-	ed = malloc(sizeof(*ed));
+	ed = calloc(1, sizeof(*ed));
 	if (!ed) {
 		td_verror(td, ENOMEM, "io_queue_init");
 		return 1;
 	}
-	memset(ed, 0 ,sizeof(*ed));
 
 	if (td->o.directory)
 		len = sprintf(donor_name, "%s/", td->o.directory);

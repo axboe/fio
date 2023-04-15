@@ -315,8 +315,7 @@ static int fio_hdfsio_setup(struct thread_data *td)
 	uint64_t file_size, total_file_size;
 
 	if (!td->io_ops_data) {
-		hd = malloc(sizeof(*hd));
-		memset(hd, 0, sizeof(*hd));
+		hd = calloc(1, sizeof(*hd));
 		
 		hd->curr_file_id = -1;
 

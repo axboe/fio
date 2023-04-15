@@ -800,11 +800,10 @@ static void fio_ioring_probe(struct thread_data *td)
 	/* default to off, as that's always safe */
 	o->nonvectored = 0;
 
-	p = malloc(sizeof(*p) + 256 * sizeof(struct io_uring_probe_op));
+	p = calloc(1, sizeof(*p) + 256 * sizeof(struct io_uring_probe_op));
 	if (!p)
 		return;
 
-	memset(p, 0, sizeof(*p) + 256 * sizeof(struct io_uring_probe_op));
 	ret = syscall(__NR_io_uring_register, ld->ring_fd,
 			IORING_REGISTER_PROBE, p, 256);
 	if (ret < 0)

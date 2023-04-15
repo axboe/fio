@@ -224,8 +224,7 @@ static int do_mount(struct thread_data *td, const char *url)
 		return -1;
 	}
 
-	options->events = malloc(event_size);
-	memset(options->events, 0, event_size);
+	options->events = calloc(1, event_size);
 
 	options->prev_requested_event_index = -1;
 	options->queue_depth = td->o.iodepth;
@@ -278,8 +277,7 @@ static int fio_libnfs_open(struct thread_data *td, struct fio_file *f)
 			options->nfs_url, ret, nfs_get_error(options->context));
 		return ret;
 	}
-	nfs_data = malloc(sizeof(struct nfs_data));
-	memset(nfs_data, 0, sizeof(struct nfs_data));
+	nfs_data = calloc(1, sizeof(struct nfs_data));
 	nfs_data->options = options;
 
 	if (td->o.td_ddir == TD_DDIR_WRITE)

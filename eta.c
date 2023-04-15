@@ -409,8 +409,7 @@ bool calc_thread_status(struct jobs_eta *je, int force)
 	if (!ddir_rw_sum(disp_io_bytes))
 		fill_start_time(&disp_prev_time);
 
-	eta_secs = malloc(thread_number * sizeof(uint64_t));
-	memset(eta_secs, 0, thread_number * sizeof(uint64_t));
+	eta_secs = calloc(thread_number, sizeof(uint64_t));
 
 	je->elapsed_sec = (mtime_since_genesis() + 999) / 1000;
 
@@ -692,10 +691,9 @@ struct jobs_eta *get_jobs_eta(bool force, size_t *size)
 		return NULL;
 
 	*size = sizeof(*je) + THREAD_RUNSTR_SZ + 8;
-	je = malloc(*size);
+	je = calloc(1, *size);
 	if (!je)
 		return NULL;
-	memset(je, 0, *size);
 
 	if (!calc_thread_status(je, force)) {
 		free(je);

@@ -198,11 +198,8 @@ static void fio_posixaio_cleanup(struct thread_data *td)
 static int fio_posixaio_init(struct thread_data *td)
 {
 	struct posixaio_data *pd;
-	pd = malloc(sizeof(*pd));
-
-	memset(pd, 0, sizeof(*pd));
-	pd->aio_events = malloc(td->o.iodepth * sizeof(struct io_u *));
-	memset(pd->aio_events, 0, td->o.iodepth * sizeof(struct io_u *));
+	pd = calloc(1, sizeof(*pd));
+	pd->aio_events = calloc(td->o.iodepth, sizeof(struct io_u *));
 
 	td->io_ops_data = pd;
 	return 0;
