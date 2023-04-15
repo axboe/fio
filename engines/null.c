@@ -106,12 +106,12 @@ static void null_cleanup(struct null_data *nd)
 
 static struct null_data *null_init(struct thread_data *td)
 {
-	struct null_data *nd = (struct null_data *) malloc(sizeof(*nd));
+	struct null_data *nd = malloc(sizeof(*nd));
 
 	memset(nd, 0, sizeof(*nd));
 
 	if (td->o.iodepth != 1) {
-		nd->io_us = (struct io_u **) malloc(td->o.iodepth * sizeof(struct io_u *));
+		nd->io_us = malloc(td->o.iodepth * sizeof(struct io_u *));
 		memset(nd->io_us, 0, td->o.iodepth * sizeof(struct io_u *));
 		td->io_ops->flags |= FIO_ASYNCIO_SETS_ISSUE_TIME;
 	} else
