@@ -106,7 +106,8 @@ static void null_cleanup(struct null_data *nd)
 
 static struct null_data *null_init(struct thread_data *td)
 {
-	struct null_data *nd = malloc(sizeof(*nd));
+	struct null_data *nd;
+	nd = malloc(sizeof(*nd));
 
 	memset(nd, 0, sizeof(*nd));
 

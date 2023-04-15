@@ -186,7 +186,8 @@ static void fio_solarisaio_init_sigio(void)
 static int fio_solarisaio_init(struct thread_data *td)
 {
 	unsigned int max_depth;
-	struct solarisaio_data *sd = malloc(sizeof(*sd));
+	struct solarisaio_data *sd;
+	sd = malloc(sizeof(*sd));
 	memset(sd, 0, sizeof(*sd));
 
 	max_depth = td->o.iodepth;
