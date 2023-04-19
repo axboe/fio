@@ -264,6 +264,8 @@ for opt do
   ;;
   --seed-buckets=*) seed_buckets="$optarg"
   ;;
+  --disable-tls) tls_check="no"
+  ;;
   --help)
     show_help="yes"
     ;;
@@ -313,6 +315,7 @@ if test "$show_help" = "yes" ; then
   echo "--disable-dfs           Disable DAOS File System support even if found"
   echo "--enable-asan           Enable address sanitizer"
   echo "--seed-buckets=         Number of seed buckets for the refill-buffer"
+  echo "--disable-tls		Disable __thread local storage"
   exit $exit_val
 fi
 
@@ -1549,7 +1552,8 @@ print_config "socklen_t" "$socklen_t"
 if test "$tls_thread" != "yes" ; then
   tls_thread="no"
 fi
-cat > $TMPC << EOF
+if test "$tls_check" != "no"; then
+  cat > $TMPC << EOF
 #include <stdio.h>
 static __thread int ret;
 int main(int argc, char **argv)
@@ -1559,6 +1563,7 @@ int main(int argc, char **argv)
 EOF
 if compile_prog "" "" "__thread"; then
   tls_thread="yes"
+fi
 fi
 print_config "__thread" "$tls_thread"
 

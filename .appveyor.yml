@@ -6,9 +6,11 @@ image:
 environment:
   CYG_MIRROR: http://cygwin.mirror.constant.com
   matrix:
+# --disable-tls for the msys2 build to work around
+# breakage with clang/lld 16.0.0-1
     - ARCHITECTURE: x64
       CC: clang
-      CONFIGURE_OPTIONS: --enable-pdb
+      CONFIGURE_OPTIONS: --enable-pdb --disable-tls
       DISTRO: msys2
 # Skip 32 bit clang build
 #    - ARCHITECTURE: x86
