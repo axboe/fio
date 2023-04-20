@@ -1447,9 +1447,8 @@ static void __init_rand_distribution(struct thread_data *td, struct fio_file *f)
 
 	nranges = (fsize + range_size - 1ULL) / range_size;
 
-	seed = jhash(f->file_name, strlen(f->file_name), 0) * td->thread_number;
-	if (!td->o.rand_repeatable)
-		seed = td->rand_seeds[FIO_RAND_BLOCK_OFF];
+	seed = jhash(f->file_name, strlen(f->file_name), 0) * td->thread_number *
+		td->rand_seeds[FIO_RAND_BLOCK_OFF];
 
 	if (td->o.random_distribution == FIO_RAND_DIST_ZIPF)
 		zipf_init(&f->zipf, nranges, td->o.zipf_theta.u.f, td->o.random_center.u.f, seed);
