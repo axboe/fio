@@ -41,7 +41,17 @@ main() {
                     )
                     ;;
             esac
-        ;;
+	    ;;
+        */windows)
+	    configure_flags+=("--disable-native")
+            case "${CI_TARGET_ARCH}" in
+                "i686")
+		    configure_flags+=("--build-32bit-win")
+                    ;;
+                "x86_64")
+                    ;;
+            esac
+	    ;;
     esac
     configure_flags+=(--extra-cflags="${extra_cflags}")
 

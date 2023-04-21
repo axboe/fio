@@ -89,6 +89,10 @@ install_macos() {
     pip3 install scipy six statsmodels
 }
 
+install_windows() {
+	pip3 install scipy six statsmodels sphinx
+}
+
 main() {
     if [ "${CI_TARGET_BUILD}" = "android" ]; then
 	echo "Installing Android NDK..."

@@ -15,7 +15,7 @@ function set_ci_target_os {
             darwin*)
                 CI_TARGET_OS="macos"
                 ;;
-            msys*)
+            cygwin|msys*)
                 CI_TARGET_OS="windows"
                 ;;
             bsd*)

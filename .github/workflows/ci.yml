@@ -16,6 +16,9 @@ jobs:
         - macos
         - linux-i686-gcc
         - android
+        - windows-cygwin-64
+        - windows-cygwin-32
+        - windows-msys2-64
         include:
         - build: linux-gcc
           os: ubuntu-22.04
@@ -31,6 +34,22 @@ jobs:
         - build: android
           os: ubuntu-22.04
           arch: aarch64-linux-android32
+        - build: windows-cygwin-64
+          os: windows-latest
+          arch: x86_64
+          installer_arch: x64
+          shell: bash
+        - build: windows-cygwin-32
+          os: windows-latest
+          arch: i686
+          installer_arch: x86
+          shell: bash
+        - build: windows-msys2-64
+          os: windows-latest
+          cc: clang
+          arch: x86_64
+          installer_arch: x64
+          shell: msys2
 
     env:
       CI_TARGET_BUILD: ${{ matrix.build }}
@@ -38,13 +57,61 @@ jobs:
       CC: ${{ matrix.cc }}
 
     steps:
+    - name: git config line endings (Windows)
+      if: ${{ contains( matrix.build, 'windows' ) }}
+      run: git config --global core.autocrlf input
     - name: Checkout repo
       uses: actions/checkout@v3
+    - name: Install Cygwin toolchain (Windows)
+      if: ${{ startsWith(matrix.build, 'windows-cygwin') }}
+      uses: cygwin/cygwin-install-action@master
+      with:
+        packages: >
+          mingw64-${{matrix.arch}}-binutils
+          mingw64-${{matrix.arch}}-CUnit
+          mingw64-${{matrix.arch}}-curl
+          mingw64-${{matrix.arch}}-dlfcn
+          mingw64-${{matrix.arch}}-gcc-core
+          mingw64-${{matrix.arch}}-headers
+          mingw64-${{matrix.arch}}-runtime
+          mingw64-${{matrix.arch}}-zlib
+
+    - name: Install msys2 toolchain (Windows)
+      if: ${{ startsWith(matrix.build, 'windows-msys2') }}
+      uses: msys2/setup-msys2@v2
+      with:
+        install: >
+          git
+          base-devel
+          mingw-w64-${{matrix.arch}}-clang
+          mingw-w64-${{matrix.arch}}-cunit
+          mingw-w64-${{matrix.arch}}-toolchain
+          mingw-w64-${{matrix.arch}}-lld
+          mingw-w64-${{matrix.arch}}-python-scipy
+          mingw-w64-${{matrix.arch}}-python-six
+          mingw-w64-${{matrix.arch}}-python-statsmodels
+          mingw-w64-${{matrix.arch}}-python-sphinx
+
     - name: Install dependencies
-      run: ./ci/actions-install.sh
+      run: ${{matrix.shell}} ./ci/actions-install.sh
+      if: ${{ !contains( matrix.build, 'msys2' ) }}
     - name: Build
-      run: ./ci/actions-build.sh
+      run:  ${{matrix.shell}} ./ci/actions-build.sh
+    - name: Build installer (Windows)
+      if: ${{ contains( matrix.build, 'windows' ) }}
+      shell: cmd
+      run: |
+        cd os\windows
+        dobuild.cmd ${{ matrix.installer_arch }}
+        cd ..\..
+
+    - name: Upload installer (Windows)
+      if: ${{ contains( matrix.build, 'windows' ) }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ matrix.build }}-installer
+        path: os\windows\*.msi
     - name: Smoke test
-      run: ./ci/actions-smoke-test.sh
+      run:  ${{matrix.shell}} ./ci/actions-smoke-test.sh
     - name: Full test
-      run: ./ci/actions-full-test.sh
+      run:  ${{matrix.shell}} ./ci/actions-full-test.sh
