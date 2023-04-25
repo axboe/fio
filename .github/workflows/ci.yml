@@ -108,12 +108,17 @@ jobs:
         dobuild.cmd ${{ matrix.installer_arch }}
         cd ..\..
 
-    - name: Upload installer (Windows)
+    - name: Upload installer as artifact (Windows)
       if: ${{ contains( matrix.build, 'windows' ) }}
       uses: actions/upload-artifact@v3
       with:
         name: ${{ matrix.build }}-installer
         path: os\windows\*.msi
+    - name: Upload installer as release for tagged builds (Windows)
+      uses: softprops/action-gh-release@v1
+      if: ${{ startsWith(github.ref, 'refs/tags/') && startsWith(matrix.build, 'windows-cygwin') }}
+      with:
+        files: os/windows/*.msi
     - name: Remove dependency files to resolve Makefile Cygwin sed issue (Windows)
       if: ${{ startsWith(matrix.build, 'windows-cygwin') }}
       run: rm *.d */*.d */*/*.d
