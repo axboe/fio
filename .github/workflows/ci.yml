@@ -111,6 +111,10 @@ jobs:
       with:
         name: ${{ matrix.build }}-installer
         path: os\windows\*.msi
+    - name: Remove dependency files to resolve Makefile Cygwin sed issue (Windows)
+      if: ${{ startsWith(matrix.build, 'windows-cygwin') }}
+      run: rm *.d */*.d */*/*.d
+      shell: bash
     - name: Smoke test
       run:  ${{matrix.shell}} ./ci/actions-smoke-test.sh
     - name: Full test
