@@ -6,7 +6,7 @@
 #include <linux/ashmem.h>
 #include <linux/shm.h>
 #include <android/api-level.h>
-#if __ANDROID_API__ >= __ANDROID_API_O__
+#ifdef CONFIG_ASHAREDMEMORY_CREATE
 #include <android/sharedmem.h>
 #else
 #define ASHMEM_DEVICE	"/dev/ashmem"
@@ -27,7 +27,7 @@ static inline int shmctl(int __shmid, int __cmd, struct shmid_ds *__buf)
 	return ret;
 }
 
-#if __ANDROID_API__ >= __ANDROID_API_O__
+#ifdef CONFIG_ASHAREDMEMORY_CREATE
 static inline int shmget(key_t __key, size_t __size, int __shmflg)
 {
 	char keybuf[11];

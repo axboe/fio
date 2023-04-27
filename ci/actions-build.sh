@@ -12,7 +12,7 @@ main() {
 
     set_ci_target_os
     case "${CI_TARGET_BUILD}/${CI_TARGET_OS}" in
-        android/*)
+        android*/*)
             export UNAME=Android
             if [ -z "${CI_TARGET_ARCH}" ]; then
                 echo "Error: CI_TARGET_ARCH has not been set"
@@ -20,7 +20,9 @@ main() {
             fi
             NDK=$PWD/android-ndk-r24/toolchains/llvm/prebuilt/linux-x86_64/bin
             export PATH="${NDK}:${PATH}"
-            export LIBS="-landroid"
+            if [ "${CI_TARGET_BUILD}" = "android" ]; then
+                export LIBS="-landroid"
+            fi
             CC=${NDK}/${CI_TARGET_ARCH}-clang
             if [ ! -e "${CC}" ]; then
                 echo "Error: could not find ${CC}"

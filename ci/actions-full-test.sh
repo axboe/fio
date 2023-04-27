@@ -3,7 +3,10 @@
 set -eu
 
 main() {
-    [ "${CI_TARGET_BUILD}" = android ] && return 0
+    case "${CI_TARGET_BUILD}" in
+	android*)
+	    return 0;;
+    esac
 
     echo "Running long running tests..."
     export PYTHONUNBUFFERED="TRUE"
