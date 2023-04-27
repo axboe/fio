@@ -1059,7 +1059,8 @@ static int submitter_init(struct submitter *s)
 		err = 0;
 	} else if (!aio) {
 		err = setup_ring(s);
-		sprintf(buf, "Engine=io_uring, sq_ring=%d, cq_ring=%d\n", *s->sq_ring.ring_entries, *s->cq_ring.ring_entries);
+		if (!err)
+			sprintf(buf, "Engine=io_uring, sq_ring=%d, cq_ring=%d\n", *s->sq_ring.ring_entries, *s->cq_ring.ring_entries);
 	} else {
 		sprintf(buf, "Engine=aio\n");
 		err = setup_aio(s);
