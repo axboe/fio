@@ -1049,7 +1049,7 @@ static int submitter_init(struct submitter *s)
 
 		buf = allocate_mem(s, bs);
 		if (!buf)
-			return 1;
+			return -1;
 		s->iovecs[i].iov_base = buf;
 		s->iovecs[i].iov_len = bs;
 	}
@@ -1066,7 +1066,7 @@ static int submitter_init(struct submitter *s)
 	}
 	if (err) {
 		printf("queue setup failed: %s, %d\n", strerror(errno), err);
-		return 1;
+		return -1;
 	}
 
 	if (!init_printed) {
@@ -1172,9 +1172,15 @@ static void *submitter_aio_fn(void *data)
 	struct iocb *iocbs;
 	struct io_event *events;
 #ifdef ARCH_HAVE_CPU_CLOCK
-	int nr_batch = submitter_init(s);
-#else
-	submitter_init(s);
+	int nr_batch;
+#endif
+
+	ret = submitter_init(s);
+	if (ret < 0)
+		goto done;
+
+#ifdef ARCH_HAVE_CPU_CLOCK
+	nr_batch = ret;
 #endif
 
 	iocbsptr = calloc(depth, sizeof(struct iocb *));
@@ -1238,6 +1244,7 @@ static void *submitter_aio_fn(void *data)
 	free(iocbsptr);
 	free(iocbs);
 	free(events);
+done:
 	finish = 1;
 	return NULL;
 }
@@ -1277,9 +1284,15 @@ static void *submitter_uring_fn(void *data)
 	struct io_sq_ring *ring = &s->sq_ring;
 	int ret, prepped;
 #ifdef ARCH_HAVE_CPU_CLOCK
-	int nr_batch = submitter_init(s);
-#else
-	submitter_init(s);
+	int nr_batch;
+#endif
+
+	ret = submitter_init(s);
+	if (ret < 0)
+		goto done;
+
+#ifdef ARCH_HAVE_CPU_CLOCK
+	nr_batch = ret;
 #endif
 
 	if (register_ring)
@@ -1383,6 +1396,7 @@ submit:
 	if (register_ring)
 		io_uring_unregister_ring(s);
 
+done:
 	finish = 1;
 	return NULL;
 }
@@ -1393,7 +1407,8 @@ static void *submitter_sync_fn(void *data)
 	struct submitter *s = data;
 	int ret;
 
-	submitter_init(s);
+	if (submitter_init(s) < 0)
+		goto done;
 
 	do {
 		uint64_t offset;
@@ -1429,6 +1444,7 @@ static void *submitter_sync_fn(void *data)
 			add_stat(s, s->clock_index, 1);
 	} while (!s->finish);
 
+done:
 	finish = 1;
 	return NULL;
 }
