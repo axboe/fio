@@ -34,6 +34,9 @@ jobs:
         - build: android
           os: ubuntu-22.04
           arch: aarch64-linux-android32
+        - build: android-recovery
+          os: ubuntu-22.04
+          arch: aarch64-linux-android32
         - build: windows-cygwin-64
           os: windows-latest
           arch: x86_64

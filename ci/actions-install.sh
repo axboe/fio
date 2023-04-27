@@ -94,12 +94,14 @@ install_windows() {
 }
 
 main() {
-    if [ "${CI_TARGET_BUILD}" = "android" ]; then
-	echo "Installing Android NDK..."
-	wget --quiet https://dl.google.com/android/repository/android-ndk-r24-linux.zip
-	unzip -q android-ndk-r24-linux.zip
-	return 0
-    fi
+    case "${CI_TARGET_BUILD}" in
+	android*)
+	    echo "Installing Android NDK..."
+	    wget --quiet https://dl.google.com/android/repository/android-ndk-r24-linux.zip
+	    unzip -q android-ndk-r24-linux.zip
+	    return 0
+	    ;;
+    esac
 
     set_ci_target_os
 
