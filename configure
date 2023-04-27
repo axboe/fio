@@ -1346,6 +1346,23 @@ fi
 print_config "sync_file_range" "$sync_file_range"
 
 ##########################################
+# ASharedMemory_create() probe
+if test "$ASharedMemory_create" != "yes" ; then
+  ASharedMemory_create="no"
+fi
+cat > $TMPC << EOF
+#include <android/sharedmem.h>
+int main(int argc, char **argv)
+{
+  return ASharedMemory_create("", 0);
+}
+EOF
+if compile_prog "" "" "ASharedMemory_create"; then
+  ASharedMemory_create="yes"
+fi
+print_config "ASharedMemory_create" "$ASharedMemory_create"
+
+##########################################
 # ext4 move extent probe
 if test "$ext4_me" != "yes" ; then
   ext4_me="no"
@@ -3010,6 +3027,9 @@ if test "$pread" = "yes" ; then
 fi
 if test "$sync_file_range" = "yes" ; then
   output_sym "CONFIG_SYNC_FILE_RANGE"
+fi
+if test "$ASharedMemory_create" = "yes" ; then
+  output_sym "CONFIG_ASHAREDMEMORY_CREATE"
 fi
 if test "$sfaa" = "yes" ; then
   output_sym "CONFIG_SFAA"
