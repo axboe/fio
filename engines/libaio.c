@@ -296,7 +296,7 @@ static int fio_libaio_getevents(struct thread_data *td, unsigned int min,
 		}
 		if (r > 0) {
 			events += r;
-			actual_min = actual_min > events ? actual_min - events : 0;
+			actual_min -= min((unsigned int)events, actual_min);
 		}
 		else if ((min && r == 0) || r == -EAGAIN) {
 			fio_libaio_commit(td);
