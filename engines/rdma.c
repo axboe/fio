@@ -856,8 +856,6 @@ static int fio_rdmaio_commit(struct thread_data *td)
 			ret = fio_rdmaio_send(td, io_us, rd->io_u_queued_nr);
 		else if (!rd->is_client)
 			ret = fio_rdmaio_recv(td, io_us, rd->io_u_queued_nr);
-		else
-			ret = 0;	/* must be a SYNC */
 
 		if (ret > 0) {
 			fio_rdmaio_queued(td, io_us, ret);
