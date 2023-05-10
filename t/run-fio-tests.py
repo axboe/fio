@@ -822,7 +822,7 @@ class FioJobTest_t0027(FioJobTest):
             self.passed = False
 
 class FioJobTest_iops_rate(FioJobTest):
-    """Test consists of fio test job t0009
+    """Test consists of fio test job t0011
     Confirm that job0 iops == 1000
     and that job1_iops / job0_iops ~ 8
     With two runs of fio-3.16 I observed a ratio of 8.3"""
