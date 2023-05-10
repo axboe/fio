@@ -247,10 +247,8 @@ static void *writer_fn(void *data)
 	while (!wt->thread.exit || !flist_empty(&wt->list)) {
 		pthread_mutex_lock(&wt->thread.lock);
 
-		if (work) {
+		if (work)
 			flist_add_tail(&work->list, &wt->done_list);
-			work = NULL;
-		}
 	
 		work = find_seq(wt, seq);
 		if (work)
