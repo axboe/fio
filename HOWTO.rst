@@ -4417,15 +4417,23 @@ writes in the example above).  In the order listed, they denote:
                 It is the sum of submission and completion latency.
 
 **bw**
-		Bandwidth statistics based on samples. Same names as the xlat stats,
-		but also includes the number of samples taken (**samples**) and an
-		approximate percentage of total aggregate bandwidth this thread
-		received in its group (**per**). This last value is only really
-		useful if the threads in this group are on the same disk, since they
-		are then competing for disk access.
+		Bandwidth statistics based on measurements from discrete
+		intervals. Fio continuously monitors bytes transferred and I/O
+		operations completed. By default fio calculates bandwidth in
+		each half-second interval (see :option:`bwavgtime`) and reports
+		descriptive statistics for the measurements here. Same names as
+		the xlat stats, but also includes the number of samples taken
+		(**samples**) and an approximate percentage of total aggregate
+		bandwidth this thread received in its group (**per**). This
+		last value is only really useful if the threads in this group
+		are on the same disk, since they are then competing for disk
+		access.
 
 **iops**
-		IOPS statistics based on samples. Same names as bw.
+		IOPS statistics based on measurements from discrete intervals.
+		For details see the description for bw above. See
+		:option:`iopsavgtime` to control the duration of the intervals.
+		Same values reported here as for bw except for percentage.
 
 **lat (nsec/usec/msec)**
 		The distribution of I/O completion latencies. This is the time from when

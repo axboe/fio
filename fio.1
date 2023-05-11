@@ -4073,15 +4073,20 @@ Total latency. Same names as slat and clat, this denotes the time from
 when fio created the I/O unit to completion of the I/O operation.
 .TP
 .B bw
-Bandwidth statistics based on samples. Same names as the xlat stats,
-but also includes the number of samples taken (\fIsamples\fR) and an
-approximate percentage of total aggregate bandwidth this thread
-received in its group (\fIper\fR). This last value is only really
-useful if the threads in this group are on the same disk, since they
-are then competing for disk access.
+Bandwidth statistics based on measurements from discrete intervals. Fio
+continuosly monitors bytes transferred and I/O operations completed. By default
+fio calculates bandwidth in each half-second interval (see \fBbwavgtime\fR)
+and reports descriptive statistics for the measurements here. Same names as the
+xlat stats, but also includes the number of samples taken (\fIsamples\fR) and an
+approximate percentage of total aggregate bandwidth this thread received in its
+group (\fIper\fR). This last value is only really useful if the threads in this
+group are on the same disk, since they are then competing for disk access.
 .TP
 .B iops
-IOPS statistics based on samples. Same names as \fBbw\fR.
+IOPS statistics based on measurements from discrete intervals.
+For details see the description for \fBbw\fR above. See
+\fBiopsavgtime\fR to control the duration of the intervals.
+Same values reported here as for \fBbw\fR except for percentage.
 .TP
 .B lat (nsec/usec/msec)
 The distribution of I/O completion latencies. This is the time from when
