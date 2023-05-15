@@ -14,7 +14,6 @@ jobs:
         - linux-gcc
         - linux-clang
         - macos
-        - linux-i686-gcc
         - android
         - windows-cygwin-64
         - windows-cygwin-32
@@ -28,9 +27,6 @@ jobs:
           cc: clang
         - build: macos
           os: macos-12
-        - build: linux-i686-gcc
-          os: ubuntu-22.04
-          arch: i686
         - build: android
           os: ubuntu-22.04
           arch: aarch64-linux-android32
