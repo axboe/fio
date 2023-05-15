@@ -99,6 +99,7 @@ int fio_nvme_get_info(struct fio_file *f, __u32 *nsid, __u32 *lba_sz,
 	struct nvme_id_ns ns;
 	int namespace_id;
 	int fd, err;
+	__u32 format_idx;
 
 	if (f->filetype != FIO_TYPE_CHAR) {
 		log_err("ioengine io_uring_cmd only works with nvme ns "
@@ -131,7 +132,18 @@ int fio_nvme_get_info(struct fio_file *f, __u32 *nsid, __u32 *lba_sz,
 	}
 
 	*nsid = namespace_id;
-	*lba_sz = 1 << ns.lbaf[(ns.flbas & 0x0f)].ds;
+
+	/*
+	 * 16 or 64 as maximum number of supported LBA formats.
+	 * From flbas bit 0-3 indicates lsb and bit 5-6 indicates msb
+	 * of the format index used to format the namespace.
+	 */
+	if (ns.nlbaf < 16)
+		format_idx = ns.flbas & 0xf;
+	else
+		format_idx = (ns.flbas & 0xf) + (((ns.flbas >> 5) & 0x3) << 4);
+
+	*lba_sz = 1 << ns.lbaf[format_idx].ds;
 	*nlba = ns.nsze;
 
 	close(fd);
