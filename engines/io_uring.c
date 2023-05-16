@@ -1198,7 +1198,8 @@ static int fio_ioring_cmd_open_file(struct thread_data *td, struct fio_file *f)
 			FILE_SET_ENG_DATA(f, data);
 		}
 
-		lba_size = data->lba_ext ? data->lba_ext : (1 << data->lba_shift);
+		assert(data->lba_shift < 32);
+		lba_size = data->lba_ext ? data->lba_ext : (1U << data->lba_shift);
 
 		for_each_rw_ddir(ddir) {
 			if (td->o.min_bs[ddir] % lba_size ||
