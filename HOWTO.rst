@@ -3203,6 +3203,11 @@ I/O rate
 	fio will ignore the thinktime and continue doing IO at the specified
 	rate, instead of entering a catch-up mode after thinktime is done.
 
+.. option:: rate_cycle=int
+
+	Average bandwidth for :option:`rate` and :option:`rate_min` over this number
+	of milliseconds. Defaults to 1000.
+
 
 I/O latency
 ~~~~~~~~~~~
@@ -3240,11 +3245,6 @@ I/O latency
 	maximum latency. When the unit is omitted, the value is interpreted in
 	microseconds. Comma-separated values may be specified for reads, writes,
 	and trims as described in :option:`blocksize`.
-
-.. option:: rate_cycle=int
-
-	Average bandwidth for :option:`rate` and :option:`rate_min` over this number
-	of milliseconds. Defaults to 1000.
 
 
 I/O replay

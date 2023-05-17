@@ -2946,6 +2946,10 @@ By default, fio will attempt to catch up to the specified rate setting, if any
 kind of thinktime setting was used. If this option is set, then fio will
 ignore the thinktime and continue doing IO at the specified rate, instead of
 entering a catch-up mode after thinktime is done.
+.TP
+.BI rate_cycle \fR=\fPint
+Average bandwidth for \fBrate\fR and \fBrate_min\fR over this number
+of milliseconds. Defaults to 1000.
 .SS "I/O latency"
 .TP
 .BI latency_target \fR=\fPtime
@@ -2975,10 +2979,6 @@ If set, fio will exit the job with an ETIMEDOUT error if it exceeds this
 maximum latency. When the unit is omitted, the value is interpreted in
 microseconds. Comma-separated values may be specified for reads, writes,
 and trims as described in \fBblocksize\fR.
-.TP
-.BI rate_cycle \fR=\fPint
-Average bandwidth for \fBrate\fR and \fBrate_min\fR over this number
-of milliseconds. Defaults to 1000.
 .SS "I/O replay"
 .TP
 .BI write_iolog \fR=\fPstr
