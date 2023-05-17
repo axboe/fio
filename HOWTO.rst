@@ -3011,6 +3011,10 @@ with the caveat that when used on the command line, they must come after the
 	performance. The default is to enable it only if
 	:option:`libblkio_wait_mode=eventfd <libblkio_wait_mode>`.
 
+.. option:: no_completion_thread : [windowsaio]
+
+	Avoid using a separate thread for completion polling.
+
 I/O depth
 ~~~~~~~~~
 

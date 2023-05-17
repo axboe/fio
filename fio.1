@@ -2765,6 +2765,9 @@ Use a busy loop with a non-blocking call to \fBblkioq_do_io()\fR.
 Enable the queue's completion eventfd even when unused. This may impact
 performance. The default is to enable it only if
 \fBlibblkio_wait_mode=eventfd\fR.
+.TP
+.BI (windowsaio)no_completion_thread
+Avoid using a separate thread for completion polling.
 .SS "I/O depth"
 .TP
 .BI iodepth \fR=\fPint
