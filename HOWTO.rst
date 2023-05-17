@@ -3761,6 +3761,13 @@ Verification
 	verification pass, according to the settings in the job file used.  Default
 	false.
 
+.. option:: experimental_verify=bool
+
+        Enable experimental verification. Standard verify records I/O metadata
+        for later use during the verification phase. Experimental verify
+        instead resets the file after the write phase and then replays I/Os for
+        the verification phase.
+
 .. option:: trim_percentage=int
 
 	Number of verify blocks to discard/trim.
@@ -3776,13 +3783,6 @@ Verification
 .. option:: trim_backlog_batch=int
 
 	Trim this number of I/O blocks.
-
-.. option:: experimental_verify=bool
-
-        Enable experimental verification. Standard verify records I/O metadata
-        for later use during the verification phase. Experimental verify
-        instead resets the file after the write phase and then replays I/Os for
-        the verification phase.
 
 Steady state
 ~~~~~~~~~~~~

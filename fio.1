@@ -3475,6 +3475,11 @@ far it should verify. Without this information, fio will run a full
 verification pass, according to the settings in the job file used. Default
 false.
 .TP
+.BI experimental_verify \fR=\fPbool
+Enable experimental verification. Standard verify records I/O metadata for
+later use during the verification phase. Experimental verify instead resets the
+file after the write phase and then replays I/Os for the verification phase.
+.TP
 .BI trim_percentage \fR=\fPint
 Number of verify blocks to discard/trim.
 .TP
@@ -3486,11 +3491,6 @@ Verify that trim/discarded blocks are returned as zeros.
 .TP
 .BI trim_backlog_batch \fR=\fPint
 Trim this number of I/O blocks.
-.TP
-.BI experimental_verify \fR=\fPbool
-Enable experimental verification. Standard verify records I/O metadata for
-later use during the verification phase. Experimental verify instead resets the
-file after the write phase and then replays I/Os for the verification phase.
 .SS "Steady state"
 .TP
 .BI steadystate \fR=\fPstr:float "\fR,\fP ss" \fR=\fPstr:float
