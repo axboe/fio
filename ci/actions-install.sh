@@ -35,6 +35,8 @@ DPKGCFG
                 gcc-multilib
                 pkg-config:i386
                 zlib1g-dev:i386
+                libc6:i386
+                libgcc-s1:i386
             )
             ;;
         "x86_64")
