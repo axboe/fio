@@ -499,13 +499,15 @@ elif check_define __aarch64__ ; then
   cpu="aarch64"
 elif check_define __hppa__ ; then
   cpu="hppa"
+elif check_define __loongarch64 ; then
+  cpu="loongarch64"
 else
   cpu=`uname -m`
 fi
 
 # Normalise host CPU name and set ARCH.
 case "$cpu" in
-  ia64|ppc|ppc64|s390|s390x|sparc64)
+  ia64|ppc|ppc64|s390|s390x|sparc64|loongarch64)
     cpu="$cpu"
   ;;
   i386|i486|i586|i686|i86pc|BePC)

@@ -270,6 +270,22 @@
 #define __NR_ioprio_get		31
 #endif
 
+/* Linux syscalls for loongarch64 */
+#elif defined(ARCH_LOONGARCH64_H)
+#ifndef __NR_ioprio_set
+#define __NR_ioprio_set         30
+#define __NR_ioprio_get         31
+#endif
+
+#ifndef __NR_fadvise64
+#define __NR_fadvise64          223
+#endif
+
+#ifndef __NR_sys_splice
+#define __NR_sys_splice         76
+#define __NR_sys_tee          	77
+#define __NR_sys_vmsplice       75
+#endif
 #else
 #warning "Unknown architecture"
 #endif
