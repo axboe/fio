@@ -23,6 +23,7 @@ enum {
 	arch_hppa,
 	arch_mips,
 	arch_aarch64,
+	arch_loongarch64,
 
 	arch_generic,
 
@@ -97,6 +98,8 @@ extern unsigned long arch_flags;
 #include "arch-hppa.h"
 #elif defined(__aarch64__)
 #include "arch-aarch64.h"
+#elif defined(__loongarch64)
+#include "arch-loongarch64.h"
 #else
 #warning "Unknown architecture, attempting to use generic model."
 #include "arch-generic.h"

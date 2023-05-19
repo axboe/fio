@@ -74,6 +74,7 @@ static const char *fio_arch_strings[arch_nr] = {
 	"hppa",
 	"mips",
 	"aarch64",
+	"loongarch64",
 	"generic"
 };
 
