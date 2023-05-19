@@ -213,8 +213,8 @@ static int zbd_report_zones(struct thread_data *td, struct fio_file *f,
 		ret = blkzoned_report_zones(td, f, offset, zones, nr_zones);
 	if (ret < 0) {
 		td_verror(td, errno, "report zones failed");
-		log_err("%s: report zones from sector %"PRIu64" failed (%d).\n",
-			f->file_name, offset >> 9, errno);
+		log_err("%s: report zones from sector %"PRIu64" failed (nr_zones=%d; errno=%d).\n",
+			f->file_name, offset >> 9, nr_zones, errno);
 	} else if (ret == 0) {
 		td_verror(td, errno, "Empty zone report");
 		log_err("%s: report zones from sector %"PRIu64" is empty.\n",
