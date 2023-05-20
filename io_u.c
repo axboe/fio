@@ -2027,6 +2027,8 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 	}
 
 	if (ddir_sync(ddir)) {
+		if (io_u->error)
+			goto error;
 		td->last_was_sync = true;
 		if (f) {
 			f->first_write = -1ULL;
@@ -2082,6 +2084,7 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 				icd->error = ret;
 		}
 	} else if (io_u->error) {
+error:
 		icd->error = io_u->error;
 		io_u_log_error(td, io_u);
 	}
