@@ -430,7 +430,8 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 			     int ddir, struct buf_output *out)
 {
 	unsigned long runt;
-	unsigned long long min, max, bw, iops;
+	unsigned long long min, max;
+	double bw, iops;
 	double mean, dev;
 	char *io_p, *bw_p, *bw_p_alt, *iops_p, *post_st = NULL;
 	int i2p;
