@@ -213,8 +213,8 @@ static int zbd_report_zones(struct thread_data *td, struct fio_file *f,
 		ret = blkzoned_report_zones(td, f, offset, zones, nr_zones);
 	if (ret < 0) {
 		td_verror(td, errno, "report zones failed");
-		log_err("%s: report zones from sector %"PRIu64" failed (%d).\n",
-			f->file_name, offset >> 9, errno);
+		log_err("%s: report zones from sector %"PRIu64" failed (nr_zones=%d; errno=%d).\n",
+			f->file_name, offset >> 9, nr_zones, errno);
 	} else if (ret == 0) {
 		td_verror(td, errno, "Empty zone report");
 		log_err("%s: report zones from sector %"PRIu64" is empty.\n",
@@ -776,7 +776,8 @@ static int parse_zone_info(struct thread_data *td, struct fio_file *f)
 	int nr_zones, nrz;
 	struct zbd_zone *zones, *z;
 	struct fio_zone_info *p;
-	uint64_t zone_size, offset;
+	uint64_t zone_size, offset, capacity;
+	bool same_zone_cap = true;
 	struct zoned_block_device_info *zbd_info = NULL;
 	int i, j, ret = -ENOMEM;
 
@@ -793,6 +794,7 @@ static int parse_zone_info(struct thread_data *td, struct fio_file *f)
 	}
 
 	zone_size = zones[0].len;
+	capacity = zones[0].capacity;
 	nr_zones = (f->real_file_size + zone_size - 1) / zone_size;
 
 	if (td->o.zone_size == 0) {
@@ -821,6 +823,8 @@ static int parse_zone_info(struct thread_data *td, struct fio_file *f)
 						     PTHREAD_MUTEX_RECURSIVE);
 			p->start = z->start;
 			p->capacity = z->capacity;
+			if (capacity != z->capacity)
+				same_zone_cap = false;
 
 			switch (z->cond) {
 			case ZBD_ZONE_COND_NOT_WP:
@@ -876,6 +880,11 @@ static int parse_zone_info(struct thread_data *td, struct fio_file *f)
 	f->zbd_info->zone_size_log2 = is_power_of_2(zone_size) ?
 		ilog2(zone_size) : 0;
 	f->zbd_info->nr_zones = nr_zones;
+
+	if (same_zone_cap)
+		dprint(FD_ZBD, "Zone capacity = %"PRIu64" KB\n",
+		       capacity / 1024);
+
 	zbd_info = NULL;
 	ret = 0;
 
