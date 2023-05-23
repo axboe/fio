@@ -457,12 +457,12 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	i2p = is_power_of_2(rs->kb_base);
 	runt = ts->runtime[ddir];
 
-	bw = (1000 * ts->io_bytes[ddir]) / runt;
+	bw = (1000.0 * ts->io_bytes[ddir]) / runt;
 	io_p = num2str(ts->io_bytes[ddir], ts->sig_figs, 1, i2p, N2S_BYTE);
 	bw_p = num2str(bw, ts->sig_figs, 1, i2p, ts->unit_base);
 	bw_p_alt = num2str(bw, ts->sig_figs, 1, !i2p, ts->unit_base);
 
-	iops = (1000 * (uint64_t)ts->total_io_u[ddir]) / runt;
+	iops = (1000.0 * (uint64_t)ts->total_io_u[ddir]) / runt;
 	iops_p = num2str(iops, ts->sig_figs, 1, 0, N2S_NONE);
 	if (ddir == DDIR_WRITE)
 		post_st = zbd_write_status(ts);
