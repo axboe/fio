@@ -123,11 +123,12 @@ Solaris:
 	``pkgutil -i fio``.
 
 Windows:
-	Beginning with fio 3.31 Windows installers are available on GitHub at
-        https://github.com/axboe/fio/releases. The latest builds for Windows
-	can also be grabbed from https://ci.appveyor.com/project/axboe/fio by
-	clicking the latest x86 or x64 build and then selecting the Artifacts
-	tab.
+        Beginning with fio 3.31 Windows installers for tagged releases are
+        available on GitHub at https://github.com/axboe/fio/releases. The
+        latest installers for Windows can also be obtained as GitHub Actions
+        artifacts by selecting a build from
+        https://github.com/axboe/fio/actions. These require logging in to a
+        GitHub account.
 
 BSDs:
 	Packages for BSDs may be available from their binary package repositories.
