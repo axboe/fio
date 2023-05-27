@@ -53,6 +53,9 @@ main() {
                 "x86_64")
                     ;;
             esac
+            if [ "${CI_TARGET_BUILD}" = "windows-msys2-64" ]; then
+                configure_flags+=("--disable-tls")
+            fi
 	    ;;
     esac
     configure_flags+=(--extra-cflags="${extra_cflags}")
