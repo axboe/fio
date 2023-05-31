@@ -863,8 +863,9 @@ class Requirements():
     _not_windows = False
     _unittests = False
     _cpucount4 = False
+    _nvmecdev = False
 
-    def __init__(self, fio_root):
+    def __init__(self, fio_root, args):
         Requirements._not_macos = platform.system() != "Darwin"
         Requirements._not_windows = platform.system() != "Windows"
         Requirements._linux = platform.system() == "Linux"
@@ -904,17 +905,21 @@ class Requirements():
         Requirements._unittests = os.path.exists(unittest_path)
 
         Requirements._cpucount4 = multiprocessing.cpu_count() >= 4
+        Requirements._nvmecdev = args.nvmecdev
 
-        req_list = [Requirements.linux,
-                    Requirements.libaio,
-                    Requirements.io_uring,
-                    Requirements.zbd,
-                    Requirements.root,
-                    Requirements.zoned_nullb,
-                    Requirements.not_macos,
-                    Requirements.not_windows,
-                    Requirements.unittests,
-                    Requirements.cpucount4]
+        req_list = [
+                Requirements.linux,
+                Requirements.libaio,
+                Requirements.io_uring,
+                Requirements.zbd,
+                Requirements.root,
+                Requirements.zoned_nullb,
+                Requirements.not_macos,
+                Requirements.not_windows,
+                Requirements.unittests,
+                Requirements.cpucount4,
+                Requirements.nvmecdev,
+                    ]
         for req in req_list:
             value, desc = req()
             logging.debug("Requirements: Requirement '%s' met? %s", desc, value)
@@ -968,6 +973,11 @@ class Requirements():
     def cpucount4(cls):
         """Do we have at least 4 CPUs?"""
         return Requirements._cpucount4, "4+ CPUs required"
+
+    @classmethod
+    def nvmecdev(cls):
+        """Do we have an NVMe character device to test?"""
+        return Requirements._nvmecdev, "NVMe character device test target required"
 
 
 SUCCESS_DEFAULT = {
@@ -1367,6 +1377,14 @@ TEST_LIST = [
         'success':          SUCCESS_DEFAULT,
         'requirements':     [],
     },
+    {
+        'test_id':          1014,
+        'test_class':       FioExeTest,
+        'exe':              't/nvmept.py',
+        'parameters':       ['-f', '{fio_path}', '--dut', '{nvmecdev}'],
+        'success':          SUCCESS_DEFAULT,
+        'requirements':     [Requirements.linux, Requirements.nvmecdev],
+    },
 ]
 
 
@@ -1390,6 +1408,8 @@ def parse_args():
                         help='skip requirements checking')
     parser.add_argument('-p', '--pass-through', action='append',
                         help='pass-through an argument to an executable test')
+    parser.add_argument('--nvmecdev', action='store', default=None,
+                        help='NVMe character device for **DESTRUCTIVE** testing (e.g., /dev/ng0n1)')
     args = parser.parse_args()
 
     return args
@@ -1439,7 +1459,7 @@ def main():
     print("Artifact directory is %s" % artifact_root)
 
     if not args.skip_req:
-        req = Requirements(fio_root)
+        req = Requirements(fio_root, args)
 
     passed = 0
     failed = 0
@@ -1477,7 +1497,8 @@ def main():
         elif issubclass(config['test_class'], FioExeTest):
             exe_path = os.path.join(fio_root, config['exe'])
             if config['parameters']:
-                parameters = [p.format(fio_path=fio_path) for p in config['parameters']]
+                parameters = [p.format(fio_path=fio_path, nvmecdev=args.nvmecdev)
+                              for p in config['parameters']]
             else:
                 parameters = []
             if Path(exe_path).suffix == '.py' and platform.system() == "Windows":
