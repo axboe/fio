@@ -79,22 +79,22 @@ class FioTest():
 
         self.artifact_root = artifact_root
         self.testnum = testnum
-        self.test_dir = os.path.join(artifact_root, "{:04d}".format(testnum))
+        self.test_dir = os.path.join(artifact_root, f"{testnum:04d}")
         if not os.path.exists(self.test_dir):
             os.mkdir(self.test_dir)
 
         self.command_file = os.path.join(
             self.test_dir,
-            "{0}.command".format(os.path.basename(self.exe_path)))
+            f"{os.path.basename(self.exe_path)}.command")
         self.stdout_file = os.path.join(
             self.test_dir,
-            "{0}.stdout".format(os.path.basename(self.exe_path)))
+            f"{os.path.basename(self.exe_path)}.stdout")
         self.stderr_file = os.path.join(
             self.test_dir,
-            "{0}.stderr".format(os.path.basename(self.exe_path)))
+            f"{os.path.basename(self.exe_path)}.stderr")
         self.exitcode_file = os.path.join(
             self.test_dir,
-            "{0}.exitcode".format(os.path.basename(self.exe_path)))
+            f"{os.path.basename(self.exe_path)}.exitcode")
 
     def run(self):
         """Run the test."""
@@ -126,7 +126,7 @@ class FioExeTest(FioTest):
 
         command = [self.exe_path] + self.parameters
         command_file = open(self.command_file, "w+")
-        command_file.write("%s\n" % command)
+        command_file.write(f"{command}\n")
         command_file.close()
 
         stdout_file = open(self.stdout_file, "w+")
@@ -144,7 +144,7 @@ class FioExeTest(FioTest):
                                     cwd=self.test_dir,
                                     universal_newlines=True)
             proc.communicate(timeout=self.success['timeout'])
-            exitcode_file.write('{0}\n'.format(proc.returncode))
+            exitcode_file.write(f'{proc.returncode}\n')
             logging.debug("Test %d: return code: %d", self.testnum, proc.returncode)
             self.output['proc'] = proc
         except subprocess.TimeoutExpired:
@@ -169,7 +169,7 @@ class FioExeTest(FioTest):
 
         if 'proc' not in self.output:
             if self.output['failure'] == 'timeout':
-                self.failure_reason = "{0} timeout,".format(self.failure_reason)
+                self.failure_reason = f"{self.failure_reason} timeout,"
             else:
                 assert self.output['failure'] == 'exception'
                 self.failure_reason = '{0} exception: {1}, {2}'.format(
@@ -183,21 +183,21 @@ class FioExeTest(FioTest):
             if self.success['zero_return']:
                 if self.output['proc'].returncode != 0:
                     self.passed = False
-                    self.failure_reason = "{0} non-zero return code,".format(self.failure_reason)
+                    self.failure_reason = f"{self.failure_reason} non-zero return code,"
             else:
                 if self.output['proc'].returncode == 0:
-                    self.failure_reason = "{0} zero return code,".format(self.failure_reason)
+                    self.failure_reason = f"{self.failure_reason} zero return code,"
                     self.passed = False
 
         stderr_size = os.path.getsize(self.stderr_file)
         if 'stderr_empty' in self.success:
             if self.success['stderr_empty']:
                 if stderr_size != 0:
-                    self.failure_reason = "{0} stderr not empty,".format(self.failure_reason)
+                    self.failure_reason = f"{self.failure_reason} stderr not empty,"
                     self.passed = False
             else:
                 if stderr_size == 0:
-                    self.failure_reason = "{0} stderr empty,".format(self.failure_reason)
+                    self.failure_reason = f"{self.failure_reason} stderr empty,"
                     self.passed = False
 
 
@@ -223,11 +223,11 @@ class FioJobTest(FioExeTest):
         self.output_format = output_format
         self.precon_failed = False
         self.json_data = None
-        self.fio_output = "{0}.output".format(os.path.basename(self.fio_job))
+        self.fio_output = f"{os.path.basename(self.fio_job)}.output"
         self.fio_args = [
             "--max-jobs=16",
-            "--output-format={0}".format(self.output_format),
-            "--output={0}".format(self.fio_output),
+            f"--output-format={self.output_format}",
+            f"--output={self.fio_output}",
             self.fio_job,
             ]
         FioExeTest.__init__(self, fio_path, self.fio_args, success)
@@ -235,20 +235,20 @@ class FioJobTest(FioExeTest):
     def setup(self, artifact_root, testnum):
         """Setup instance variables for fio job test."""
 
-        super(FioJobTest, self).setup(artifact_root, testnum)
+        super().setup(artifact_root, testnum)
 
         self.command_file = os.path.join(
             self.test_dir,
-            "{0}.command".format(os.path.basename(self.fio_job)))
+            f"{os.path.basename(self.fio_job)}.command")
         self.stdout_file = os.path.join(
             self.test_dir,
-            "{0}.stdout".format(os.path.basename(self.fio_job)))
+            f"{os.path.basename(self.fio_job)}.stdout")
         self.stderr_file = os.path.join(
             self.test_dir,
-            "{0}.stderr".format(os.path.basename(self.fio_job)))
+            f"{os.path.basename(self.fio_job)}.stderr")
         self.exitcode_file = os.path.join(
             self.test_dir,
-            "{0}.exitcode".format(os.path.basename(self.fio_job)))
+            f"{os.path.basename(self.fio_job)}.exitcode")
 
     def run_pre_job(self):
         """Run fio job precondition step."""
@@ -269,7 +269,7 @@ class FioJobTest(FioExeTest):
             self.run_pre_job()
 
         if not self.precon_failed:
-            super(FioJobTest, self).run()
+            super().run()
         else:
             logging.debug("Test %d: precondition step failed", self.testnum)
 
@@ -295,7 +295,7 @@ class FioJobTest(FioExeTest):
             with open(filename, "r") as output_file:
                 file_data = output_file.read()
         except OSError:
-            self.failure_reason += " unable to read file {0}".format(filename)
+            self.failure_reason += f" unable to read file {filename}"
             self.passed = False
 
         return file_data
@@ -305,10 +305,10 @@ class FioJobTest(FioExeTest):
 
         if self.precon_failed:
             self.passed = False
-            self.failure_reason = "{0} precondition step failed,".format(self.failure_reason)
+            self.failure_reason = f"{self.failure_reason} precondition step failed,"
             return
 
-        super(FioJobTest, self).check_result()
+        super().check_result()
 
         if not self.passed:
             return
@@ -330,7 +330,7 @@ class FioJobTest(FioExeTest):
         try:
             self.json_data = json.loads(file_data)
         except json.JSONDecodeError:
-            self.failure_reason = "{0} unable to decode JSON data,".format(self.failure_reason)
+            self.failure_reason = f"{self.failure_reason} unable to decode JSON data,"
             self.passed = False
 
 
@@ -339,16 +339,16 @@ class FioJobTest_t0005(FioJobTest):
     Confirm that read['io_kbytes'] == write['io_kbytes'] == 102400"""
 
     def check_result(self):
-        super(FioJobTest_t0005, self).check_result()
+        super().check_result()
 
         if not self.passed:
             return
 
         if self.json_data['jobs'][0]['read']['io_kbytes'] != 102400:
-            self.failure_reason = "{0} bytes read mismatch,".format(self.failure_reason)
+            self.failure_reason = f"{self.failure_reason} bytes read mismatch,"
             self.passed = False
         if self.json_data['jobs'][0]['write']['io_kbytes'] != 102400:
-            self.failure_reason = "{0} bytes written mismatch,".format(self.failure_reason)
+            self.failure_reason = f"{self.failure_reason} bytes written mismatch,"
             self.passed = False
 
 
@@ -357,7 +357,7 @@ class FioJobTest_t0006(FioJobTest):
     Confirm that read['io_kbytes'] ~ 2*write['io_kbytes']"""
 
     def check_result(self):
-        super(FioJobTest_t0006, self).check_result()
+        super().check_result()
 
         if not self.passed:
             return
@@ -366,7 +366,7 @@ class FioJobTest_t0006(FioJobTest):
             / self.json_data['jobs'][0]['write']['io_kbytes']
         logging.debug("Test %d: ratio: %f", self.testnum, ratio)
         if ratio < 1.99 or ratio > 2.01:
-            self.failure_reason = "{0} read/write ratio mismatch,".format(self.failure_reason)
+            self.failure_reason = f"{self.failure_reason} read/write ratio mismatch,"
             self.passed = False
 
 
@@ -375,13 +375,13 @@ class FioJobTest_t0007(FioJobTest):
     Confirm that read['io_kbytes'] = 87040"""
 
     def check_result(self):
-        super(FioJobTest_t0007, self).check_result()
+        super().check_result()
 
         if not self.passed:
             return
 
         if self.json_data['jobs'][0]['read']['io_kbytes'] != 87040:
-            self.failure_reason = "{0} bytes read mismatch,".format(self.failure_reason)
+            self.failure_reason = f"{self.failure_reason} bytes read mismatch,"
             self.passed = False
 
 
@@ -397,7 +397,7 @@ class FioJobTest_t0008(FioJobTest):
     the blocks originally written will be read."""
 
     def check_result(self):
-        super(FioJobTest_t0008, self).check_result()
+        super().check_result()
 
         if not self.passed:
             return
@@ -406,10 +406,10 @@ class FioJobTest_t0008(FioJobTest):
         logging.debug("Test %d: ratio: %f", self.testnum, ratio)
 
         if ratio < 0.97 or ratio > 1.03:
-            self.failure_reason = "{0} bytes written mismatch,".format(self.failure_reason)
+            self.failure_reason = f"{self.failure_reason} bytes written mismatch,"
             self.passed = False
         if self.json_data['jobs'][0]['read']['io_kbytes'] != 32768:
-            self.failure_reason = "{0} bytes read mismatch,".format(self.failure_reason)
+            self.failure_reason = f"{self.failure_reason} bytes read mismatch,"
             self.passed = False
 
 
@@ -418,7 +418,7 @@ class FioJobTest_t0009(FioJobTest):
     Confirm that runtime >= 60s"""
 
     def check_result(self):
-        super(FioJobTest_t0009, self).check_result()
+        super().check_result()
 
         if not self.passed:
             return
@@ -426,7 +426,7 @@ class FioJobTest_t0009(FioJobTest):
         logging.debug('Test %d: elapsed: %d', self.testnum, self.json_data['jobs'][0]['elapsed'])
 
         if self.json_data['jobs'][0]['elapsed'] < 60:
-            self.failure_reason = "{0} elapsed time mismatch,".format(self.failure_reason)
+            self.failure_reason = f"{self.failure_reason} elapsed time mismatch,"
             self.passed = False
 
 
@@ -436,7 +436,7 @@ class FioJobTest_t0012(FioJobTest):
     job1,job2,job3 respectively"""
 
     def check_result(self):
-        super(FioJobTest_t0012, self).check_result()
+        super().check_result()
 
         if not self.passed:
             return
@@ -484,7 +484,7 @@ class FioJobTest_t0014(FioJobTest):
     re-calibrate the activity dynamically"""
 
     def check_result(self):
-        super(FioJobTest_t0014, self).check_result()
+        super().check_result()
 
         if not self.passed:
             return
@@ -539,7 +539,7 @@ class FioJobTest_t0015(FioJobTest):
     Confirm that mean(slat) + mean(clat) = mean(tlat)"""
 
     def check_result(self):
-        super(FioJobTest_t0015, self).check_result()
+        super().check_result()
 
         if not self.passed:
             return
@@ -560,7 +560,7 @@ class FioJobTest_t0019(FioJobTest):
     Confirm that all offsets were touched sequentially"""
 
     def check_result(self):
-        super(FioJobTest_t0019, self).check_result()
+        super().check_result()
 
         bw_log_filename = os.path.join(self.test_dir, "test_bw.log")
         file_data = self.get_file_fail(bw_log_filename)
@@ -576,13 +576,13 @@ class FioJobTest_t0019(FioJobTest):
             cur = int(line.split(',')[4])
             if cur - prev != 4096:
                 self.passed = False
-                self.failure_reason = "offsets {0}, {1} not sequential".format(prev, cur)
+                self.failure_reason = f"offsets {prev}, {cur} not sequential"
                 return
             prev = cur
 
         if cur/4096 != 255:
             self.passed = False
-            self.failure_reason = "unexpected last offset {0}".format(cur)
+            self.failure_reason = f"unexpected last offset {cur}"
 
 
 class FioJobTest_t0020(FioJobTest):
@@ -590,7 +590,7 @@ class FioJobTest_t0020(FioJobTest):
     Confirm that almost all offsets were touched non-sequentially"""
 
     def check_result(self):
-        super(FioJobTest_t0020, self).check_result()
+        super().check_result()
 
         bw_log_filename = os.path.join(self.test_dir, "test_bw.log")
         file_data = self.get_file_fail(bw_log_filename)
@@ -611,14 +611,14 @@ class FioJobTest_t0020(FioJobTest):
 
         if len(offsets) != 256:
             self.passed = False
-            self.failure_reason += " number of offsets is {0} instead of 256".format(len(offsets))
+            self.failure_reason += f" number of offsets is {len(offsets)} instead of 256"
 
         for i in range(256):
             if not i in offsets:
                 self.passed = False
-                self.failure_reason += " missing offset {0}".format(i*4096)
+                self.failure_reason += f" missing offset {i * 4096}"
 
-        (z, p) = runstest_1samp(list(offsets))
+        (_, p) = runstest_1samp(list(offsets))
         if p < 0.05:
             self.passed = False
             self.failure_reason += f" runs test failed with p = {p}"
@@ -628,7 +628,7 @@ class FioJobTest_t0022(FioJobTest):
     """Test consists of fio test job t0022"""
 
     def check_result(self):
-        super(FioJobTest_t0022, self).check_result()
+        super().check_result()
 
         bw_log_filename = os.path.join(self.test_dir, "test_bw.log")
         file_data = self.get_file_fail(bw_log_filename)
@@ -655,7 +655,7 @@ class FioJobTest_t0022(FioJobTest):
         # 10 is an arbitrary threshold
         if seq_count > 10:
             self.passed = False
-            self.failure_reason = "too many ({0}) consecutive offsets".format(seq_count)
+            self.failure_reason = f"too many ({seq_count}) consecutive offsets"
 
         if len(offsets) == filesize/bs:
             self.passed = False
@@ -690,7 +690,7 @@ class FioJobTest_t0023(FioJobTest):
                         bw_log_filename, line)
                     break
             else:
-                if ddir != 1:
+                if ddir != 1:   # pylint: disable=no-else-break
                     self.passed = False
                     self.failure_reason += " {0}: trim not preceeded by write: {1}".format(
                         bw_log_filename, line)
@@ -701,11 +701,13 @@ class FioJobTest_t0023(FioJobTest):
                         self.failure_reason += " {0}: block size does not match: {1}".format(
                             bw_log_filename, line)
                         break
+
                     if prev_offset != offset:
                         self.passed = False
                         self.failure_reason += " {0}: offset does not match: {1}".format(
                             bw_log_filename, line)
                         break
+
             prev_ddir = ddir
             prev_bs = bs
             prev_offset = offset
@@ -750,7 +752,7 @@ class FioJobTest_t0023(FioJobTest):
 
 
     def check_result(self):
-        super(FioJobTest_t0023, self).check_result()
+        super().check_result()
 
         filesize = 1024*1024
 
@@ -792,7 +794,7 @@ class FioJobTest_t0024(FioJobTest_t0023):
 class FioJobTest_t0025(FioJobTest):
     """Test experimental verify read backs written data pattern."""
     def check_result(self):
-        super(FioJobTest_t0025, self).check_result()
+        super().check_result()
 
         if not self.passed:
             return
@@ -802,7 +804,7 @@ class FioJobTest_t0025(FioJobTest):
 
 class FioJobTest_t0027(FioJobTest):
     def setup(self, *args, **kws):
-        super(FioJobTest_t0027, self).setup(*args, **kws)
+        super().setup(*args, **kws)
         self.pattern_file = os.path.join(self.test_dir, "t0027.pattern")
         self.output_file = os.path.join(self.test_dir, "t0027file")
         self.pattern = os.urandom(16 << 10)
@@ -810,7 +812,7 @@ class FioJobTest_t0027(FioJobTest):
             f.write(self.pattern)
 
     def check_result(self):
-        super(FioJobTest_t0027, self).check_result()
+        super().check_result()
 
         if not self.passed:
             return
@@ -828,7 +830,7 @@ class FioJobTest_iops_rate(FioJobTest):
     With two runs of fio-3.16 I observed a ratio of 8.3"""
 
     def check_result(self):
-        super(FioJobTest_iops_rate, self).check_result()
+        super().check_result()
 
         if not self.passed:
             return
@@ -841,11 +843,11 @@ class FioJobTest_iops_rate(FioJobTest):
         logging.debug("Test %d: ratio: %f", self.testnum, ratio)
 
         if iops1 < 950 or iops1 > 1050:
-            self.failure_reason = "{0} iops value mismatch,".format(self.failure_reason)
+            self.failure_reason = f"{self.failure_reason} iops value mismatch,"
             self.passed = False
 
         if ratio < 6 or ratio > 10:
-            self.failure_reason = "{0} iops ratio mismatch,".format(self.failure_reason)
+            self.failure_reason = f"{self.failure_reason} iops ratio mismatch,"
             self.passed = False
 
 
@@ -874,7 +876,7 @@ class Requirements():
             config_file = os.path.join(fio_root, "config-host.h")
             contents, success = FioJobTest.get_file(config_file)
             if not success:
-                print("Unable to open {0} to check requirements".format(config_file))
+                print(f"Unable to open {config_file} to check requirements")
                 Requirements._zbd = True
             else:
                 Requirements._zbd = "CONFIG_HAS_BLKZONED" in contents
@@ -886,7 +888,7 @@ class Requirements():
             else:
                 Requirements._io_uring = "io_uring_setup" in contents
 
-            Requirements._root = (os.geteuid() == 0)
+            Requirements._root = os.geteuid() == 0
             if Requirements._zbd and Requirements._root:
                 try:
                     subprocess.run(["modprobe", "null_blk"],
@@ -1428,7 +1430,7 @@ def main():
     if args.pass_through:
         for arg in args.pass_through:
             if not ':' in arg:
-                print("Invalid --pass-through argument '%s'" % arg)
+                print(f"Invalid --pass-through argument '{arg}'")
                 print("Syntax for --pass-through is TESTNUMBER:ARGUMENT")
                 return
             split = arg.split(":", 1)
@@ -1439,7 +1441,7 @@ def main():
         fio_root = args.fio_root
     else:
         fio_root = str(Path(__file__).absolute().parent.parent)
-    print("fio root is %s" % fio_root)
+    print(f"fio root is {fio_root}")
 
     if args.fio:
         fio_path = args.fio
@@ -1449,14 +1451,14 @@ def main():
         else:
             fio_exe = "fio"
         fio_path = os.path.join(fio_root, fio_exe)
-    print("fio path is %s" % fio_path)
+    print(f"fio path is {fio_path}")
     if not shutil.which(fio_path):
         print("Warning: fio executable not found")
 
     artifact_root = args.artifact_root if args.artifact_root else \
-        "fio-test-{0}".format(time.strftime("%Y%m%d-%H%M%S"))
+        f"fio-test-{time.strftime('%Y%m%d-%H%M%S')}"
     os.mkdir(artifact_root)
-    print("Artifact directory is %s" % artifact_root)
+    print(f"Artifact directory is {artifact_root}")
 
     if not args.skip_req:
         req = Requirements(fio_root, args)
@@ -1469,7 +1471,7 @@ def main():
         if (args.skip and config['test_id'] in args.skip) or \
            (args.run_only and config['test_id'] not in args.run_only):
             skipped = skipped + 1
-            print("Test {0} SKIPPED (User request)".format(config['test_id']))
+            print(f"Test {config['test_id']} SKIPPED (User request)")
             continue
 
         if issubclass(config['test_class'], FioJobTest):
@@ -1510,7 +1512,7 @@ def main():
                                         config['success'])
             desc = config['exe']
         else:
-            print("Test {0} FAILED: unable to process test config".format(config['test_id']))
+            print(f"Test {config['test_id']} FAILED: unable to process test config")
             failed = failed + 1
             continue
 
@@ -1523,7 +1525,7 @@ def main():
                 if not reqs_met:
                     break
             if not reqs_met:
-                print("Test {0} SKIPPED ({1}) {2}".format(config['test_id'], reason, desc))
+                print(f"Test {config['test_id']} SKIPPED ({reason}) {desc}")
                 skipped = skipped + 1
                 continue
 
@@ -1541,15 +1543,15 @@ def main():
             result = "PASSED"
             passed = passed + 1
         else:
-            result = "FAILED: {0}".format(test.failure_reason)
+            result = f"FAILED: {test.failure_reason}"
             failed = failed + 1
             contents, _ = FioJobTest.get_file(test.stderr_file)
             logging.debug("Test %d: stderr:\n%s", config['test_id'], contents)
             contents, _ = FioJobTest.get_file(test.stdout_file)
             logging.debug("Test %d: stdout:\n%s", config['test_id'], contents)
-        print("Test {0} {1} {2}".format(config['test_id'], result, desc))
+        print(f"Test {config['test_id']} {result} {desc}")
 
-    print("{0} test(s) passed, {1} failed, {2} skipped".format(passed, failed, skipped))
+    print(f"{passed} test(s) passed, {failed} failed, {skipped} skipped")
 
     sys.exit(failed)
 
