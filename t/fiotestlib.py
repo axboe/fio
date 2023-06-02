@@ -18,6 +18,7 @@ import platform
 import traceback
 import subprocess
 from pathlib import Path
+from fiotestcommon import get_file
 
 
 class FioTest():
@@ -233,20 +234,6 @@ class FioJobFileTest(FioExeTest):
         else:
             logging.debug("Test %d: precondition step failed", self.testnum)
 
-    @classmethod
-    def get_file(cls, filename):
-        """Safely read a file."""
-        file_data = ''
-        success = True
-
-        try:
-            with open(filename, "r", encoding=locale.getpreferredencoding()) as output_file:
-                file_data = output_file.read()
-        except OSError:
-            success = False
-
-        return file_data, success
-
     def get_file_fail(self, filename):
         """Safely read a file and fail the test upon error."""
         file_data = None
@@ -381,9 +368,9 @@ def run_fio_tests(test_list, test_env, args):
         else:
             result = f"FAILED: {test.failure_reason}"
             failed = failed + 1
-            contents, _ = FioJobFileTest.get_file(test.stderr_file)
+            contents, _ = get_file(test.stderr_file)
             logging.debug("Test %d: stderr:\n%s", config['test_id'], contents)
-            contents, _ = FioJobFileTest.get_file(test.stdout_file)
+            contents, _ = get_file(test.stdout_file)
             logging.debug("Test %d: stdout:\n%s", config['test_id'], contents)
         print(f"Test {config['test_id']} {result} {desc}")
 

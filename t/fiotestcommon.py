@@ -7,11 +7,11 @@ be used to help with running fio tests.
 """
 
 import os
+import locale
 import logging
 import platform
 import subprocess
 import multiprocessing
-from fiotestlib import FioJobFileTest
 
 
 SUCCESS_DEFAULT = {
@@ -29,6 +29,21 @@ SUCCESS_STDERR = {
     'stderr_empty': False,
     'timeout': 600,
     }
+
+
+def get_file(filename):
+    """Safely read a file."""
+    file_data = ''
+    success = True
+
+    try:
+        with open(filename, "r", encoding=locale.getpreferredencoding()) as output_file:
+            file_data = output_file.read()
+    except OSError:
+        success = False
+
+    return file_data, success
+
 
 class Requirements():
     """Requirements consists of multiple run environment characteristics.
@@ -53,7 +68,7 @@ class Requirements():
 
         if Requirements._linux:
             config_file = os.path.join(fio_root, "config-host.h")
-            contents, success = FioJobFileTest.get_file(config_file)
+            contents, success = get_file(config_file)
             if not success:
                 print(f"Unable to open {config_file} to check requirements")
                 Requirements._zbd = True
@@ -61,7 +76,7 @@ class Requirements():
                 Requirements._zbd = "CONFIG_HAS_BLKZONED" in contents
                 Requirements._libaio = "CONFIG_LIBAIO" in contents
 
-            contents, success = FioJobFileTest.get_file("/proc/kallsyms")
+            contents, success = get_file("/proc/kallsyms")
             if not success:
                 print("Unable to open '/proc/kallsyms' to probe for io_uring support")
             else:
