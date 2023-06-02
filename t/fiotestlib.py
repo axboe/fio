@@ -165,12 +165,12 @@ class FioExeTest(FioTest):
                     self.passed = False
 
 
-class FioJobTest(FioExeTest):
+class FioJobFileTest(FioExeTest):
     """Test consists of a fio job"""
 
     def __init__(self, fio_path, fio_job, success, fio_pre_job=None,
                  fio_pre_success=None, output_format="normal"):
-        """Construct a FioJobTest which is a FioExeTest consisting of a
+        """Construct a FioJobFileTest which is a FioExeTest consisting of a
         single fio job file with an optional setup step.
 
         fio_path:           location of fio executable
@@ -213,7 +213,7 @@ class FioJobTest(FioExeTest):
     def run_pre_job(self):
         """Run fio job precondition step."""
 
-        precon = FioJobTest(self.exe_path, self.fio_pre_job,
+        precon = FioJobFileTest(self.exe_path, self.fio_pre_job,
                             self.fio_pre_success,
                             output_format=self.output_format)
         precon.setup(self.artifact_root, self.testnum)
@@ -310,7 +310,7 @@ def run_fio_tests(test_list, test_env, args):
             print(f"Test {config['test_id']} SKIPPED (User request)")
             continue
 
-        if issubclass(config['test_class'], FioJobTest):
+        if issubclass(config['test_class'], FioJobFileTest):
             if config['pre_job']:
                 fio_pre_job = os.path.join(test_env['fio_root'], 't', 'jobs',
                                            config['pre_job'])
@@ -381,9 +381,9 @@ def run_fio_tests(test_list, test_env, args):
         else:
             result = f"FAILED: {test.failure_reason}"
             failed = failed + 1
-            contents, _ = FioJobTest.get_file(test.stderr_file)
+            contents, _ = FioJobFileTest.get_file(test.stderr_file)
             logging.debug("Test %d: stderr:\n%s", config['test_id'], contents)
-            contents, _ = FioJobTest.get_file(test.stdout_file)
+            contents, _ = FioJobFileTest.get_file(test.stdout_file)
             logging.debug("Test %d: stdout:\n%s", config['test_id'], contents)
         print(f"Test {config['test_id']} {result} {desc}")
 

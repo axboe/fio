@@ -49,11 +49,11 @@ import logging
 import argparse
 from pathlib import Path
 from statsmodels.sandbox.stats.runs import runstest_1samp
-from fiotestlib import FioExeTest, FioJobTest, run_fio_tests
+from fiotestlib import FioExeTest, FioJobFileTest, run_fio_tests
 from fiotestcommon import *
 
 
-class FioJobTest_t0005(FioJobTest):
+class FioJobFileTest_t0005(FioJobFileTest):
     """Test consists of fio test job t0005
     Confirm that read['io_kbytes'] == write['io_kbytes'] == 102400"""
 
@@ -71,7 +71,7 @@ class FioJobTest_t0005(FioJobTest):
             self.passed = False
 
 
-class FioJobTest_t0006(FioJobTest):
+class FioJobFileTest_t0006(FioJobFileTest):
     """Test consists of fio test job t0006
     Confirm that read['io_kbytes'] ~ 2*write['io_kbytes']"""
 
@@ -89,7 +89,7 @@ class FioJobTest_t0006(FioJobTest):
             self.passed = False
 
 
-class FioJobTest_t0007(FioJobTest):
+class FioJobFileTest_t0007(FioJobFileTest):
     """Test consists of fio test job t0007
     Confirm that read['io_kbytes'] = 87040"""
 
@@ -104,7 +104,7 @@ class FioJobTest_t0007(FioJobTest):
             self.passed = False
 
 
-class FioJobTest_t0008(FioJobTest):
+class FioJobFileTest_t0008(FioJobFileTest):
     """Test consists of fio test job t0008
     Confirm that read['io_kbytes'] = 32768 and that
                 write['io_kbytes'] ~ 16384
@@ -132,7 +132,7 @@ class FioJobTest_t0008(FioJobTest):
             self.passed = False
 
 
-class FioJobTest_t0009(FioJobTest):
+class FioJobFileTest_t0009(FioJobFileTest):
     """Test consists of fio test job t0009
     Confirm that runtime >= 60s"""
 
@@ -149,7 +149,7 @@ class FioJobTest_t0009(FioJobTest):
             self.passed = False
 
 
-class FioJobTest_t0012(FioJobTest):
+class FioJobFileTest_t0012(FioJobFileTest):
     """Test consists of fio test job t0012
     Confirm ratios of job iops are 1:5:10
     job1,job2,job3 respectively"""
@@ -194,7 +194,7 @@ class FioJobTest_t0012(FioJobTest):
             return
 
 
-class FioJobTest_t0014(FioJobTest):
+class FioJobFileTest_t0014(FioJobFileTest):
     """Test consists of fio test job t0014
 	Confirm that job1_iops / job2_iops ~ 1:2 for entire duration
 	and that job1_iops / job3_iops ~ 1:3 for first half of duration.
@@ -253,7 +253,7 @@ class FioJobTest_t0014(FioJobTest):
             return
 
 
-class FioJobTest_t0015(FioJobTest):
+class FioJobFileTest_t0015(FioJobFileTest):
     """Test consists of fio test jobs t0015 and t0016
     Confirm that mean(slat) + mean(clat) = mean(tlat)"""
 
@@ -274,7 +274,7 @@ class FioJobTest_t0015(FioJobTest):
             self.passed = False
 
 
-class FioJobTest_t0019(FioJobTest):
+class FioJobFileTest_t0019(FioJobFileTest):
     """Test consists of fio test job t0019
     Confirm that all offsets were touched sequentially"""
 
@@ -304,7 +304,7 @@ class FioJobTest_t0019(FioJobTest):
             self.failure_reason = f"unexpected last offset {cur}"
 
 
-class FioJobTest_t0020(FioJobTest):
+class FioJobFileTest_t0020(FioJobFileTest):
     """Test consists of fio test jobs t0020 and t0021
     Confirm that almost all offsets were touched non-sequentially"""
 
@@ -343,7 +343,7 @@ class FioJobTest_t0020(FioJobTest):
             self.failure_reason += f" runs test failed with p = {p}"
 
 
-class FioJobTest_t0022(FioJobTest):
+class FioJobFileTest_t0022(FioJobFileTest):
     """Test consists of fio test job t0022"""
 
     def check_result(self):
@@ -381,7 +381,7 @@ class FioJobTest_t0022(FioJobTest):
             self.failure_reason += " no duplicate offsets found with norandommap=1"
 
 
-class FioJobTest_t0023(FioJobTest):
+class FioJobFileTest_t0023(FioJobFileTest):
     """Test consists of fio test job t0023 randtrimwrite test."""
 
     def check_trimwrite(self, filename):
@@ -490,12 +490,12 @@ class FioJobTest_t0023(FioJobTest):
         self.check_all_offsets("bssplit_bw.log", 512, filesize)
 
 
-class FioJobTest_t0024(FioJobTest_t0023):
+class FioJobFileTest_t0024(FioJobFileTest_t0023):
     """Test consists of fio test job t0024 trimwrite test."""
 
     def check_result(self):
-        # call FioJobTest_t0023's parent to skip checks done by t0023
-        super(FioJobTest_t0023, self).check_result()
+        # call FioJobFileTest_t0023's parent to skip checks done by t0023
+        super(FioJobFileTest_t0023, self).check_result()
 
         filesize = 1024*1024
 
@@ -510,7 +510,7 @@ class FioJobTest_t0024(FioJobTest_t0023):
         self.check_all_offsets("bssplit_bw.log", 512, filesize)
 
 
-class FioJobTest_t0025(FioJobTest):
+class FioJobFileTest_t0025(FioJobFileTest):
     """Test experimental verify read backs written data pattern."""
     def check_result(self):
         super().check_result()
@@ -521,7 +521,7 @@ class FioJobTest_t0025(FioJobTest):
         if self.json_data['jobs'][0]['read']['io_kbytes'] != 128:
             self.passed = False
 
-class FioJobTest_t0027(FioJobTest):
+class FioJobFileTest_t0027(FioJobFileTest):
     def setup(self, *args, **kws):
         super().setup(*args, **kws)
         self.pattern_file = os.path.join(self.test_dir, "t0027.pattern")
@@ -542,7 +542,7 @@ class FioJobTest_t0027(FioJobTest):
         if data != self.pattern:
             self.passed = False
 
-class FioJobTest_iops_rate(FioJobTest):
+class FioJobFileTest_iops_rate(FioJobFileTest):
     """Test consists of fio test job t0011
     Confirm that job0 iops == 1000
     and that job1_iops / job0_iops ~ 8
@@ -573,7 +573,7 @@ class FioJobTest_iops_rate(FioJobTest):
 TEST_LIST = [
     {
         'test_id':          1,
-        'test_class':       FioJobTest,
+        'test_class':       FioJobFileTest,
         'job':              't0001-52c58027.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
@@ -582,7 +582,7 @@ TEST_LIST = [
     },
     {
         'test_id':          2,
-        'test_class':       FioJobTest,
+        'test_class':       FioJobFileTest,
         'job':              't0002-13af05ae-post.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          't0002-13af05ae-pre.fio',
@@ -591,7 +591,7 @@ TEST_LIST = [
     },
     {
         'test_id':          3,
-        'test_class':       FioJobTest,
+        'test_class':       FioJobFileTest,
         'job':              't0003-0ae2c6e1-post.fio',
         'success':          SUCCESS_NONZERO,
         'pre_job':          't0003-0ae2c6e1-pre.fio',
@@ -600,7 +600,7 @@ TEST_LIST = [
     },
     {
         'test_id':          4,
-        'test_class':       FioJobTest,
+        'test_class':       FioJobFileTest,
         'job':              't0004-8a99fdf6.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
@@ -609,7 +609,7 @@ TEST_LIST = [
     },
     {
         'test_id':          5,
-        'test_class':       FioJobTest_t0005,
+        'test_class':       FioJobFileTest_t0005,
         'job':              't0005-f7078f7b.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
@@ -619,7 +619,7 @@ TEST_LIST = [
     },
     {
         'test_id':          6,
-        'test_class':       FioJobTest_t0006,
+        'test_class':       FioJobFileTest_t0006,
         'job':              't0006-82af2a7c.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
@@ -629,7 +629,7 @@ TEST_LIST = [
     },
     {
         'test_id':          7,
-        'test_class':       FioJobTest_t0007,
+        'test_class':       FioJobFileTest_t0007,
         'job':              't0007-37cf9e3c.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
@@ -639,7 +639,7 @@ TEST_LIST = [
     },
     {
         'test_id':          8,
-        'test_class':       FioJobTest_t0008,
+        'test_class':       FioJobFileTest_t0008,
         'job':              't0008-ae2fafc8.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
@@ -649,7 +649,7 @@ TEST_LIST = [
     },
     {
         'test_id':          9,
-        'test_class':       FioJobTest_t0009,
+        'test_class':       FioJobFileTest_t0009,
         'job':              't0009-f8b0bd10.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
@@ -661,7 +661,7 @@ TEST_LIST = [
     },
     {
         'test_id':          10,
-        'test_class':       FioJobTest,
+        'test_class':       FioJobFileTest,
         'job':              't0010-b7aae4ba.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
@@ -670,7 +670,7 @@ TEST_LIST = [
     },
     {
         'test_id':          11,
-        'test_class':       FioJobTest_iops_rate,
+        'test_class':       FioJobFileTest_iops_rate,
         'job':              't0011-5d2788d5.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
@@ -680,7 +680,7 @@ TEST_LIST = [
     },
     {
         'test_id':          12,
-        'test_class':       FioJobTest_t0012,
+        'test_class':       FioJobFileTest_t0012,
         'job':              't0012.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
@@ -690,7 +690,7 @@ TEST_LIST = [
     },
     {
         'test_id':          13,
-        'test_class':       FioJobTest,
+        'test_class':       FioJobFileTest,
         'job':              't0013.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
@@ -700,7 +700,7 @@ TEST_LIST = [
     },
     {
         'test_id':          14,
-        'test_class':       FioJobTest_t0014,
+        'test_class':       FioJobFileTest_t0014,
         'job':              't0014.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
@@ -710,7 +710,7 @@ TEST_LIST = [
     },
     {
         'test_id':          15,
-        'test_class':       FioJobTest_t0015,
+        'test_class':       FioJobFileTest_t0015,
         'job':              't0015-e78980ff.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
@@ -720,7 +720,7 @@ TEST_LIST = [
     },
     {
         'test_id':          16,
-        'test_class':       FioJobTest_t0015,
+        'test_class':       FioJobFileTest_t0015,
         'job':              't0016-d54ae22.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
@@ -730,7 +730,7 @@ TEST_LIST = [
     },
     {
         'test_id':          17,
-        'test_class':       FioJobTest_t0015,
+        'test_class':       FioJobFileTest_t0015,
         'job':              't0017.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
@@ -740,7 +740,7 @@ TEST_LIST = [
     },
     {
         'test_id':          18,
-        'test_class':       FioJobTest,
+        'test_class':       FioJobFileTest,
         'job':              't0018.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
@@ -749,7 +749,7 @@ TEST_LIST = [
     },
     {
         'test_id':          19,
-        'test_class':       FioJobTest_t0019,
+        'test_class':       FioJobFileTest_t0019,
         'job':              't0019.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
@@ -758,7 +758,7 @@ TEST_LIST = [
     },
     {
         'test_id':          20,
-        'test_class':       FioJobTest_t0020,
+        'test_class':       FioJobFileTest_t0020,
         'job':              't0020.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
@@ -767,7 +767,7 @@ TEST_LIST = [
     },
     {
         'test_id':          21,
-        'test_class':       FioJobTest_t0020,
+        'test_class':       FioJobFileTest_t0020,
         'job':              't0021.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
@@ -776,7 +776,7 @@ TEST_LIST = [
     },
     {
         'test_id':          22,
-        'test_class':       FioJobTest_t0022,
+        'test_class':       FioJobFileTest_t0022,
         'job':              't0022.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
@@ -785,7 +785,7 @@ TEST_LIST = [
     },
     {
         'test_id':          23,
-        'test_class':       FioJobTest_t0023,
+        'test_class':       FioJobFileTest_t0023,
         'job':              't0023.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
@@ -794,7 +794,7 @@ TEST_LIST = [
     },
     {
         'test_id':          24,
-        'test_class':       FioJobTest_t0024,
+        'test_class':       FioJobFileTest_t0024,
         'job':              't0024.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
@@ -803,7 +803,7 @@ TEST_LIST = [
     },
     {
         'test_id':          25,
-        'test_class':       FioJobTest_t0025,
+        'test_class':       FioJobFileTest_t0025,
         'job':              't0025.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
@@ -813,7 +813,7 @@ TEST_LIST = [
     },
     {
         'test_id':          26,
-        'test_class':       FioJobTest,
+        'test_class':       FioJobFileTest,
         'job':              't0026.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
@@ -822,7 +822,7 @@ TEST_LIST = [
     },
     {
         'test_id':          27,
-        'test_class':       FioJobTest_t0027,
+        'test_class':       FioJobFileTest_t0027,
         'job':              't0027.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
@@ -831,7 +831,7 @@ TEST_LIST = [
     },
     {
         'test_id':          28,
-        'test_class':       FioJobTest,
+        'test_class':       FioJobFileTest,
         'job':              't0028-c6cade16.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,

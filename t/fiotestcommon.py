@@ -11,7 +11,7 @@ import logging
 import platform
 import subprocess
 import multiprocessing
-from fiotestlib import FioJobTest
+from fiotestlib import FioJobFileTest
 
 
 SUCCESS_DEFAULT = {
@@ -53,7 +53,7 @@ class Requirements():
 
         if Requirements._linux:
             config_file = os.path.join(fio_root, "config-host.h")
-            contents, success = FioJobTest.get_file(config_file)
+            contents, success = FioJobFileTest.get_file(config_file)
             if not success:
                 print(f"Unable to open {config_file} to check requirements")
                 Requirements._zbd = True
@@ -61,7 +61,7 @@ class Requirements():
                 Requirements._zbd = "CONFIG_HAS_BLKZONED" in contents
                 Requirements._libaio = "CONFIG_LIBAIO" in contents
 
-            contents, success = FioJobTest.get_file("/proc/kallsyms")
+            contents, success = FioJobFileTest.get_file("/proc/kallsyms")
             if not success:
                 print("Unable to open '/proc/kallsyms' to probe for io_uring support")
             else:
