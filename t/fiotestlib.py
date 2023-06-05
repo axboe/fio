@@ -127,9 +127,8 @@ class FioExeTest(FioTest):
                 self.failure_reason = f"{self.failure_reason} timeout,"
             else:
                 assert self.output['failure'] == 'exception'
-                self.failure_reason = '{0} exception: {1}, {2}'.format(
-                    self.failure_reason, self.output['exc_info'][0],
-                    self.output['exc_info'][1])
+                self.failure_reason = f'{self.failure_reason} exception: ' + \
+                f'{self.output["exc_info"][0]}, {self.output["exc_info"][1]}'
 
             self.passed = False
             return
