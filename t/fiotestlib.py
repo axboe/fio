@@ -81,32 +81,31 @@ class FioExeTest(FioTest):
         """Execute the binary or script described by this instance."""
 
         command = [self.paths['exe']] + self.parameters
-        command_file = open(self.filenames['cmd'], "w+",
-                            encoding=locale.getpreferredencoding())
-        command_file.write(f"{command}\n")
-        command_file.close()
+        with open(self.filenames['cmd'], "w+",
+                  encoding=locale.getpreferredencoding()) as command_file:
+            command_file.write(f"{command}\n")
 
-        stdout_file = open(self.filenames['stdout'], "w+",
-                           encoding=locale.getpreferredencoding())
-        stderr_file = open(self.filenames['stderr'], "w+",
-                           encoding=locale.getpreferredencoding())
-        exitcode_file = open(self.filenames['exitcode'], "w+",
-                             encoding=locale.getpreferredencoding())
         try:
-            proc = None
-            # Avoid using subprocess.run() here because when a timeout occurs,
-            # fio will be stopped with SIGKILL. This does not give fio a
-            # chance to clean up and means that child processes may continue
-            # running and submitting IO.
-            proc = subprocess.Popen(command,
-                                    stdout=stdout_file,
-                                    stderr=stderr_file,
-                                    cwd=self.paths['test_dir'],
-                                    universal_newlines=True)
-            proc.communicate(timeout=self.success['timeout'])
-            exitcode_file.write(f'{proc.returncode}\n')
-            logging.debug("Test %d: return code: %d", self.testnum, proc.returncode)
-            self.output['proc'] = proc
+            with open(self.filenames['stdout'], "w+",
+                      encoding=locale.getpreferredencoding()) as stdout_file, \
+                open(self.filenames['stderr'], "w+",
+                     encoding=locale.getpreferredencoding()) as stderr_file, \
+                open(self.filenames['exitcode'], "w+",
+                     encoding=locale.getpreferredencoding()) as exitcode_file:
+                proc = None
+                # Avoid using subprocess.run() here because when a timeout occurs,
+                # fio will be stopped with SIGKILL. This does not give fio a
+                # chance to clean up and means that child processes may continue
+                # running and submitting IO.
+                proc = subprocess.Popen(command,
+                                        stdout=stdout_file,
+                                        stderr=stderr_file,
+                                        cwd=self.paths['test_dir'],
+                                        universal_newlines=True)
+                proc.communicate(timeout=self.success['timeout'])
+                exitcode_file.write(f'{proc.returncode}\n')
+                logging.debug("Test %d: return code: %d", self.testnum, proc.returncode)
+                self.output['proc'] = proc
         except subprocess.TimeoutExpired:
             proc.terminate()
             proc.communicate()
@@ -119,10 +118,6 @@ class FioExeTest(FioTest):
                     proc.communicate()
             self.output['failure'] = 'exception'
             self.output['exc_info'] = sys.exc_info()
-        finally:
-            stdout_file.close()
-            stderr_file.close()
-            exitcode_file.close()
 
     def check_result(self):
         """Check results of test run."""
