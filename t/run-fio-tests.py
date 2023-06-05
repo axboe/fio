@@ -162,7 +162,7 @@ class FioJobFileTest_t0012(FioJobFileTest):
 
         iops_files = []
         for i in range(1, 4):
-            filename = os.path.join(self.test_dir, "{0}_iops.{1}.log".format(os.path.basename(
+            filename = os.path.join(self.paths['test_dir'], "{0}_iops.{1}.log".format(os.path.basename(
                 self.fio_job), i))
             file_data = self.get_file_fail(filename)
             if not file_data:
@@ -210,7 +210,7 @@ class FioJobFileTest_t0014(FioJobFileTest):
 
         iops_files = []
         for i in range(1, 4):
-            filename = os.path.join(self.test_dir, "{0}_iops.{1}.log".format(os.path.basename(
+            filename = os.path.join(self.paths['test_dir'], "{0}_iops.{1}.log".format(os.path.basename(
                 self.fio_job), i))
             file_data = self.get_file_fail(filename)
             if not file_data:
@@ -281,7 +281,7 @@ class FioJobFileTest_t0019(FioJobFileTest):
     def check_result(self):
         super().check_result()
 
-        bw_log_filename = os.path.join(self.test_dir, "test_bw.log")
+        bw_log_filename = os.path.join(self.paths['test_dir'], "test_bw.log")
         file_data = self.get_file_fail(bw_log_filename)
         if not file_data:
             return
@@ -311,7 +311,7 @@ class FioJobFileTest_t0020(FioJobFileTest):
     def check_result(self):
         super().check_result()
 
-        bw_log_filename = os.path.join(self.test_dir, "test_bw.log")
+        bw_log_filename = os.path.join(self.paths['test_dir'], "test_bw.log")
         file_data = self.get_file_fail(bw_log_filename)
         if not file_data:
             return
@@ -349,7 +349,7 @@ class FioJobFileTest_t0022(FioJobFileTest):
     def check_result(self):
         super().check_result()
 
-        bw_log_filename = os.path.join(self.test_dir, "test_bw.log")
+        bw_log_filename = os.path.join(self.paths['test_dir'], "test_bw.log")
         file_data = self.get_file_fail(bw_log_filename)
         if not file_data:
             return
@@ -387,7 +387,7 @@ class FioJobFileTest_t0023(FioJobFileTest):
     def check_trimwrite(self, filename):
         """Make sure that trims are followed by writes of the same size at the same offset."""
 
-        bw_log_filename = os.path.join(self.test_dir, filename)
+        bw_log_filename = os.path.join(self.paths['test_dir'], filename)
         file_data = self.get_file_fail(bw_log_filename)
         if not file_data:
             return
@@ -435,7 +435,7 @@ class FioJobFileTest_t0023(FioJobFileTest):
     def check_all_offsets(self, filename, sectorsize, filesize):
         """Make sure all offsets were touched."""
 
-        file_data = self.get_file_fail(os.path.join(self.test_dir, filename))
+        file_data = self.get_file_fail(os.path.join(self.paths['test_dir'], filename))
         if not file_data:
             return
 
@@ -524,8 +524,8 @@ class FioJobFileTest_t0025(FioJobFileTest):
 class FioJobFileTest_t0027(FioJobFileTest):
     def setup(self, *args, **kws):
         super().setup(*args, **kws)
-        self.pattern_file = os.path.join(self.test_dir, "t0027.pattern")
-        self.output_file = os.path.join(self.test_dir, "t0027file")
+        self.pattern_file = os.path.join(self.paths['test_dir'], "t0027.pattern")
+        self.output_file = os.path.join(self.paths['test_dir'], "t0027file")
         self.pattern = os.urandom(16 << 10)
         with open(self.pattern_file, "wb") as f:
             f.write(self.pattern)
