@@ -23,6 +23,7 @@ import os
 import sys
 import time
 import locale
+import logging
 import argparse
 import subprocess
 from pathlib import Path
@@ -161,16 +162,14 @@ class TestRR(FioRandTest):
 
         if not TestRR.seeds[rr]:
             TestRR.seeds[rr] = rand_seeds
-            if self.debug:
-                print(f"TestRR: saving rand_seeds for [a]rr={rr}")
+            logging.debug(f"TestRR: saving rand_seeds for [a]rr={rr}")
         else:
             if rr:
                 if TestRR.seeds[1] != rand_seeds:
                     retval = False
                     print(f"TestRR: unexpected seed mismatch for [a]rr={rr}")
                 else:
-                    if self.debug:
-                        print(f"TestRR: seeds correctly match for [a]rr={rr}")
+                    logging.debug(f"TestRR: seeds correctly match for [a]rr={rr}")
                 if TestRR.seeds[0] == rand_seeds:
                     retval = False
                     print("TestRR: seeds unexpectedly match those from system RNG")
@@ -179,8 +178,7 @@ class TestRR(FioRandTest):
                     retval = False
                     print(f"TestRR: unexpected seed match for [a]rr={rr}")
                 else:
-                    if self.debug:
-                        print(f"TestRR: seeds correctly don't match for [a]rr={rr}")
+                    logging.debug(f"TestRR: seeds correctly don't match for [a]rr={rr}")
                 if TestRR.seeds[1] == rand_seeds:
                     retval = False
                     print(f"TestRR: random seeds unexpectedly match those from [a]rr=1")
@@ -204,20 +202,17 @@ class TestRS(FioRandTest):
         rand_seeds = self.get_rand_seeds()
         randseed = self.test_options['randseed']
 
-        if self.debug:
-            print("randseed = ", randseed)
+        logging.debug(f"randseed = {randseed}")
 
         if randseed not in TestRS.seeds:
             TestRS.seeds[randseed] = rand_seeds
-            if self.debug:
-                print("TestRS: saving rand_seeds")
+            logging.debug("TestRS: saving rand_seeds")
         else:
             if TestRS.seeds[randseed] != rand_seeds:
                 retval = False
                 print("TestRS: seeds don't match when they should")
             else:
-                if self.debug:
-                    print("TestRS: seeds correctly match")
+                logging.debug("TestRS: seeds correctly match")
 
         # Now try to find seeds generated using a different randseed and make
         # sure they *don't* match
@@ -227,10 +222,7 @@ class TestRS(FioRandTest):
                     retval = False
                     print("TestRS: randseeds differ but generated seeds match.")
                 else:
-                    if self.debug:
-                        print("TestRS: randseeds differ and generated seeds also differ.")
-
-        return retval
+                    logging.debug("TestRS: randseeds differ and generated seeds also differ.")
 
 
 def parse_args():
@@ -253,6 +245,11 @@ def main():
     """Run tests of fio random seed options"""
 
     args = parse_args()
+
+    if args.debug:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
 
     artifact_root = args.artifact_root if args.artifact_root else \
         f"random-seed-test-{time.strftime('%Y%m%d-%H%M%S')}"
