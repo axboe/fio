@@ -24,34 +24,36 @@ from fiotestcommon import get_file
 class FioTest():
     """Base for all fio tests."""
 
-    def __init__(self, exe_path, success):
-        self.paths = {'exe': exe_path}
+    def __init__(self, exe_path, success, testnum, artifact_root):
         self.success = success
+        self.testnum = testnum
         self.output = {}
-        self.testnum = None
         self.passed = True
         self.failure_reason = ''
-        self.filenames = {}
         self.parameters = None
+        self.paths = {
+                        'exe': exe_path,
+                        'artifacts': artifact_root,
+                        'test_dir': os.path.join(artifact_root, \
+                                f"{testnum:04d}"),
+                        }
+        self.filenames = {
+                            'cmd': os.path.join(self.paths['test_dir'], \
+                                    f"{os.path.basename(self.paths['exe'])}.command"),
+                            'stdout': os.path.join(self.paths['test_dir'], \
+                                    f"{os.path.basename(self.paths['exe'])}.stdout"),
+                            'stderr': os.path.join(self.paths['test_dir'], \
+                                    f"{os.path.basename(self.paths['exe'])}.stderr"),
+                            'exitcode': os.path.join(self.paths['test_dir'], \
+                                    f"{os.path.basename(self.paths['exe'])}.exitcode"),
+                            }
 
-    def setup(self, artifact_root, testnum, parameters):
+    def setup(self, parameters):
         """Setup instance variables for test."""
 
-        self.testnum = testnum
         self.parameters = parameters
-        self.paths['artifacts'] = artifact_root
-        self.paths['test_dir'] = os.path.join(artifact_root, f"{testnum:04d}")
         if not os.path.exists(self.paths['test_dir']):
             os.mkdir(self.paths['test_dir'])
-
-        self.filenames['cmd'] = os.path.join(self.paths['test_dir'],
-                                             f"{os.path.basename(self.paths['exe'])}.command")
-        self.filenames['stdout'] = os.path.join(self.paths['test_dir'],
-                                                f"{os.path.basename(self.paths['exe'])}.stdout")
-        self.filenames['stderr'] = os.path.join(self.paths['test_dir'],
-                                                f"{os.path.basename(self.paths['exe'])}.stderr")
-        self.filenames['exitcode'] = os.path.join(self.paths['test_dir'],
-                                                  f"{os.path.basename(self.paths['exe'])}.exitcode")
 
     def run(self):
         """Run the test."""
@@ -66,16 +68,6 @@ class FioTest():
 
 class FioExeTest(FioTest):
     """Test consists of an executable binary or script"""
-
-    def __init__(self, exe_path, success):
-        """Construct a FioExeTest which is a FioTest consisting of an
-        executable binary or script.
-
-        exe_path:       location of executable binary or script
-        success:        Definition of test success
-        """
-
-        FioTest.__init__(self, exe_path, success)
 
     def run(self):
         """Execute the binary or script described by this instance."""
@@ -158,14 +150,17 @@ class FioExeTest(FioTest):
 class FioJobFileTest(FioExeTest):
     """Test consists of a fio job with options in a job file."""
 
-    def __init__(self, fio_path, fio_job, success, fio_pre_job=None,
-                 fio_pre_success=None, output_format="normal"):
+    def __init__(self, fio_path, fio_job, success, testnum, artifact_root,
+                 fio_pre_job=None, fio_pre_success=None,
+                 output_format="normal"):
         """Construct a FioJobFileTest which is a FioExeTest consisting of a
         single fio job file with an optional setup step.
 
         fio_path:           location of fio executable
         fio_job:            location of fio job file
         success:            Definition of test success
+        testnum:            test ID
+        artifact_root:      root directory for artifacts
         fio_pre_job:        fio job for preconditioning
         fio_pre_success:    Definition of test success for fio precon job
         output_format:      normal (default), json, jsonplus, or terse
@@ -178,9 +173,9 @@ class FioJobFileTest(FioExeTest):
         self.precon_failed = False
         self.json_data = None
 
-        FioExeTest.__init__(self, fio_path, success)
+        super().__init__(fio_path, success, testnum, artifact_root)
 
-    def setup(self, artifact_root, testnum, parameters=None):
+    def setup(self, parameters=None):
         """Setup instance variables for fio job test."""
 
         self.filenames['fio_output'] = f"{os.path.basename(self.fio_job)}.output"
@@ -191,7 +186,7 @@ class FioJobFileTest(FioExeTest):
             self.fio_job,
             ]
 
-        super().setup(artifact_root, testnum, fio_args)
+        super().setup(fio_args)
 
         # Update the filenames from the default
         self.filenames['cmd'] = os.path.join(self.paths['test_dir'],
@@ -208,8 +203,10 @@ class FioJobFileTest(FioExeTest):
 
         precon = FioJobFileTest(self.paths['exe'], self.fio_pre_job,
                             self.fio_pre_success,
+                            self.testnum,
+                            self.paths['artifacts'],
                             output_format=self.output_format)
-        precon.setup(self.paths['artifacts'], self.testnum)
+        precon.setup()
         precon.run()
         precon.check_result()
         self.precon_failed = not precon.passed
@@ -308,6 +305,8 @@ def run_fio_tests(test_list, test_env, args):
                 test_env['fio_path'],
                 os.path.join(test_env['fio_root'], 't', 'jobs', config['job']),
                 config['success'],
+                config['test_id'],
+                test_env['artifact_root'],
                 fio_pre_job=fio_pre_job,
                 fio_pre_success=fio_pre_success,
                 output_format=output_format)
@@ -324,7 +323,11 @@ def run_fio_tests(test_list, test_env, args):
                 exe_path = "python.exe"
             if config['test_id'] in test_env['pass_through']:
                 parameters += test_env['pass_through'][config['test_id']].split()
-            test = config['test_class'](exe_path, config['success'])
+            test = config['test_class'](
+                    exe_path,
+                    config['success'],
+                    config['test_id'],
+                    test_env['artifact_root'])
             desc = config['exe']
         else:
             print(f"Test {config['test_id']} FAILED: unable to process test config")
@@ -345,7 +348,7 @@ def run_fio_tests(test_list, test_env, args):
                 continue
 
         try:
-            test.setup(test_env['artifact_root'], config['test_id'], parameters)
+            test.setup(parameters)
             test.run()
             test.check_result()
         except KeyboardInterrupt:
