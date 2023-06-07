@@ -18,7 +18,7 @@ import platform
 import traceback
 import subprocess
 from pathlib import Path
-from fiotestcommon import get_file
+from fiotestcommon import get_file, SUCCESS_DEFAULT
 
 
 class FioTest():
@@ -271,6 +271,96 @@ class FioJobFileTest(FioExeTest):
             self.passed = False
 
 
+class FioJobCmdTest(FioExeTest):
+    """This runs a fio job with options specified on the command line."""
+
+    def __init__(self, fio_path, success, testnum, artifact_root, fio_opts, basename=None):
+
+        self.basename = basename if basename else os.path.basename(fio_path)
+        self.fio_opts = fio_opts
+        self.json_data = None
+
+        super().__init__(fio_path, success, testnum, artifact_root)
+
+        filename_stub = f"{self.basename}{self.testnum:03d}"
+        self.filenames['cmd'] = os.path.join(self.paths['test_dir'], f"{filename_stub}.command")
+        self.filenames['stdout'] = os.path.join(self.paths['test_dir'], f"{filename_stub}.stdout")
+        self.filenames['stderr'] = os.path.join(self.paths['test_dir'], f"{filename_stub}.stderr")
+        self.filenames['output'] = os.path.abspath(os.path.join(self.paths['test_dir'],
+                                     f"{filename_stub}.output"))
+        self.filenames['exitcode'] = os.path.join(self.paths['test_dir'],
+                                                  f"{filename_stub}.exitcode")
+
+    def run(self):
+        super().run()
+
+        if 'output-format' in self.fio_opts and 'json' in \
+                self.fio_opts['output-format']:
+            if not self.get_json():
+                print('Unable to decode JSON data')
+                self.passed = False
+
+    def get_json(self):
+        """Convert fio JSON output into a python JSON object"""
+
+        filename = self.filenames['output']
+        with open(filename, 'r', encoding=locale.getpreferredencoding()) as file:
+            file_data = file.read()
+
+        #
+        # Sometimes fio informational messages are included at the top of the
+        # JSON output, especially under Windows. Try to decode output as JSON
+        # data, lopping off up to the first four lines
+        #
+        lines = file_data.splitlines()
+        for i in range(5):
+            file_data = '\n'.join(lines[i:])
+            try:
+                self.json_data = json.loads(file_data)
+            except json.JSONDecodeError:
+                continue
+            else:
+                return True
+
+        return False
+
+    @staticmethod
+    def check_empty(job):
+        """
+        Make sure JSON data is empty.
+
+        Some data structures should be empty. This function makes sure that they are.
+
+        job         JSON object that we need to check for emptiness
+        """
+
+        return job['total_ios'] == 0 and \
+                job['slat_ns']['N'] == 0 and \
+                job['clat_ns']['N'] == 0 and \
+                job['lat_ns']['N'] == 0
+
+    def check_all_ddirs(self, ddir_nonzero, job):
+        """
+        Iterate over the data directions and check whether each is
+        appropriately empty or not.
+        """
+
+        retval = True
+        ddirlist = ['read', 'write', 'trim']
+
+        for ddir in ddirlist:
+            if ddir in ddir_nonzero:
+                if self.check_empty(job[ddir]):
+                    print(f"Unexpected zero {ddir} data found in output")
+                    retval = False
+            else:
+                if not self.check_empty(job[ddir]):
+                    print(f"Unexpected {ddir} data found in output")
+                    retval = False
+
+        return retval
+
+
 def run_fio_tests(test_list, test_env, args):
     """
     Run tests as specified in test_list.
@@ -312,6 +402,17 @@ def run_fio_tests(test_list, test_env, args):
                 output_format=output_format)
             desc = config['job']
             parameters = []
+        elif issubclass(config['test_class'], FioJobCmdTest):
+            if not 'success' in config:
+                config['success'] = SUCCESS_DEFAULT
+            test = config['test_class'](test_env['fio_path'],
+                                        config['success'],
+                                        config['test_id'],
+                                        test_env['artifact_root'],
+                                        config['fio_opts'],
+                                        test_env['basename'])
+            desc = config['test_id']
+            parameters = config
         elif issubclass(config['test_class'], FioExeTest):
             exe_path = os.path.join(test_env['fio_root'], config['exe'])
             parameters = []
@@ -334,7 +435,7 @@ def run_fio_tests(test_list, test_env, args):
             failed = failed + 1
             continue
 
-        if not args.skip_req:
+        if 'requirements' in config and not args.skip_req:
             reqs_met = True
             for req in config['requirements']:
                 reqs_met, reason = req()
