@@ -890,7 +890,7 @@ TEST_LIST = [
         'test_id':          1006,
         'test_class':       FioExeTest,
         'exe':              't/strided.py',
-        'parameters':       ['{fio_path}'],
+        'parameters':       ['--fio', '{fio_path}'],
         'success':          SUCCESS_DEFAULT,
         'requirements':     [],
     },
