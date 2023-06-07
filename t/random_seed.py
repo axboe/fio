@@ -27,35 +27,13 @@ import logging
 import argparse
 import subprocess
 from pathlib import Path
+from fiotestlib import FioJobCmdTest, run_fio_tests
 
-class FioRandTest():
+class FioRandTest(FioJobCmdTest):
     """fio random seed test."""
 
-    def __init__(self, artifact_root, test_options, debug):
-        """
-        artifact_root   root directory for artifacts (subdirectory will be created under here)
-        test            test specification
-        """
-        self.artifact_root = artifact_root
-        self.test_options = test_options
-        self.debug = debug
-        self.filename_stub = None
-        self.filenames = {}
-
-        self.test_dir = os.path.abspath(os.path.join(self.artifact_root,
-                                     f"{self.test_options['test_id']:03d}"))
-        if not os.path.exists(self.test_dir):
-            os.mkdir(self.test_dir)
-
-        self.filename_stub = f"random{self.test_options['test_id']:03d}"
-        self.filenames['command'] = os.path.join(self.test_dir, f"{self.filename_stub}.command")
-        self.filenames['stdout'] = os.path.join(self.test_dir, f"{self.filename_stub}.stdout")
-        self.filenames['stderr'] = os.path.join(self.test_dir, f"{self.filename_stub}.stderr")
-        self.filenames['exitcode'] = os.path.join(self.test_dir, f"{self.filename_stub}.exitcode")
-        self.filenames['output'] = os.path.join(self.test_dir, f"{self.filename_stub}.output")
-
-    def run_fio(self, fio_path):
-        """Run a test."""
+    def setup(self, parameters):
+        """Setup the test."""
 
         fio_args = [
             "--debug=random",
@@ -66,48 +44,11 @@ class FioRandTest():
             f"--output={self.filenames['output']}",
         ]
         for opt in ['randseed', 'randrepeat', 'allrandrepeat']:
-            if opt in self.test_options:
-                option = f"--{opt}={self.test_options[opt]}"
+            if opt in self.fio_opts:
+                option = f"--{opt}={self.fio_opts[opt]}"
                 fio_args.append(option)
 
-        command = [fio_path] + fio_args
-        with open(self.filenames['command'], "w+", encoding=locale.getpreferredencoding()) as command_file:
-            command_file.write(" ".join(command))
-
-        passed = True
-
-        try:
-            with open(self.filenames['stdout'], "w+", encoding=locale.getpreferredencoding()) as stdout_file, \
-                open(self.filenames['stderr'], "w+", encoding=locale.getpreferredencoding()) as stderr_file, \
-                open(self.filenames['exitcode'], "w+", encoding=locale.getpreferredencoding()) as exitcode_file:
-                proc = None
-                # Avoid using subprocess.run() here because when a timeout occurs,
-                # fio will be stopped with SIGKILL. This does not give fio a
-                # chance to clean up and means that child processes may continue
-                # running and submitting IO.
-                proc = subprocess.Popen(command,
-                                        stdout=stdout_file,
-                                        stderr=stderr_file,
-                                        cwd=self.test_dir,
-                                        universal_newlines=True)
-                proc.communicate(timeout=300)
-                exitcode_file.write(f'{proc.returncode}\n')
-                passed &= (proc.returncode == 0)
-        except subprocess.TimeoutExpired:
-            proc.terminate()
-            proc.communicate()
-            assert proc.poll()
-            print("Timeout expired")
-            passed = False
-        except Exception:
-            if proc:
-                if not proc.poll():
-                    proc.terminate()
-                    proc.communicate()
-            print(f"Exception: {sys.exc_info()}")
-            passed = False
-
-        return passed
+        super().setup(fio_args)
 
     def get_rand_seeds(self):
         """Collect random seeds from --debug=random output."""
@@ -137,11 +78,6 @@ class FioRandTest():
 
             return seed_list
 
-    def check(self):
-        """Check test output."""
-
-        raise NotImplementedError()
-
 
 class TestRR(FioRandTest):
     """
@@ -152,12 +88,11 @@ class TestRR(FioRandTest):
     # one set of seeds is for randrepeat=0 and the other is for randrepeat=1
     seeds = { 0: None, 1: None }
 
-    def check(self):
+    def check_result(self):
         """Check output for allrandrepeat=1."""
 
-        retval = True
-        opt = 'randrepeat' if 'randrepeat' in self.test_options else 'allrandrepeat'
-        rr = self.test_options[opt]
+        opt = 'randrepeat' if 'randrepeat' in self.fio_opts else 'allrandrepeat'
+        rr = self.fio_opts[opt]
         rand_seeds = self.get_rand_seeds()
 
         if not TestRR.seeds[rr]:
@@ -166,24 +101,22 @@ class TestRR(FioRandTest):
         else:
             if rr:
                 if TestRR.seeds[1] != rand_seeds:
-                    retval = False
+                    self.passed = False
                     print(f"TestRR: unexpected seed mismatch for [a]rr={rr}")
                 else:
                     logging.debug(f"TestRR: seeds correctly match for [a]rr={rr}")
                 if TestRR.seeds[0] == rand_seeds:
-                    retval = False
+                    self.passed = False
                     print("TestRR: seeds unexpectedly match those from system RNG")
             else:
                 if TestRR.seeds[0] == rand_seeds:
-                    retval = False
+                    self.passed = False
                     print(f"TestRR: unexpected seed match for [a]rr={rr}")
                 else:
                     logging.debug(f"TestRR: seeds correctly don't match for [a]rr={rr}")
                 if TestRR.seeds[1] == rand_seeds:
-                    retval = False
+                    self.passed = False
                     print(f"TestRR: random seeds unexpectedly match those from [a]rr=1")
-
-        return retval
 
 
 class TestRS(FioRandTest):
@@ -195,12 +128,11 @@ class TestRS(FioRandTest):
     """
     seeds = {}
 
-    def check(self):
+    def check_result(self):
         """Check output for randseed=something."""
 
-        retval = True
         rand_seeds = self.get_rand_seeds()
-        randseed = self.test_options['randseed']
+        randseed = self.fio_opts['randseed']
 
         logging.debug(f"randseed = {randseed}")
 
@@ -209,7 +141,7 @@ class TestRS(FioRandTest):
             logging.debug("TestRS: saving rand_seeds")
         else:
             if TestRS.seeds[randseed] != rand_seeds:
-                retval = False
+                self.passed = False
                 print("TestRS: seeds don't match when they should")
             else:
                 logging.debug("TestRS: seeds correctly match")
@@ -219,7 +151,7 @@ class TestRS(FioRandTest):
         for key in TestRS.seeds:
             if key != randseed:
                 if TestRS.seeds[key] == rand_seeds:
-                    retval = False
+                    self.passed = False
                     print("TestRS: randseeds differ but generated seeds match.")
                 else:
                     logging.debug("TestRS: randseeds differ and generated seeds also differ.")
@@ -257,133 +189,150 @@ def main():
     print(f"Artifact directory is {artifact_root}")
 
     if args.fio:
-        fio = str(Path(args.fio).absolute())
+        fio_path = str(Path(args.fio).absolute())
     else:
-        fio = 'fio'
-    print(f"fio path is {fio}")
+        fio_path = 'fio'
+    print(f"fio path is {fio_path}")
 
     test_list = [
         {
             "test_id": 1,
-            "randrepeat": 0,
-            "test_obj": TestRR,
+            "fio_opts": {
+                "randrepeat": 0,
+                },
+            "test_class": TestRR,
         },
         {
             "test_id": 2,
-            "randrepeat": 0,
-            "test_obj": TestRR,
+            "fio_opts": {
+                "randrepeat": 0,
+                },
+            "test_class": TestRR,
         },
         {
             "test_id": 3,
-            "randrepeat": 1,
-            "test_obj": TestRR,
+            "fio_opts": {
+                "randrepeat": 1,
+                },
+            "test_class": TestRR,
         },
         {
             "test_id": 4,
-            "randrepeat": 1,
-            "test_obj": TestRR,
+            "fio_opts": {
+                "randrepeat": 1,
+                },
+            "test_class": TestRR,
         },
         {
             "test_id": 5,
-            "allrandrepeat": 0,
-            "test_obj": TestRR,
+            "fio_opts": {
+                "allrandrepeat": 0,
+                },
+            "test_class": TestRR,
         },
         {
             "test_id": 6,
-            "allrandrepeat": 0,
-            "test_obj": TestRR,
+            "fio_opts": {
+                "allrandrepeat": 0,
+                },
+            "test_class": TestRR,
         },
         {
             "test_id": 7,
-            "allrandrepeat": 1,
-            "test_obj": TestRR,
+            "fio_opts": {
+                "allrandrepeat": 1,
+                },
+            "test_class": TestRR,
         },
         {
             "test_id": 8,
-            "allrandrepeat": 1,
-            "test_obj": TestRR,
+            "fio_opts": {
+                "allrandrepeat": 1,
+                },
+            "test_class": TestRR,
         },
         {
             "test_id": 9,
-            "randrepeat": 0,
-            "randseed": "12345",
-            "test_obj": TestRS,
+            "fio_opts": {
+                "randrepeat": 0,
+                "randseed": "12345",
+                },
+            "test_class": TestRS,
         },
         {
             "test_id": 10,
-            "randrepeat": 0,
-            "randseed": "12345",
-            "test_obj": TestRS,
+            "fio_opts": {
+                "randrepeat": 0,
+                "randseed": "12345",
+                },
+            "test_class": TestRS,
         },
         {
             "test_id": 11,
-            "randrepeat": 1,
-            "randseed": "12345",
-            "test_obj": TestRS,
+            "fio_opts": {
+                "randrepeat": 1,
+                "randseed": "12345",
+                },
+            "test_class": TestRS,
         },
         {
             "test_id": 12,
-            "allrandrepeat": 0,
-            "randseed": "12345",
-            "test_obj": TestRS,
+            "fio_opts": {
+                "allrandrepeat": 0,
+                "randseed": "12345",
+                },
+            "test_class": TestRS,
         },
         {
             "test_id": 13,
-            "allrandrepeat": 1,
-            "randseed": "12345",
-            "test_obj": TestRS,
+            "fio_opts": {
+                "allrandrepeat": 1,
+                "randseed": "12345",
+                },
+            "test_class": TestRS,
         },
         {
             "test_id": 14,
-            "randrepeat": 0,
-            "randseed": "67890",
-            "test_obj": TestRS,
+            "fio_opts": {
+                "randrepeat": 0,
+                "randseed": "67890",
+                },
+            "test_class": TestRS,
         },
         {
             "test_id": 15,
-            "randrepeat": 1,
-            "randseed": "67890",
-            "test_obj": TestRS,
+            "fio_opts": {
+                "randrepeat": 1,
+                "randseed": "67890",
+                },
+            "test_class": TestRS,
         },
         {
             "test_id": 16,
-            "allrandrepeat": 0,
-            "randseed": "67890",
-            "test_obj": TestRS,
+            "fio_opts": {
+                "allrandrepeat": 0,
+                "randseed": "67890",
+                },
+            "test_class": TestRS,
         },
         {
             "test_id": 17,
-            "allrandrepeat": 1,
-            "randseed": "67890",
-            "test_obj": TestRS,
+            "fio_opts": {
+                "allrandrepeat": 1,
+                "randseed": "67890",
+                },
+            "test_class": TestRS,
         },
     ]
 
-    passed = 0
-    failed = 0
-    skipped = 0
+    test_env = {
+              'fio_path': fio_path,
+              'fio_root': str(Path(__file__).absolute().parent.parent),
+              'artifact_root': artifact_root,
+              'basename': 'random',
+              }
 
-    for test in test_list:
-        if (args.skip and test['test_id'] in args.skip) or \
-           (args.run_only and test['test_id'] not in args.run_only):
-            skipped = skipped + 1
-            outcome = 'SKIPPED (User request)'
-        else:
-            test_obj = test['test_obj'](artifact_root, test, args.debug)
-            status = test_obj.run_fio(fio)
-            if status:
-                status = test_obj.check()
-            if status:
-                passed = passed + 1
-                outcome = 'PASSED'
-            else:
-                failed = failed + 1
-                outcome = 'FAILED'
-
-        print(f"**********Test {test['test_id']} {outcome}**********")
-
-    print(f"{passed} tests passed, {failed} failed, {skipped} skipped")
-
+    _, failed, _ = run_fio_tests(test_list, test_env, args)
     sys.exit(failed)
 
 
