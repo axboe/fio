@@ -6,7 +6,7 @@
 # Test zonemode=strided. This uses the null ioengine when no file is
 # specified. If a file is specified, use it for randdom read testing.
 # Some of the zoneranges in the tests are 16MiB. So when using a file
-# a minimum size of 32MiB is recommended.
+# a minimum size of 64MiB is recommended.
 #
 # USAGE
 # python strided.py fio-executable [-f file/device]
@@ -14,7 +14,7 @@
 # EXAMPLES
 # python t/strided.py ./fio
 # python t/strided.py ./fio -f /dev/sda
-# dd if=/dev/zero of=temp bs=1M count=32
+# dd if=/dev/zero of=temp bs=1M count=64
 # python t/strided.py ./fio -f temp
 #
 # ===TEST MATRIX===
