@@ -25,7 +25,6 @@ import time
 import locale
 import logging
 import argparse
-import subprocess
 from pathlib import Path
 from fiotestlib import FioJobCmdTest, run_fio_tests
 
@@ -52,7 +51,8 @@ class FioRandTest(FioJobCmdTest):
 
     def get_rand_seeds(self):
         """Collect random seeds from --debug=random output."""
-        with open(self.filenames['output'], "r", encoding=locale.getpreferredencoding()) as out_file:
+        with open(self.filenames['output'], "r",
+                  encoding=locale.getpreferredencoding()) as out_file:
             file_data = out_file.read()
 
             offsets = 0
@@ -97,14 +97,14 @@ class TestRR(FioRandTest):
 
         if not TestRR.seeds[rr]:
             TestRR.seeds[rr] = rand_seeds
-            logging.debug(f"TestRR: saving rand_seeds for [a]rr={rr}")
+            logging.debug("TestRR: saving rand_seeds for [a]rr=%d", rr)
         else:
             if rr:
                 if TestRR.seeds[1] != rand_seeds:
                     self.passed = False
                     print(f"TestRR: unexpected seed mismatch for [a]rr={rr}")
                 else:
-                    logging.debug(f"TestRR: seeds correctly match for [a]rr={rr}")
+                    logging.debug("TestRR: seeds correctly match for [a]rr=%d", rr)
                 if TestRR.seeds[0] == rand_seeds:
                     self.passed = False
                     print("TestRR: seeds unexpectedly match those from system RNG")
@@ -113,10 +113,10 @@ class TestRR(FioRandTest):
                     self.passed = False
                     print(f"TestRR: unexpected seed match for [a]rr={rr}")
                 else:
-                    logging.debug(f"TestRR: seeds correctly don't match for [a]rr={rr}")
+                    logging.debug("TestRR: seeds correctly don't match for [a]rr=%d", rr)
                 if TestRR.seeds[1] == rand_seeds:
                     self.passed = False
-                    print(f"TestRR: random seeds unexpectedly match those from [a]rr=1")
+                    print("TestRR: random seeds unexpectedly match those from [a]rr=1")
 
 
 class TestRS(FioRandTest):
@@ -134,7 +134,7 @@ class TestRS(FioRandTest):
         rand_seeds = self.get_rand_seeds()
         randseed = self.fio_opts['randseed']
 
-        logging.debug(f"randseed = {randseed}")
+        logging.debug("randseed = %s", randseed)
 
         if randseed not in TestRS.seeds:
             TestRS.seeds[randseed] = rand_seeds
@@ -148,9 +148,9 @@ class TestRS(FioRandTest):
 
         # Now try to find seeds generated using a different randseed and make
         # sure they *don't* match
-        for key in TestRS.seeds:
+        for key, value in TestRS.seeds.items():
             if key != randseed:
-                if TestRS.seeds[key] == rand_seeds:
+                if value == rand_seeds:
                     self.passed = False
                     print("TestRS: randseeds differ but generated seeds match.")
                 else:
