@@ -279,17 +279,17 @@ class FioJobCmdTest(FioExeTest):
         self.basename = basename if basename else os.path.basename(fio_path)
         self.fio_opts = fio_opts
         self.json_data = None
+        self.iops_log_lines = None
 
         super().__init__(fio_path, success, testnum, artifact_root)
 
-        filename_stub = f"{self.basename}{self.testnum:03d}"
-        self.filenames['cmd'] = os.path.join(self.paths['test_dir'], f"{filename_stub}.command")
-        self.filenames['stdout'] = os.path.join(self.paths['test_dir'], f"{filename_stub}.stdout")
-        self.filenames['stderr'] = os.path.join(self.paths['test_dir'], f"{filename_stub}.stderr")
-        self.filenames['output'] = os.path.abspath(os.path.join(self.paths['test_dir'],
-                                     f"{filename_stub}.output"))
-        self.filenames['exitcode'] = os.path.join(self.paths['test_dir'],
-                                                  f"{filename_stub}.exitcode")
+        filename_stub = os.path.join(self.paths['test_dir'], f"{self.basename}{self.testnum:03d}")
+        self.filenames['cmd'] = f"{filename_stub}.command"
+        self.filenames['stdout'] = f"{filename_stub}.stdout"
+        self.filenames['stderr'] = f"{filename_stub}.stderr"
+        self.filenames['output'] = os.path.abspath(f"{filename_stub}.output")
+        self.filenames['exitcode'] = f"{filename_stub}.exitcode"
+        self.filenames['iopslog'] = os.path.abspath(f"{filename_stub}")
 
     def run(self):
         super().run()
@@ -299,6 +299,16 @@ class FioJobCmdTest(FioExeTest):
             if not self.get_json():
                 print('Unable to decode JSON data')
                 self.passed = False
+
+        if any('--write_iops_log=' in param for param in self.parameters):
+            self.get_iops_log()
+
+    def get_iops_log(self):
+        """Read IOPS log from the first job."""
+
+        log_filename = self.filenames['iopslog'] + "_iops.1.log"
+        with open(log_filename, 'r', encoding=locale.getpreferredencoding()) as iops_file:
+            self.iops_log_lines = iops_file.read()
 
     def get_json(self):
         """Convert fio JSON output into a python JSON object"""
