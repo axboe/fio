@@ -460,7 +460,8 @@ test11() {
 test12() {
     local size off capacity
 
-    prep_write
+    [ -n "$is_zbd" ] && reset_zone "$dev" -1
+
     size=$((8 * zone_size))
     off=$((first_sequential_zone_sector * 512))
     capacity=$(total_zone_capacity 8 $off $dev)
@@ -477,7 +478,8 @@ test13() {
 
     require_max_open_zones 4 || return $SKIP_TESTCASE
 
-    prep_write
+    [ -n "$is_zbd" ] && reset_zone "$dev" -1
+
     size=$((8 * zone_size))
     off=$((first_sequential_zone_sector * 512))
     capacity=$(total_zone_capacity 8 $off $dev)
@@ -726,7 +728,9 @@ test29() {
     require_seq_zones 80 || return $SKIP_TESTCASE
     off=$((first_sequential_zone_sector * 512 + 64 * zone_size))
     size=$((16*zone_size))
-    prep_write
+
+    [ -n "$is_zbd" ] && reset_zone "$dev" -1
+
     opts=("--debug=zbd")
     for ((i=0;i<jobs;i++)); do
 	opts+=("--name=job$i" "--filename=$dev" "--offset=$off" "--bs=16K")
@@ -796,7 +800,8 @@ test32() {
 
     require_zbd || return $SKIP_TESTCASE
 
-    prep_write
+    [ -n "$is_zbd" ] && reset_zone "$dev" -1
+
     off=$((first_sequential_zone_sector * 512))
     size=$((disk_size - off))
     opts+=("--name=$dev" "--filename=$dev" "--offset=$off" "--size=$size")
@@ -1024,7 +1029,9 @@ test48() {
 
     off=$((first_sequential_zone_sector * 512 + 64 * zone_size))
     size=$((16*zone_size))
-    prep_write
+
+    [ -n "$is_zbd" ] && reset_zone "$dev" -1
+
     opts=("--aux-path=/tmp" "--allow_file_create=0" "--significant_figures=10")
     opts+=("--debug=zbd")
     opts+=("$(ioengine "libaio")" "--rw=randwrite" "--direct=1")
@@ -1094,7 +1101,7 @@ test51() {
 	require_conv_zones 8 || return $SKIP_TESTCASE
 	require_seq_zones 8 || return $SKIP_TESTCASE
 
-	prep_write
+	reset_zone "$dev" -1
 
 	off=$((first_sequential_zone_sector * 512 - 8 * zone_size))
 	opts+=("--size=$((16 * zone_size))" "$(ioengine "libaio")")
