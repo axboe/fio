@@ -1206,12 +1206,10 @@ int zbd_setup_files(struct thread_data *td)
 				continue;
 			/*
 			 * If the number of open zones exceeds specified limits,
-			 * reset all extra open zones.
+			 * error out.
 			 */
-			if (zbd_reset_zone(td, f, z) < 0) {
-				log_err("Failed to reest zone %d\n", zi);
-				return 1;
-			}
+			log_err("Number of open zones exceeds max_open_zones limit\n");
+			return 1;
 		}
 	}
 
