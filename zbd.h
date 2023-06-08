@@ -29,8 +29,8 @@ enum io_u_action {
  * @type: zone type (BLK_ZONE_TYPE_*)
  * @cond: zone state (BLK_ZONE_COND_*)
  * @has_wp: whether or not this zone can have a valid write pointer
- * @open: whether or not this zone is currently open. Only relevant if
- *		max_open_zones > 0.
+ * @write: whether or not this zone is the write target at this moment. Only
+ *              relevant if zbd->max_open_zones > 0.
  * @reset_zone: whether or not this zone should be reset before writing to it
  */
 struct fio_zone_info {
@@ -41,16 +41,17 @@ struct fio_zone_info {
 	enum zbd_zone_type	type:2;
 	enum zbd_zone_cond	cond:4;
 	unsigned int		has_wp:1;
-	unsigned int		open:1;
+	unsigned int		write:1;
 	unsigned int		reset_zone:1;
 };
 
 /**
  * zoned_block_device_info - zoned block device characteristics
  * @model: Device model.
- * @max_open_zones: global limit on the number of simultaneously opened
- *	sequential write zones. A zero value means unlimited open zones,
- *	and that open zones will not be tracked in the open_zones array.
+ * @max_write_zones: global limit on the number of sequential write zones which
+ *      are simultaneously written. A zero value means unlimited zones of
+ *      simultaneous writes and that write target zones will not be tracked in
+ *      the write_zones array.
  * @mutex: Protects the modifiable members in this structure (refcount and
  *		num_open_zones).
  * @zone_size: size of a single zone in bytes.
@@ -61,10 +62,10 @@ struct fio_zone_info {
  *		if the zone size is not a power of 2.
  * @nr_zones: number of zones
  * @refcount: number of fio files that share this structure
- * @num_open_zones: number of open zones
+ * @num_write_zones: number of write target zones
  * @write_cnt: Number of writes since the latest zone reset triggered by
  *	       the zone_reset_frequency fio job parameter.
- * @open_zones: zone numbers of open zones
+ * @write_zones: zone numbers of write target zones
  * @zone_info: description of the individual zones
  *
  * Only devices for which all zones have the same size are supported.
@@ -73,7 +74,7 @@ struct fio_zone_info {
  */
 struct zoned_block_device_info {
 	enum zbd_zoned_model	model;
-	uint32_t		max_open_zones;
+	uint32_t		max_write_zones;
 	pthread_mutex_t		mutex;
 	uint64_t		zone_size;
 	uint64_t		wp_valid_data_bytes;
@@ -82,9 +83,9 @@ struct zoned_block_device_info {
 	uint32_t		zone_size_log2;
 	uint32_t		nr_zones;
 	uint32_t		refcount;
-	uint32_t		num_open_zones;
+	uint32_t		num_write_zones;
 	uint32_t		write_cnt;
-	uint32_t		open_zones[ZBD_MAX_OPEN_ZONES];
+	uint32_t		write_zones[ZBD_MAX_WRITE_ZONES];
 	struct fio_zone_info	zone_info[0];
 };
 

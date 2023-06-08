@@ -8,7 +8,7 @@
 
 #include <inttypes.h>
 
-#define ZBD_MAX_OPEN_ZONES	4096
+#define ZBD_MAX_WRITE_ZONES	4096
 
 /*
  * Zoned block device models.

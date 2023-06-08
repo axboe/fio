@@ -275,7 +275,7 @@ struct thread_data {
 	unsigned long long num_unique_pages;
 
 	struct zone_split_index **zone_state_index;
-	unsigned int num_open_zones;
+	unsigned int num_write_zones;
 
 	unsigned int verify_batch;
 	unsigned int trim_batch;
