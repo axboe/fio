@@ -2379,7 +2379,7 @@ int do_io_u_sync(const struct thread_data *td, struct io_u *io_u)
 	return ret;
 }
 
-int do_io_u_trim(const struct thread_data *td, struct io_u *io_u)
+int do_io_u_trim(struct thread_data *td, struct io_u *io_u)
 {
 #ifndef FIO_HAVE_TRIM
 	io_u->error = EINVAL;

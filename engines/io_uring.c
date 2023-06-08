@@ -561,7 +561,7 @@ static inline void fio_ioring_cmdprio_prep(struct thread_data *td,
 		ld->sqes[io_u->index].ioprio = io_u->ioprio;
 }
 
-static int fio_ioring_cmd_io_u_trim(const struct thread_data *td,
+static int fio_ioring_cmd_io_u_trim(struct thread_data *td,
 				    struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;

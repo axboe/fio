@@ -254,7 +254,7 @@ static int zbd_reset_wp(struct thread_data *td, struct fio_file *f,
 }
 
 /**
- * zbd_reset_zone - reset the write pointer of a single zone
+ * __zbd_reset_zone - reset the write pointer of a single zone
  * @td: FIO thread data.
  * @f: FIO file associated with the disk for which to reset a write pointer.
  * @z: Zone to reset.
@@ -263,8 +263,8 @@ static int zbd_reset_wp(struct thread_data *td, struct fio_file *f,
  *
  * The caller must hold z->mutex.
  */
-static int zbd_reset_zone(struct thread_data *td, struct fio_file *f,
-			  struct fio_zone_info *z)
+static int __zbd_reset_zone(struct thread_data *td, struct fio_file *f,
+			    struct fio_zone_info *z)
 {
 	uint64_t offset = z->start;
 	uint64_t length = (z+1)->start - offset;
@@ -340,6 +340,32 @@ static void zbd_write_zone_put(struct thread_data *td, const struct fio_file *f,
 }
 
 /**
+ * zbd_reset_zone - reset the write pointer of a single zone and remove the zone
+ *                  from the array of write zones.
+ * @td: FIO thread data.
+ * @f: FIO file associated with the disk for which to reset a write pointer.
+ * @z: Zone to reset.
+ *
+ * Returns 0 upon success and a negative error code upon failure.
+ *
+ * The caller must hold z->mutex.
+ */
+static int zbd_reset_zone(struct thread_data *td, struct fio_file *f,
+			  struct fio_zone_info *z)
+{
+	int ret;
+
+	ret = __zbd_reset_zone(td, f, z);
+	if (ret)
+		return ret;
+
+	pthread_mutex_lock(&f->zbd_info->mutex);
+	zbd_write_zone_put(td, f, z);
+	pthread_mutex_unlock(&f->zbd_info->mutex);
+	return 0;
+}
+
+/**
  * zbd_finish_zone - finish the specified zone
  * @td: FIO thread data.
  * @f: FIO file for which to finish a zone
@@ -404,9 +430,6 @@ static int zbd_reset_zones(struct thread_data *td, struct fio_file *f,
 			continue;
 
 		zone_lock(td, f, z);
-		pthread_mutex_lock(&f->zbd_info->mutex);
-		zbd_write_zone_put(td, f, z);
-		pthread_mutex_unlock(&f->zbd_info->mutex);
 
 		if (z->wp != z->start) {
 			dprint(FD_ZBD, "%s: resetting zone %u\n",
@@ -2048,7 +2071,7 @@ retry:
 			 */
 			io_u_quiesce(td);
 			zb->reset_zone = 0;
-			if (zbd_reset_zone(td, f, zb) < 0)
+			if (__zbd_reset_zone(td, f, zb) < 0)
 				goto eof;
 
 			if (zb->capacity < min_bs) {
@@ -2167,7 +2190,7 @@ char *zbd_write_status(const struct thread_stat *ts)
  * Return io_u_completed when reset zone succeeds. Return 0 when the target zone
  * does not have write pointer. On error, return negative errno.
  */
-int zbd_do_io_u_trim(const struct thread_data *td, struct io_u *io_u)
+int zbd_do_io_u_trim(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
 	struct fio_zone_info *z;
