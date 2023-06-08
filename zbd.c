@@ -450,21 +450,19 @@ static int zbd_get_max_open_zones(struct thread_data *td, struct fio_file *f,
 }
 
 /**
- * zbd_write_zone_get - Add a zone to the array of write zones.
+ * __zbd_write_zone_get - Add a zone to the array of write zones.
  * @td: fio thread data.
  * @f: fio file that has the write zones array to add.
  * @zone_idx: Index of the zone to add.
  *
- * Add a ZBD zone to write target zones array, if it is not yet added. Returns
- * true if either the zone was already added or if the zone was successfully
- * added to the array without exceeding the maximum number of write zones.
- * Returns false if the zone was not already added and addition of the zone
- * would cause the zone limit to be exceeded.
+ * Do same operation as @zbd_write_zone_get, except it adds the zone at
+ * @zone_idx to write target zones array even when it does not have remainder
+ * space to write one block.
  */
-static bool zbd_write_zone_get(struct thread_data *td, const struct fio_file *f,
-			       struct fio_zone_info *z)
+static bool __zbd_write_zone_get(struct thread_data *td,
+				 const struct fio_file *f,
+				 struct fio_zone_info *z)
 {
-	const uint64_t min_bs = td->o.min_bs[DDIR_WRITE];
 	struct zoned_block_device_info *zbdi = f->zbd_info;
 	uint32_t zone_idx = zbd_zone_idx(f, z);
 	bool res = true;
@@ -476,7 +474,7 @@ static bool zbd_write_zone_get(struct thread_data *td, const struct fio_file *f,
 	 * Skip full zones with data verification enabled because resetting a
 	 * zone causes data loss and hence causes verification to fail.
 	 */
-	if (td->o.verify != VERIFY_NONE && zbd_zone_full(f, z, min_bs))
+	if (td->o.verify != VERIFY_NONE && zbd_zone_remainder(z) == 0)
 		return false;
 
 	/*
@@ -519,6 +517,33 @@ static bool zbd_write_zone_get(struct thread_data *td, const struct fio_file *f,
 out:
 	pthread_mutex_unlock(&zbdi->mutex);
 	return res;
+}
+
+/**
+ * zbd_write_zone_get - Add a zone to the array of write zones.
+ * @td: fio thread data.
+ * @f: fio file that has the open zones to add.
+ * @zone_idx: Index of the zone to add.
+ *
+ * Add a ZBD zone to write target zones array, if it is not yet added. Returns
+ * true if either the zone was already added or if the zone was successfully
+ * added to the array without exceeding the maximum number of write zones.
+ * Returns false if the zone was not already added and addition of the zone
+ * would cause the zone limit to be exceeded.
+ */
+static bool zbd_write_zone_get(struct thread_data *td, const struct fio_file *f,
+			       struct fio_zone_info *z)
+{
+	const uint64_t min_bs = td->o.min_bs[DDIR_WRITE];
+
+	/*
+	 * Skip full zones with data verification enabled because resetting a
+	 * zone causes data loss and hence causes verification to fail.
+	 */
+	if (td->o.verify != VERIFY_NONE && zbd_zone_full(f, z, min_bs))
+		return false;
+
+	return __zbd_write_zone_get(td, f, z);
 }
 
 /* Verify whether direct I/O is used for all host-managed zoned block drives. */
@@ -1202,7 +1227,7 @@ int zbd_setup_files(struct thread_data *td)
 			if (z->cond != ZBD_ZONE_COND_IMP_OPEN &&
 			    z->cond != ZBD_ZONE_COND_EXP_OPEN)
 				continue;
-			if (zbd_write_zone_get(td, f, z))
+			if (__zbd_write_zone_get(td, f, z))
 				continue;
 			/*
 			 * If the number of open zones exceeds specified limits,
