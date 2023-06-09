@@ -1547,11 +1547,11 @@ retry:
 		dprint(FD_ZBD,
 		       "%s(%s): wait zone write and retry write target zone selection\n",
 		       __func__, f->file_name);
+		should_retry = in_flight;
 		pthread_mutex_unlock(&zbdi->mutex);
 		zone_unlock(z);
 		io_u_quiesce(td);
 		zone_lock(td, f, z);
-		should_retry = in_flight;
 		goto retry;
 	}
 
