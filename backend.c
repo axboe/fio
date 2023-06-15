@@ -2485,6 +2485,7 @@ reap:
 				} else if (__td_index == fio_debug_jobno)
 					*fio_debug_jobp = pid;
 				free(eo);
+				eo = NULL;
 				free(fd);
 				fd = NULL;
 			}
