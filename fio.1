@@ -627,7 +627,9 @@ generated filenames (with a directory specified) with the source of the
 client connecting. To disable this behavior, set this option to 0.
 .TP
 .BI opendir \fR=\fPstr
-Recursively open any files below directory \fIstr\fR.
+Recursively open any files below directory \fIstr\fR. This accepts only a
+single directory and unlike related options, colons appearing in the path must
+not be escaped.
 .TP
 .BI lockfile \fR=\fPstr
 Fio defaults to not locking any files before it does I/O to them. If a file

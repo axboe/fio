@@ -843,7 +843,9 @@ Target file/device
 
 .. option:: opendir=str
 
-	Recursively open any files below directory `str`.
+        Recursively open any files below directory `str`. This accepts only a
+        single directory and unlike related options, colons appearing in the
+        path must not be escaped.
 
 .. option:: lockfile=str
 
