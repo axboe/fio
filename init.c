@@ -951,13 +951,16 @@ static int fixup_options(struct thread_data *td)
 	if (o->disable_slat)
 		o->slat_percentiles = 0;
 
-	/*
-	 * Fix these up to be nsec internally
-	 */
-	for_each_rw_ddir(ddir)
-		o->max_latency[ddir] *= 1000ULL;
+	/* Do this only for the parent job */
+	if (!td->subjob_number) {
+		/*
+		 * Fix these up to be nsec internally
+		 */
+		for_each_rw_ddir(ddir)
+			o->max_latency[ddir] *= 1000ULL;
 
-	o->latency_target *= 1000ULL;
+		o->latency_target *= 1000ULL;
+	}
 
 	/*
 	 * Dedupe working set verifications
