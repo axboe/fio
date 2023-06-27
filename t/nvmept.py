@@ -80,6 +80,10 @@ class PassThruTest(FioJobCmdTest):
             print(f"Unhandled rw value {self.fio_opts['rw']}")
             self.passed = False
 
+        if job['iodepth_level']['8'] < 95:
+            print("Did not achieve requested iodepth")
+            self.passed = False
+
 
 TEST_LIST = [
     {
