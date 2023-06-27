@@ -5,8 +5,41 @@
 
 #include "nvme.h"
 
+static inline __u64 get_slba(struct nvme_data *data, struct io_u *io_u)
+{
+	if (data->lba_ext)
+		return io_u->offset / data->lba_ext;
+	else
+		return io_u->offset >> data->lba_shift;
+}
+
+static inline __u32 get_nlb(struct nvme_data *data, struct io_u *io_u)
+{
+	if (data->lba_ext)
+		return io_u->xfer_buflen / data->lba_ext - 1;
+	else
+		return (io_u->xfer_buflen >> data->lba_shift) - 1;
+}
+
+void fio_nvme_uring_cmd_trim_prep(struct nvme_uring_cmd *cmd, struct io_u *io_u,
+				  struct nvme_dsm_range *dsm)
+{
+	struct nvme_data *data = FILE_ENG_DATA(io_u->file);
+
+	cmd->opcode = nvme_cmd_dsm;
+	cmd->nsid = data->nsid;
+	cmd->cdw10 = 0;
+	cmd->cdw11 = NVME_ATTRIBUTE_DEALLOCATE;
+	cmd->addr = (__u64) (uintptr_t) dsm;
+	cmd->data_len = sizeof(*dsm);
+
+	dsm->slba = get_slba(data, io_u);
+	/* nlb is a 1-based value for deallocate */
+	dsm->nlb = get_nlb(data, io_u) + 1;
+}
+
 int fio_nvme_uring_cmd_prep(struct nvme_uring_cmd *cmd, struct io_u *io_u,
-			    struct iovec *iov)
+			    struct iovec *iov, struct nvme_dsm_range *dsm)
 {
 	struct nvme_data *data = FILE_ENG_DATA(io_u->file);
 	__u64 slba;
@@ -14,20 +47,22 @@ int fio_nvme_uring_cmd_prep(struct nvme_uring_cmd *cmd, struct io_u *io_u,
 
 	memset(cmd, 0, sizeof(struct nvme_uring_cmd));
 
-	if (io_u->ddir == DDIR_READ)
+	switch (io_u->ddir) {
+	case DDIR_READ:
 		cmd->opcode = nvme_cmd_read;
-	else if (io_u->ddir == DDIR_WRITE)
+		break;
+	case DDIR_WRITE:
 		cmd->opcode = nvme_cmd_write;
-	else
+		break;
+	case DDIR_TRIM:
+		fio_nvme_uring_cmd_trim_prep(cmd, io_u, dsm);
+		return 0;
+	default:
 		return -ENOTSUP;
-
-	if (data->lba_ext) {
-		slba = io_u->offset / data->lba_ext;
-		nlb = (io_u->xfer_buflen / data->lba_ext) - 1;
-	} else {
-		slba = io_u->offset >> data->lba_shift;
-		nlb = (io_u->xfer_buflen >> data->lba_shift) - 1;
 	}
+
+	slba = get_slba(data, io_u);
+	nlb = get_nlb(data, io_u);
 
 	/* cdw10 and cdw11 represent starting lba */
 	cmd->cdw10 = slba & 0xffffffff;

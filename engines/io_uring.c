@@ -78,6 +78,8 @@ struct ioring_data {
 	struct ioring_mmap mmap[3];
 
 	struct cmdprio cmdprio;
+
+	struct nvme_dsm_range *dsm;
 };
 
 struct ioring_options {
@@ -410,7 +412,7 @@ static int fio_ioring_cmd_prep(struct thread_data *td, struct io_u *io_u)
 	if (o->cmd_type != FIO_URING_CMD_NVME)
 		return -EINVAL;
 
-	if (io_u->ddir == DDIR_TRIM)
+	if (io_u->ddir == DDIR_TRIM && td->io_ops->flags & FIO_ASYNCIO_SYNC_TRIM)
 		return 0;
 
 	sqe = &ld->sqes[(io_u->index) << 1];
@@ -444,7 +446,8 @@ static int fio_ioring_cmd_prep(struct thread_data *td, struct io_u *io_u)
 
 	cmd = (struct nvme_uring_cmd *)sqe->cmd;
 	return fio_nvme_uring_cmd_prep(cmd, io_u,
-			o->nonvectored ? NULL : &ld->iovecs[io_u->index]);
+			o->nonvectored ? NULL : &ld->iovecs[io_u->index],
+			&ld->dsm[io_u->index]);
 }
 
 static struct io_u *fio_ioring_event(struct thread_data *td, int event)
@@ -594,7 +597,7 @@ static enum fio_q_status fio_ioring_queue(struct thread_data *td,
 	if (ld->queued == ld->iodepth)
 		return FIO_Q_BUSY;
 
-	if (io_u->ddir == DDIR_TRIM) {
+	if (io_u->ddir == DDIR_TRIM && td->io_ops->flags & FIO_ASYNCIO_SYNC_TRIM) {
 		if (ld->queued)
 			return FIO_Q_BUSY;
 
@@ -734,6 +737,7 @@ static void fio_ioring_cleanup(struct thread_data *td)
 		free(ld->io_u_index);
 		free(ld->iovecs);
 		free(ld->fds);
+		free(ld->dsm);
 		free(ld);
 	}
 }
@@ -1146,6 +1150,16 @@ static int fio_ioring_init(struct thread_data *td)
 		return 1;
 	}
 
+	/*
+	 * For io_uring_cmd, trims are async operations unless we are operating
+	 * in zbd mode where trim means zone reset.
+	 */
+	if (!strcmp(td->io_ops->name, "io_uring_cmd") && td_trim(td) &&
+	    td->o.zone_mode == ZONE_MODE_ZBD)
+		td->io_ops->flags |= FIO_ASYNCIO_SYNC_TRIM;
+	else
+		ld->dsm = calloc(ld->iodepth, sizeof(*ld->dsm));
+
 	return 0;
 }
 
@@ -1361,8 +1375,7 @@ static struct ioengine_ops ioengine_uring = {
 static struct ioengine_ops ioengine_uring_cmd = {
 	.name			= "io_uring_cmd",
 	.version		= FIO_IOOPS_VERSION,
-	.flags			= FIO_ASYNCIO_SYNC_TRIM | FIO_NO_OFFLOAD |
-					FIO_MEMALIGN | FIO_RAWIO |
+	.flags			= FIO_NO_OFFLOAD | FIO_MEMALIGN | FIO_RAWIO |
 					FIO_ASYNCIO_SETS_ISSUE_TIME,
 	.init			= fio_ioring_init,
 	.post_init		= fio_ioring_cmd_post_init,
