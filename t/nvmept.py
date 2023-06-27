@@ -236,6 +236,23 @@ TEST_LIST = [
             },
         "test_class": PassThruTest,
     },
+    {
+        # We can't enable fixedbufs because for trim-only
+        # workloads fio actually does not allocate any buffers
+        "test_id": 15,
+        "fio_opts": {
+            "rw": 'randtrim',
+            "timebased": 1,
+            "runtime": 3,
+            "fixedbufs": 0,
+            "nonvectored": 1,
+            "force_async": 1,
+            "registerfiles": 1,
+            "sqthread_poll": 1,
+            "output-format": "json",
+            },
+        "test_class": PassThruTest,
+    },
 ]
 
 def parse_args():
