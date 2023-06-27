@@ -564,27 +564,6 @@ static inline void fio_ioring_cmdprio_prep(struct thread_data *td,
 		ld->sqes[io_u->index].ioprio = io_u->ioprio;
 }
 
-static int fio_ioring_cmd_io_u_trim(struct thread_data *td,
-				    struct io_u *io_u)
-{
-	struct fio_file *f = io_u->file;
-	int ret;
-
-	if (td->o.zone_mode == ZONE_MODE_ZBD) {
-		ret = zbd_do_io_u_trim(td, io_u);
-		if (ret == io_u_completed)
-			return io_u->xfer_buflen;
-		if (ret)
-			goto err;
-	}
-
-	return fio_nvme_trim(td, f, io_u->offset, io_u->xfer_buflen);
-
-err:
-	io_u->error = ret;
-	return 0;
-}
-
 static enum fio_q_status fio_ioring_queue(struct thread_data *td,
 					  struct io_u *io_u)
 {
@@ -601,10 +580,7 @@ static enum fio_q_status fio_ioring_queue(struct thread_data *td,
 		if (ld->queued)
 			return FIO_Q_BUSY;
 
-		if (!strcmp(td->io_ops->name, "io_uring_cmd"))
-			fio_ioring_cmd_io_u_trim(td, io_u);
-		else
-			do_io_u_trim(td, io_u);
+		do_io_u_trim(td, io_u);
 
 		io_u_mark_submit(td, 1);
 		io_u_mark_complete(td, 1);

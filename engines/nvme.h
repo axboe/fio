@@ -216,9 +216,6 @@ struct nvme_dsm_range {
 	__le64	slba;
 };
 
-int fio_nvme_trim(const struct thread_data *td, struct fio_file *f,
-		  unsigned long long offset, unsigned long long len);
-
 int fio_nvme_iomgmt_ruhs(struct thread_data *td, struct fio_file *f,
 			 struct nvme_fdp_ruh_status *ruhs, __u32 bytes);
 
