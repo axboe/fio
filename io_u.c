@@ -1613,7 +1613,6 @@ struct io_u *__get_io_u(struct thread_data *td)
 {
 	const bool needs_lock = td_async_processing(td);
 	struct io_u *io_u = NULL;
-	int ret;
 
 	if (td->stop_io)
 		return NULL;
@@ -1647,14 +1646,16 @@ again:
 		io_u_set(td, io_u, IO_U_F_IN_CUR_DEPTH);
 		io_u->ipo = NULL;
 	} else if (td_async_processing(td)) {
+		int ret;
 		/*
 		 * We ran out, wait for async verify threads to finish and
 		 * return one
 		 */
 		assert(!(td->flags & TD_F_CHILD));
 		ret = pthread_cond_wait(&td->free_cond, &td->io_u_lock);
-		assert(ret == 0);
-		if (!td->error)
+		if (fio_unlikely(ret != 0)) {
+			td->error = errno;
+		} else if (!td->error)
 			goto again;
 	}
 

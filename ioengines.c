@@ -17,6 +17,7 @@
 #include <assert.h>
 #include <sys/types.h>
 #include <dirent.h>
+#include <errno.h>
 
 #include "fio.h"
 #include "diskutil.h"
@@ -342,8 +343,13 @@ enum fio_q_status td_io_queue(struct thread_data *td, struct io_u *io_u)
 	 * flag is now set
 	 */
 	if (td_offload_overlap(td)) {
-		int res = pthread_mutex_unlock(&overlap_check);
-		assert(res == 0);
+		int res;
+
+		res = pthread_mutex_unlock(&overlap_check);
+		if (fio_unlikely(res != 0)) {
+			log_err("failed to unlock overlap check mutex, err: %i:%s", errno, strerror(errno));
+			abort();
+		}
 	}
 
 	assert(fio_file_open(io_u->file));

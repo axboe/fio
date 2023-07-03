@@ -36,6 +36,8 @@
 
 #include "../flist.h"
 
+#include "compiler/compiler.h"
+
 static int bs = 4096;
 static int max_us = 10000;
 static char *file;
@@ -46,6 +48,18 @@ static int separate_writer = 1;
 #define PLAT_GROUP_NR	19
 #define PLAT_NR		(PLAT_GROUP_NR * PLAT_VAL)
 #define PLAT_LIST_MAX	20
+
+#ifndef NDEBUG
+#define CHECK_ZERO_OR_ABORT(code) assert(code)
+#else
+#define CHECK_ZERO_OR_ABORT(code) 										\
+	do { 																\
+		if (fio_unlikely((code) != 0)) { 								\
+			log_err("failed checking code %i != 0", (code)); 	\
+			abort();													\
+		} 																\
+	} while (0)
+#endif
 
 struct stats {
 	unsigned int plat[PLAT_NR];
@@ -121,7 +135,7 @@ uint64_t utime_since(const struct timespec *s, const struct timespec *e)
 	return ret;
 }
 
-static struct work_item *find_seq(struct writer_thread *w, unsigned int seq)
+static struct work_item *find_seq(struct writer_thread *w, int seq)
 {
 	struct work_item *work;
 	struct flist_head *entry;
@@ -224,6 +238,8 @@ static int write_work(struct work_item *work)
 
 	clock_gettime(CLOCK_MONOTONIC, &s);
 	ret = write(STDOUT_FILENO, work->buf, work->buf_size);
+	if (ret < 0)
+		return (int)ret;
 	clock_gettime(CLOCK_MONOTONIC, &e);
 	assert(ret == work->buf_size);
 
@@ -241,10 +257,10 @@ static void *writer_fn(void *data)
 {
 	struct writer_thread *wt = data;
 	struct work_item *work;
-	unsigned int seq = 1;
+	int seq = 1;
 
 	work = NULL;
-	while (!wt->thread.exit || !flist_empty(&wt->list)) {
+	while (!(seq < 0) && (!wt->thread.exit || !flist_empty(&wt->list))) {
 		pthread_mutex_lock(&wt->thread.lock);
 
 		if (work)
@@ -467,10 +483,10 @@ static void init_thread(struct thread_data *thread)
 	int ret;
 
 	ret = pthread_condattr_init(&cattr);
-	assert(ret == 0);
+	CHECK_ZERO_OR_ABORT(ret);
 #ifdef CONFIG_PTHREAD_CONDATTR_SETCLOCK
 	ret = pthread_condattr_setclock(&cattr, CLOCK_MONOTONIC);
-	assert(ret == 0);
+	CHECK_ZERO_OR_ABORT(ret);
 #endif
 	pthread_cond_init(&thread->cond, &cattr);
 	pthread_cond_init(&thread->done_cond, &cattr);
@@ -624,10 +640,10 @@ int main(int argc, char *argv[])
 	bytes = 0;
 
 	ret = pthread_condattr_init(&cattr);
-	assert(ret == 0);
+	CHECK_ZERO_OR_ABORT(ret);
 #ifdef CONFIG_PTHREAD_CONDATTR_SETCLOCK
 	ret = pthread_condattr_setclock(&cattr, CLOCK_MONOTONIC);
-	assert(ret == 0);
+	CHECK_ZERO_OR_ABORT(ret);
 #endif
 
 	clock_gettime(CLOCK_MONOTONIC, &s);
