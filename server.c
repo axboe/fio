@@ -2343,7 +2343,8 @@ void fio_server_send_add_job(struct thread_data *td)
 void fio_server_send_start(struct thread_data *td)
 {
 	struct sk_out *sk_out = pthread_getspecific(sk_out_key);
-	if (!sk_out || sk_out->sk == -1) {
+
+	if (sk_out->sk == -1) {
 		log_err("pthread getting specific for key failed, sk_out %p, sk %i, err: %i:%s",
 			sk_out, sk_out->sk, errno, strerror(errno));
 		abort();
