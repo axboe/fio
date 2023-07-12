@@ -2195,6 +2195,22 @@ file blocks are fully allocated and the disk request could be issued immediately
 .BI (io_uring_cmd)fdp \fR=\fPbool
 Enable Flexible Data Placement mode for write commands.
 .TP
+.BI (io_uring_cmd)fdp_pli_select \fR=\fPstr
+Defines how fio decides which placement ID to use next. The following types
+are defined:
+.RS
+.RS
+.TP
+.B random
+Choose a placement ID at random (uniform).
+.TP
+.B roundrobin
+Round robin over available placement IDs. This is the default.
+.RE
+.P
+The available placement ID index/indices is defined by \fBfdp_pli\fR option.
+.RE
+.TP
 .BI (io_uring_cmd)fdp_pli \fR=\fPstr
 Select which Placement ID Index/Indicies this job is allowed to use for writes.
 By default, the job will cycle through all available Placement IDs, so use this

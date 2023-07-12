@@ -2435,6 +2435,21 @@ with the caveat that when used on the command line, they must come after the
 
 	Enable Flexible Data Placement mode for write commands.
 
+.. option:: fdp_pli_select=str : [io_uring_cmd]
+
+	Defines how fio decides which placement ID to use next. The following
+	types are defined:
+
+		**random**
+			Choose a placement ID at random (uniform).
+
+		**roundrobin**
+			Round robin over available placement IDs. This is the
+			default.
+
+	The available placement ID index/indices is defined by the option
+	:option:`fdp_pli`.
+
 .. option:: fdp_pli=str : [io_uring_cmd]
 
 	Select which Placement ID Index/Indicies this job is allowed to use for

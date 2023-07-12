@@ -388,6 +388,7 @@ struct thread_options {
 
 #define FIO_MAX_PLIS 16
 	unsigned int fdp;
+	unsigned int fdp_pli_select;
 	unsigned int fdp_plis[FIO_MAX_PLIS];
 	unsigned int fdp_nrpli;
 
@@ -703,6 +704,7 @@ struct thread_options_pack {
 	uint32_t log_prio;
 
 	uint32_t fdp;
+	uint32_t fdp_pli_select;
 	uint32_t fdp_plis[FIO_MAX_PLIS];
 	uint32_t fdp_nrpli;
 

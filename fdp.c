@@ -119,10 +119,16 @@ void fdp_fill_dspec_data(struct thread_data *td, struct io_u *io_u)
 		return;
 	}
 
-	if (ruhs->pli_loc >= ruhs->nr_ruhs)
-		ruhs->pli_loc = 0;
+	if (td->o.fdp_pli_select == FIO_FDP_RR) {
+		if (ruhs->pli_loc >= ruhs->nr_ruhs)
+			ruhs->pli_loc = 0;
 
-	dspec = ruhs->plis[ruhs->pli_loc++];
+		dspec = ruhs->plis[ruhs->pli_loc++];
+	} else {
+		ruhs->pli_loc = rand_between(&td->fdp_state, 0, ruhs->nr_ruhs - 1);
+		dspec = ruhs->plis[ruhs->pli_loc];
+	}
+
 	io_u->dtype = FDP_DIR_DTYPE;
 	io_u->dspec = dspec;
 }
