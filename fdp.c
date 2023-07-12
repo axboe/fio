@@ -65,7 +65,7 @@ static int init_ruh_info(struct thread_data *td, struct fio_file *f)
 	}
 
 	for (i = 0; i < td->o.fdp_nrpli; i++) {
-		if (td->o.fdp_plis[i] > ruhs->nr_ruhs) {
+		if (td->o.fdp_plis[i] >= ruhs->nr_ruhs) {
 			ret = -EINVAL;
 			goto out;
 		}
