@@ -16,6 +16,7 @@
 #include <libxnvme_spec_fs.h>
 #include "fio.h"
 #include "zbd_types.h"
+#include "fdp.h"
 #include "optgroup.h"
 
 static pthread_mutex_t g_serialize = PTHREAD_MUTEX_INITIALIZER;
@@ -509,6 +510,7 @@ static enum fio_q_status xnvme_fioe_queue(struct thread_data *td, struct io_u *i
 	uint16_t nlb;
 	int err;
 	bool vectored_io = ((struct xnvme_fioe_options *)td->eo)->xnvme_iovec;
+	uint32_t dir = io_u->dtype;
 
 	fio_ro_check(td, io_u);
 
@@ -524,6 +526,10 @@ static enum fio_q_status xnvme_fioe_queue(struct thread_data *td, struct io_u *i
 	ctx->cmd.common.nsid = nsid;
 	ctx->cmd.nvm.slba = slba;
 	ctx->cmd.nvm.nlb = nlb;
+	if (dir) {
+		ctx->cmd.nvm.dtype = io_u->dtype;
+		ctx->cmd.nvm.cdw13.dspec = io_u->dspec;
+	}
 
 	switch (io_u->ddir) {
 	case DDIR_READ:
@@ -947,6 +953,72 @@ exit:
 	return err;
 }
 
+static int xnvme_fioe_fetch_ruhs(struct thread_data *td, struct fio_file *f,
+				 struct fio_ruhs_info *fruhs_info)
+{
+	struct xnvme_opts opts = xnvme_opts_from_fioe(td);
+	struct xnvme_dev *dev;
+	struct xnvme_spec_ruhs *ruhs;
+	struct xnvme_cmd_ctx ctx;
+	uint32_t ruhs_nbytes;
+	uint32_t nsid;
+	int err = 0, err_lock;
+
+	if (f->filetype != FIO_TYPE_CHAR) {
+		log_err("ioeng->fdp_ruhs(): ignoring filetype: %d\n", f->filetype);
+		return -EINVAL;
+	}
+
+	err = pthread_mutex_lock(&g_serialize);
+	if (err) {
+		log_err("ioeng->fdp_ruhs(): pthread_mutex_lock(), err(%d)\n", err);
+		return -err;
+	}
+
+	dev = xnvme_dev_open(f->file_name, &opts);
+	if (!dev) {
+		log_err("ioeng->fdp_ruhs(): xnvme_dev_open(%s) failed, errno: %d\n",
+			f->file_name, errno);
+		err = -errno;
+		goto exit;
+	}
+
+	ruhs_nbytes = sizeof(*ruhs) + (FDP_MAX_RUHS * sizeof(struct xnvme_spec_ruhs_desc));
+	ruhs = xnvme_buf_alloc(dev, ruhs_nbytes);
+	if (!ruhs) {
+		err = -errno;
+		goto exit;
+	}
+	memset(ruhs, 0, ruhs_nbytes);
+
+	ctx = xnvme_cmd_ctx_from_dev(dev);
+	nsid = xnvme_dev_get_nsid(dev);
+
+	err = xnvme_nvm_mgmt_recv(&ctx, nsid, XNVME_SPEC_IO_MGMT_RECV_RUHS, 0, ruhs, ruhs_nbytes);
+
+	if (err || xnvme_cmd_ctx_cpl_status(&ctx)) {
+		err = err ? err : -EIO;
+		log_err("ioeng->fdp_ruhs(): err(%d), sc(%d)", err, ctx.cpl.status.sc);
+		goto free_buffer;
+	}
+
+	fruhs_info->nr_ruhs = ruhs->nruhsd;
+	for (uint32_t idx = 0; idx < fruhs_info->nr_ruhs; ++idx) {
+		fruhs_info->plis[idx] = le16_to_cpu(ruhs->desc[idx].pi);
+	}
+
+free_buffer:
+	xnvme_buf_free(dev, ruhs);
+exit:
+	xnvme_dev_close(dev);
+
+	err_lock = pthread_mutex_unlock(&g_serialize);
+	if (err_lock)
+		log_err("ioeng->fdp_ruhs(): pthread_mutex_unlock(), err(%d)\n", err_lock);
+
+	return err;
+}
+
 static int xnvme_fioe_get_file_size(struct thread_data *td, struct fio_file *f)
 {
 	struct xnvme_opts opts = xnvme_opts_from_fioe(td);
@@ -971,7 +1043,9 @@ static int xnvme_fioe_get_file_size(struct thread_data *td, struct fio_file *f)
 
 	f->real_file_size = xnvme_dev_get_geo(dev)->tbytes;
 	fio_file_set_size_known(f);
-	f->filetype = FIO_TYPE_BLOCK;
+
+	if (td->o.zone_mode == ZONE_MODE_ZBD)
+		f->filetype = FIO_TYPE_BLOCK;
 
 exit:
 	xnvme_dev_close(dev);
@@ -1011,6 +1085,8 @@ FIO_STATIC struct ioengine_ops ioengine = {
 	.get_zoned_model = xnvme_fioe_get_zoned_model,
 	.report_zones = xnvme_fioe_report_zones,
 	.reset_wp = xnvme_fioe_reset_wp,
+
+	.fdp_fetch_ruhs = xnvme_fioe_fetch_ruhs,
 };
 
 static void fio_init fio_xnvme_register(void)

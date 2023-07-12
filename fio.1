@@ -2192,10 +2192,10 @@ cached data. Currently the RWF_NOWAIT flag does not supported for cached write.
 For direct I/O, requests will only succeed if cache invalidation isn't required,
 file blocks are fully allocated and the disk request could be issued immediately.
 .TP
-.BI (io_uring_cmd)fdp \fR=\fPbool
+.BI (io_uring_cmd,xnvme)fdp \fR=\fPbool
 Enable Flexible Data Placement mode for write commands.
 .TP
-.BI (io_uring_cmd)fdp_pli_select \fR=\fPstr
+.BI (io_uring_cmd,xnvme)fdp_pli_select \fR=\fPstr
 Defines how fio decides which placement ID to use next. The following types
 are defined:
 .RS
@@ -2211,7 +2211,7 @@ Round robin over available placement IDs. This is the default.
 The available placement ID index/indices is defined by \fBfdp_pli\fR option.
 .RE
 .TP
-.BI (io_uring_cmd)fdp_pli \fR=\fPstr
+.BI (io_uring_cmd,xnvme)fdp_pli \fR=\fPstr
 Select which Placement ID Index/Indicies this job is allowed to use for writes.
 By default, the job will cycle through all available Placement IDs, so use this
 to isolate these identifiers to specific jobs. If you want fio to use placement

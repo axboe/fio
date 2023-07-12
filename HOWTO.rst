@@ -2431,11 +2431,11 @@ with the caveat that when used on the command line, they must come after the
 	For direct I/O, requests will only succeed if cache invalidation isn't required,
 	file blocks are fully allocated and the disk request could be issued immediately.
 
-.. option:: fdp=bool : [io_uring_cmd]
+.. option:: fdp=bool : [io_uring_cmd] [xnvme]
 
 	Enable Flexible Data Placement mode for write commands.
 
-.. option:: fdp_pli_select=str : [io_uring_cmd]
+.. option:: fdp_pli_select=str : [io_uring_cmd] [xnvme]
 
 	Defines how fio decides which placement ID to use next. The following
 	types are defined:
@@ -2450,7 +2450,7 @@ with the caveat that when used on the command line, they must come after the
 	The available placement ID index/indices is defined by the option
 	:option:`fdp_pli`.
 
-.. option:: fdp_pli=str : [io_uring_cmd]
+.. option:: fdp_pli=str : [io_uring_cmd] [xnvme]
 
 	Select which Placement ID Index/Indicies this job is allowed to use for
 	writes. By default, the job will cycle through all available Placement
