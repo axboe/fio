@@ -45,7 +45,7 @@ static int init_ruh_info(struct thread_data *td, struct fio_file *f)
 	struct fio_ruhs_info *ruhs, *tmp;
 	int i, ret;
 
-	ruhs = scalloc(1, sizeof(*ruhs) + 128 * sizeof(*ruhs->plis));
+	ruhs = scalloc(1, sizeof(*ruhs) + FDP_MAX_RUHS * sizeof(*ruhs->plis));
 	if (!ruhs)
 		return -ENOMEM;
 
@@ -56,8 +56,8 @@ static int init_ruh_info(struct thread_data *td, struct fio_file *f)
 		goto out;
 	}
 
-	if (ruhs->nr_ruhs > 128)
-		ruhs->nr_ruhs = 128;
+	if (ruhs->nr_ruhs > FDP_MAX_RUHS)
+		ruhs->nr_ruhs = FDP_MAX_RUHS;
 
 	if (td->o.fdp_nrpli == 0) {
 		f->ruhs_info = ruhs;
@@ -123,6 +123,6 @@ void fdp_fill_dspec_data(struct thread_data *td, struct io_u *io_u)
 		ruhs->pli_loc = 0;
 
 	dspec = ruhs->plis[ruhs->pli_loc++];
-	io_u->dtype = 2;
+	io_u->dtype = FDP_DIR_DTYPE;
 	io_u->dspec = dspec;
 }
