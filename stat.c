@@ -1030,11 +1030,14 @@ void print_disk_util(struct disk_util_stat *dus, struct disk_util_agg *agg,
 		if (agg->slavecount)
 			log_buf(out, "  ");
 
-		log_buf(out, "  %s: ios=%llu/%llu, merge=%llu/%llu, "
-			 "ticks=%llu/%llu, in_queue=%llu, util=%3.2f%%",
+		log_buf(out, "  %s: ios=%llu/%llu, sectors=%llu/%llu, "
+			"merge=%llu/%llu, ticks=%llu/%llu, in_queue=%llu, "
+			"util=%3.2f%%",
 				dus->name,
 				(unsigned long long) dus->s.ios[0],
 				(unsigned long long) dus->s.ios[1],
+				(unsigned long long) dus->s.sectors[0],
+				(unsigned long long) dus->s.sectors[1],
 				(unsigned long long) dus->s.merges[0],
 				(unsigned long long) dus->s.merges[1],
 				(unsigned long long) dus->s.ticks[0],
