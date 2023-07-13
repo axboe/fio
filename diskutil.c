@@ -73,7 +73,7 @@ static int get_io_ticks(struct disk_util *du, struct disk_util_stat *dus)
 		     &dus->s.ticks[1],
 		     &dus->s.io_ticks, &dus->s.time_in_queue);
 	fclose(f);
-	dprint(FD_DISKUTIL, "%s: stat read ok? %d\n", du->path, ret == 1);
+	dprint(FD_DISKUTIL, "%s: stat read ok? %d\n", du->path, ret == 10);
 	return ret != 10;
 }
 
