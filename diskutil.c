@@ -45,8 +45,6 @@ static void disk_util_free(struct disk_util *du)
 
 static int get_io_ticks(struct disk_util *du, struct disk_util_stat *dus)
 {
-	unsigned in_flight;
-	unsigned long long sectors[2];
 	char line[256];
 	FILE *f;
 	char *p;
@@ -66,19 +64,17 @@ static int get_io_ticks(struct disk_util *du, struct disk_util_stat *dus)
 
 	dprint(FD_DISKUTIL, "%s: %s", du->path, p);
 
-	ret = sscanf(p, "%"SCNu64" %"SCNu64" %llu %"SCNu64" "
-		     "%"SCNu64" %"SCNu64" %llu %"SCNu64" "
-		     "%u %"SCNu64" %"SCNu64"\n",
-		     &dus->s.ios[0], &dus->s.merges[0], &sectors[0],
+	ret = sscanf(p, "%"SCNu64" %"SCNu64" %"SCNu64" %"SCNu64" "
+		     "%"SCNu64" %"SCNu64" %"SCNu64" %"SCNu64" "
+		     "%*u %"SCNu64" %"SCNu64"\n",
+		     &dus->s.ios[0], &dus->s.merges[0], &dus->s.sectors[0],
 		     &dus->s.ticks[0],
-		     &dus->s.ios[1], &dus->s.merges[1], &sectors[1],
+		     &dus->s.ios[1], &dus->s.merges[1], &dus->s.sectors[1],
 		     &dus->s.ticks[1],
-		     &in_flight, &dus->s.io_ticks, &dus->s.time_in_queue);
+		     &dus->s.io_ticks, &dus->s.time_in_queue);
 	fclose(f);
 	dprint(FD_DISKUTIL, "%s: stat read ok? %d\n", du->path, ret == 1);
-	dus->s.sectors[0] = sectors[0];
-	dus->s.sectors[1] = sectors[1];
-	return ret != 11;
+	return ret != 10;
 }
 
 static void update_io_tick_disk(struct disk_util *du)
