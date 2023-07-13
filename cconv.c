@@ -351,6 +351,7 @@ int convert_thread_options_to_cpu(struct thread_options *o,
 		o->merge_blktrace_iters[i].u.f = fio_uint64_to_double(le64_to_cpu(top->merge_blktrace_iters[i].u.i));
 
 	o->fdp = le32_to_cpu(top->fdp);
+	o->fdp_pli_select = le32_to_cpu(top->fdp_pli_select);
 	o->fdp_nrpli = le32_to_cpu(top->fdp_nrpli);
 	for (i = 0; i < o->fdp_nrpli; i++)
 		o->fdp_plis[i] = le32_to_cpu(top->fdp_plis[i]);
@@ -645,6 +646,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 		top->merge_blktrace_iters[i].u.i = __cpu_to_le64(fio_double_to_uint64(o->merge_blktrace_iters[i].u.f));
 
 	top->fdp = cpu_to_le32(o->fdp);
+	top->fdp_pli_select = cpu_to_le32(o->fdp_pli_select);
 	top->fdp_nrpli = cpu_to_le32(o->fdp_nrpli);
 	for (i = 0; i < o->fdp_nrpli; i++)
 		top->fdp_plis[i] = cpu_to_le32(o->fdp_plis[i]);
