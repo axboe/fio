@@ -4528,13 +4528,15 @@ For each data direction it prints:
 And finally, the disk statistics are printed. This is Linux specific. They will look like this::
 
   Disk stats (read/write):
-    sda: ios=16398/16511, merge=30/162, ticks=6853/819634, in_queue=826487, util=100.00%
+    sda: ios=16398/16511, sectors=32321/65472, merge=30/162, ticks=6853/819634, in_queue=826487, util=100.00%
 
 Each value is printed for both reads and writes, with reads first. The
 numbers denote:
 
 **ios**
 		Number of I/Os performed by all groups.
+**sectors**
+		Amount of data transferred in units of 512 bytes for all groups.
 **merge**
 		Number of merges performed by the I/O scheduler.
 **ticks**

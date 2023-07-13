@@ -1,3 +1,4 @@
+#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
@@ -44,8 +45,6 @@ static void disk_util_free(struct disk_util *du)
 
 static int get_io_ticks(struct disk_util *du, struct disk_util_stat *dus)
 {
-	unsigned in_flight;
-	unsigned long long sectors[2];
 	char line[256];
 	FILE *f;
 	char *p;
@@ -65,23 +64,17 @@ static int get_io_ticks(struct disk_util *du, struct disk_util_stat *dus)
 
 	dprint(FD_DISKUTIL, "%s: %s", du->path, p);
 
-	ret = sscanf(p, "%llu %llu %llu %llu %llu %llu %llu %llu %u %llu %llu\n",
-				(unsigned long long *) &dus->s.ios[0],
-				(unsigned long long *) &dus->s.merges[0],
-				&sectors[0],
-				(unsigned long long *) &dus->s.ticks[0],
-				(unsigned long long *) &dus->s.ios[1],
-				(unsigned long long *) &dus->s.merges[1],
-				&sectors[1],
-				(unsigned long long *) &dus->s.ticks[1],
-				&in_flight,
-				(unsigned long long *) &dus->s.io_ticks,
-				(unsigned long long *) &dus->s.time_in_queue);
+	ret = sscanf(p, "%"SCNu64" %"SCNu64" %"SCNu64" %"SCNu64" "
+		     "%"SCNu64" %"SCNu64" %"SCNu64" %"SCNu64" "
+		     "%*u %"SCNu64" %"SCNu64"\n",
+		     &dus->s.ios[0], &dus->s.merges[0], &dus->s.sectors[0],
+		     &dus->s.ticks[0],
+		     &dus->s.ios[1], &dus->s.merges[1], &dus->s.sectors[1],
+		     &dus->s.ticks[1],
+		     &dus->s.io_ticks, &dus->s.time_in_queue);
 	fclose(f);
-	dprint(FD_DISKUTIL, "%s: stat read ok? %d\n", du->path, ret == 1);
-	dus->s.sectors[0] = sectors[0];
-	dus->s.sectors[1] = sectors[1];
-	return ret != 11;
+	dprint(FD_DISKUTIL, "%s: stat read ok? %d\n", du->path, ret == 10);
+	return ret != 10;
 }
 
 static void update_io_tick_disk(struct disk_util *du)
