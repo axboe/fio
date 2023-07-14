@@ -897,7 +897,16 @@ static void handle_thinktime(struct thread_data *td, enum fio_ddir ddir,
 	if (left)
 		total = usec_spin(left);
 
-	left = td->o.thinktime - total;
+	/*
+	 * usec_spin() might run for slightly longer than intended in a VM
+	 * where the vCPU could get descheduled or the hypervisor could steal
+	 * CPU time. Ensure "left" doesn't become negative.
+	 */
+	if (total < td->o.thinktime)
+		left = td->o.thinktime - total;
+	else
+		left = 0;
+
 	if (td->o.timeout) {
 		runtime_left = td->o.timeout - utime_since_now(&td->epoch);
 		if (runtime_left < (unsigned long long)left)
