@@ -1084,6 +1084,8 @@ void json_array_add_disk_util(struct disk_util_stat *dus,
 	json_object_add_value_string(obj, "name", (const char *)dus->name);
 	json_object_add_value_int(obj, "read_ios", dus->s.ios[0]);
 	json_object_add_value_int(obj, "write_ios", dus->s.ios[1]);
+	json_object_add_value_int(obj, "read_sectors", dus->s.sectors[0]);
+	json_object_add_value_int(obj, "write_sectors", dus->s.sectors[1]);
 	json_object_add_value_int(obj, "read_merges", dus->s.merges[0]);
 	json_object_add_value_int(obj, "write_merges", dus->s.merges[1]);
 	json_object_add_value_int(obj, "read_ticks", dus->s.ticks[0]);
@@ -1101,6 +1103,10 @@ void json_array_add_disk_util(struct disk_util_stat *dus,
 				agg->ios[0] / agg->slavecount);
 	json_object_add_value_int(obj, "aggr_write_ios",
 				agg->ios[1] / agg->slavecount);
+	json_object_add_value_int(obj, "aggr_read_sectors",
+				agg->sectors[0] / agg->slavecount);
+	json_object_add_value_int(obj, "aggr_write_sectors",
+				agg->sectors[1] / agg->slavecount);
 	json_object_add_value_int(obj, "aggr_read_merges",
 				agg->merges[0] / agg->slavecount);
 	json_object_add_value_int(obj, "aggr_write_merge",
