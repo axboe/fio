@@ -957,11 +957,13 @@ static void show_agg_stats(struct disk_util_agg *agg, int terse,
 		return;
 
 	if (!terse) {
-		log_buf(out, ", aggrios=%llu/%llu, aggrmerge=%llu/%llu, "
-			 "aggrticks=%llu/%llu, aggrin_queue=%llu, "
-			 "aggrutil=%3.2f%%",
+		log_buf(out, ", aggrios=%llu/%llu, aggsectors=%llu/%llu, "
+			 "aggrmerge=%llu/%llu, aggrticks=%llu/%llu, "
+			 "aggrin_queue=%llu, aggrutil=%3.2f%%",
 			(unsigned long long) agg->ios[0] / agg->slavecount,
 			(unsigned long long) agg->ios[1] / agg->slavecount,
+			(unsigned long long) agg->sectors[0] / agg->slavecount,
+			(unsigned long long) agg->sectors[1] / agg->slavecount,
 			(unsigned long long) agg->merges[0] / agg->slavecount,
 			(unsigned long long) agg->merges[1] / agg->slavecount,
 			(unsigned long long) agg->ticks[0] / agg->slavecount,
