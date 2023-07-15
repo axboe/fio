@@ -646,7 +646,7 @@ static int fio_ioring_commit(struct thread_data *td)
 	 */
 	if (o->sqpoll_thread) {
 		struct io_sq_ring *ring = &ld->sq_ring;
-		unsigned start = *ld->sq_ring.head;
+		unsigned start = *ld->sq_ring.tail - ld->queued;
 		unsigned flags;
 
 		flags = atomic_load_acquire(ring->flags);
