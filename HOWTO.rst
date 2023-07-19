@@ -1056,22 +1056,34 @@ Target file/device
 
 .. option:: max_open_zones=int
 
-	A zone of a zoned block device is in the open state when it is partially
-	written (i.e. not all sectors of the zone have been written). Zoned
-	block devices may have a limit on the total number of zones that can
-	be simultaneously in the open state, that is, the number of zones that
-	can be written to simultaneously. The :option:`max_open_zones` parameter
-	limits the number of zones to which write commands are issued by all fio
-	jobs, that is, limits the number of zones that will be in the open
-	state. This parameter is relevant only if the :option:`zonemode` =zbd is
-	used. The default value is always equal to maximum number of open zones
-	of the target zoned block device and a value higher than this limit
-	cannot be specified by users unless the option
-	:option:`ignore_zone_limits` is specified. When
-	:option:`ignore_zone_limits` is specified or the target device has no
-	limit on the number of zones that can be in an open state,
-	:option:`max_open_zones` can specify 0 to disable any limit on the
-	number of zones that can be simultaneously written to by all jobs.
+	When a zone of a zoned block device is partially written (i.e. not all
+	sectors of the zone have been written), the zone is in one of three
+	conditions: 'implicit open', 'explicit open' or 'closed'. Zoned block
+	devices may have a limit called 'max_open_zones' (same name as the
+	parameter) on the total number of zones that can simultaneously be in
+	the 'implicit open' or 'explicit open' conditions. Zoned block devices
+	may have another limit called 'max_active_zones', on the total number of
+	zones that can simultaneously be in the three conditions. The
+	:option:`max_open_zones` parameter limits the number of zones to which
+	write commands are issued by all fio jobs, that is, limits the number of
+	zones that will be in the conditions. When the device has the
+	max_open_zones limit and does not have the max_active_zones limit, the
+	:option:`max_open_zones` parameter limits the number of zones in the two
+	open conditions up to the limit. In this case, fio includes zones in the
+	two open conditions to the write target zones at fio start. When the
+	device has both the max_open_zones and the max_active_zones limits, the
+	:option:`max_open_zones` parameter limits the number of zones in the
+	three conditions up to the limit. In this case, fio includes zones in
+	the three conditions to the write target zones at fio start.
+
+	This parameter is relevant only if the :option:`zonemode` =zbd is used.
+	The default value is always equal to the max_open_zones limit of the
+	target zoned block device and a value higher than this limit cannot be
+	specified by users unless the option :option:`ignore_zone_limits` is
+	specified. When :option:`ignore_zone_limits` is specified or the target
+	device does not have the max_open_zones limit, :option:`max_open_zones`
+	can specify 0 to disable any limit on the number of zones that can be
+	simultaneously written to by all jobs.
 
 .. option:: job_max_open_zones=int
 
