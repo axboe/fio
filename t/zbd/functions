@@ -239,6 +239,18 @@ max_open_zones() {
     fi
 }
 
+# If sysfs provides, get max_active_zones limit of the zoned block device.
+max_active_zones() {
+	local dev=$1
+	local sys_queue="/sys/block/${dev##*/}/queue/"
+
+	if [[ -e "$sys_queue/max_active_zones" ]]; then
+		cat "$sys_queue/max_active_zones"
+		return
+	fi
+	echo 0
+}
+
 # Get minimum block size to write to seq zones. Refer the sysfs attribute
 # zone_write_granularity which shows the valid minimum size regardless of zoned
 # block device type. If the sysfs attribute is not available, refer physical
