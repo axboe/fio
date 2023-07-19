@@ -472,6 +472,34 @@ static int zbd_get_max_open_zones(struct thread_data *td, struct fio_file *f,
 }
 
 /**
+ * zbd_get_max_active_zones - Get the maximum number of active zones
+ * @td: FIO thread data
+ * @f: FIO file for which to get max active zones
+ *
+ * Returns max_active_zones limit value of the target file if it is available.
+ * Otherwise return zero, which means no limit.
+ */
+static unsigned int zbd_get_max_active_zones(struct thread_data *td,
+					     struct fio_file *f)
+{
+	unsigned int max_active_zones;
+	int ret;
+
+	if (td->io_ops && td->io_ops->get_max_active_zones)
+		ret = td->io_ops->get_max_active_zones(td, f,
+						       &max_active_zones);
+	else
+		ret = blkzoned_get_max_active_zones(td, f, &max_active_zones);
+	if (ret < 0) {
+		dprint(FD_ZBD, "%s: max_active_zones is not available\n",
+		       f->file_name);
+		return 0;
+	}
+
+	return max_active_zones;
+}
+
+/**
  * __zbd_write_zone_get - Add a zone to the array of write zones.
  * @td: fio thread data.
  * @f: fio file that has the write zones array to add.
@@ -927,6 +955,7 @@ static int parse_zone_info(struct thread_data *td, struct fio_file *f)
 	f->zbd_info->zone_size_log2 = is_power_of_2(zone_size) ?
 		ilog2(zone_size) : 0;
 	f->zbd_info->nr_zones = nr_zones;
+	f->zbd_info->max_active_zones = zbd_get_max_active_zones(td, f);
 
 	if (same_zone_cap)
 		dprint(FD_ZBD, "Zone capacity = %"PRIu64" KB\n",

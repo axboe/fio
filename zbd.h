@@ -52,6 +52,9 @@ struct fio_zone_info {
  *      are simultaneously written. A zero value means unlimited zones of
  *      simultaneous writes and that write target zones will not be tracked in
  *      the write_zones array.
+ * @max_active_zones: device side limit on the number of sequential write zones
+ *	in open or closed conditions. A zero value means unlimited number of
+ *	zones in the conditions.
  * @mutex: Protects the modifiable members in this structure (refcount and
  *		num_open_zones).
  * @zone_size: size of a single zone in bytes.
@@ -75,6 +78,7 @@ struct fio_zone_info {
 struct zoned_block_device_info {
 	enum zbd_zoned_model	model;
 	uint32_t		max_write_zones;
+	uint32_t		max_active_zones;
 	pthread_mutex_t		mutex;
 	uint64_t		zone_size;
 	uint64_t		wp_valid_data_bytes;

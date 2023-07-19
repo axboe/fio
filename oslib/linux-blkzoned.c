@@ -186,6 +186,29 @@ int blkzoned_get_max_open_zones(struct thread_data *td, struct fio_file *f,
 	return 0;
 }
 
+int blkzoned_get_max_active_zones(struct thread_data *td, struct fio_file *f,
+				  unsigned int *max_active_zones)
+{
+	char *max_active_str;
+
+	if (f->filetype != FIO_TYPE_BLOCK)
+		return -EIO;
+
+	max_active_str = blkzoned_get_sysfs_attr(f->file_name, "queue/max_active_zones");
+	if (!max_active_str) {
+		*max_active_zones = 0;
+		return 0;
+	}
+
+	dprint(FD_ZBD, "%s: max active zones supported by device: %s\n",
+	       f->file_name, max_active_str);
+	*max_active_zones = atoll(max_active_str);
+
+	free(max_active_str);
+
+	return 0;
+}
+
 static uint64_t zone_capacity(struct blk_zone_report *hdr,
 			      struct blk_zone *blkz)
 {
