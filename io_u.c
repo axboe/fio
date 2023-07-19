@@ -1879,6 +1879,8 @@ static void __io_u_log_error(struct thread_data *td, struct io_u *io_u)
 		io_ddir_name(io_u->ddir),
 		io_u->offset, io_u->xfer_buflen);
 
+	zbd_log_err(td, io_u);
+
 	if (td->io_ops->errdetails) {
 		char *err = td->io_ops->errdetails(io_u);
 

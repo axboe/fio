@@ -2243,3 +2243,15 @@ int zbd_do_io_u_trim(struct thread_data *td, struct io_u *io_u)
 
 	return io_u_completed;
 }
+
+void zbd_log_err(const struct thread_data *td, const struct io_u *io_u)
+{
+	const struct fio_file *f = io_u->file;
+
+	if (td->o.zone_mode != ZONE_MODE_ZBD)
+		return;
+
+	if (io_u->error == EOVERFLOW)
+		log_err("%s: Exceeded max_active_zones limit. Check conditions of zones out of I/O ranges.\n",
+			f->file_name);
+}

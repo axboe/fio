@@ -105,6 +105,7 @@ enum fio_ddir zbd_adjust_ddir(struct thread_data *td, struct io_u *io_u,
 enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u);
 char *zbd_write_status(const struct thread_stat *ts);
 int zbd_do_io_u_trim(struct thread_data *td, struct io_u *io_u);
+void zbd_log_err(const struct thread_data *td, const struct io_u *io_u);
 
 static inline void zbd_close_file(struct fio_file *f)
 {
