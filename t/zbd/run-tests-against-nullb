@@ -81,6 +81,13 @@ configure_nullb()
 
 		if ((max_open)); then
 			echo "${max_open}" > zone_max_open
+			if ((max_active)); then
+				if ((!max_act_supported)); then
+					echo "null_blk does not support active zone counts"
+					return 2
+				fi
+				echo "${max_active}" > zone_max_active
+			fi
 		fi
 	fi
 
@@ -97,6 +104,11 @@ show_nullb_config()
 		echo "    $(printf "Zone Capacity: %d MB" ${zone_capacity})"
 		if ((max_open)); then
 			echo "    $(printf "Max Open: %d Zones" ${max_open})"
+			if ((max_active)); then
+				echo "    $(printf "Max Active: %d Zones" ${max_active})"
+			else
+				echo "    Max Active: Unlimited Zones"
+			fi
 		else
 			echo "    Max Open: Unlimited Zones"
 		fi
@@ -131,6 +143,7 @@ section3()
 	zone_size=4
 	zone_capacity=3
 	max_open=0
+	max_active=0
 }
 
 # Zoned device with mostly sequential zones, ZCAP == ZSIZE, unlimited MaxOpen.
@@ -140,6 +153,7 @@ section4()
 	zone_size=1
 	zone_capacity=1
 	max_open=0
+	max_active=0
 }
 
 # Zoned device with mostly sequential zones, ZCAP < ZSIZE, unlimited MaxOpen.
@@ -149,6 +163,7 @@ section5()
 	zone_size=4
 	zone_capacity=3
 	max_open=0
+	max_active=0
 }
 
 # Zoned device with mostly conventional zones, ZCAP == ZSIZE, unlimited MaxOpen.
@@ -158,6 +173,7 @@ section6()
 	zone_size=1
 	zone_capacity=1
 	max_open=0
+	max_active=0
 }
 
 # Zoned device with mostly conventional zones, ZCAP < ZSIZE, unlimited MaxOpen.
@@ -168,9 +184,11 @@ section7()
 	zone_size=4
 	zone_capacity=3
 	max_open=0
+	max_active=0
 }
 
-# Zoned device with no conventional zones, ZCAP == ZSIZE, limited MaxOpen.
+# Zoned device with no conventional zones, ZCAP == ZSIZE, limited MaxOpen,
+# unlimited MaxActive.
 section8()
 {
 	dev_size=1024
@@ -179,9 +197,11 @@ section8()
 	zone_capacity=1
 	max_open=${set_max_open}
 	zbd_test_opts+=("-o ${max_open}")
+	max_active=0
 }
 
-# Zoned device with no conventional zones, ZCAP < ZSIZE, limited MaxOpen.
+# Zoned device with no conventional zones, ZCAP < ZSIZE, limited MaxOpen,
+# unlimited MaxActive.
 section9()
 {
 	conv_pcnt=0
@@ -189,9 +209,11 @@ section9()
 	zone_capacity=3
 	max_open=${set_max_open}
 	zbd_test_opts+=("-o ${max_open}")
+	max_active=0
 }
 
-# Zoned device with mostly sequential zones, ZCAP == ZSIZE, limited MaxOpen.
+# Zoned device with mostly sequential zones, ZCAP == ZSIZE, limited MaxOpen,
+# unlimited MaxActive.
 section10()
 {
 	conv_pcnt=10
@@ -199,9 +221,11 @@ section10()
 	zone_capacity=1
 	max_open=${set_max_open}
 	zbd_test_opts+=("-o ${max_open}")
+	max_active=0
 }
 
-# Zoned device with mostly sequential zones, ZCAP < ZSIZE, limited MaxOpen.
+# Zoned device with mostly sequential zones, ZCAP < ZSIZE, limited MaxOpen,
+# unlimited MaxActive.
 section11()
 {
 	conv_pcnt=10
@@ -209,9 +233,11 @@ section11()
 	zone_capacity=3
 	max_open=${set_max_open}
 	zbd_test_opts+=("-o ${max_open}")
+	max_active=0
 }
 
-# Zoned device with mostly conventional zones, ZCAP == ZSIZE, limited MaxOpen.
+# Zoned device with mostly conventional zones, ZCAP == ZSIZE, limited MaxOpen,
+# unlimited MaxActive.
 section12()
 {
 	conv_pcnt=66
@@ -219,9 +245,11 @@ section12()
 	zone_capacity=1
 	max_open=${set_max_open}
 	zbd_test_opts+=("-o ${max_open}")
+	max_active=0
 }
 
-# Zoned device with mostly conventional zones, ZCAP < ZSIZE, limited MaxOpen.
+# Zoned device with mostly conventional zones, ZCAP < ZSIZE, limited MaxOpen,
+# unlimited MaxActive.
 section13()
 {
 	dev_size=2048
@@ -230,6 +258,155 @@ section13()
 	zone_capacity=3
 	max_open=${set_max_open}
 	zbd_test_opts+=("-o ${max_open}")
+	max_active=0
+}
+
+# Zoned device with no conventional zones, ZCAP == ZSIZE, limited MaxOpen,
+# MaxActive == MaxOpen.
+section14()
+{
+	dev_size=1024
+	conv_pcnt=0
+	zone_size=1
+	zone_capacity=1
+	max_open=${set_max_open}
+	zbd_test_opts+=("-o ${max_open}")
+	max_active=${set_max_open}
+}
+
+# Zoned device with no conventional zones, ZCAP < ZSIZE, limited MaxOpen,
+# MaxActive == MaxOpen.
+section15()
+{
+	conv_pcnt=0
+	zone_size=4
+	zone_capacity=3
+	max_open=${set_max_open}
+	zbd_test_opts+=("-o ${max_open}")
+	max_active=${set_max_open}
+}
+
+# Zoned device with mostly sequential zones, ZCAP == ZSIZE, limited MaxOpen,
+# MaxActive == MaxOpen.
+section16()
+{
+	conv_pcnt=10
+	zone_size=1
+	zone_capacity=1
+	max_open=${set_max_open}
+	zbd_test_opts+=("-o ${max_open}")
+	max_active=${set_max_open}
+}
+
+# Zoned device with mostly sequential zones, ZCAP < ZSIZE, limited MaxOpen,
+# MaxActive == MaxOpen.
+section17()
+{
+	conv_pcnt=10
+	zone_size=4
+	zone_capacity=3
+	max_open=${set_max_open}
+	zbd_test_opts+=("-o ${max_open}")
+	max_active=${set_max_open}
+}
+
+# Zoned device with mostly conventional zones, ZCAP == ZSIZE, limited MaxOpen,
+# MaxActive == MaxOpen.
+section18()
+{
+	conv_pcnt=66
+	zone_size=1
+	zone_capacity=1
+	max_open=${set_max_open}
+	zbd_test_opts+=("-o ${max_open}")
+	max_active=${set_max_open}
+}
+
+# Zoned device with mostly conventional zones, ZCAP < ZSIZE, limited MaxOpen,
+# MaxActive == MaxOpen.
+section19()
+{
+	dev_size=2048
+	conv_pcnt=66
+	zone_size=4
+	zone_capacity=3
+	max_open=${set_max_open}
+	zbd_test_opts+=("-o ${max_open}")
+	max_active=${set_max_open}
+}
+
+# Zoned device with no conventional zones, ZCAP == ZSIZE, limited MaxOpen,
+# MaxActive > MaxOpen.
+section20()
+{
+	dev_size=1024
+	conv_pcnt=0
+	zone_size=1
+	zone_capacity=1
+	max_open=${set_max_open}
+	zbd_test_opts+=("-o ${max_open}")
+	max_active=$((set_max_open+set_extra_max_active))
+}
+
+# Zoned device with no conventional zones, ZCAP < ZSIZE, limited MaxOpen,
+# MaxActive > MaxOpen.
+section21()
+{
+	conv_pcnt=0
+	zone_size=4
+	zone_capacity=3
+	max_open=${set_max_open}
+	zbd_test_opts+=("-o ${max_open}")
+	max_active=$((set_max_open+set_extra_max_active))
+}
+
+# Zoned device with mostly sequential zones, ZCAP == ZSIZE, limited MaxOpen,
+# MaxActive > MaxOpen.
+section22()
+{
+	conv_pcnt=10
+	zone_size=1
+	zone_capacity=1
+	max_open=${set_max_open}
+	zbd_test_opts+=("-o ${max_open}")
+	max_active=$((set_max_open+set_extra_max_active))
+}
+
+# Zoned device with mostly sequential zones, ZCAP < ZSIZE, limited MaxOpen,
+# MaxActive > MaxOpen.
+section23()
+{
+	conv_pcnt=10
+	zone_size=4
+	zone_capacity=3
+	max_open=${set_max_open}
+	zbd_test_opts+=("-o ${max_open}")
+	max_active=$((set_max_open+set_extra_max_active))
+}
+
+# Zoned device with mostly conventional zones, ZCAP == ZSIZE, limited MaxOpen,
+# MaxActive > MaxOpen.
+section24()
+{
+	conv_pcnt=66
+	zone_size=1
+	zone_capacity=1
+	max_open=${set_max_open}
+	zbd_test_opts+=("-o ${max_open}")
+	max_active=$((set_max_open+set_extra_max_active))
+}
+
+# Zoned device with mostly conventional zones, ZCAP < ZSIZE, limited MaxOpen,
+# MaxActive > MaxOpen.
+section25()
+{
+	dev_size=2048
+	conv_pcnt=66
+	zone_size=4
+	zone_capacity=3
+	max_open=${set_max_open}
+	zbd_test_opts+=("-o ${max_open}")
+	max_active=$((set_max_open+set_extra_max_active))
 }
 
 #
@@ -240,10 +417,12 @@ scriptdir="$(cd "$(dirname "$0")" && pwd)"
 sections=()
 zcap_supported=1
 conv_supported=1
+max_act_supported=1
 list_only=0
 dev_size=1024
 dev_blocksize=4096
 set_max_open=8
+set_extra_max_active=2
 zbd_test_opts=()
 num_of_runs=1
 test_case=0
@@ -282,6 +461,9 @@ if ! cat /sys/kernel/config/nullb/features | grep -q zone_capacity; then
 fi
 if ! cat /sys/kernel/config/nullb/features | grep -q zone_nr_conv; then
 	conv_supported=0
+fi
+if ! cat /sys/kernel/config/nullb/features | grep -q zone_max_active; then
+	max_act_supported=0
 fi
 
 rc=0
