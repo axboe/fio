@@ -67,13 +67,20 @@ configure_nullb()
 			fi
 			echo "${zone_capacity}" > zone_capacity
 		fi
+
 		if ((conv_pcnt)); then
 			if ((!conv_supported)); then
 				echo "null_blk does not support conventional zones"
 				return 2
 			fi
 			nr_conv=$((dev_size/zone_size*conv_pcnt/100))
-			echo "${nr_conv}" > zone_nr_conv
+		else
+			nr_conv=0
+		fi
+		echo "${nr_conv}" > zone_nr_conv
+
+		if ((max_open)); then
+			echo "${max_open}" > zone_max_open
 		fi
 	fi
 
