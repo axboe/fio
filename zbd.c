@@ -1276,7 +1276,11 @@ int zbd_setup_files(struct thread_data *td)
 		for (zi = f->min_zone; zi < f->max_zone; zi++) {
 			z = &zbd->zone_info[zi];
 			if (z->cond != ZBD_ZONE_COND_IMP_OPEN &&
-			    z->cond != ZBD_ZONE_COND_EXP_OPEN)
+			    z->cond != ZBD_ZONE_COND_EXP_OPEN &&
+			    z->cond != ZBD_ZONE_COND_CLOSED)
+				continue;
+			if (!zbd->max_active_zones &&
+			    z->cond == ZBD_ZONE_COND_CLOSED)
 				continue;
 			if (__zbd_write_zone_get(td, f, z))
 				continue;
