@@ -2084,6 +2084,14 @@ is set, this defaults to the highest priority class. A single value applies
 to reads and writes. Comma-separated values may be specified for reads and
 writes. See man \fBionice\fR\|(1). See also the \fBprioclass\fR option.
 .TP
+.BI (io_uring,libaio)cmdprio_hint \fR=\fPint[,int]
+Set the I/O priority hint to use for I/Os that must be issued with a
+priority when \fBcmdprio_percentage\fR or \fBcmdprio_bssplit\fR is set.
+If not specified when \fBcmdprio_percentage\fR or \fBcmdprio_bssplit\fR
+is set, this defaults to 0 (no hint). A single value applies to reads and
+writes. Comma-separated values may be specified for reads and writes.
+See also the \fBpriohint\fR option.
+.TP
 .BI (io_uring,libaio)cmdprio \fR=\fPint[,int]
 Set the I/O priority value to use for I/Os that must be issued with a
 priority when \fBcmdprio_percentage\fR or \fBcmdprio_bssplit\fR is set.
@@ -2109,8 +2117,9 @@ The first accepted format for this option is the same as the format of the
 cmdprio_bssplit=blocksize/percentage:blocksize/percentage
 .RE
 .P
-In this case, each entry will use the priority class and priority level defined
-by the options \fBcmdprio_class\fR and \fBcmdprio\fR respectively.
+In this case, each entry will use the priority class, priority hint and
+priority level defined by the options \fBcmdprio_class\fR, \fBcmdprio\fR
+and \fBcmdprio_hint\fR respectively.
 .P
 The second accepted format for this option is:
 .RS
@@ -2123,7 +2132,16 @@ entry. In comparison with the first accepted format, the second accepted format
 does not restrict all entries to have the same priority class and priority
 level.
 .P
-For both formats, only the read and write data directions are supported, values
+The third accepted format for this option is:
+.RS
+.P
+cmdprio_bssplit=blocksize/percentage/class/level/hint:...
+.RE
+.P
+This is an extension of the second accepted format that allows to also
+specify a priority hint.
+.P
+For all formats, only the read and write data directions are supported, values
 for trim IOs are ignored. This option is mutually exclusive with the
 \fBcmdprio_percentage\fR option.
 .RE
@@ -3150,7 +3168,8 @@ I/O priority classes and to devices with features controlled through priority
 hints, e.g. block devices supporting command duration limits, or CDL. CDL is a
 way to indicate the desired maximum latency of I/Os so that the device can
 optimize its internal command scheduling according to the latency limits
-indicated by the user.
+indicated by the user. For per-I/O priority hint setting, see the I/O engine
+specific \fBcmdprio_hint\fB option.
 .TP
 .BI cpus_allowed \fR=\fPstr
 Controls the same options as \fBcpumask\fR, but accepts a textual

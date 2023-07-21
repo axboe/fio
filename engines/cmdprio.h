@@ -40,6 +40,7 @@ struct cmdprio_options {
 	unsigned int percentage[CMDPRIO_RWDIR_CNT];
 	unsigned int class[CMDPRIO_RWDIR_CNT];
 	unsigned int level[CMDPRIO_RWDIR_CNT];
+	unsigned int hint[CMDPRIO_RWDIR_CNT];
 	char *bssplit_str;
 };
 
@@ -70,6 +71,21 @@ struct cmdprio_options {
 		.help	= "Set asynchronous IO priority class",			\
 		.minval	= IOPRIO_MIN_PRIO_CLASS + 1,				\
 		.maxval	= IOPRIO_MAX_PRIO_CLASS,				\
+		.interval = 1,							\
+		.category = FIO_OPT_C_ENGINE,					\
+		.group	= opt_group,						\
+	},									\
+	{									\
+		.name	= "cmdprio_hint",					\
+		.lname	= "Asynchronous I/O priority hint",			\
+		.type	= FIO_OPT_INT,						\
+		.off1	= offsetof(opt_struct,					\
+				   cmdprio_options.hint[DDIR_READ]),		\
+		.off2	= offsetof(opt_struct,					\
+				   cmdprio_options.hint[DDIR_WRITE]),		\
+		.help	= "Set asynchronous IO priority hint",			\
+		.minval	= IOPRIO_MIN_PRIO_HINT,					\
+		.maxval	= IOPRIO_MAX_PRIO_HINT,					\
 		.interval = 1,							\
 		.category = FIO_OPT_C_ENGINE,					\
 		.group	= opt_group,						\
@@ -109,6 +125,12 @@ struct cmdprio_options {
 	{									\
 		.name	= "cmdprio_class",					\
 		.lname	= "Asynchronous I/O priority class",			\
+		.type	= FIO_OPT_UNSUPPORTED,					\
+		.help	= "Platform does not support I/O priority classes",	\
+	},									\
+	{									\
+		.name	= "cmdprio_hint",					\
+		.lname	= "Asynchronous I/O priority hint",			\
 		.type	= FIO_OPT_UNSUPPORTED,					\
 		.help	= "Platform does not support I/O priority classes",	\
 	},									\
