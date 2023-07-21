@@ -171,8 +171,8 @@ static inline int fio_getaffinity(int pid, os_cpu_mask_t *mask)
  * ioprio_set() with 4 arguments, so define fio's ioprio_set() as a macro.
  * Note that there is no idea of class within ioprio_set(2) unlike Linux.
  */
-#define ioprio_value(ioprio_class, ioprio)	(ioprio)
-#define ioprio_set(which, who, ioprio_class, ioprio)	\
+#define ioprio_value(ioprio_class, ioprio, ioprio_hint)	(ioprio)
+#define ioprio_set(which, who, ioprio_class, ioprio, ioprio_hint)	\
 	ioprio_set(which, who, ioprio)
 
 #define ioprio(ioprio)		(ioprio)

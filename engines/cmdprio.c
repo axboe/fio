@@ -267,7 +267,8 @@ static int fio_cmdprio_percentage(struct cmdprio *cmdprio, struct io_u *io_u,
  * to be set. If the random percentage value is within the user specified
  * percentage of I/Os that should use a cmdprio priority value (rather than
  * the default priority), then this function updates the io_u with an ioprio
- * value as defined by the cmdprio/cmdprio_class or cmdprio_bssplit options.
+ * value as defined by the cmdprio/cmdprio_hint/cmdprio_class or
+ * cmdprio_bssplit options.
  *
  * Return true if the io_u ioprio was changed and false otherwise.
  */
@@ -342,7 +343,8 @@ static int fio_cmdprio_gen_perc(struct thread_data *td, struct cmdprio *cmdprio)
 		prio = &cmdprio->perc_entry[ddir];
 		prio->perc = options->percentage[ddir];
 		prio->prio = ioprio_value(options->class[ddir],
-					  options->level[ddir]);
+					  options->level[ddir],
+					  options->hint[ddir]);
 		assign_clat_prio_index(prio, &values[ddir]);
 
 		ret = init_ts_clat_prio(ts, ddir, &values[ddir]);
@@ -400,7 +402,8 @@ static int fio_cmdprio_parse_and_gen_bssplit(struct thread_data *td,
 			goto err;
 
 		implicit_cmdprio = ioprio_value(options->class[ddir],
-						options->level[ddir]);
+						options->level[ddir],
+						options->hint[ddir]);
 
 		ret = fio_cmdprio_generate_bsprio_desc(&cmdprio->bsprio_desc[ddir],
 						       &parse_res[ddir],

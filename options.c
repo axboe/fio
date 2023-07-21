@@ -313,15 +313,17 @@ static int parse_cmdprio_bssplit_entry(struct thread_options *o,
 	int matches = 0;
 	char *bs_str = NULL;
 	long long bs_val;
-	unsigned int perc = 0, class, level;
+	unsigned int perc = 0, class, level, hint;
 
 	/*
 	 * valid entry formats:
 	 * bs/ - %s/ - set perc to 0, prio to -1.
 	 * bs/perc - %s/%u - set prio to -1.
 	 * bs/perc/class/level - %s/%u/%u/%u
+	 * bs/perc/class/level/hint - %s/%u/%u/%u/%u
 	 */
-	matches = sscanf(str, "%m[^/]/%u/%u/%u", &bs_str, &perc, &class, &level);
+	matches = sscanf(str, "%m[^/]/%u/%u/%u/%u",
+			 &bs_str, &perc, &class, &level, &hint);
 	if (matches < 1) {
 		log_err("fio: invalid cmdprio_bssplit format\n");
 		return 1;
@@ -342,9 +344,14 @@ static int parse_cmdprio_bssplit_entry(struct thread_options *o,
 	case 2: /* bs/perc case */
 		break;
 	case 4: /* bs/perc/class/level case */
+	case 5: /* bs/perc/class/level/hint case */
 		class = min(class, (unsigned int) IOPRIO_MAX_PRIO_CLASS);
 		level = min(level, (unsigned int) IOPRIO_MAX_PRIO);
-		entry->prio = ioprio_value(class, level);
+		if (matches == 5)
+			hint = min(hint, (unsigned int) IOPRIO_MAX_PRIO_HINT);
+		else
+			hint = 0;
+		entry->prio = ioprio_value(class, level, hint);
 		break;
 	default:
 		log_err("fio: invalid cmdprio_bssplit format\n");
@@ -3806,12 +3813,30 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.category = FIO_OPT_C_GENERAL,
 		.group	= FIO_OPT_G_CRED,
 	},
+	{
+		.name	= "priohint",
+		.lname	= "I/O nice priority hint",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct thread_options, ioprio_hint),
+		.help	= "Set job IO priority hint",
+		.minval	= IOPRIO_MIN_PRIO_HINT,
+		.maxval	= IOPRIO_MAX_PRIO_HINT,
+		.interval = 1,
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_CRED,
+	},
 #else
 	{
 		.name	= "prioclass",
 		.lname	= "I/O nice priority class",
 		.type	= FIO_OPT_UNSUPPORTED,
 		.help	= "Your platform does not support IO priority classes",
+	},
+	{
+		.name	= "priohint",
+		.lname	= "I/O nice priority hint",
+		.type	= FIO_OPT_UNSUPPORTED,
+		.help	= "Your platform does not support IO priority hints",
 	},
 #endif
 	{
