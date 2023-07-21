@@ -344,7 +344,7 @@ static int parse_cmdprio_bssplit_entry(struct thread_options *o,
 	case 4: /* bs/perc/class/level case */
 		class = min(class, (unsigned int) IOPRIO_MAX_PRIO_CLASS);
 		level = min(level, (unsigned int) IOPRIO_MAX_PRIO);
-		entry->prio = ioprio_value(class, level);
+		entry->prio = ioprio_value(class, level, 0);
 		break;
 	default:
 		log_err("fio: invalid cmdprio_bssplit format\n");
