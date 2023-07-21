@@ -131,6 +131,9 @@ enum {
 #define IOPRIO_MIN_PRIO_CLASS	0
 #define IOPRIO_MAX_PRIO_CLASS	3
 
+#define ioprio_class(ioprio)	((ioprio) >> IOPRIO_CLASS_SHIFT)
+#define ioprio(ioprio)		((ioprio) & IOPRIO_MAX_PRIO)
+
 static inline int ioprio_value(int ioprio_class, int ioprio)
 {
 	/*
@@ -144,7 +147,7 @@ static inline int ioprio_value(int ioprio_class, int ioprio)
 
 static inline bool ioprio_value_is_class_rt(unsigned int priority)
 {
-	return (priority >> IOPRIO_CLASS_SHIFT) == IOPRIO_CLASS_RT;
+	return ioprio_class(priority) == IOPRIO_CLASS_RT;
 }
 
 static inline int ioprio_set(int which, int who, int ioprio_class, int ioprio)
@@ -152,9 +155,6 @@ static inline int ioprio_set(int which, int who, int ioprio_class, int ioprio)
 	return syscall(__NR_ioprio_set, which, who,
 		       ioprio_value(ioprio_class, ioprio));
 }
-
-#define ioprio_class(ioprio)	((ioprio) >> IOPRIO_CLASS_SHIFT)
-#define ioprio(ioprio)		((ioprio) & 7)
 
 #ifndef CONFIG_HAVE_GETTID
 static inline int gettid(void)
