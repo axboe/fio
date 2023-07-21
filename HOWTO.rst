@@ -3436,6 +3436,15 @@ Threads, processes and job synchronization
 	priority setting, see I/O engine specific :option:`cmdprio_percentage`
 	and :option:`cmdprio_class` options.
 
+.. option:: priohint=int
+
+	Set the I/O priority hint. This is only applicable to platforms that
+	support I/O priority classes and to devices with features controlled
+	through priority hints, e.g. block devices supporting command duration
+	limits, or CDL. CDL is a way to indicate the desired maximum latency
+	of I/Os so that the device can optimize its internal command scheduling
+	according to the latency limits indicated by the user.
+
 .. option:: cpus_allowed=str
 
 	Controls the same options as :option:`cpumask`, but accepts a textual
