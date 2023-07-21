@@ -466,7 +466,7 @@ int io_queue_event(struct thread_data *td, struct io_u *io_u, int *ret,
 				if (!from_verify)
 					unlog_io_piece(td, io_u);
 				td_verror(td, EIO, "full resid");
-				put_io_u(td, io_u);
+				clear_io_u(td, io_u);
 				break;
 			}
 
