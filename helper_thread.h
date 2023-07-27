@@ -1,6 +1,8 @@
 #ifndef FIO_HELPER_THREAD_H
 #define FIO_HELPER_THREAD_H
 
+#include <stdbool.h>
+
 extern void helper_reset(void);
 extern void helper_do_stat(void);
 extern bool helper_should_exit(void);
