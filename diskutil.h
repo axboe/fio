@@ -2,10 +2,13 @@
 #define FIO_DISKUTIL_H
 #define FIO_DU_NAME_SZ		64
 
+#include <stdint.h>
 #include <limits.h>
 
 #include "helper_thread.h"
 #include "fio_sem.h"
+#include "flist.h"
+#include "lib/ieee754.h"
 
 /**
  * @ios: Number of I/O operations that have been completed successfully.
