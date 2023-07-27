@@ -5829,9 +5829,9 @@ void fio_options_free(struct thread_data *td)
 	options_free(fio_options, &td->o);
 	if (td->eo && td->io_ops && td->io_ops->options) {
 		options_free(td->io_ops->options, td->eo);
-		free(td->eo);
-		td->eo = NULL;
 	}
+	free(td->eo);
+	td->eo = NULL;
 }
 
 void fio_dump_options_free(struct thread_data *td)
