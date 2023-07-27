@@ -3,6 +3,9 @@
 
 #include <stdbool.h>
 
+struct fio_sem;
+struct sk_out;
+
 extern void helper_reset(void);
 extern void helper_do_stat(void);
 extern bool helper_should_exit(void);
