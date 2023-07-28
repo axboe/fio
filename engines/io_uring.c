@@ -509,7 +509,7 @@ static enum fio_q_status fio_ioring_queue(struct thread_data *td,
 
 	tail = *ring->tail;
 	next_tail = tail + 1;
-	if (next_tail == atomic_load_acquire(ring->head))
+	if (next_tail == atomic_load_relaxed(ring->head))
 		return FIO_Q_BUSY;
 
 	if (ld->cmdprio.mode != CMDPRIO_MODE_NONE)
@@ -569,7 +569,7 @@ static int fio_ioring_commit(struct thread_data *td)
 		unsigned start = *ld->sq_ring.tail - ld->queued;
 		unsigned flags;
 
-		flags = atomic_load_acquire(ring->flags);
+		flags = atomic_load_relaxed(ring->flags);
 		if (flags & IORING_SQ_NEED_WAKEUP)
 			io_uring_enter(ld, ld->queued, 0,
 					IORING_ENTER_SQ_WAKEUP);
