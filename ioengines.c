@@ -238,8 +238,7 @@ void free_ioengine(struct thread_data *td)
 	if (td->eo && td->io_ops->options) {
 		options_free(td->io_ops->options, td->eo);
 		free(td->eo);
-		if (td->o.use_thread)
-			td->eo = NULL;
+		td->eo = NULL;
 	}
 
 	if (td->io_ops->dlhandle) {
