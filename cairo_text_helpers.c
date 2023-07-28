@@ -1,3 +1,5 @@
+#include "cairo_text_helpers.h"
+
 #include <cairo.h>
 #include <gtk/gtk.h>
 #include <math.h>

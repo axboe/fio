@@ -1,6 +1,8 @@
 #ifndef CAIRO_TEXT_HELPERS_H
 #define CAIRO_TEXT_HELPERS_H
 
+#include <cairo.h>
+
 void draw_centered_text(cairo_t *cr, const char *font, double x, double y,
 			       double fontsize, const char *text);
 
