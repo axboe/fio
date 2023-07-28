@@ -364,16 +364,8 @@ enum fio_q_status td_io_queue(struct thread_data *td, struct io_u *io_u)
 
 	if (td_ioengine_flagged(td, FIO_SYNCIO) ||
 		async_ioengine_sync_trim(td, io_u)) {
-		if (fio_fill_issue_time(td)) {
+		if (fio_fill_issue_time(td))
 			fio_gettime(&io_u->issue_time, NULL);
-
-			/*
-			 * only used for iolog
-			 */
-			if (td->o.read_iolog_file)
-				memcpy(&td->last_issue, &io_u->issue_time,
-						sizeof(io_u->issue_time));
-		}
 	}
 
 
@@ -450,16 +442,8 @@ enum fio_q_status td_io_queue(struct thread_data *td, struct io_u *io_u)
 	if (!td_ioengine_flagged(td, FIO_SYNCIO) &&
 		!async_ioengine_sync_trim(td, io_u)) {
 		if (fio_fill_issue_time(td) &&
-			!td_ioengine_flagged(td, FIO_ASYNCIO_SETS_ISSUE_TIME)) {
+			!td_ioengine_flagged(td, FIO_ASYNCIO_SETS_ISSUE_TIME))
 			fio_gettime(&io_u->issue_time, NULL);
-
-			/*
-			 * only used for iolog
-			 */
-			if (td->o.read_iolog_file)
-				memcpy(&td->last_issue, &io_u->issue_time,
-						sizeof(io_u->issue_time));
-		}
 	}
 
 	return ret;

@@ -628,13 +628,6 @@ static int fixup_options(struct thread_data *td)
 	}
 #endif
 
-	if (o->write_iolog_file && o->read_iolog_file) {
-		log_err("fio: read iolog overrides write_iolog\n");
-		free(o->write_iolog_file);
-		o->write_iolog_file = NULL;
-		ret |= warnings_fatal;
-	}
-
 	if (o->zone_mode == ZONE_MODE_NONE && o->zone_size) {
 		log_err("fio: --zonemode=none and --zonesize are not compatible.\n");
 		ret |= 1;

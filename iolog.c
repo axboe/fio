@@ -80,23 +80,23 @@ void log_file(struct thread_data *td, struct fio_file *f,
 
 static void iolog_delay(struct thread_data *td, unsigned long delay)
 {
-	uint64_t usec = utime_since_now(&td->last_issue);
-	unsigned long orig_delay = delay;
+	uint64_t usec;
+	unsigned long delay_wanted;
 	uint64_t this_delay;
-	struct timespec ts;
+	struct timespec ts, ts_after_sleep;
 
-	if (delay < td->time_offset) {
-		td->time_offset = 0;
+	fio_gettime(&ts, NULL);
+	usec = utime_since(&td->last_issue, &ts) + td->time_offset;
+
+	if (delay <= usec) {
+		td->time_offset = usec-delay;
+		td->last_issue = ts;
 		return;
 	}
 
-	delay -= td->time_offset;
-	if (delay < usec)
-		return;
-
 	delay -= usec;
 
-	fio_gettime(&ts, NULL);
+	delay_wanted = delay;
 	while (delay && !td->terminate) {
 		this_delay = delay;
 		if (this_delay > 500000)
@@ -106,11 +106,13 @@ static void iolog_delay(struct thread_data *td, unsigned long delay)
 		delay -= this_delay;
 	}
 
-	usec = utime_since_now(&ts);
-	if (usec > orig_delay)
-		td->time_offset = usec - orig_delay;
+	fio_gettime(&ts_after_sleep, NULL);
+	usec = utime_since(&ts, &ts_after_sleep);
+	if (usec > delay_wanted)
+		td->time_offset = usec - delay_wanted;
 	else
 		td->time_offset = 0;
+	td->last_issue = ts_after_sleep;
 }
 
 static int ipo_special(struct thread_data *td, struct io_piece *ipo)
