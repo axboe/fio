@@ -2494,10 +2494,7 @@ reap:
 							strerror(ret));
 			} else {
 				pid_t pid;
-				void *eo;
 				dprint(FD_PROCESS, "will fork\n");
-				eo = td->eo;
-				read_barrier();
 				pid = fork();
 				if (!pid) {
 					int ret;
@@ -2506,7 +2503,6 @@ reap:
 					_exit(ret);
 				} else if (__td_index == fio_debug_jobno)
 					*fio_debug_jobp = pid;
-				free(eo);
 				free(fd);
 				fd = NULL;
 			}
