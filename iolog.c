@@ -82,8 +82,8 @@ static void iolog_delay(struct thread_data *td, unsigned long delay)
 {
 	uint64_t usec = utime_since_now(&td->last_issue);
 	unsigned long orig_delay = delay;
-	uint64_t this_delay;
 	struct timespec ts;
+	int ret = 0;
 
 	if (delay < td->time_offset) {
 		td->time_offset = 0;
@@ -97,13 +97,13 @@ static void iolog_delay(struct thread_data *td, unsigned long delay)
 	delay -= usec;
 
 	fio_gettime(&ts, NULL);
-	while (delay && !td->terminate) {
-		this_delay = delay;
-		if (this_delay > 500000)
-			this_delay = 500000;
 
-		usec_sleep(td, this_delay);
-		delay -= this_delay;
+	while (delay && !td->terminate) {
+		ret = io_u_queued_complete(td, 0);
+		if (ret < 0)
+			td_verror(td, -ret, "io_u_queued_complete");
+		if (utime_since_now(&ts) > delay)
+			break;
 	}
 
 	usec = utime_since_now(&ts);
