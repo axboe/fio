@@ -69,7 +69,7 @@ struct fio_client {
 	uint16_t argc;
 	char **argv;
 
-	struct client_ops *ops;
+	struct client_ops const *ops;
 	void *client_data;
 
 	struct client_file *files;
@@ -84,7 +84,7 @@ typedef void (client_eta_op)(struct jobs_eta *je);
 typedef void (client_timed_out_op)(struct fio_client *);
 typedef void (client_jobs_eta_op)(struct fio_client *client, struct jobs_eta *je);
 
-extern struct client_ops fio_client_ops;
+extern struct client_ops const fio_client_ops;
 
 struct client_ops {
 	client_cmd_op		*text;
@@ -128,8 +128,8 @@ extern int fio_start_client(struct fio_client *);
 extern int fio_start_all_clients(void);
 extern int fio_clients_send_ini(const char *);
 extern int fio_client_send_ini(struct fio_client *, const char *, bool);
-extern int fio_handle_clients(struct client_ops *);
-extern int fio_client_add(struct client_ops *, const char *, void **);
+extern int fio_handle_clients(struct client_ops const*);
+extern int fio_client_add(struct client_ops const*, const char *, void **);
 extern struct fio_client *fio_client_add_explicit(struct client_ops *, const char *, int, int);
 extern void fio_client_add_cmd_option(void *, const char *);
 extern int fio_client_add_ini_file(void *, const char *, bool);
