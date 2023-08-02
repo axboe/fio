@@ -295,7 +295,7 @@ def main():
               'fio_path': fio_path,
               'fio_root': str(Path(__file__).absolute().parent.parent),
               'artifact_root': artifact_root,
-              'basename': 'readonly',
+              'basename': 'nvmept',
               }
 
     _, failed, _ = run_fio_tests(TEST_LIST, test_env, args)
