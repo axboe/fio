@@ -75,7 +75,7 @@ class FioExeTest(FioTest):
         command = [self.paths['exe']] + self.parameters
         with open(self.filenames['cmd'], "w+",
                   encoding=locale.getpreferredencoding()) as command_file:
-            command_file.write(" ".join(command))
+            command_file.write(" \\\n ".join(command))
 
         try:
             with open(self.filenames['stdout'], "w+",
