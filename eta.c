@@ -376,6 +376,22 @@ bool eta_time_within_slack(unsigned int time)
 }
 
 /*
+ * These are the conditions under which we might be able to skip the eta
+ * calculation.
+ */
+static bool skip_eta()
+{
+	if (!(output_format & FIO_OUTPUT_NORMAL) && f_out == stdout)
+		return true;
+	if (temp_stall_ts || eta_print == FIO_ETA_NEVER)
+		return true;
+	if (!isatty(STDOUT_FILENO) && eta_print != FIO_ETA_ALWAYS)
+		return true;
+
+	return false;
+}
+
+/*
  * Print status of the jobs we know about. This includes rate estimates,
  * ETA, thread state, etc.
  */
@@ -393,14 +409,12 @@ bool calc_thread_status(struct jobs_eta *je, int force)
 	static unsigned long long disp_io_iops[DDIR_RWDIR_CNT];
 	static struct timespec rate_prev_time, disp_prev_time;
 
-	if (!force) {
-		if (!(output_format & FIO_OUTPUT_NORMAL) &&
-		    f_out == stdout)
-			return false;
-		if (temp_stall_ts || eta_print == FIO_ETA_NEVER)
-			return false;
+	bool ret = true;
 
-		if (!isatty(STDOUT_FILENO) && (eta_print != FIO_ETA_ALWAYS))
+	if (!force && skip_eta()) {
+		if (write_bw_log)
+			ret = false;
+		else
 			return false;
 	}
 
@@ -534,7 +548,7 @@ bool calc_thread_status(struct jobs_eta *je, int force)
 	je->nr_threads = thread_number;
 	update_condensed_str(__run_str, run_str);
 	memcpy(je->run_str, run_str, strlen(run_str));
-	return true;
+	return ret;
 }
 
 static int gen_eta_str(struct jobs_eta *je, char *p, size_t left,
