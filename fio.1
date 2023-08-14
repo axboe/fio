@@ -2250,6 +2250,41 @@ identifier only at indices 0, 2 and 5 specify, you would set `fdp_pli=0,2,5`.
 .BI (io_uring_cmd)md_per_io_size \fR=\fPint
 Size in bytes for separate metadata buffer per IO. Default: 0.
 .TP
+.BI (io_uring_cmd)pi_act \fR=\fPint
+Action to take when nvme namespace is formatted with protection information.
+If this is set to 1 and namespace is formatted with metadata size equal to
+protection information size, fio won't use separate metadata buffer or extended
+logical block. If this is set to 1 and namespace is formatted with metadata
+size greater than protection information size, fio will not generate or verify
+the protection information portion of metadata for write or read case
+respectively. If this is set to 0, fio generates protection information for
+write case and verifies for read case. Default: 1.
+.TP
+.BI (io_uring_cmd)pi_chk \fR=\fPstr[,str][,str]
+Controls the protection information check. This can take one or more of these
+values. Default: none.
+.RS
+.RS
+.TP
+.B GUARD
+Enables protection information checking of guard field.
+.TP
+.B REFTAG
+Enables protection information checking of logical block reference tag field.
+.TP
+.B APPTAG
+Enables protection information checking of application tag field.
+.RE
+.RE
+.TP
+.BI (io_uring_cmd)apptag \fR=\fPint
+Specifies logical block application tag value, if namespace is formatted to use
+end to end protection information. Default: 0x1234.
+.TP
+.BI (io_uring_cmd)apptag_mask \fR=\fPint
+Specifies logical block application tag mask value, if namespace is formatted
+to use end to end protection information. Default: 0xffff.
+.TP
 .BI (cpuio)cpuload \fR=\fPint
 Attempt to use the specified percentage of CPU cycles. This is a mandatory
 option when using cpuio I/O engine.

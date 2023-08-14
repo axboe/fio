@@ -42,6 +42,7 @@ struct nvme_uring_cmd {
 #define NVME_DEFAULT_IOCTL_TIMEOUT 0
 #define NVME_IDENTIFY_DATA_SIZE 4096
 #define NVME_IDENTIFY_CSI_SHIFT 24
+#define NVME_NQN_LENGTH	256
 
 #define NVME_ZNS_ZRA_REPORT_ZONES 0
 #define NVME_ZNS_ZRAS_FEAT_ERZ (1 << 16)
@@ -52,6 +53,7 @@ struct nvme_uring_cmd {
 
 enum nvme_identify_cns {
 	NVME_IDENTIFY_CNS_NS		= 0x00,
+	NVME_IDENTIFY_CNS_CTRL		= 0x01,
 	NVME_IDENTIFY_CNS_CSI_NS	= 0x05,
 	NVME_IDENTIFY_CNS_CSI_CTRL	= 0x06,
 };
@@ -85,18 +87,68 @@ enum nvme_zns_zs {
 	NVME_ZNS_ZS_OFFLINE		= 0xf,
 };
 
+enum nvme_id_ctrl_ctratt {
+	NVME_CTRL_CTRATT_ELBAS		= 1 << 15,
+};
+
+enum {
+	NVME_ID_NS_NVM_STS_MASK		= 0x7f,
+	NVME_ID_NS_NVM_GUARD_SHIFT	= 7,
+	NVME_ID_NS_NVM_GUARD_MASK	= 0x3,
+};
+
+enum {
+	NVME_NVM_NS_16B_GUARD		= 0,
+	NVME_NVM_NS_32B_GUARD		= 1,
+	NVME_NVM_NS_64B_GUARD		= 2,
+};
+
 struct nvme_data {
 	__u32 nsid;
 	__u32 lba_shift;
 	__u32 lba_size;
 	__u32 lba_ext;
 	__u16 ms;
+	__u16 pi_size;
+	__u8 pi_type;
+	__u8 guard_type;
+	__u8 pi_loc;
+};
+
+enum nvme_id_ns_dps {
+	NVME_NS_DPS_PI_NONE		= 0,
+	NVME_NS_DPS_PI_TYPE1		= 1,
+	NVME_NS_DPS_PI_TYPE2		= 2,
+	NVME_NS_DPS_PI_TYPE3		= 3,
+	NVME_NS_DPS_PI_MASK		= 7 << 0,
+	NVME_NS_DPS_PI_FIRST		= 1 << 3,
+};
+
+enum nvme_io_control_flags {
+	NVME_IO_PRINFO_PRCHK_REF	= 1U << 26,
+	NVME_IO_PRINFO_PRCHK_APP	= 1U << 27,
+	NVME_IO_PRINFO_PRCHK_GUARD	= 1U << 28,
+	NVME_IO_PRINFO_PRACT		= 1U << 29,
 };
 
 struct nvme_lbaf {
 	__le16			ms;
 	__u8			ds;
 	__u8			rp;
+};
+
+/* 16 bit guard protection Information format */
+struct nvme_16b_guard_pif {
+	__be16 guard;
+	__be16 apptag;
+	__be32 srtag;
+};
+
+/* 64 bit guard protection Information format */
+struct nvme_64b_guard_pif {
+	__be64 guard;
+	__be16 apptag;
+	__u8 srtag[6];
 };
 
 struct nvme_id_ns {
@@ -139,6 +191,133 @@ struct nvme_id_ns {
 	__u8			eui64[8];
 	struct nvme_lbaf	lbaf[64];
 	__u8			vs[3712];
+};
+
+struct nvme_id_psd {
+	__le16			mp;
+	__u8			rsvd2;
+	__u8			flags;
+	__le32			enlat;
+	__le32			exlat;
+	__u8			rrt;
+	__u8			rrl;
+	__u8			rwt;
+	__u8			rwl;
+	__le16			idlp;
+	__u8			ips;
+	__u8			rsvd19;
+	__le16			actp;
+	__u8			apws;
+	__u8			rsvd23[9];
+};
+
+struct nvme_id_ctrl {
+	__le16			vid;
+	__le16			ssvid;
+	char			sn[20];
+	char			mn[40];
+	char			fr[8];
+	__u8			rab;
+	__u8			ieee[3];
+	__u8			cmic;
+	__u8			mdts;
+	__le16			cntlid;
+	__le32			ver;
+	__le32			rtd3r;
+	__le32			rtd3e;
+	__le32			oaes;
+	__le32			ctratt;
+	__le16			rrls;
+	__u8			rsvd102[9];
+	__u8			cntrltype;
+	__u8			fguid[16];
+	__le16			crdt1;
+	__le16			crdt2;
+	__le16			crdt3;
+	__u8			rsvd134[119];
+	__u8			nvmsr;
+	__u8			vwci;
+	__u8			mec;
+	__le16			oacs;
+	__u8			acl;
+	__u8			aerl;
+	__u8			frmw;
+	__u8			lpa;
+	__u8			elpe;
+	__u8			npss;
+	__u8			avscc;
+	__u8			apsta;
+	__le16			wctemp;
+	__le16			cctemp;
+	__le16			mtfa;
+	__le32			hmpre;
+	__le32			hmmin;
+	__u8			tnvmcap[16];
+	__u8			unvmcap[16];
+	__le32			rpmbs;
+	__le16			edstt;
+	__u8			dsto;
+	__u8			fwug;
+	__le16			kas;
+	__le16			hctma;
+	__le16			mntmt;
+	__le16			mxtmt;
+	__le32			sanicap;
+	__le32			hmminds;
+	__le16			hmmaxd;
+	__le16			nsetidmax;
+	__le16			endgidmax;
+	__u8			anatt;
+	__u8			anacap;
+	__le32			anagrpmax;
+	__le32			nanagrpid;
+	__le32			pels;
+	__le16			domainid;
+	__u8			rsvd358[10];
+	__u8			megcap[16];
+	__u8			rsvd384[128];
+	__u8			sqes;
+	__u8			cqes;
+	__le16			maxcmd;
+	__le32			nn;
+	__le16			oncs;
+	__le16			fuses;
+	__u8			fna;
+	__u8			vwc;
+	__le16			awun;
+	__le16			awupf;
+	__u8			icsvscc;
+	__u8			nwpc;
+	__le16			acwu;
+	__le16			ocfs;
+	__le32			sgls;
+	__le32			mnan;
+	__u8			maxdna[16];
+	__le32			maxcna;
+	__u8			rsvd564[204];
+	char			subnqn[NVME_NQN_LENGTH];
+	__u8			rsvd1024[768];
+
+	/* Fabrics Only */
+	__le32			ioccsz;
+	__le32			iorcsz;
+	__le16			icdoff;
+	__u8			fcatt;
+	__u8			msdbd;
+	__le16			ofcs;
+	__u8			dctype;
+	__u8			rsvd1807[241];
+
+	struct nvme_id_psd	psd[32];
+	__u8			vs[1024];
+};
+
+struct nvme_nvm_id_ns {
+	__le64			lbstm;
+	__u8			pic;
+	__u8			rsvd9[3];
+	__le32			elbaf[64];
+	__u8			rsvd268[3828];
 };
 
 static inline int ilog2(uint32_t i)
@@ -218,13 +397,23 @@ struct nvme_dsm_range {
 	__le64	slba;
 };
 
+struct nvme_cmd_ext_io_opts {
+	__u32 io_flags;
+	__u16 apptag;
+	__u16 apptag_mask;
+};
+
 int fio_nvme_iomgmt_ruhs(struct thread_data *td, struct fio_file *f,
 			 struct nvme_fdp_ruh_status *ruhs, __u32 bytes);
 
-int fio_nvme_get_info(struct fio_file *f, __u64 *nlba, struct nvme_data *data);
+int fio_nvme_get_info(struct fio_file *f, __u64 *nlba, __u32 pi_act,
+		      struct nvme_data *data);
 
 int fio_nvme_uring_cmd_prep(struct nvme_uring_cmd *cmd, struct io_u *io_u,
 			    struct iovec *iov, struct nvme_dsm_range *dsm);
+
+void fio_nvme_pi_fill(struct nvme_uring_cmd *cmd, struct io_u *io_u,
+		      struct nvme_cmd_ext_io_opts *opts);
 
 int fio_nvme_get_zoned_model(struct thread_data *td, struct fio_file *f,
 			     enum zbd_zoned_model *model);

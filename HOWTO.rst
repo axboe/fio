@@ -2491,6 +2491,41 @@ with the caveat that when used on the command line, they must come after the
 
 	Size in bytes for separate metadata buffer per IO. Default: 0.
 
+.. option:: pi_act=int : [io_uring_cmd]
+
+	Action to take when nvme namespace is formatted with protection
+	information. If this is set to 1 and namespace is formatted with
+	metadata size equal to protection information size, fio won't use
+	separate metadata buffer or extended logical block. If this is set to
+	1 and namespace is formatted with metadata size greater than protection
+	information size, fio will not generate or verify the protection
+	information portion of metadata for write or read case respectively.
+	If this is set to 0, fio generates protection information for
+	write case and verifies for read case. Default: 1.
+
+.. option:: pi_chk=str[,str][,str] : [io_uring_cmd]
+
+	Controls the protection information check. This can take one or more
+	of these values. Default: none.
+
+	**GUARD**
+		Enables protection information checking of guard field.
+	**REFTAG**
+		Enables protection information checking of logical block
+		reference tag field.
+	**APPTAG**
+		Enables protection information checking of application tag field.
+
+.. option:: apptag=int : [io_uring_cmd]
+
+	Specifies logical block application tag value, if namespace is
+	formatted to use end to end protection information. Default: 0x1234.
+
+.. option:: apptag_mask=int : [io_uring_cmd]
+
+	Specifies logical block application tag mask value, if namespace is
+	formatted to use end to end protection information. Default: 0xffff.
+
 .. option:: cpuload=int : [cpuio]
 
 	Attempt to use the specified percentage of CPU cycles. This is a mandatory
