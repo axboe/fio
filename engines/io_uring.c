@@ -1115,10 +1115,12 @@ static int fio_ioring_cmd_open_file(struct thread_data *td, struct fio_file *f)
 			if (td->o.min_bs[ddir] % lba_size ||
 				td->o.max_bs[ddir] % lba_size) {
 				if (data->lba_ext)
-					log_err("block size must be a multiple of "
-						"(LBA data size + Metadata size)\n");
+					log_err("%s: block size must be a multiple of (LBA data size + Metadata size)\n",
+						f->file_name);
 				else
-					log_err("block size must be a multiple of LBA data size\n");
+					log_err("%s: block size must be a multiple of LBA data size\n",
+						f->file_name);
+				td_verror(td, EINVAL, "fio_ioring_cmd_open_file");
 				return 1;
 			}
                 }
