@@ -457,4 +457,11 @@ static inline __u64 get_unaligned_be48(__u8 *p)
 		p[3] << 16 | p[4] << 8 | p[5];
 }
 
+static inline bool fio_nvme_pi_ref_escape(__u8 *reftag)
+{
+	__u8 ref_esc[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+
+	return memcmp(reftag, ref_esc, sizeof(ref_esc)) == 0;
+}
+
 #endif
