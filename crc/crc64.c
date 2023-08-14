@@ -1,4 +1,16 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * crc64nvme[256] table is from the generator polynomial specified by NVMe
+ * 64b CRC and is defined as,
+ *
+ * x^64 + x^63 + x^61 + x^59 + x^58 + x^56 + x^55 + x^52 + x^49 + x^48 + x^47 +
+ * x^46 + x^44 + x^41 + x^37 + x^36 + x^34 + x^32 + x^31 + x^28 + x^26 + x^23 +
+ * x^22 + x^19 + x^16 + x^13 + x^12 + x^10 + x^9 + x^6 + x^4 + x^3 + 1
+ *
+ */
+
 #include "crc64.h"
+#include "crc64table.h"
 
 /*
  * poly 0x95AC9329AC4BC9B5ULL and init 0xFFFFFFFFFFFFFFFFULL
@@ -102,3 +114,23 @@ unsigned long long fio_crc64(const unsigned char *buffer, unsigned long length)
 	return crc;
 }
 
+/**
+ * fio_crc64_nvme - Calculate bitwise NVMe CRC64
+ * @crc: seed value for computation. 0 for a new CRC calculation, or the
+ * 	 previous crc64 value if computing incrementally.
+ * @p: pointer to buffer over which CRC64 is run
+ * @len: length of buffer @p
+ */
+unsigned long long fio_crc64_nvme(unsigned long long crc, const void *p,
+				  unsigned int len)
+{
+	const unsigned char *_p = p;
+	unsigned int i;
+
+	crc = ~crc;
+
+	for (i = 0; i < len; i++)
+		crc = (crc >> 8) ^ crc64nvmetable[(crc & 0xff) ^ *_p++];
+
+	return ~crc;
+}
