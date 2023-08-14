@@ -4,6 +4,7 @@
  */
 
 #include "nvme.h"
+#include "../crc/crc-t10dif.h"
 
 static inline __u64 get_slba(struct nvme_data *data, struct io_u *io_u)
 {
@@ -19,6 +20,158 @@ static inline __u32 get_nlb(struct nvme_data *data, struct io_u *io_u)
 		return io_u->xfer_buflen / data->lba_ext - 1;
 	else
 		return (io_u->xfer_buflen >> data->lba_shift) - 1;
+}
+
+static void fio_nvme_generate_pi_16b_guard(struct nvme_data *data,
+					   struct io_u *io_u,
+					   struct nvme_cmd_ext_io_opts *opts)
+{
+	struct nvme_pi_data *pi_data = io_u->engine_data;
+	struct nvme_16b_guard_pif *pi;
+	unsigned char *buf = io_u->xfer_buf;
+	unsigned char *md_buf = io_u->mmap_data;
+	__u64 slba = get_slba(data, io_u);
+	__u32 nlb = get_nlb(data, io_u) + 1;
+	__u32 lba_num = 0;
+	__u16 guard = 0;
+
+	if (data->pi_loc) {
+		if (data->lba_ext)
+			pi_data->interval = data->lba_ext - data->ms;
+		else
+			pi_data->interval = 0;
+	} else {
+		if (data->lba_ext)
+			pi_data->interval = data->lba_ext - sizeof(struct nvme_16b_guard_pif);
+		else
+			pi_data->interval = data->ms - sizeof(struct nvme_16b_guard_pif);
+	}
+
+	if (io_u->ddir != DDIR_WRITE)
+		return;
+
+	while (lba_num < nlb) {
+		if (data->lba_ext)
+			pi = (struct nvme_16b_guard_pif *)(buf + pi_data->interval);
+		else
+			pi = (struct nvme_16b_guard_pif *)(md_buf + pi_data->interval);
+
+		if (opts->io_flags & NVME_IO_PRINFO_PRCHK_GUARD) {
+			if (data->lba_ext) {
+				guard = fio_crc_t10dif(0, buf, pi_data->interval);
+			} else {
+				guard = fio_crc_t10dif(0, buf, data->lba_size);
+				guard = fio_crc_t10dif(guard, md_buf, pi_data->interval);
+			}
+			pi->guard = cpu_to_be16(guard);
+		}
+
+		if (opts->io_flags & NVME_IO_PRINFO_PRCHK_APP)
+			pi->apptag = cpu_to_be16(pi_data->apptag);
+
+		if (opts->io_flags & NVME_IO_PRINFO_PRCHK_REF) {
+			switch (data->pi_type) {
+			case NVME_NS_DPS_PI_TYPE1:
+			case NVME_NS_DPS_PI_TYPE2:
+				pi->srtag = cpu_to_be32((__u32)slba + lba_num);
+				break;
+			case NVME_NS_DPS_PI_TYPE3:
+				break;
+			}
+		}
+		if (data->lba_ext) {
+			buf += data->lba_ext;
+		} else {
+			buf += data->lba_size;
+			md_buf += data->ms;
+		}
+		lba_num++;
+	}
+}
+
+static int fio_nvme_verify_pi_16b_guard(struct nvme_data *data,
+					struct io_u *io_u)
+{
+	struct nvme_pi_data *pi_data = io_u->engine_data;
+	struct nvme_16b_guard_pif *pi;
+	struct fio_file *f = io_u->file;
+	unsigned char *buf = io_u->xfer_buf;
+	unsigned char *md_buf = io_u->mmap_data;
+	__u64 slba = get_slba(data, io_u);
+	__u32 nlb = get_nlb(data, io_u) + 1;
+	__u32 lba_num = 0;
+	__u16 unmask_app, unmask_app_exp, guard = 0;
+
+	while (lba_num < nlb) {
+		if (data->lba_ext)
+			pi = (struct nvme_16b_guard_pif *)(buf + pi_data->interval);
+		else
+			pi = (struct nvme_16b_guard_pif *)(md_buf + pi_data->interval);
+
+		if (data->pi_type == NVME_NS_DPS_PI_TYPE3) {
+			if (pi->apptag == NVME_PI_APP_DISABLE &&
+			    pi->srtag == NVME_PI_REF_DISABLE)
+				goto next;
+		} else if (data->pi_type == NVME_NS_DPS_PI_TYPE1 ||
+			   data->pi_type == NVME_NS_DPS_PI_TYPE2) {
+			if (pi->apptag == NVME_PI_APP_DISABLE)
+				goto next;
+		}
+
+		if (pi_data->io_flags & NVME_IO_PRINFO_PRCHK_GUARD) {
+			if (data->lba_ext) {
+				guard = fio_crc_t10dif(0, buf, pi_data->interval);
+			} else {
+				guard = fio_crc_t10dif(0, buf, data->lba_size);
+				guard = fio_crc_t10dif(guard, md_buf, pi_data->interval);
+			}
+			if (be16_to_cpu(pi->guard) != guard) {
+				log_err("%s: Guard compare error: LBA: %llu Expected=%x, Actual=%x\n",
+					f->file_name, (unsigned long long)slba,
+					guard, be16_to_cpu(pi->guard));
+				return -EIO;
+			}
+		}
+
+		if (pi_data->io_flags & NVME_IO_PRINFO_PRCHK_APP) {
+			unmask_app = be16_to_cpu(pi->apptag) & pi_data->apptag_mask;
+			unmask_app_exp = pi_data->apptag & pi_data->apptag_mask;
+			if (unmask_app != unmask_app_exp) {
+				log_err("%s: APPTAG compare error: LBA: %llu Expected=%x, Actual=%x\n",
+					f->file_name, (unsigned long long)slba,
+					unmask_app_exp, unmask_app);
+				return -EIO;
+			}
+		}
+
+		if (pi_data->io_flags & NVME_IO_PRINFO_PRCHK_REF) {
+			switch (data->pi_type) {
+			case NVME_NS_DPS_PI_TYPE1:
+			case NVME_NS_DPS_PI_TYPE2:
+				if (be32_to_cpu(pi->srtag) !=
+				    ((__u32)slba + lba_num)) {
+					log_err("%s: REFTAG compare error: LBA: %llu Expected=%x, Actual=%x\n",
+						f->file_name, (unsigned long long)slba,
+						(__u32)slba + lba_num,
+						be32_to_cpu(pi->srtag));
+					return -EIO;
+				}
+				break;
+			case NVME_NS_DPS_PI_TYPE3:
+				break;
+			}
+		}
+next:
+		if (data->lba_ext) {
+			buf += data->lba_ext;
+		} else {
+			buf += data->lba_size;
+			md_buf += data->ms;
+		}
+		lba_num++;
+	}
+
+	return 0;
 }
 
 void fio_nvme_uring_cmd_trim_prep(struct nvme_uring_cmd *cmd, struct io_u *io_u,
@@ -96,6 +249,11 @@ void fio_nvme_pi_fill(struct nvme_uring_cmd *cmd, struct io_u *io_u,
 	slba = get_slba(data, io_u);
 	cmd->cdw12 |= opts->io_flags;
 
+	if (data->pi_type && !(opts->io_flags & NVME_IO_PRINFO_PRACT)) {
+		if (data->guard_type == NVME_NVM_NS_16B_GUARD)
+			fio_nvme_generate_pi_16b_guard(data, io_u, opts);
+	}
+
 	switch (data->pi_type) {
 	case NVME_NS_DPS_PI_TYPE1:
 	case NVME_NS_DPS_PI_TYPE2:
@@ -118,6 +276,21 @@ void fio_nvme_pi_fill(struct nvme_uring_cmd *cmd, struct io_u *io_u,
 	case NVME_NS_DPS_PI_NONE:
 		break;
 	}
+}
+
+int fio_nvme_pi_verify(struct nvme_data *data, struct io_u *io_u)
+{
+	int ret = 0;
+
+	switch (data->guard_type) {
+	case NVME_NVM_NS_16B_GUARD:
+		ret = fio_nvme_verify_pi_16b_guard(data, io_u);
+		break;
+	default:
+		break;
+	}
+
+	return ret;
 }
 
 static int nvme_identify(int fd, __u32 nsid, enum nvme_identify_cns cns,

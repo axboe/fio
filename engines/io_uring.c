@@ -456,7 +456,9 @@ static struct io_u *fio_ioring_cmd_event(struct thread_data *td, int event)
 	struct ioring_options *o = td->eo;
 	struct io_uring_cqe *cqe;
 	struct io_u *io_u;
+	struct nvme_data *data;
 	unsigned index;
+	int ret;
 
 	index = (event + ld->cq_ring_off) & ld->cq_ring_mask;
 	if (o->cmd_type == FIO_URING_CMD_NVME)
@@ -469,6 +471,15 @@ static struct io_u *fio_ioring_cmd_event(struct thread_data *td, int event)
 		io_u->error = -cqe->res;
 	else
 		io_u->error = 0;
+
+	if (o->cmd_type == FIO_URING_CMD_NVME) {
+		data = FILE_ENG_DATA(io_u->file);
+		if (data->pi_type && (io_u->ddir == DDIR_READ) && !o->pi_act) {
+			ret = fio_nvme_pi_verify(data, io_u);
+			if (ret)
+				io_u->error = ret;
+		}
+	}
 
 	return io_u;
 }
@@ -1190,6 +1201,7 @@ static int fio_ioring_io_u_init(struct thread_data *td, struct io_u *io_u)
 {
 	struct ioring_data *ld = td->io_ops_data;
 	struct ioring_options *o = td->eo;
+	struct nvme_pi_data *pi_data;
 	char *p;
 
 	ld->io_u_index[io_u->index] = io_u;
@@ -1198,9 +1210,30 @@ static int fio_ioring_io_u_init(struct thread_data *td, struct io_u *io_u)
 		p = PTR_ALIGN(ld->md_buf, page_mask) + td->o.mem_align;
 		p += o->md_per_io_size * io_u->index;
 		io_u->mmap_data = p;
+
+		if (!o->pi_act) {
+			pi_data = calloc(1, sizeof(*pi_data));
+			pi_data->io_flags |= o->prchk;
+			pi_data->apptag_mask = o->apptag_mask;
+			pi_data->apptag = o->apptag;
+			io_u->engine_data = pi_data;
+		}
 	}
 
 	return 0;
+}
+
+static void fio_ioring_io_u_free(struct thread_data *td, struct io_u *io_u)
+{
+	struct ioring_options *o = td->eo;
+	struct nvme_pi *pi;
+
+	if (!strcmp(td->io_ops->name, "io_uring_cmd") &&
+	    (o->cmd_type == FIO_URING_CMD_NVME)) {
+		pi = io_u->engine_data;
+		free(pi);
+		io_u->engine_data = NULL;
+	}
 }
 
 static int fio_ioring_open_file(struct thread_data *td, struct fio_file *f)
@@ -1411,6 +1444,7 @@ static struct ioengine_ops ioengine_uring_cmd = {
 	.init			= fio_ioring_init,
 	.post_init		= fio_ioring_cmd_post_init,
 	.io_u_init		= fio_ioring_io_u_init,
+	.io_u_free		= fio_ioring_io_u_free,
 	.prep			= fio_ioring_cmd_prep,
 	.queue			= fio_ioring_queue,
 	.commit			= fio_ioring_commit,

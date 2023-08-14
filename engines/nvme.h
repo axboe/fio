@@ -44,6 +44,9 @@ struct nvme_uring_cmd {
 #define NVME_IDENTIFY_CSI_SHIFT 24
 #define NVME_NQN_LENGTH	256
 
+#define NVME_PI_APP_DISABLE 0xFFFF
+#define NVME_PI_REF_DISABLE 0xFFFFFFFF
+
 #define NVME_ZNS_ZRA_REPORT_ZONES 0
 #define NVME_ZNS_ZRAS_FEAT_ERZ (1 << 16)
 #define NVME_ZNS_ZSA_RESET 0x4
@@ -129,6 +132,13 @@ enum nvme_io_control_flags {
 	NVME_IO_PRINFO_PRCHK_APP	= 1U << 27,
 	NVME_IO_PRINFO_PRCHK_GUARD	= 1U << 28,
 	NVME_IO_PRINFO_PRACT		= 1U << 29,
+};
+
+struct nvme_pi_data {
+	__u32 interval;
+	__u32 io_flags;
+	__u16 apptag;
+	__u16 apptag_mask;
 };
 
 struct nvme_lbaf {
@@ -414,6 +424,8 @@ int fio_nvme_uring_cmd_prep(struct nvme_uring_cmd *cmd, struct io_u *io_u,
 
 void fio_nvme_pi_fill(struct nvme_uring_cmd *cmd, struct io_u *io_u,
 		      struct nvme_cmd_ext_io_opts *opts);
+
+int fio_nvme_pi_verify(struct nvme_data *data, struct io_u *io_u);
 
 int fio_nvme_get_zoned_model(struct thread_data *td, struct fio_file *f,
 			     enum zbd_zoned_model *model);
