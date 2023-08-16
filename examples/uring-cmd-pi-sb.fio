@@ -1,0 +1,32 @@
+# Protection information test with io_uring_cmd I/O engine for nvme-ns generic
+# character device.
+#
+# This requires nvme device to be formatted with separate metadata buffer and
+# protection information enabled. This can be done with nvme-cli utility.
+# Replace md_per_io_size as per the required metadata buffer size for each IO.
+#
+# First we sequentially write to the device, without protection information
+# action being set. FIO will generate and send necessary protection
+# information data as per the protection information check option. Later on we
+# sequentially read and verify the device returned protection information data.
+#
+[global]
+filename=/dev/ng0n1
+ioengine=io_uring_cmd
+cmd_type=nvme
+size=1G
+iodepth=32
+bs=4096
+md_per_io_size=64
+pi_act=0
+pi_chk=GUARD,APPTAG,REFTAG
+apptag=0x0888
+apptag_mask=0xFFFF
+thread=1
+stonewall=1
+
+[write]
+rw=write
+
+[read]
+rw=read
