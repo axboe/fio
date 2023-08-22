@@ -133,6 +133,20 @@ EOF
   compile_object
 }
 
+check_val() {
+    cat > $TMPC <<EOF
+#if $1 == $2
+int main(void)
+{
+  return 0;
+}
+#else
+#error $1 is not equal $2
+#endif
+EOF
+  compile_object
+}
+
 output_sym() {
   echo "$1=y" >> $config_host_mak
   echo "#define $1" >> $config_host_h
@@ -501,13 +515,21 @@ elif check_define __hppa__ ; then
   cpu="hppa"
 elif check_define __loongarch64 ; then
   cpu="loongarch64"
+elif check_define __riscv ; then
+  if check_val __riscv_xlen 32 ; then
+    cpu="riscv32"
+  elif check_val __riscv_xlen 64 ; then
+    cpu="riscv64"
+  elif check_val __riscv_xlen 128 ; then
+    cpu="riscv128"
+  fi
 else
   cpu=`uname -m`
 fi
 
 # Normalise host CPU name and set ARCH.
 case "$cpu" in
-  ia64|ppc|ppc64|s390|s390x|sparc64|loongarch64)
+  ia64|ppc|ppc64|s390|s390x|sparc64|loongarch64|riscv64)
     cpu="$cpu"
   ;;
   i386|i486|i586|i686|i86pc|BePC)
