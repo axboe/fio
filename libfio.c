@@ -75,6 +75,7 @@ static const char *fio_arch_strings[arch_nr] = {
 	"mips",
 	"aarch64",
 	"loongarch64",
+	"riscv64",
 	"generic"
 };
 
