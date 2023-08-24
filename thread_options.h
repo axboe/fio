@@ -170,9 +170,8 @@ struct thread_options {
 	unsigned int log_offset;
 	unsigned int log_gz;
 	unsigned int log_gz_store;
-	unsigned int log_unix_epoch;
 	unsigned int log_alternate_epoch;
-	unsigned int log_alternate_epoch_clock_id;
+	unsigned int clock_id;
 	unsigned int norandommap;
 	unsigned int softrandommap;
 	unsigned int bs_unaligned;
@@ -494,9 +493,9 @@ struct thread_options_pack {
 	uint32_t log_offset;
 	uint32_t log_gz;
 	uint32_t log_gz_store;
-	uint32_t log_unix_epoch;
+	uint32_t pad2;
 	uint32_t log_alternate_epoch;
-	uint32_t log_alternate_epoch_clock_id;
+	uint32_t clock_id;
 	uint32_t norandommap;
 	uint32_t softrandommap;
 	uint32_t bs_unaligned;

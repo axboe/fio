@@ -172,15 +172,13 @@ void set_genesis_time(void)
 	fio_gettime(&genesis, NULL);
 }
 
-void set_epoch_time(struct thread_data *td, int log_alternate_epoch, clockid_t clock_id)
+void set_epoch_time(struct thread_data *td, clockid_t clock_id)
 {
+	struct timespec ts;
 	fio_gettime(&td->epoch, NULL);
-	if (log_alternate_epoch) {
-		struct timespec ts;
-		clock_gettime(clock_id, &ts);
-		td->alternate_epoch = (unsigned long long)(ts.tv_sec) * 1000 +
-		                 (unsigned long long)(ts.tv_nsec) / 1000000;
-	}
+	clock_gettime(clock_id, &ts);
+	td->clock_gettime_job_start = (unsigned long long)(ts.tv_sec) * 1000 +
+					 (unsigned long long)(ts.tv_nsec) / 1000000;
 }
 
 void fill_start_time(struct timespec *t)

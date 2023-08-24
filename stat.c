@@ -1712,6 +1712,7 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 	root = json_create_object();
 	json_object_add_value_string(root, "jobname", ts->name);
 	json_object_add_value_int(root, "groupid", ts->groupid);
+	json_object_add_value_int(root, "clock_gettime_job_start", ts->clock_gettime_job_start);
 	json_object_add_value_int(root, "error", ts->error);
 
 	/* ETA Info */
@@ -2526,6 +2527,7 @@ void __show_run_stats(void)
 			 */
 			ts->thread_number = td->thread_number;
 			ts->groupid = td->groupid;
+			ts->clock_gettime_job_start = td->clock_gettime_job_start;
 
 			/*
 			 * first pid in group, not very useful...
@@ -3044,11 +3046,13 @@ static void __add_log_sample(struct io_log *iolog, union io_sample_data data,
 	cur_log = get_cur_log(iolog);
 	if (cur_log) {
 		struct io_sample *s;
+		bool add_alternate_epoch;
 
 		s = get_sample(iolog, cur_log, cur_log->nr_samples);
 
 		s->data = data;
-		s->time = t + (iolog->td ? iolog->td->alternate_epoch : 0);
+		add_alternate_epoch = (iolog->td != NULL) && iolog->td->o.log_alternate_epoch;
+		s->time = t + (add_alternate_epoch ? iolog->td->clock_gettime_job_start : 0);
 		io_sample_set_ddir(iolog, s, ddir);
 		s->bs = bs;
 		s->priority = priority;

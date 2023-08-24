@@ -388,7 +388,7 @@ struct thread_data {
 
 	struct timespec start;	/* start of this loop */
 	struct timespec epoch;	/* time job was started */
-	unsigned long long alternate_epoch; /* Time job was started, clock_gettime's clock_id epoch based. */
+	unsigned long long clock_gettime_job_start; /* Time job was started, clock_gettime's clock_id epoch based. */
 	struct timespec last_issue;
 	long time_offset;
 	struct timespec ts_cache;

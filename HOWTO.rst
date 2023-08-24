@@ -4103,22 +4103,24 @@ Measurements and reporting
 
 .. option:: log_unix_epoch=bool
 
-	If set, fio will log Unix timestamps to the log files produced by enabling
-	write_type_log for each log type, instead of the default zero-based
-	timestamps.
+    Backwards compatible alias for log_alternate_epoch.
 
 .. option:: log_alternate_epoch=bool
 
-	If set, fio will log timestamps based on the epoch used by the clock specified
-	in the log_alternate_epoch_clock_id option, to the log files produced by
-	enabling write_type_log for each log type, instead of the default zero-based
-	timestamps.
+    If set, fio will log timestamps based on the epoch used by the clock
+    specified in the clock_id option, to the log files produced by enabling
+    write_type_log for each log type, instead of the default zero-based
+    timestamps.
 
 .. option:: log_alternate_epoch_clock_id=int
 
-	Specifies the clock_id to be used by clock_gettime to obtain the alternate epoch
-	if either log_unix_epoch or log_alternate_epoch are true. Otherwise has no
-	effect. Default value is 0, or CLOCK_REALTIME.
+    Backwards compatible alias for clock_id.
+
+.. option:: clock_id=int
+
+    Specifies the clock_id to be used by clock_gettime to obtain the start time
+    of a job via clock_gettime. Default value is 0, or CLOCK_REALTIME, which
+    yields times based on the unix epoch.
 
 .. option:: block_error_percentiles=bool
 
