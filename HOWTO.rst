@@ -755,6 +755,10 @@ Time related parameters
 	calls will be excluded from other uses. Fio will manually clear it from the
 	CPU mask of other jobs.
 
+.. option:: job_start_clock_id=int
+   The clock_id passed to the call to `clock_gettime` used to record job_start
+   in the `json` output format. Default is 0, or CLOCK_REALTIME.
+
 
 Target file/device
 ~~~~~~~~~~~~~~~~~~
@@ -3965,6 +3969,13 @@ Measurements and reporting
 	per-job, use :option:`group_reporting`. Jobs in a file will be part of the
 	same reporting group, unless if separated by a :option:`stonewall`, or by
 	using :option:`new_group`.
+
+    NOTE: When :option: `group_reporting` is used along with `json` output,
+    there are certain per-job properties which can be different between jobs
+    but do not have a natural group-level equivalent. Examples include
+    `kb_base`, `unit_base`, `sig_figs`, `thread_number`, `pid`, and
+    `job_start`. For these properties, the values for the first job are
+    recorded for the group.
 
 .. option:: new_group
 

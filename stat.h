@@ -169,6 +169,7 @@ struct thread_stat {
 	uint32_t error;
 	uint32_t thread_number;
 	uint32_t groupid;
+	uint64_t job_start; /* Time job was started, as clock_gettime(job_start_clock_id) */
 	uint32_t pid;
 	char description[FIO_JOBDESC_SIZE];
 	uint32_t members;

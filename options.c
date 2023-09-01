@@ -4953,6 +4953,16 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_CLOCK,
 	},
 	{
+		.name	= "job_start_clock_id",
+		.lname	= "Job start clock_id",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct thread_options, job_start_clock_id),
+		.help	= "The clock_id passed to the call to clock_gettime used to record job_start in the json output format. Default is 0, or CLOCK_REALTIME",
+		.verify	= gtod_cpu_verify,
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_CLOCK,
+	},
+	{
 		.name	= "unified_rw_reporting",
 		.lname	= "Unified RW Reporting",
 		.type	= FIO_OPT_STR,

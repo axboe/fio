@@ -273,6 +273,7 @@ struct thread_options {
 	unsigned int unified_rw_rep;
 	unsigned int gtod_reduce;
 	unsigned int gtod_cpu;
+	unsigned int job_start_clock_id;
 	enum fio_cs clocksource;
 	unsigned int no_stall;
 	unsigned int trim_percentage;
@@ -422,7 +423,6 @@ struct thread_options_pack {
 	uint32_t iodepth_batch_complete_min;
 	uint32_t iodepth_batch_complete_max;
 	uint32_t serialize_overlap;
-	uint32_t pad;
 
 	uint64_t size;
 	uint64_t io_size;
@@ -433,13 +433,11 @@ struct thread_options_pack {
 	uint32_t fill_device;
 	uint32_t file_append;
 	uint32_t unique_filename;
-	uint32_t pad3;
 	uint64_t file_size_low;
 	uint64_t file_size_high;
 	uint64_t start_offset;
 	uint64_t start_offset_align;
 	uint32_t start_offset_nz;
-	uint32_t pad4;
 
 	uint64_t bs[DDIR_RWDIR_CNT];
 	uint64_t ba[DDIR_RWDIR_CNT];
@@ -511,6 +509,7 @@ struct thread_options_pack {
 	struct zone_split zone_split[DDIR_RWDIR_CNT][ZONESPLIT_MAX];
 	uint32_t zone_split_nr[DDIR_RWDIR_CNT];
 
+	uint32_t pad;
 	fio_fp64_t zipf_theta;
 	fio_fp64_t pareto_h;
 	fio_fp64_t gauss_dev;
@@ -593,6 +592,7 @@ struct thread_options_pack {
 	uint32_t unified_rw_rep;
 	uint32_t gtod_reduce;
 	uint32_t gtod_cpu;
+	uint32_t job_start_clock_id;
 	uint32_t clocksource;
 	uint32_t no_stall;
 	uint32_t trim_percentage;
@@ -603,6 +603,7 @@ struct thread_options_pack {
 	uint32_t lat_percentiles;
 	uint32_t slat_percentiles;
 	uint32_t percentile_precision;
+	uint32_t pad2;
 	fio_fp64_t percentile_list[FIO_IO_U_LIST_MAX_LEN];
 
 	uint8_t read_iolog_file[FIO_TOP_STR_MAX];
