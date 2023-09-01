@@ -596,9 +596,21 @@ static int str_rw_cb(void *data, const char *str)
 	if (!nr)
 		return 0;
 
-	if (td_random(td))
-		o->ddir_seq_nr = atoi(nr);
-	else {
+	if (td_random(td)) {
+		long long val;
+
+		if (str_to_decimal(nr, &val, 1, o, 0, 0)) {
+			log_err("fio: randrw postfix parsing failed\n");
+			free(nr);
+			return 1;
+		}
+		if ((val <= 0) || (val > UINT_MAX)) {
+			log_err("fio: randrw postfix parsing out of range\n");
+			free(nr);
+			return 1;
+		}
+		o->ddir_seq_nr = (unsigned int) val;
+	} else {
 		long long val;
 
 		if (str_to_decimal(nr, &val, 1, o, 0, 0)) {
