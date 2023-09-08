@@ -4601,16 +4601,8 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	},
 #endif
 	{
-		.name = "log_unix_epoch",
-		.lname = "Log epoch unix",
-		.type = FIO_OPT_BOOL,
-		.off1 = offsetof(struct thread_options, log_unix_epoch),
-		.help = "Use Unix time in log files",
-		.category = FIO_OPT_C_LOG,
-		.group = FIO_OPT_G_INVALID,
-	},
-	{
 		.name = "log_alternate_epoch",
+		.alias = "log_unix_epoch",
 		.lname = "Log epoch alternate",
 		.type = FIO_OPT_BOOL,
 		.off1 = offsetof(struct thread_options, log_alternate_epoch),
@@ -4623,7 +4615,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.lname = "Log alternate epoch clock_id",
 		.type = FIO_OPT_INT,
 		.off1 = offsetof(struct thread_options, log_alternate_epoch_clock_id),
-		.help = "If log_alternate_epoch or log_unix_epoch is true, this option specifies the clock_id from clock_gettime whose epoch should be used. If neither of those is true, this option has no effect. Default value is 0, or CLOCK_REALTIME",
+		.help = "If log_alternate_epoch is true, this option specifies the clock_id from clock_gettime whose epoch should be used. If log_alternate_epoch is false, this option has no effect. Default value is 0, or CLOCK_REALTIME",
 		.category = FIO_OPT_C_LOG,
 		.group = FIO_OPT_G_INVALID,
 	},

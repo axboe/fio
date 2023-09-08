@@ -170,7 +170,6 @@ struct thread_options {
 	unsigned int log_offset;
 	unsigned int log_gz;
 	unsigned int log_gz_store;
-	unsigned int log_unix_epoch;
 	unsigned int log_alternate_epoch;
 	unsigned int log_alternate_epoch_clock_id;
 	unsigned int norandommap;
@@ -492,7 +491,6 @@ struct thread_options_pack {
 	uint32_t log_offset;
 	uint32_t log_gz;
 	uint32_t log_gz_store;
-	uint32_t log_unix_epoch;
 	uint32_t log_alternate_epoch;
 	uint32_t log_alternate_epoch_clock_id;
 	uint32_t norandommap;
@@ -509,7 +507,6 @@ struct thread_options_pack {
 	struct zone_split zone_split[DDIR_RWDIR_CNT][ZONESPLIT_MAX];
 	uint32_t zone_split_nr[DDIR_RWDIR_CNT];
 
-	uint32_t pad;
 	fio_fp64_t zipf_theta;
 	fio_fp64_t pareto_h;
 	fio_fp64_t gauss_dev;
@@ -603,7 +600,7 @@ struct thread_options_pack {
 	uint32_t lat_percentiles;
 	uint32_t slat_percentiles;
 	uint32_t percentile_precision;
-	uint32_t pad2;
+	uint32_t pad;
 	fio_fp64_t percentile_list[FIO_IO_U_LIST_MAX_LEN];
 
 	uint8_t read_iolog_file[FIO_TOP_STR_MAX];

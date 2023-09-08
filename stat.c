@@ -3051,7 +3051,7 @@ static void __add_log_sample(struct io_log *iolog, union io_sample_data data,
 
 		s->data = data;
 		s->time = t;
-		if (iolog->td && (iolog->td->o.log_unix_epoch || iolog->td->o.log_alternate_epoch))
+		if (iolog->td && iolog->td->o.log_alternate_epoch)
 			s->time += iolog->td->alternate_epoch;
 		io_sample_set_ddir(iolog, s, ddir);
 		s->bs = bs;
