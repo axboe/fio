@@ -956,6 +956,7 @@ static void convert_ts(struct thread_stat *dst, struct thread_stat *src)
 	dst->error		= le32_to_cpu(src->error);
 	dst->thread_number	= le32_to_cpu(src->thread_number);
 	dst->groupid		= le32_to_cpu(src->groupid);
+	dst->job_start		= le64_to_cpu(src->job_start);
 	dst->pid		= le32_to_cpu(src->pid);
 	dst->members		= le32_to_cpu(src->members);
 	dst->unified_rw_rep	= le32_to_cpu(src->unified_rw_rep);

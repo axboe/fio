@@ -537,6 +537,10 @@ copy that segment, instead of entering the kernel with a
 \fBgettimeofday\fR\|(2) call. The CPU set aside for doing these time
 calls will be excluded from other uses. Fio will manually clear it from the
 CPU mask of other jobs.
+.TP
+.BI job_start_clock_id \fR=\fPint
+The clock_id passed to the call to \fBclock_gettime\fR used to record job_start
+in the \fBjson\fR output format. Default is 0, or CLOCK_REALTIME.
 .SS "Target file/device"
 .TP
 .BI directory \fR=\fPstr
@@ -3664,6 +3668,15 @@ quickly becomes unwieldy. To see the final report per-group instead of
 per-job, use \fBgroup_reporting\fR. Jobs in a file will be part of the
 same reporting group, unless if separated by a \fBstonewall\fR, or by
 using \fBnew_group\fR.
+.RS
+.P
+NOTE: When \fBgroup_reporting\fR is used along with \fBjson\fR output, there
+are certain per-job properties which can be different between jobs but do not
+have a natural group-level equivalent. Examples include \fBkb_base\fR,
+\fBunit_base\fR, \fBsig_figs\fR, \fBthread_number\fR, \fBpid\fR, and
+\fBjob_start\fR. For these properties, the values for the first job are
+recorded for the group.
+.RE
 .TP
 .BI new_group
 Start a new reporting group. See: \fBgroup_reporting\fR. If not given,
@@ -3795,9 +3808,7 @@ decompressed with fio, using the \fB\-\-inflate\-log\fR command line
 parameter. The files will be stored with a `.fz' suffix.
 .TP
 .BI log_unix_epoch \fR=\fPbool
-If set, fio will log Unix timestamps to the log files produced by enabling
-write_type_log for each log type, instead of the default zero-based
-timestamps.
+Backward-compatible alias for \fBlog_alternate_epoch\fR.
 .TP
 .BI log_alternate_epoch \fR=\fPbool
 If set, fio will log timestamps based on the epoch used by the clock specified
@@ -3806,9 +3817,9 @@ enabling write_type_log for each log type, instead of the default zero-based
 timestamps.
 .TP
 .BI log_alternate_epoch_clock_id \fR=\fPint
-Specifies the clock_id to be used by clock_gettime to obtain the alternate epoch
-if either \fBBlog_unix_epoch\fR or \fBlog_alternate_epoch\fR are true. Otherwise has no
-effect. Default value is 0, or CLOCK_REALTIME.
+Specifies the clock_id to be used by clock_gettime to obtain the alternate
+epoch if \fBlog_alternate_epoch\fR is true. Otherwise has no effect. Default
+value is 0, or CLOCK_REALTIME.
 .TP
 .BI block_error_percentiles \fR=\fPbool
 If set, record errors in trim block-sized units from writes and trims and

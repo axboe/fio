@@ -30,6 +30,6 @@ extern bool ramp_time_over(struct thread_data *);
 extern bool in_ramp_time(struct thread_data *);
 extern void fio_time_init(void);
 extern void timespec_add_msec(struct timespec *, unsigned int);
-extern void set_epoch_time(struct thread_data *, int, clockid_t);
+extern void set_epoch_time(struct thread_data *, clockid_t, clockid_t);
 
 #endif
