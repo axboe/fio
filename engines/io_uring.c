@@ -18,6 +18,7 @@
 #include "../lib/memalign.h"
 #include "../lib/fls.h"
 #include "../lib/roundup.h"
+#include "../verify.h"
 
 #ifdef ARCH_HAVE_IOURING
 
@@ -1299,6 +1300,19 @@ static int fio_ioring_cmd_open_file(struct thread_data *td, struct fio_file *f)
 				return 1;
 			}
                 }
+
+		/*
+		 * For extended logical block sizes we cannot use verify when
+		 * end to end data protection checks are enabled, as the PI
+		 * section of data buffer conflicts with verify.
+		 */
+		if (data->ms && data->pi_type && data->lba_ext &&
+		    td->o.verify != VERIFY_NONE) {
+			log_err("%s: for extended LBA, verify cannot be used when E2E data protection is enabled\n",
+				f->file_name);
+			td_verror(td, EINVAL, "fio_ioring_cmd_open_file");
+			return 1;
+		}
 	}
 	if (!ld || !o->registerfiles)
 		return generic_open_file(td, f);
