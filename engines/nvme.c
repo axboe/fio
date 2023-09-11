@@ -415,19 +415,24 @@ void fio_nvme_pi_fill(struct nvme_uring_cmd *cmd, struct io_u *io_u,
 	case NVME_NS_DPS_PI_TYPE2:
 		switch (data->guard_type) {
 		case NVME_NVM_NS_16B_GUARD:
-			cmd->cdw14 = (__u32)slba;
+			if (opts->io_flags & NVME_IO_PRINFO_PRCHK_REF)
+				cmd->cdw14 = (__u32)slba;
 			break;
 		case NVME_NVM_NS_64B_GUARD:
-			cmd->cdw14 = (__u32)slba;
-			cmd->cdw3 = ((slba >> 32) & 0xffff);
+			if (opts->io_flags & NVME_IO_PRINFO_PRCHK_REF) {
+				cmd->cdw14 = (__u32)slba;
+				cmd->cdw3 = ((slba >> 32) & 0xffff);
+			}
 			break;
 		default:
 			break;
 		}
-		cmd->cdw15 = (opts->apptag_mask << 16 | opts->apptag);
+		if (opts->io_flags & NVME_IO_PRINFO_PRCHK_APP)
+			cmd->cdw15 = (opts->apptag_mask << 16 | opts->apptag);
 		break;
 	case NVME_NS_DPS_PI_TYPE3:
-		cmd->cdw15 = (opts->apptag_mask << 16 | opts->apptag);
+		if (opts->io_flags & NVME_IO_PRINFO_PRCHK_APP)
+			cmd->cdw15 = (opts->apptag_mask << 16 | opts->apptag);
 		break;
 	case NVME_NS_DPS_PI_NONE:
 		break;
