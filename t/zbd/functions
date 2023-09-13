@@ -27,6 +27,17 @@ blkzone_reports_capacity() {
 		"${blkzone}" report -c 1 -o 0 "${dev}" | grep -q 'cap '
 }
 
+has_command() {
+	local cmd="${1}"
+
+	cmd_path=$(type -p "${cmd}" 2>/dev/null)
+	if [ -z "${cmd_path}" ]; then
+		echo "${cmd} is not available"
+		return 1
+	fi
+	return 0
+}
+
 # Whether or not $1 (/dev/...) is a NVME ZNS device.
 is_nvme_zns() {
 	local s
