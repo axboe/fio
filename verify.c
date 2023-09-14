@@ -1648,6 +1648,10 @@ static int open_state_file(const char *name, const char *prefix, int num,
 	else
 		flags = O_RDONLY;
 
+#ifdef _WIN32
+	flags |= O_BINARY;
+#endif
+
 	verify_state_gen_name(out, sizeof(out), name, prefix, num);
 
 	fd = open(out, flags, 0644);
