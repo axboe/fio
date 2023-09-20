@@ -5105,6 +5105,9 @@ is the connect string, and `remote-args` and `job file(s)` are sent to the
 server. The `server` string follows the same format as it does on the server
 side, to allow IP/hostname/socket and port strings.
 
+Note that all job options must be defined in job files when running fio as a
+client. Any job options specified in `remote-args` will be ignored.
+
 Fio can connect to multiple servers this way::
 
     fio --client=<server1> <job file(s)> --client=<server2> <job file(s)>
