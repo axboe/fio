@@ -398,7 +398,8 @@ static int verify_io_u_pattern(struct verify_header *hdr, struct vcont *vc)
 				(unsigned char)buf[i],
 				(unsigned char)pattern[mod],
 				bits);
-			log_err("fio: bad pattern block offset %u\n", i);
+			log_err("fio: bad pattern block offset %u\n",
+				i + header_size);
 			vc->name = "pattern";
 			log_verify_failure(hdr, vc);
 			return EILSEQ;
