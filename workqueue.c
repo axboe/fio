@@ -136,7 +136,8 @@ static void *worker_thread(void *data)
 	sk_out_assign(sw->sk_out);
 
 	if (wq->ops.nice) {
-		if (nice(wq->ops.nice) < 0) {
+		errno = 0;
+		if (nice(wq->ops.nice) == -1 && errno != 0) {
 			log_err("workqueue: nice %s\n", strerror(errno));
 			ret = 1;
 		}
