@@ -27,7 +27,7 @@ jobs:
           os: ubuntu-22.04
           cc: clang
         - build: macos
-          os: macos-12
+          os: macos-13
         - build: linux-i686-gcc
           os: ubuntu-22.04
           arch: i686
