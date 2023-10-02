@@ -1002,14 +1002,14 @@ void flush_samples(FILE *f, void *samples, uint64_t sample_size)
 
 	if (log_offset) {
 		if (log_prio)
-			fmt = "%lu, %" PRId64 ", %u, %llu, %llu, 0x%04x\n";
+			fmt = "%" PRIu64 ", %" PRId64 ", %u, %llu, %llu, 0x%04x\n";
 		else
-			fmt = "%lu, %" PRId64 ", %u, %llu, %llu, %u\n";
+			fmt = "%" PRIu64 ", %" PRId64 ", %u, %llu, %llu, %u\n";
 	} else {
 		if (log_prio)
-			fmt = "%lu, %" PRId64 ", %u, %llu, 0x%04x\n";
+			fmt = "%" PRIu64 ", %" PRId64 ", %u, %llu, 0x%04x\n";
 		else
-			fmt = "%lu, %" PRId64 ", %u, %llu, %u\n";
+			fmt = "%" PRIu64 ", %" PRId64 ", %u, %llu, %u\n";
 	}
 
 	nr_samples = sample_size / __log_entry_sz(log_offset);
@@ -1024,7 +1024,7 @@ void flush_samples(FILE *f, void *samples, uint64_t sample_size)
 
 		if (!log_offset) {
 			fprintf(f, fmt,
-				(unsigned long) s->time,
+				s->time,
 				s->data.val,
 				io_sample_ddir(s), (unsigned long long) s->bs,
 				prio_val);
@@ -1032,7 +1032,7 @@ void flush_samples(FILE *f, void *samples, uint64_t sample_size)
 			struct io_sample_offset *so = (void *) s;
 
 			fprintf(f, fmt,
-				(unsigned long) s->time,
+				s->time,
 				s->data.val,
 				io_sample_ddir(s), (unsigned long long) s->bs,
 				(unsigned long long) so->offset,
