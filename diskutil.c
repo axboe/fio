@@ -103,8 +103,8 @@ static void update_io_tick_disk(struct disk_util *du)
 
 	fio_gettime(&t, NULL);
 	dus->s.msec += mtime_since(&du->time, &t);
-	memcpy(&du->time, &t, sizeof(t));
-	memcpy(&ldus->s, &__dus.s, sizeof(__dus.s));
+	du->time = t;
+	ldus->s = __dus.s;
 }
 
 int update_io_ticks(void)
