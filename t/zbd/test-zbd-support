@@ -1058,15 +1058,20 @@ test44() {
 
 test45() {
     local bs i
+    local grep_str="fio: first I/O failed. If .* is a zoned block device, consider --zonemode=zbd"
 
     require_zbd || return $SKIP_TESTCASE
     prep_write
     bs=$((min_seq_write_size))
-    run_one_fio_job "$(ioengine "psync")" --iodepth=1 --rw=randwrite --bs=$bs\
-		    --offset=$((first_sequential_zone_sector * 512)) \
-		    --size="$zone_size" --do_verify=1 --verify=md5 2>&1 |
-	tee -a "${logfile}.${test_number}" |
-	grep -q "fio: first I/O failed. If .* is a zoned block device, consider --zonemode=zbd"
+    for ((i = 0; i < 10; i++)); do
+	    run_one_fio_job "$(ioengine "psync")" --iodepth=1 --rw=randwrite \
+			    --offset=$((first_sequential_zone_sector * 512)) \
+			    --bs="$bs" --time_based --runtime=1s \
+			    --do_verify=1 --verify=md5 \
+		    >> "${logfile}.${test_number}" 2>&1
+	    grep -qe "$grep_str" "${logfile}.${test_number}" && return 0
+    done
+    return 1
 }
 
 # Random write to sequential zones, libaio, 8 jobs, queue depth 64 per job
