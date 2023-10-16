@@ -864,7 +864,8 @@ cat > $TMPC <<EOF
 #include <signal.h> /* pthread_sigmask() */
 int main(void)
 {
-  return pthread_sigmask(0, NULL, NULL);
+  sigset_t sigmask;
+  return pthread_sigmask(0, NULL, &sigmask);
 }
 EOF
 if compile_prog "" "$LIBS" "pthread_sigmask" ; then
