@@ -86,7 +86,7 @@ install_macos() {
     #echo "Updating homebrew..."
     #brew update >/dev/null 2>&1
     echo "Installing packages..."
-    HOMEBREW_NO_AUTO_UPDATE=1 brew install cunit libnfs sphinx-doc
+    HOMEBREW_NO_AUTO_UPDATE=1 brew install cunit libnfs sphinx-doc pygments python-certifi
     brew link sphinx-doc --force
     pip3 install scipy six statsmodels
 }
