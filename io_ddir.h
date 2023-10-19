@@ -11,6 +11,7 @@ enum fio_ddir {
 	DDIR_WAIT,
 	DDIR_LAST,
 	DDIR_INVAL = -1,
+	DDIR_TIMEOUT = -2,
 
 	DDIR_RWDIR_CNT = 3,
 	DDIR_RWDIR_SYNC_CNT = 4,
