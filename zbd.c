@@ -2171,6 +2171,7 @@ retry:
 	case DDIR_WAIT:
 	case DDIR_LAST:
 	case DDIR_INVAL:
+	case DDIR_TIMEOUT:
 		goto accept;
 	}
 

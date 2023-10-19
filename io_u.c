@@ -717,7 +717,7 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 		 * check if the usec is capable of taking negative values
 		 */
 		if (now > td->o.timeout) {
-			ddir = DDIR_INVAL;
+			ddir = DDIR_TIMEOUT;
 			return ddir;
 		}
 		usec = td->o.timeout - now;
@@ -726,7 +726,7 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 
 	now = utime_since_now(&td->epoch);
 	if ((td->o.timeout && (now > td->o.timeout)) || td->terminate)
-		ddir = DDIR_INVAL;
+		ddir = DDIR_TIMEOUT;
 
 	return ddir;
 }
@@ -951,7 +951,7 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 
 	set_rw_ddir(td, io_u);
 
-	if (io_u->ddir == DDIR_INVAL) {
+	if (io_u->ddir == DDIR_INVAL || io_u->ddir == DDIR_TIMEOUT) {
 		dprint(FD_IO, "invalid direction received ddir = %d", io_u->ddir);
 		return 1;
 	}
@@ -1419,6 +1419,10 @@ static long set_io_u_file(struct thread_data *td, struct io_u *io_u)
 		put_file_log(td, f);
 		td_io_close_file(td, f);
 		io_u->file = NULL;
+
+		if (io_u->ddir == DDIR_TIMEOUT)
+			return 1;
+
 		if (td->o.file_service_type & __FIO_FSERVICE_NONUNIFORM)
 			fio_file_reset(td, f);
 		else {
