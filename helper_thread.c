@@ -106,13 +106,14 @@ static int read_from_pipe(int fd, void *buf, size_t len)
 
 static void block_signals(void)
 {
-#ifdef HAVE_PTHREAD_SIGMASK
+#ifdef CONFIG_PTHREAD_SIGMASK
 	sigset_t sigmask;
+
+	int ret;
 
 	ret = pthread_sigmask(SIG_UNBLOCK, NULL, &sigmask);
 	assert(ret == 0);
 	ret = pthread_sigmask(SIG_BLOCK, &sigmask, NULL);
-	assert(ret == 0);
 #endif
 }
 
