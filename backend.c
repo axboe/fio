@@ -49,6 +49,7 @@
 #include "helper_thread.h"
 #include "pshared.h"
 #include "zone-dist.h"
+#include "fio_time.h"
 
 static struct fio_sem *startup_sem;
 static struct flist_head *cgroup_list;
@@ -1132,6 +1133,9 @@ reap:
 		}
 		if (ret < 0)
 			break;
+
+		if (ddir_rw(ddir) && td->o.thinkcycles)
+			cycles_spin(td->o.thinkcycles);
 
 		if (ddir_rw(ddir) && td->o.thinktime)
 			handle_thinktime(td, ddir, &comp_time);

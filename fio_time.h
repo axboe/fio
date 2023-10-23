@@ -22,6 +22,7 @@ extern uint64_t time_since_now(const struct timespec *);
 extern uint64_t time_since_genesis(void);
 extern uint64_t mtime_since_genesis(void);
 extern uint64_t utime_since_genesis(void);
+extern void cycles_spin(unsigned int);
 extern uint64_t usec_spin(unsigned int);
 extern uint64_t usec_sleep(struct thread_data *, unsigned long);
 extern void fill_start_time(struct timespec *);
