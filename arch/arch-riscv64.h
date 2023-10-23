@@ -16,7 +16,7 @@ static inline unsigned long long get_cpu_clock(void)
 {
 	unsigned long val;
 
-	asm volatile("rdcycle %0" : "=r"(val));
+	asm volatile("rdtime %0" : "=r"(val));
 	return val;
 }
 #define ARCH_HAVE_CPU_CLOCK
