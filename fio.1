@@ -2142,7 +2142,7 @@ The third accepted format for this option is:
 cmdprio_bssplit=blocksize/percentage/class/level/hint:...
 .RE
 .P
-This is an extension of the second accepted format that allows to also
+This is an extension of the second accepted format that allows one to also
 specify a priority hint.
 .P
 For all formats, only the read and write data directions are supported, values
@@ -2774,7 +2774,7 @@ This is the default posix memory backend for linux NVMe driver.
 .BI hugepage
 Use hugepages, instead of existing posix memory backend. The memory backend
 uses hugetlbfs. This require users to allocate hugepages, mount hugetlbfs and
-set an enviornment variable for XNVME_HUGETLB_PATH.
+set an environment variable for XNVME_HUGETLB_PATH.
 .TP
 .BI spdk
 Uses SPDK's memory allocator.
@@ -2803,7 +2803,7 @@ support it; see \fIhttps://libblkio.gitlab.io/libblkio/blkio.html#drivers\fR
 A colon-separated list of additional libblkio properties to be set after
 creating but before connecting the libblkio instance. Each property must have
 the format \fB<name>=<value>\fR. Colons can be escaped as \fB\\:\fR. These are
-set after the engine sets any other properties, so those can be overriden.
+set after the engine sets any other properties, so those can be overridden.
 Available properties depend on the libblkio version in use and are listed at
 \fIhttps://libblkio.gitlab.io/libblkio/blkio.html#properties\fR
 .TP
@@ -2821,7 +2821,7 @@ may support it; see \fIhttps://libblkio.gitlab.io/libblkio/blkio.html#drivers\fR
 A colon-separated list of additional libblkio properties to be set after
 connecting but before starting the libblkio instance. Each property must have
 the format \fB<name>=<value>\fR. Colons can be escaped as \fB\\:\fR. These are
-set after the engine sets any other properties, so those can be overriden.
+set after the engine sets any other properties, so those can be overridden.
 Available properties depend on the libblkio version in use and are listed at
 \fIhttps://libblkio.gitlab.io/libblkio/blkio.html#properties\fR
 .TP
