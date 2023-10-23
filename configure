@@ -334,7 +334,7 @@ if test "$show_help" = "yes" ; then
 fi
 
 cross_prefix=${cross_prefix-${CROSS_COMPILE}}
-# Preferred compiler (can be overriden later after we know the platform):
+# Preferred compiler (can be overridden later after we know the platform):
 #  ${CC} (if set)
 #  ${cross_prefix}gcc (if cross-prefix specified)
 #  gcc if available

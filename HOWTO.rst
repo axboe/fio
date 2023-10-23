@@ -2344,8 +2344,8 @@ with the caveat that when used on the command line, they must come after the
 
 		cmdprio_bssplit=blocksize/percentage/class/level/hint:...
 
-	This is an extension of the second accepted format that allows to also
-	specify a priority hint.
+	This is an extension of the second accepted format that allows one to
+	also specify a priority hint.
 
 	For all formats, only the read and write data directions are supported,
 	values for trim IOs are ignored. This option is mutually exclusive with
@@ -3014,7 +3014,7 @@ with the caveat that when used on the command line, they must come after the
 	**hugepage**
 		Use hugepages, instead of existing posix memory backend. The
 		memory backend uses hugetlbfs. This require users to allocate
-		hugepages, mount hugetlbfs and set an enviornment variable for
+		hugepages, mount hugetlbfs and set an environment variable for
 		XNVME_HUGETLB_PATH.
 	**spdk**
 		Uses SPDK's memory allocator.
@@ -3047,7 +3047,7 @@ with the caveat that when used on the command line, they must come after the
 	creating but before connecting the libblkio instance. Each property must
 	have the format ``<name>=<value>``. Colons can be escaped as ``\:``.
 	These are set after the engine sets any other properties, so those can
-	be overriden. Available properties depend on the libblkio version in use
+	be overridden. Available properties depend on the libblkio version in use
 	and are listed at
 	https://libblkio.gitlab.io/libblkio/blkio.html#properties
 
@@ -3071,7 +3071,7 @@ with the caveat that when used on the command line, they must come after the
 	connecting but before starting the libblkio instance. Each property must
 	have the format ``<name>=<value>``. Colons can be escaped as ``\:``.
 	These are set after the engine sets any other properties, so those can
-	be overriden. Available properties depend on the libblkio version in use
+	be overridden. Available properties depend on the libblkio version in use
 	and are listed at
 	https://libblkio.gitlab.io/libblkio/blkio.html#properties
 
@@ -3635,8 +3635,8 @@ Threads, processes and job synchronization
 	By default, fio will continue running all other jobs when one job finishes.
 	Sometimes this is not the desired action. Setting ``exitall`` will
 	instead make fio terminate all jobs in the same group. The option
-        ``exit_what`` allows to control which jobs get terminated when ``exitall`` is
-        enabled. The default is ``group`` and does not change the behaviour of
+        ``exit_what`` allows one to control which jobs get terminated when ``exitall``
+        is enabled. The default is ``group`` and does not change the behaviour of
         ``exitall``. The setting ``all`` terminates all jobs. The setting ``stonewall``
         terminates all currently running jobs across all groups and continues execution
         with the next stonewalled group.
