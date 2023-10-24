@@ -308,7 +308,7 @@ static int fio_libnfs_close(struct thread_data *td, struct fio_file *f)
 	return ret;
 }
 
-struct ioengine_ops ioengine = {
+static struct ioengine_ops ioengine = {
 	.name		= "nfs",
 	.version	= FIO_IOOPS_VERSION,
 	.setup		= fio_libnfs_setup,
