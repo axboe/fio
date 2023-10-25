@@ -1196,7 +1196,7 @@ static int fio_ioring_init(struct thread_data *td)
 	    td->o.zone_mode == ZONE_MODE_ZBD)
 		td->io_ops->flags |= FIO_ASYNCIO_SYNC_TRIM;
 	else
-		ld->dsm = calloc(ld->iodepth, sizeof(*ld->dsm));
+		ld->dsm = calloc(td->o.iodepth, sizeof(*ld->dsm));
 
 	return 0;
 }
