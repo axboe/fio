@@ -2263,6 +2263,10 @@ size greater than protection information size, fio will not generate or verify
 the protection information portion of metadata for write or read case
 respectively. If this is set to 0, fio generates protection information for
 write case and verifies for read case. Default: 1.
+
+For 16 bit CRC generation fio will use isa-l if available otherwise it will
+use the default slower generator.
+(see: https://github.com/intel/isa-l)
 .TP
 .BI (io_uring_cmd)pi_chk \fR=\fPstr[,str][,str]
 Controls the protection information check. This can take one or more of these

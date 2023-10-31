@@ -24,6 +24,17 @@
  *
  */
 
+#ifdef CONFIG_LIBISAL
+#include <isa-l/crc.h>
+
+extern unsigned short fio_crc_t10dif(unsigned short crc,
+				     const unsigned char *buffer,
+				     unsigned int len)
+{
+	return crc16_t10dif(crc, buffer, len);
+}
+
+#else
 #include "crc-t10dif.h"
 
 /* Table generated using the following polynomium:
@@ -76,3 +87,5 @@ extern unsigned short fio_crc_t10dif(unsigned short crc,
 
 	return crc;
 }
+
+#endif

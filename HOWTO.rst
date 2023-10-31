@@ -2507,6 +2507,10 @@ with the caveat that when used on the command line, they must come after the
 	If this is set to 0, fio generates protection information for
 	write case and verifies for read case. Default: 1.
 
+	For 16 bit CRC generation fio will use isa-l if available otherwise
+	it will use the default slower generator.
+	(see: https://github.com/intel/isa-l)
+
 .. option:: pi_chk=str[,str][,str] : [io_uring_cmd]
 
 	Controls the protection information check. This can take one or more

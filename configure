@@ -189,6 +189,7 @@ libiscsi="no"
 libnbd="no"
 libnfs=""
 xnvme=""
+isal=""
 libblkio=""
 libzbc=""
 dfs=""
@@ -262,6 +263,8 @@ for opt do
   ;;
   --disable-xnvme) xnvme="no"
   ;;
+  --disable-isal) isal="no"
+  ;;
   --disable-libblkio) libblkio="no"
   ;;
   --disable-tcmalloc) disable_tcmalloc="yes"
@@ -322,6 +325,7 @@ if test "$show_help" = "yes" ; then
   echo "--enable-libiscsi       Enable iscsi support"
   echo "--enable-libnbd         Enable libnbd (NBD engine) support"
   echo "--disable-xnvme         Disable xnvme support even if found"
+  echo "--disable-isal          Disable isal support even if found"
   echo "--disable-libblkio      Disable libblkio support even if found"
   echo "--disable-libzbc        Disable libzbc even if found"
   echo "--disable-tcmalloc      Disable tcmalloc support"
@@ -2684,6 +2688,28 @@ if test "$xnvme" != "no" ; then
 fi
 print_config "xnvme engine" "$xnvme"
 
+if test "$targetos" = "Linux" ; then
+##########################################
+# Check ISA-L support
+cat > $TMPC << EOF
+#include <isa-l/crc.h>
+#include <stddef.h>
+int main(void)
+{
+  return crc16_t10dif(0, NULL, 4096);
+}
+EOF
+if test "$isal" != "no" ; then
+  if compile_prog "" "-lisal" "ISAL"; then
+    isal="yes"
+    LIBS="-lisal $LIBS"
+  else
+    isal="no"
+  fi
+fi
+print_config "isal" "$isal"
+fi
+
 ##########################################
 # Check if we have libblkio
 if test "$libblkio" != "no" ; then
@@ -3333,6 +3359,9 @@ if test "$xnvme" = "yes" ; then
   output_sym "CONFIG_LIBXNVME"
   echo "LIBXNVME_CFLAGS=$xnvme_cflags" >> $config_host_mak
   echo "LIBXNVME_LIBS=$xnvme_libs" >> $config_host_mak
+fi
+if test "$isal" = "yes" ; then
+  output_sym "CONFIG_LIBISAL"
 fi
 if test "$libblkio" = "yes" ; then
   output_sym "CONFIG_LIBBLKIO"
