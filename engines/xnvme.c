@@ -964,7 +964,7 @@ static int xnvme_fioe_fetch_ruhs(struct thread_data *td, struct fio_file *f,
 	uint32_t nsid;
 	int err = 0, err_lock;
 
-	if (f->filetype != FIO_TYPE_CHAR) {
+	if (f->filetype != FIO_TYPE_CHAR && f->filetype != FIO_TYPE_FILE) {
 		log_err("ioeng->fdp_ruhs(): ignoring filetype: %d\n", f->filetype);
 		return -EINVAL;
 	}
