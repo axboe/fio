@@ -3876,6 +3876,18 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_THINKTIME,
 	},
 	{
+		.name	= "thinkcycles",
+		.lname	= "Think cycles",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct thread_options, thinkcycles),
+		.help	= "Spin for a constant amount of cycles between requests",
+		.def	= "0",
+		.parent	= "thinktime",
+		.hide	= 1,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_THINKTIME,
+	},
+	{
 		.name	= "thinktime_blocks",
 		.lname	= "Thinktime blocks",
 		.type	= FIO_OPT_INT,

@@ -3209,6 +3209,14 @@ I/O depth
 I/O rate
 ~~~~~~~~
 
+.. option:: thinkcycles=int
+
+	Stall the job for the specified number of cycles after an I/O has completed before
+	issuing the next. May be used to simulate processing being done by an application.
+	This is not taken into account for the time to be waited on for  :option:`thinktime`.
+	Might not have any effect on some platforms, this can be checked by trying a setting
+	a high enough amount of thinkcycles.
+
 .. option:: thinktime=time
 
 	Stall the job for the specified period of time after an I/O has completed before issuing the

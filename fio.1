@@ -2962,6 +2962,13 @@ reporting if I/O gets backed up on the device side (the coordinated omission
 problem). Note that this option cannot reliably be used with async IO engines.
 .SS "I/O rate"
 .TP
+.BI thinkcycles \fR=\fPint
+Stall the job for the specified number of cycles after an I/O has completed before
+issuing the next. May be used to simulate processing being done by an application.
+This is not taken into account for the time to be waited on for \fBthinktime\fR.
+Might not have any effect on some platforms, this can be checked by trying a setting
+a high enough amount of thinkcycles.
+.TP
 .BI thinktime \fR=\fPtime
 Stall the job for the specified period of time after an I/O has completed before issuing the
 next. May be used to simulate processing being done by an application.

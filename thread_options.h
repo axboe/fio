@@ -309,6 +309,8 @@ struct thread_options {
 	char *exec_prerun;
 	char *exec_postrun;
 
+	unsigned int thinkcycles;
+
 	unsigned int thinktime;
 	unsigned int thinktime_spin;
 	unsigned int thinktime_blocks;
@@ -355,8 +357,8 @@ struct thread_options {
 
 	unsigned long long latency_target;
 	unsigned long long latency_window;
-	fio_fp64_t latency_percentile;
 	uint32_t latency_run;
+	fio_fp64_t latency_percentile;
 
 	/*
 	 * flow support
@@ -626,6 +628,8 @@ struct thread_options_pack {
 	uint8_t exec_prerun[FIO_TOP_STR_MAX];
 	uint8_t exec_postrun[FIO_TOP_STR_MAX];
 
+	uint32_t thinkcycles;
+
 	uint32_t thinktime;
 	uint32_t thinktime_spin;
 	uint32_t thinktime_blocks;
@@ -671,8 +675,8 @@ struct thread_options_pack {
 	uint64_t latency_target;
 	uint64_t latency_window;
 	uint64_t max_latency[DDIR_RWDIR_CNT];
-	fio_fp64_t latency_percentile;
 	uint32_t latency_run;
+	fio_fp64_t latency_percentile;
 
 	/*
 	 * flow support

@@ -38,6 +38,17 @@ uint64_t usec_spin(unsigned int usec)
 	return t;
 }
 
+/*
+ * busy loop for a fixed amount of cycles
+ */
+void cycles_spin(unsigned int n)
+{
+	unsigned long i;
+
+	for (i=0; i < n; i++)
+		nop;
+}
+
 uint64_t usec_sleep(struct thread_data *td, unsigned long usec)
 {
 	struct timespec req;
