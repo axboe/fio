@@ -2260,6 +2260,7 @@ int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
 		.thread_number		= cpu_to_le32(td->thread_number),
 		.log_type		= cpu_to_le32(log->log_type),
 		.log_hist_coarseness	= cpu_to_le32(log->hist_coarseness),
+		.per_job_logs		= cpu_to_le32(td->o.per_job_logs),
 	};
 	struct sk_entry *first;
 	struct flist_head *entry;
