@@ -3968,9 +3968,11 @@ Measurements and reporting
 
 .. option:: per_job_logs=bool
 
-	If set, this generates bw/clat/iops log with per file private filenames. If
-	not set, jobs with identical names will share the log filename. Default:
-	true.
+        If set to true, fio generates bw/clat/iops logs with per job unique
+        filenames. If set to false, jobs with identical names will share a log
+        filename. Note that when this option is set to false log files will be
+        opened in append mode and if log files already exist the previous
+        contents will not be overwritten. Default: true.
 
 .. option:: group_reporting
 
