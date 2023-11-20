@@ -10,10 +10,6 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <libxnvme.h>
-#include <libxnvme_libconf.h>
-#include <libxnvme_nvm.h>
-#include <libxnvme_znd.h>
-#include <libxnvme_spec_fs.h>
 #include "fio.h"
 #include "zbd_types.h"
 #include "fdp.h"
