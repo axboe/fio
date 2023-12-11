@@ -590,19 +590,21 @@ int td_io_open_file(struct thread_data *td, struct fio_file *f)
 	if (fio_option_is_set(&td->o, write_hint) &&
 	    (f->filetype == FIO_TYPE_BLOCK || f->filetype == FIO_TYPE_FILE)) {
 		uint64_t hint = td->o.write_hint;
-		int cmd;
+		int res;
 
 		/*
-		 * For direct IO, we just need/want to set the hint on
-		 * the file descriptor. For buffered IO, we need to set
-		 * it on the inode.
+		 * For direct IO, set the hint on the file descriptor if that is
+		 * supported. Otherwise set it on the inode. For buffered IO, we
+		 * need to set it on the inode.
 		 */
-		if (td->o.odirect)
-			cmd = F_SET_FILE_RW_HINT;
-		else
-			cmd = F_SET_RW_HINT;
-
-		if (fcntl(f->fd, cmd, &hint) < 0) {
+		if (td->o.odirect) {
+			res = fcntl(f->fd, F_SET_FILE_RW_HINT, &hint);
+			if (res < 0)
+				res = fcntl(f->fd, F_SET_RW_HINT, &hint);
+		} else {
+			res = fcntl(f->fd, F_SET_RW_HINT, &hint);
+		}
+		if (res < 0) {
 			td_verror(td, errno, "fcntl write hint");
 			goto err;
 		}
