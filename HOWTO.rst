@@ -801,7 +801,7 @@ Target file/device
 
 	On Windows, disk devices are accessed as :file:`\\\\.\\PhysicalDrive0` for
 	the first device, :file:`\\\\.\\PhysicalDrive1` for the second etc.
-	Note: Windows and FreeBSD prevent write access to areas
+	Note: Windows and FreeBSD (refer to geom(4)) prevent write access to areas
 	of the disk containing in-use data (e.g. filesystems).
 
 	The filename "`-`" is a reserved name, meaning *stdin* or *stdout*.  Which
