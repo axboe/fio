@@ -250,6 +250,7 @@ static char *_aws_uriencode(const char *uri)
 	for (i = 0; (c = uri[i]); i++) {
 		if (n > bufsize-5) {
 			log_err("encoding the URL failed\n");
+			free(r);
 			return NULL;
 		}
 
