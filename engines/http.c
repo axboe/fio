@@ -640,7 +640,6 @@ static enum fio_q_status fio_http_queue(struct thread_data *td,
 	char url[1024];
 	long status;
 	CURLcode res;
-	int r = -1;
 
 	fio_ro_check(td, io_u);
 	memset(&_curl_stream, 0, sizeof(_curl_stream));
@@ -712,7 +711,7 @@ static enum fio_q_status fio_http_queue(struct thread_data *td,
 	log_err("WARNING: Only DDIR_READ/DDIR_WRITE/DDIR_TRIM are supported!\n");
 
 err:
-	io_u->error = r;
+	io_u->error = -1;
 	td_verror(td, io_u->error, "transfer");
 out:
 	curl_slist_free_all(slist);
