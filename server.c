@@ -1883,7 +1883,6 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 
 		offset = (char *)extended_buf_wp - (char *)extended_buf;
 		ptr->ts.ss_bw_data_offset = cpu_to_le64(offset);
-		extended_buf_wp = ss_bw + (int) ts->ss_dur;
 	}
 
 	fio_net_queue_cmd(FIO_NET_CMD_TS, extended_buf, extended_buf_size, NULL, SK_F_COPY);
