@@ -276,7 +276,6 @@ static int cq_event_handler(struct thread_data *td, enum ibv_wc_opcode opcode)
 	int i;
 
 	while ((ret = ibv_poll_cq(rd->cq, 1, &wc)) == 1) {
-		ret = 0;
 		compevnum++;
 
 		if (wc.status) {
