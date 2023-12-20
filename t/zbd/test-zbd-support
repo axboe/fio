@@ -1561,6 +1561,29 @@ test67() {
 	grep -q 'Exceeded max_active_zones limit' "${logfile}.${test_number}"
 }
 
+# Test rw=randrw and rwmixwrite=0 options do not issue write I/O unit
+test68() {
+	local off size
+
+	require_zbd || return "$SKIP_TESTCASE"
+
+	reset_zone "${dev}" -1
+
+	# Write some data as preparation
+	off=$((first_sequential_zone_sector * 512))
+	size=$min_seq_write_size
+	run_one_fio_job "$(ioengine "psync")" --rw=write --offset="$off" \
+			--io_size="$size" --zonemode=strided \
+			--zonesize="$zone_size" --zonerange="$zone_size" \
+		       >> "${logfile}.${test_number}" 2>&1 || return $?
+	# Run random mixed read and write specifying zero write ratio
+	run_fio_on_seq "$(ioengine "psync")" --rw=randrw --rwmixwrite=0 \
+		       --time_based --runtime=1s \
+		       >> "${logfile}.${test_number}" 2>&1 || return $?
+	# "WRITE:" shall be recoreded only once for the preparation
+	[[ $(grep -c "WRITE:" "${logfile}.${test_number}") == 1 ]]
+}
+
 SECONDS=0
 tests=()
 dynamic_analyzer=()
