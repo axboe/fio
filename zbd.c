@@ -1876,7 +1876,8 @@ enum fio_ddir zbd_adjust_ddir(struct thread_data *td, struct io_u *io_u,
 	if (ddir != DDIR_READ || !td_rw(td))
 		return ddir;
 
-	if (io_u->file->last_start[DDIR_WRITE] != -1ULL || td->o.read_beyond_wp)
+	if (io_u->file->last_start[DDIR_WRITE] != -1ULL ||
+	    td->o.read_beyond_wp || td->o.rwmix[DDIR_WRITE] == 0)
 		return DDIR_READ;
 
 	return DDIR_WRITE;
