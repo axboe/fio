@@ -55,6 +55,8 @@ class PassThruTest(FioJobCmdTest):
 
 
     def check_result(self):
+        super().check_result()
+
         if 'rw' not in self.fio_opts:
             return
 
