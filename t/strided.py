@@ -99,7 +99,7 @@ class StridedTest(FioJobCmdTest):
             offset = int(tokens[4])
             if offset < zonestart or offset >= zonestart + self.fio_opts['zonerange']:
                 print(f"Offset {offset} outside of zone starting at {zonestart}")
-                return False
+                return
 
             # skip next section if norandommap is enabled with no
             # random_generator or with a random_generator != lfsr
@@ -117,16 +117,14 @@ class StridedTest(FioJobCmdTest):
             block = (offset - zonestart) / self.fio_opts['bs']
             if block in zoneset:
                 print(f"Offset {offset} in zone already touched")
-                return False
+                return
 
             zoneset.add(block)
             if iosperzone % iosperrange == 0:
                 if len(zoneset) != iosperrange:
                     print(f"Expected {iosperrange} blocks in zone but only saw {len(zoneset)}")
-                    return False
+                    return
                 zoneset = set()
-
-        return True
 
 
 TEST_LIST = [   # randommap enabled
