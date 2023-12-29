@@ -71,6 +71,10 @@ class StridedTest(FioJobCmdTest):
         super().setup(fio_args)
 
     def check_result(self):
+        super().check_result()
+        if not self.passed:
+            return
+
         zonestart = 0 if 'offset' not in self.fio_opts else self.fio_opts['offset']
         iospersize = self.fio_opts['zonesize'] / self.fio_opts['bs']
         iosperrange = self.fio_opts['zonerange'] / self.fio_opts['bs']
