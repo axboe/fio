@@ -91,6 +91,10 @@ class TestRR(FioRandTest):
     def check_result(self):
         """Check output for allrandrepeat=1."""
 
+        super().check_result()
+        if not self.passed:
+            return
+
         opt = 'randrepeat' if 'randrepeat' in self.fio_opts else 'allrandrepeat'
         rr = self.fio_opts[opt]
         rand_seeds = self.get_rand_seeds()
@@ -130,6 +134,10 @@ class TestRS(FioRandTest):
 
     def check_result(self):
         """Check output for randseed=something."""
+
+        super().check_result()
+        if not self.passed:
+            return
 
         rand_seeds = self.get_rand_seeds()
         randseed = self.fio_opts['randseed']
