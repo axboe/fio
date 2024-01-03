@@ -5,15 +5,22 @@
 
 #define FDP_DIR_DTYPE	2
 #define FDP_MAX_RUHS	128
+#define FIO_MAX_DP_IDS 	16
 
 /*
  * How fio chooses what placement identifier to use next. Choice of
  * uniformly random, or roundrobin.
  */
+enum {
+	FIO_DP_RANDOM	= 0x1,
+	FIO_DP_RR	= 0x2,
+};
+
 
 enum {
-	FIO_FDP_RANDOM	= 0x1,
-	FIO_FDP_RR	= 0x2,
+	FIO_DP_NONE	= 0x0,
+	FIO_DP_FDP	= 0x1,
+	FIO_DP_STREAMS	= 0x2,
 };
 
 struct fio_ruhs_info {

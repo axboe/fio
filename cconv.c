@@ -354,10 +354,11 @@ int convert_thread_options_to_cpu(struct thread_options *o,
 		o->merge_blktrace_iters[i].u.f = fio_uint64_to_double(le64_to_cpu(top->merge_blktrace_iters[i].u.i));
 
 	o->fdp = le32_to_cpu(top->fdp);
-	o->fdp_pli_select = le32_to_cpu(top->fdp_pli_select);
-	o->fdp_nrpli = le32_to_cpu(top->fdp_nrpli);
-	for (i = 0; i < o->fdp_nrpli; i++)
-		o->fdp_plis[i] = le32_to_cpu(top->fdp_plis[i]);
+	o->dp_type = le32_to_cpu(top->dp_type);
+	o->dp_id_select = le32_to_cpu(top->dp_id_select);
+	o->dp_nr_ids = le32_to_cpu(top->dp_nr_ids);
+	for (i = 0; i < o->dp_nr_ids; i++)
+		o->dp_ids[i] = le32_to_cpu(top->dp_ids[i]);
 #if 0
 	uint8_t cpumask[FIO_TOP_STR_MAX];
 	uint8_t verify_cpumask[FIO_TOP_STR_MAX];
@@ -652,10 +653,11 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 		top->merge_blktrace_iters[i].u.i = __cpu_to_le64(fio_double_to_uint64(o->merge_blktrace_iters[i].u.f));
 
 	top->fdp = cpu_to_le32(o->fdp);
-	top->fdp_pli_select = cpu_to_le32(o->fdp_pli_select);
-	top->fdp_nrpli = cpu_to_le32(o->fdp_nrpli);
-	for (i = 0; i < o->fdp_nrpli; i++)
-		top->fdp_plis[i] = cpu_to_le32(o->fdp_plis[i]);
+	top->dp_type = cpu_to_le32(o->dp_type);
+	top->dp_id_select = cpu_to_le32(o->dp_id_select);
+	top->dp_nr_ids = cpu_to_le32(o->dp_nr_ids);
+	for (i = 0; i < o->dp_nr_ids; i++)
+		top->dp_ids[i] = cpu_to_le32(o->dp_ids[i]);
 #if 0
 	uint8_t cpumask[FIO_TOP_STR_MAX];
 	uint8_t verify_cpumask[FIO_TOP_STR_MAX];

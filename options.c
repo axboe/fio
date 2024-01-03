@@ -270,12 +270,12 @@ static int str_fdp_pli_cb(void *data, const char *input)
 	strip_blank_front(&str);
 	strip_blank_end(str);
 
-	while ((v = strsep(&str, ",")) != NULL && i < FIO_MAX_PLIS)
-		td->o.fdp_plis[i++] = strtoll(v, NULL, 0);
+	while ((v = strsep(&str, ",")) != NULL && i < FIO_MAX_DP_IDS)
+		td->o.dp_ids[i++] = strtoll(v, NULL, 0);
 	free(p);
 
-	qsort(td->o.fdp_plis, i, sizeof(*td->o.fdp_plis), fio_fdp_cmp);
-	td->o.fdp_nrpli = i;
+	qsort(td->o.dp_ids, i, sizeof(*td->o.dp_ids), fio_fdp_cmp);
+	td->o.dp_nr_ids = i;
 
 	return 0;
 }
@@ -3710,32 +3710,59 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group  = FIO_OPT_G_INVALID,
 	},
 	{
-		.name	= "fdp_pli_select",
-		.lname	= "FDP Placement ID select",
+		.name	= "dataplacement",
+		.alias	= "data_placement",
+		.lname	= "Data Placement interface",
 		.type	= FIO_OPT_STR,
-		.off1	= offsetof(struct thread_options, fdp_pli_select),
-		.help	= "Select which FDP placement ID to use next",
+		.off1	= offsetof(struct thread_options, dp_type),
+		.help	= "Data Placement interface to use",
+		.def	= "none",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_INVALID,
+		.posval	= {
+			  { .ival = "none",
+			    .oval = FIO_DP_NONE,
+			    .help = "Do not specify a data placement interface",
+			  },
+			  { .ival = "fdp",
+			    .oval = FIO_DP_FDP,
+			    .help = "Use Flexible Data Placement interface",
+			  },
+			  { .ival = "streams",
+			    .oval = FIO_DP_STREAMS,
+			    .help = "Use Streams interface",
+			  },
+		},
+	},
+	{
+		.name	= "plid_select",
+		.alias	= "fdp_pli_select",
+		.lname	= "Data Placement ID selection strategy",
+		.type	= FIO_OPT_STR,
+		.off1	= offsetof(struct thread_options, dp_id_select),
+		.help	= "Strategy for selecting next Data Placement ID",
 		.def	= "roundrobin",
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_INVALID,
 		.posval	= {
 			  { .ival = "random",
-			    .oval = FIO_FDP_RANDOM,
+			    .oval = FIO_DP_RANDOM,
 			    .help = "Choose a Placement ID at random (uniform)",
 			  },
 			  { .ival = "roundrobin",
-			    .oval = FIO_FDP_RR,
+			    .oval = FIO_DP_RR,
 			    .help = "Round robin select Placement IDs",
 			  },
 		},
 	},
 	{
-		.name	= "fdp_pli",
-		.lname	= "FDP Placement ID indicies",
+		.name	= "plids",
+		.alias	= "fdp_pli",
+		.lname	= "Stream IDs/Data Placement ID indices",
 		.type	= FIO_OPT_STR,
 		.cb	= str_fdp_pli_cb,
-		.off1	= offsetof(struct thread_options, fdp_plis),
-		.help	= "Sets which placement ids to use (defaults to all)",
+		.off1	= offsetof(struct thread_options, dp_ids),
+		.help	= "Sets which Data Placement ids to use (defaults to all for FDP)",
 		.hide	= 1,
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_INVALID,

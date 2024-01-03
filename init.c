@@ -1015,7 +1015,15 @@ static int fixup_options(struct thread_data *td)
 		ret |= 1;
 	}
 
-
+	if (td->o.fdp) {
+		if (fio_option_is_set(&td->o, dp_type) &&
+			(td->o.dp_type == FIO_DP_STREAMS || td->o.dp_type == FIO_DP_NONE)) {
+			log_err("fio: fdp=1 is not compatible with dataplacement={streams, none}\n");
+			ret |= 1;
+		} else {
+			td->o.dp_type = FIO_DP_FDP;
+		}
+	}
 	return ret;
 }
 

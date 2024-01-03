@@ -391,11 +391,11 @@ struct thread_options {
 	fio_fp64_t zrt;
 	fio_fp64_t zrf;
 
-#define FIO_MAX_PLIS 16
 	unsigned int fdp;
-	unsigned int fdp_pli_select;
-	unsigned int fdp_plis[FIO_MAX_PLIS];
-	unsigned int fdp_nrpli;
+	unsigned int dp_type;
+	unsigned int dp_id_select;
+	unsigned int dp_ids[FIO_MAX_DP_IDS];
+	unsigned int dp_nr_ids;
 
 	unsigned int log_entries;
 	unsigned int log_prio;
@@ -709,9 +709,10 @@ struct thread_options_pack {
 	uint32_t log_prio;
 
 	uint32_t fdp;
-	uint32_t fdp_pli_select;
-	uint32_t fdp_plis[FIO_MAX_PLIS];
-	uint32_t fdp_nrpli;
+	uint32_t dp_type;
+	uint32_t dp_id_select;
+	uint32_t dp_ids[FIO_MAX_DP_IDS];
+	uint32_t dp_nr_ids;
 
 	uint32_t num_range;
 	/*

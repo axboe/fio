@@ -59,13 +59,13 @@ static int init_ruh_info(struct thread_data *td, struct fio_file *f)
 	if (ruhs->nr_ruhs > FDP_MAX_RUHS)
 		ruhs->nr_ruhs = FDP_MAX_RUHS;
 
-	if (td->o.fdp_nrpli == 0) {
+	if (td->o.dp_nr_ids == 0) {
 		f->ruhs_info = ruhs;
 		return 0;
 	}
 
-	for (i = 0; i < td->o.fdp_nrpli; i++) {
-		if (td->o.fdp_plis[i] >= ruhs->nr_ruhs) {
+	for (i = 0; i < td->o.dp_nr_ids; i++) {
+		if (td->o.dp_ids[i] >= ruhs->nr_ruhs) {
 			ret = -EINVAL;
 			goto out;
 		}
@@ -77,9 +77,9 @@ static int init_ruh_info(struct thread_data *td, struct fio_file *f)
 		goto out;
 	}
 
-	tmp->nr_ruhs = td->o.fdp_nrpli;
-	for (i = 0; i < td->o.fdp_nrpli; i++)
-		tmp->plis[i] = ruhs->plis[td->o.fdp_plis[i]];
+	tmp->nr_ruhs = td->o.dp_nr_ids;
+	for (i = 0; i < td->o.dp_nr_ids; i++)
+		tmp->plis[i] = ruhs->plis[td->o.dp_ids[i]];
 	f->ruhs_info = tmp;
 out:
 	sfree(ruhs);
@@ -119,7 +119,7 @@ void dp_fill_dspec_data(struct thread_data *td, struct io_u *io_u)
 		return;
 	}
 
-	if (td->o.fdp_pli_select == FIO_FDP_RR) {
+	if (td->o.dp_id_select == FIO_DP_RR) {
 		if (ruhs->pli_loc >= ruhs->nr_ruhs)
 			ruhs->pli_loc = 0;
 

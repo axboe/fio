@@ -1411,7 +1411,7 @@ done:
 
 	td_restore_runstate(td, old_state);
 
-	if (td->o.fdp) {
+	if (td->o.dp_type == FIO_DP_FDP) {
 		err = dp_init(td);
 		if (err)
 			goto err_out;
