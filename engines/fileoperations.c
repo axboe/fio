@@ -1,8 +1,8 @@
 /*
- * fileoperations engine
+ * file/directory operations engine
  *
- * IO engine that doesn't do any IO, just operates files and tracks the latency
- * of the file operation.
+ * IO engine that doesn't do any IO, just operates files/directories
+ * and tracks the latency of the operation.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,9 +15,15 @@
 #include "../optgroup.h"
 #include "../oslib/statx.h"
 
+enum fio_engine {
+	UNKNOWN_OP_ENGINE = 0,
+	FILE_OP_ENGINE = 1,
+	DIR_OP_ENGINE = 2,
+};
 
 struct fc_data {
 	enum fio_ddir stat_ddir;
+	enum fio_engine op_engine;
 };
 
 struct filestat_options {
@@ -61,6 +67,26 @@ static struct fio_option options[] = {
 	},
 };
 
+static int setup_dirs(struct thread_data *td)
+{
+	int ret = 0;
+	int i;
+	struct fio_file *f;
+
+	for_each_file(td, f, i) {
+		dprint(FD_FILE, "setup directory %s\n", f->file_name);
+		ret = fio_mkdir(f->file_name, 0700);
+		if ((ret && errno != EEXIST)) {
+			log_err("create directory %s failed with %d\n",
+				f->file_name, errno);
+			break;
+		}
+		ret = 0;
+	}
+	return ret;
+}
+
+
 
 static int open_file(struct thread_data *td, struct fio_file *f)
 {
@@ -81,7 +107,14 @@ static int open_file(struct thread_data *td, struct fio_file *f)
 	if (do_lat)
 		fio_gettime(&start, NULL);
 
-	f->fd = open(f->file_name, O_CREAT|O_RDWR, 0600);
+	if (((struct fc_data *)td->io_ops_data)->op_engine == FILE_OP_ENGINE)
+		f->fd = open(f->file_name, O_CREAT|O_RDWR, 0600);
+	else if (((struct fc_data *)td->io_ops_data)->op_engine == DIR_OP_ENGINE)
+		f->fd = fio_mkdir(f->file_name, S_IFDIR);
+	else {
+		log_err("fio: unknown file/directory operation engine\n");
+		return 1;
+	}
 
 	if (f->fd == -1) {
 		char buf[FIO_VERROR_SIZE];
@@ -195,7 +228,16 @@ static int delete_file(struct thread_data *td, struct fio_file *f)
 	if (do_lat)
 		fio_gettime(&start, NULL);
 
-	ret = unlink(f->file_name);
+	if (((struct fc_data *)td->io_ops_data)->op_engine == FILE_OP_ENGINE)
+		ret = unlink(f->file_name);
+	else if (((struct fc_data *)td->io_ops_data)->op_engine == DIR_OP_ENGINE)
+		ret = rmdir(f->file_name);
+	else {
+		log_err("fio: unknown file/directory operation engine\n");
+		return 1;
+	}
+
+
 
 	if (ret == -1) {
 		char buf[FIO_VERROR_SIZE];
@@ -250,6 +292,17 @@ static int init(struct thread_data *td)
 	else if (td_write(td))
 		data->stat_ddir = DDIR_WRITE;
 
+	data->op_engine = UNKNOWN_OP_ENGINE;
+
+	if (!strncmp(td->o.ioengine, "file", 4)) {
+		data->op_engine = FILE_OP_ENGINE;
+		dprint(FD_FILE, "Operate engine type: file\n");
+	}
+	if (!strncmp(td->o.ioengine, "dir", 3)) {
+		data->op_engine = DIR_OP_ENGINE;
+		dprint(FD_FILE, "Operate engine type: directory\n");
+	}
+
 	td->io_ops_data = data;
 	return 0;
 }
@@ -259,6 +312,12 @@ static void cleanup(struct thread_data *td)
 	struct fc_data *data = td->io_ops_data;
 
 	free(data);
+}
+
+static int remove_dir(struct thread_data *td, struct fio_file *f)
+{
+	dprint(FD_FILE, "remove directory %s\n", f->file_name);
+	return rmdir(f->file_name);
 }
 
 static struct ioengine_ops ioengine_filecreate = {
@@ -302,12 +361,61 @@ static struct ioengine_ops ioengine_filedelete = {
 				FIO_NOSTATS | FIO_NOFILEHASH,
 };
 
+static struct ioengine_ops ioengine_dircreate = {
+	.name		= "dircreate",
+	.version	= FIO_IOOPS_VERSION,
+	.init		= init,
+	.cleanup	= cleanup,
+	.queue		= queue_io,
+	.get_file_size	= get_file_size,
+	.open_file	= open_file,
+	.close_file	= generic_close_file,
+	.unlink_file    = remove_dir,
+	.flags		= FIO_DISKLESSIO | FIO_SYNCIO | FIO_FAKEIO |
+				FIO_NOSTATS | FIO_NOFILEHASH,
+};
+
+static struct ioengine_ops ioengine_dirstat = {
+	.name		= "dirstat",
+	.version	= FIO_IOOPS_VERSION,
+	.setup		= setup_dirs,
+	.init		= init,
+	.cleanup	= cleanup,
+	.queue		= queue_io,
+	.invalidate	= invalidate_do_nothing,
+	.get_file_size	= generic_get_file_size,
+	.open_file	= stat_file,
+	.unlink_file	= remove_dir,
+	.flags		=  FIO_DISKLESSIO | FIO_SYNCIO | FIO_FAKEIO |
+				FIO_NOSTATS | FIO_NOFILEHASH,
+	.options	= options,
+	.option_struct_size = sizeof(struct filestat_options),
+};
+
+static struct ioengine_ops ioengine_dirdelete = {
+	.name		= "dirdelete",
+	.version	= FIO_IOOPS_VERSION,
+	.setup		= setup_dirs,
+	.init		= init,
+	.invalidate	= invalidate_do_nothing,
+	.cleanup	= cleanup,
+	.queue		= queue_io,
+	.get_file_size	= get_file_size,
+	.open_file	= delete_file,
+	.unlink_file	= remove_dir,
+	.flags		= FIO_DISKLESSIO | FIO_SYNCIO | FIO_FAKEIO |
+				FIO_NOSTATS | FIO_NOFILEHASH,
+};
+
 
 static void fio_init fio_fileoperations_register(void)
 {
 	register_ioengine(&ioengine_filecreate);
 	register_ioengine(&ioengine_filestat);
 	register_ioengine(&ioengine_filedelete);
+	register_ioengine(&ioengine_dircreate);
+	register_ioengine(&ioengine_dirstat);
+	register_ioengine(&ioengine_dirdelete);
 }
 
 static void fio_exit fio_fileoperations_unregister(void)
@@ -315,4 +423,7 @@ static void fio_exit fio_fileoperations_unregister(void)
 	unregister_ioengine(&ioengine_filecreate);
 	unregister_ioengine(&ioengine_filestat);
 	unregister_ioengine(&ioengine_filedelete);
+	unregister_ioengine(&ioengine_dircreate);
+	unregister_ioengine(&ioengine_dirstat);
+	unregister_ioengine(&ioengine_dirdelete);
 }

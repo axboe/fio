@@ -2004,6 +2004,21 @@ Simply delete files by unlink() and do no I/O to the file. You need to set 'file
 and 'nrfiles', so that files will be created.
 This engine is to measure file delete.
 .TP
+.B dircreate
+Simply create the directories and do no I/O to them.  You still need to set
+\fBfilesize\fR so that all the accounting still occurs, but no actual I/O will be
+done other than creating the directories.
+.TP
+.B dirstat
+Simply do stat() and do no I/O to the directory. You need to set 'filesize'
+and 'nrfiles', so that directories will be created.
+This engine is to measure directory lookup and meta data access.
+.TP
+.B dirdelete
+Simply delete directories by unlink() and do no I/O to the directory. You need to set 'filesize'
+and 'nrfiles', so that directories will be created.
+This engine is to measure directory delete.
+.TP
 .B libpmem
 Read and write using mmap I/O to a file on a filesystem
 mounted with DAX on a persistent memory device through the PMDK
