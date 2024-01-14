@@ -3984,12 +3984,12 @@ Measurements and reporting
 	same reporting group, unless if separated by a :option:`stonewall`, or by
 	using :option:`new_group`.
 
-    NOTE: When :option: `group_reporting` is used along with `json` output,
-    there are certain per-job properties which can be different between jobs
-    but do not have a natural group-level equivalent. Examples include
-    `kb_base`, `unit_base`, `sig_figs`, `thread_number`, `pid`, and
-    `job_start`. For these properties, the values for the first job are
-    recorded for the group.
+	NOTE: When :option:`group_reporting` is used along with `json` output,
+	there are certain per-job properties which can be different between jobs
+	but do not have a natural group-level equivalent. Examples include
+	`kb_base`, `unit_base`, `sig_figs`, `thread_number`, `pid`, and
+	`job_start`. For these properties, the values for the first job are
+	recorded for the group.
 
 .. option:: new_group
 
