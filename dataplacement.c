@@ -49,6 +49,20 @@ static int init_ruh_info(struct thread_data *td, struct fio_file *f)
 	if (!ruhs)
 		return -ENOMEM;
 
+	/* set up the data structure used for FDP to work with the supplied stream IDs */
+	if (td->o.dp_type == FIO_DP_STREAMS) {
+		if (!td->o.dp_nr_ids) {
+			log_err("fio: stream IDs must be provided for dataplacement=streams\n");
+			return -EINVAL;
+		}
+		ruhs->nr_ruhs = td->o.dp_nr_ids;
+		for (int i = 0; i < ruhs->nr_ruhs; i++)
+			ruhs->plis[i] = td->o.dp_ids[i];
+
+		f->ruhs_info = ruhs;
+		return 0;
+	}
+
 	ret = fdp_ruh_info(td, f, ruhs);
 	if (ret) {
 		log_info("fio: ruh info failed for %s (%d)\n",
@@ -129,6 +143,6 @@ void dp_fill_dspec_data(struct thread_data *td, struct io_u *io_u)
 		dspec = ruhs->plis[ruhs->pli_loc];
 	}
 
-	io_u->dtype = FDP_DIR_DTYPE;
+	io_u->dtype = td->o.dp_type == FIO_DP_FDP ? FDP_DIR_DTYPE : STREAMS_DIR_DTYPE;
 	io_u->dspec = dspec;
 }

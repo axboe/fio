@@ -3,9 +3,10 @@
 
 #include "io_u.h"
 
-#define FDP_DIR_DTYPE	2
-#define FDP_MAX_RUHS	128
-#define FIO_MAX_DP_IDS 	16
+#define STREAMS_DIR_DTYPE	1
+#define FDP_DIR_DTYPE		2
+#define FDP_MAX_RUHS		128
+#define FIO_MAX_DP_IDS 		16
 
 /*
  * How fio chooses what placement identifier to use next. Choice of
