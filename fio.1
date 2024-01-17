@@ -2264,7 +2264,26 @@ file blocks are fully allocated and the disk request could be issued immediately
 .BI (io_uring_cmd,xnvme)fdp \fR=\fPbool
 Enable Flexible Data Placement mode for write commands.
 .TP
-.BI (io_uring_cmd,xnvme)fdp_pli_select \fR=\fPstr
+.BI (io_uring_cmd,xnvme)dataplacement \fR=\fPstr
+Specifies the data placement directive type to use for write commands. The
+following types are supported:
+.RS
+.RS
+.TP
+.B none
+Do not use a data placement directive. This is the default.
+.TP
+.B fdp
+Use Flexible Data placement directives for write commands. This is equivalent
+to specifying \fBfdp\fR=1.
+.TP
+.B streams
+Use Streams directives for write commands.
+.TP
+.RE
+.RE
+.TP
+.BI (io_uring_cmd,xnvme)plid_select=str, fdp_pli_select \fR=\fPstr
 Defines how fio decides which placement ID to use next. The following types
 are defined:
 .RS
@@ -2277,14 +2296,16 @@ Choose a placement ID at random (uniform).
 Round robin over available placement IDs. This is the default.
 .RE
 .P
-The available placement ID index/indices is defined by \fBfdp_pli\fR option.
+The available placement ID (indices) are defined by the \fBplids\fR option.
 .RE
 .TP
-.BI (io_uring_cmd,xnvme)fdp_pli \fR=\fPstr
-Select which Placement ID Index/Indicies this job is allowed to use for writes.
-By default, the job will cycle through all available Placement IDs, so use this
-to isolate these identifiers to specific jobs. If you want fio to use placement
-identifier only at indices 0, 2 and 5 specify, you would set `fdp_pli=0,2,5`.
+.BI (io_uring_cmd,xnvme)plids=str, fdp_pli \fR=\fPstr
+Select which Placement IDs (streams) or Placement ID Indicies (FDP) this job is
+allowed to use for writes.  For FDP by default, the job will cycle through all
+available Placement IDs, so use this to isolate these identifiers to specific
+jobs. If you want fio to use placement identifier only at indices 0, 2 and 5
+specify, you would set `plids=0,2,5`. For streams this should be a
+comma-separated list of Stream IDs.
 .TP
 .BI (io_uring_cmd,xnvme)md_per_io_size \fR=\fPint
 Size in bytes for separate metadata buffer per IO. Default: 0.

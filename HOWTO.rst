@@ -2500,7 +2500,24 @@ with the caveat that when used on the command line, they must come after the
 
 	Enable Flexible Data Placement mode for write commands.
 
-.. option:: fdp_pli_select=str : [io_uring_cmd] [xnvme]
+.. option:: dataplacement=str : [io_uring_cmd] [xnvme]
+
+        Specifies the data placement directive type to use for write commands.
+        The following types are supported:
+
+                **none**
+                        Do not use a data placement directive. This is the
+                        default.
+
+                **fdp**
+                        Use Flexible Data Placement directives for write
+                        commands. This is equivalent to specifying
+                        :option:`fdp` =1.
+
+               **streams**
+                        Use Streams directives for write commands.
+
+.. option:: plid_select=str, fdp_pli_select=str : [io_uring_cmd] [xnvme]
 
 	Defines how fio decides which placement ID to use next. The following
 	types are defined:
@@ -2512,16 +2529,17 @@ with the caveat that when used on the command line, they must come after the
 			Round robin over available placement IDs. This is the
 			default.
 
-	The available placement ID index/indices is defined by the option
-	:option:`fdp_pli`.
+	The available placement ID (indices) are defined by the option
+	:option:`plids`.
 
-.. option:: fdp_pli=str : [io_uring_cmd] [xnvme]
+.. option:: plids=str, fdp_pli=str : [io_uring_cmd] [xnvme]
 
-	Select which Placement ID Index/Indicies this job is allowed to use for
-	writes. By default, the job will cycle through all available Placement
-        IDs, so use this to isolate these identifiers to specific jobs. If you
-        want fio to use placement identifier only at indices 0, 2 and 5 specify
-        ``fdp_pli=0,2,5``.
+        Select which Placement IDs (streams) or Placement ID Indices (FDP) this
+        job is allowed to use for writes. For FDP by default, the job will
+        cycle through all available Placement IDs, so use this to isolate these
+        identifiers to specific jobs. If you want fio to use FDP placement
+        identifiers only at indices 0, 2 and 5 specify ``plids=0,2,5``. For
+        streams this should be a comma-separated list of Stream IDs.
 
 .. option:: md_per_io_size=int : [io_uring_cmd] [xnvme]
 
