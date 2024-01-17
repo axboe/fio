@@ -2656,7 +2656,7 @@ if test "$libzbc" != "no" ; then
 fi
 print_config "libzbc engine" "$libzbc"
 
-if test "$targetos" = "Linux" ; then
+if test "$targetos" = "Linux" || test "$targetos" = "Android"; then
 ##########################################
 # Check NVME_URING_CMD support
 cat > $TMPC << EOF
