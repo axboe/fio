@@ -61,7 +61,9 @@ main() {
     configure_flags+=(--extra-cflags="${extra_cflags}")
 
     ./configure "${configure_flags[@]}"
-    make -j 2
+    make -j "$(nproc 2>/dev/null || sysctl -n hw.logicalcpu)"
+# macOS does not have nproc, so we have to use sysctl to obtain the number of
+# logical CPUs.
 }
 
 main
