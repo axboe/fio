@@ -749,6 +749,11 @@ open_again:
 		if (!read_only)
 			flags |= O_RDWR;
 
+		if (td->o.verify_only) {
+			flags &= ~O_RDWR;
+			flags |= O_RDONLY;
+		}
+
 		if (f->filetype == FIO_TYPE_FILE && td->o.allow_create)
 			flags |= O_CREAT;
 
