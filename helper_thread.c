@@ -161,7 +161,6 @@ void helper_thread_exit(void)
 		return;
 
 	helper_data->exit = 1;
-	submit_action(A_EXIT);
 	pthread_join(helper_data->thread, NULL);
 }
 
