@@ -155,11 +155,11 @@ output_sym() {
 check_min_lib_version() {
   _feature=$3
 
-  if "${cross_prefix}"pkg-config --atleast-version="$2" "$1" > /dev/null 2>&1; then
+  if pkg-config --atleast-version="$2" "$1" > /dev/null 2>&1; then
     return 0
   fi
   : "${_feature:=${1}}"
-  if "${cross_prefix}"pkg-config --version > /dev/null 2>&1; then
+  if pkg-config --version > /dev/null 2>&1; then
     if test "$(eval echo \"\$$_feature\")" = "yes" ; then
       feature_not_found "$_feature" "$1 >= $2"
     fi
@@ -1631,14 +1631,14 @@ int main(void)
   return GTK_CHECK_VERSION(2, 18, 0) ? 0 : 1; /* 0 on success */
 }
 EOF
-GTK_CFLAGS=$(${cross_prefix}pkg-config --cflags gtk+-2.0 gthread-2.0)
+GTK_CFLAGS=$(pkg-config --cflags gtk+-2.0 gthread-2.0)
 ORG_LDFLAGS=$LDFLAGS
 LDFLAGS=$(echo $LDFLAGS | sed s/"-static"//g)
 if test "$?" != "0" ; then
   echo "configure: gtk and gthread not found"
   exit 1
 fi
-GTK_LIBS=$(${cross_prefix}pkg-config --libs gtk+-2.0 gthread-2.0)
+GTK_LIBS=$(pkg-config --libs gtk+-2.0 gthread-2.0)
 if test "$?" != "0" ; then
   echo "configure: gtk and gthread not found"
   exit 1
