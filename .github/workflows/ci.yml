@@ -64,7 +64,7 @@ jobs:
       if: ${{ contains( matrix.build, 'windows' ) }}
       run: git config --global core.autocrlf input
     - name: Checkout repo
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Install Cygwin toolchain (Windows)
       if: ${{ startsWith(matrix.build, 'windows-cygwin') }}
       uses: cygwin/cygwin-install-action@master
@@ -110,7 +110,7 @@ jobs:
 
     - name: Upload installer as artifact (Windows)
       if: ${{ contains( matrix.build, 'windows' ) }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.build }}-installer
         path: os\windows\*.msi
