@@ -3576,6 +3576,22 @@ static int add_iops_samples(struct thread_data *td, struct timespec *t)
 				td->ts.iops_stat, td->iops_log, false);
 }
 
+static bool td_in_logging_state(struct thread_data *td)
+{
+	if (in_ramp_time(td))
+		return false;
+
+	switch(td->runstate) {
+	case TD_RUNNING:
+	case TD_VERIFYING:
+	case TD_FINISHING:
+	case TD_EXITED:
+		return true;
+	default:
+		return false;
+	}
+}
+
 /*
  * Returns msecs to next event
  */
@@ -3591,8 +3607,7 @@ int calc_log_samples(void)
 
 		if (!td->o.stats)
 			continue;
-		if (in_ramp_time(td) ||
-		    !(td->runstate == TD_RUNNING || td->runstate == TD_VERIFYING)) {
+		if (!td_in_logging_state(td)) {
 			next = min(td->o.iops_avg_time, td->o.bw_avg_time);
 			continue;
 		}
