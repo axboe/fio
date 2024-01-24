@@ -2191,6 +2191,21 @@ I/O engine
 			and 'nrfiles', so that the files will be created.
 			This engine is to measure file delete.
 
+		**dircreate**
+			Simply create the directories and do no I/O to them.  You still need to
+			set  `filesize` so that all the accounting still occurs, but no
+			actual I/O will be done other than creating the directories.
+
+		**dirstat**
+			Simply do stat() and do no I/O to the directories. You need to set 'filesize'
+			and 'nrfiles', so that directories will be created.
+			This engine is to measure directory lookup and meta data access.
+
+		**dirdelete**
+			Simply delete the directories by rmdir() and do no I/O to them. You need to set 'filesize'
+			and 'nrfiles', so that the directories will be created.
+			This engine is to measure directory delete.
+
 		**libpmem**
 			Read and write using mmap I/O to a file on a filesystem
 			mounted with DAX on a persistent memory device through the PMDK
