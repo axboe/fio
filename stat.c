@@ -3585,10 +3585,9 @@ int calc_log_samples(void)
 	struct timespec now;
 	long elapsed_time = 0;
 
-	fio_gettime(&now, NULL);
-
 	for_each_td(td) {
-		elapsed_time = mtime_since_now(&td->epoch);
+		fio_gettime(&now, NULL);
+		elapsed_time = mtime_since(&td->epoch, &now);
 
 		if (!td->o.stats)
 			continue;
