@@ -3782,7 +3782,7 @@ the histogram logs enabled with \fBlog_hist_msec\fR. For each increment
 in coarseness, fio outputs half as many bins. Defaults to 0, for which
 histogram logs contain 1216 latency bins. See \fBLOG FILE FORMATS\fR section.
 .TP
-.BI log_window_value \fR=\fPint "\fR,\fP log_max_value" \fR=\fPint
+.BI log_window_value \fR=\fPstr "\fR,\fP log_max_value" \fR=\fPstr
 If \fBlog_avg_msec\fR is set, fio by default logs the average over that window.
 This option determines whether fio logs the average, maximum or both the
 values over the window. This only affects the latency logging, as both average

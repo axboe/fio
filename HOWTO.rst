@@ -4088,7 +4088,7 @@ Measurements and reporting
 	histogram logs contain 1216 latency bins. See :option:`write_hist_log`
 	and `Log File Formats`_.
 
-.. option:: log_window_value=int, log_max_value=int
+.. option:: log_window_value=str, log_max_value=str
 
 	If :option:`log_avg_msec` is set, fio by default logs the average over that
 	window. This option determines whether fio logs the average, maximum or
