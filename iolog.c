@@ -862,7 +862,12 @@ void setup_log(struct io_log **log, struct log_params *p,
 		l->log_ddir_mask = LOG_OFFSET_SAMPLE_BIT;
 	if (l->log_prio)
 		l->log_ddir_mask |= LOG_PRIO_SAMPLE_BIT;
-	if (l->td->o.log_max == IO_LOG_SAMPLE_BOTH)
+	/*
+	 * The bandwidth-log option generates agg-read_bw.log,
+	 * agg-write_bw.log and agg-trim_bw.log for which l->td is NULL.
+	 * Check if l->td is valid before dereferencing it.
+	 */
+	if (l->td && l->td->o.log_max == IO_LOG_SAMPLE_BOTH)
 		l->log_ddir_mask |= LOG_AVG_MAX_SAMPLE_BIT;
 
 	INIT_FLIST_HEAD(&l->chunk_list);
