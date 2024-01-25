@@ -4067,7 +4067,7 @@ Measurements and reporting
 	I/O that completes. When writing to the disk log, that can quickly grow to a
 	very large size. Setting this option makes fio average the each log entry
 	over the specified period of time, reducing the resolution of the log.  See
-	:option:`log_max_value` as well. Defaults to 0, logging all entries.
+	:option:`log_window_value` as well. Defaults to 0, logging all entries.
 	Also see `Log File Formats`_.
 
 .. option:: log_hist_msec=int
@@ -4088,11 +4088,28 @@ Measurements and reporting
 	histogram logs contain 1216 latency bins. See :option:`write_hist_log`
 	and `Log File Formats`_.
 
-.. option:: log_max_value=bool
+.. option:: log_window_value=int, log_max_value=int
 
-	If :option:`log_avg_msec` is set, fio logs the average over that window. If
-	you instead want to log the maximum value, set this option to 1. Defaults to
-	0, meaning that averaged values are logged.
+	If :option:`log_avg_msec` is set, fio by default logs the average over that
+	window. This option determines whether fio logs the average, maximum or
+	both the values over the window. This only affects the latency logging,
+	as both average and maximum values for iops or bw log will be same.
+	Accepted values are:
+
+		**avg**
+			Log average value over the window. The default.
+
+		**max**
+			Log maximum value in the window.
+
+		**both**
+			Log both average and maximum value over the window.
+
+		**0**
+			Backward-compatible alias for **avg**.
+
+		**1**
+			Backward-compatible alias for **max**.
 
 .. option:: log_offset=bool
 
@@ -5061,11 +5078,19 @@ toggled with :option:`log_offset`.
 by the ioengine specific :option:`cmdprio_percentage`.
 
 Fio defaults to logging every individual I/O but when windowed logging is set
-through :option:`log_avg_msec`, either the average (by default) or the maximum
-(:option:`log_max_value` is set) *value* seen over the specified period of time
-is recorded. Each *data direction* seen within the window period will aggregate
-its values in a separate row. Further, when using windowed logging the *block
-size* and *offset* entries will always contain 0.
+through :option:`log_avg_msec`, either the average (by default), the maximum
+(:option:`log_window_value` is set to max) *value* seen over the specified period
+of time, or both the average *value* and maximum *value1* (:option:`log_window_value`
+is set to both) is recorded. The log file format when both the values are reported
+takes this form:
+
+    *time* (`msec`), *value*, *value1*, *data direction*, *block size* (`bytes`),
+    *offset* (`bytes`), *command priority*
+
+
+Each *data direction* seen within the window period will aggregate its values in a
+separate row. Further, when using windowed logging the *block size* and *offset*
+entries will always contain 0.
 
 
 Client/Server

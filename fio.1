@@ -3764,7 +3764,7 @@ By default, fio will log an entry in the iops, latency, or bw log for every
 I/O that completes. When writing to the disk log, that can quickly grow to a
 very large size. Setting this option makes fio average the each log entry
 over the specified period of time, reducing the resolution of the log. See
-\fBlog_max_value\fR as well. Defaults to 0, logging all entries.
+\fBlog_window_value\fR as well. Defaults to 0, logging all entries.
 Also see \fBLOG FILE FORMATS\fR section.
 .TP
 .BI log_hist_msec \fR=\fPint
@@ -3782,10 +3782,28 @@ the histogram logs enabled with \fBlog_hist_msec\fR. For each increment
 in coarseness, fio outputs half as many bins. Defaults to 0, for which
 histogram logs contain 1216 latency bins. See \fBLOG FILE FORMATS\fR section.
 .TP
-.BI log_max_value \fR=\fPbool
-If \fBlog_avg_msec\fR is set, fio logs the average over that window. If
-you instead want to log the maximum value, set this option to 1. Defaults to
-0, meaning that averaged values are logged.
+.BI log_window_value \fR=\fPint "\fR,\fP log_max_value" \fR=\fPint
+If \fBlog_avg_msec\fR is set, fio by default logs the average over that window.
+This option determines whether fio logs the average, maximum or both the
+values over the window. This only affects the latency logging, as both average
+and maximum values for iops or bw log will be same. Accepted values are:
+.RS
+.TP
+.B avg
+Log average value over the window. The default.
+.TP
+.B max
+Log maximum value in the window.
+.TP
+.B both
+Log both average and maximum value over the window.
+.TP
+.B 0
+Backward-compatible alias for \fBavg\fR.
+.TP
+.B 1
+Backward-compatible alias for \fBmax\fR.
+.RE
 .TP
 .BI log_offset \fR=\fPbool
 If this is set, the iolog options will include the byte offset for the I/O
@@ -4797,11 +4815,20 @@ number with the lowest 13 bits indicating the priority value (\fBprio\fR and
 (\fBprioclass\fR and \fBcmdprio_class\fR options).
 .P
 Fio defaults to logging every individual I/O but when windowed logging is set
-through \fBlog_avg_msec\fR, either the average (by default) or the maximum
-(\fBlog_max_value\fR is set) `value' seen over the specified period of time
-is recorded. Each `data direction' seen within the window period will aggregate
-its values in a separate row. Further, when using windowed logging the `block
-size' and `offset' entries will always contain 0.
+through \fBlog_avg_msec\fR, either the average (by default), the maximum
+(\fBlog_window_value\fR is set to max) `value' seen over the specified period of
+time, or both the average `value' and maximum `value1' (\fBlog_window_value\fR is
+set to both) is recorded. The log file format when both the values are reported
+takes this form:
+.RS
+.P
+time (msec), value, value1, data direction, block size (bytes), offset (bytes),
+command priority
+.RE
+.P
+Each `data direction' seen within the window period will aggregate its values
+in a separate row. Further, when using windowed logging the `block size' and
+`offset' entries will always contain 0.
 .SH CLIENT / SERVER
 Normally fio is invoked as a stand-alone application on the machine where the
 I/O workload should be generated. However, the backend and frontend of fio can
