@@ -129,7 +129,6 @@ static int batch_complete = BATCH_COMPLETE;
 static int bs = BS;
 static int polled = 1;		/* use IO polling */
 static int fixedbufs = 1;	/* use fixed user buffers */
-static int dma_map;		/* pre-map DMA buffers */
 static int register_files = 1;	/* use fixed files */
 static int buffered = 0;	/* use buffered IO, not O_DIRECT */
 static int sq_thread_poll = 0;	/* use kernel submission/poller thread */
@@ -154,17 +153,6 @@ static int vectored = 1;
 static float plist[] = { 1.0, 5.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0,
 			80.0, 90.0, 95.0, 99.0, 99.5, 99.9, 99.95, 99.99 };
 static int plist_len = 17;
-
-#ifndef IORING_REGISTER_MAP_BUFFERS
-#define IORING_REGISTER_MAP_BUFFERS	26
-struct io_uring_map_buffers {
-	__s32	fd;
-	__u32	buf_start;
-	__u32	buf_end;
-	__u32	flags;
-	__u64	rsvd[2];
-};
-#endif
 
 static int nvme_identify(int fd, __u32 nsid, enum nvme_identify_cns cns,
 			 enum nvme_csi csi, void *data)
@@ -403,22 +391,6 @@ static void add_stat(struct submitter *s, int clock_index, int nr)
 		s->plat[pidx] += nr;
 	}
 #endif
-}
-
-static int io_uring_map_buffers(struct submitter *s)
-{
-	struct io_uring_map_buffers map = {
-		.fd		= s->files[0].real_fd,
-		.buf_end	= depth,
-	};
-
-	if (do_nop)
-		return 0;
-	if (s->nr_files > 1)
-		fprintf(stdout, "Mapping buffers may not work with multiple files\n");
-
-	return syscall(__NR_io_uring_register, s->ring_fd,
-			IORING_REGISTER_MAP_BUFFERS, &map, 1);
 }
 
 static int io_uring_register_buffers(struct submitter *s)
@@ -950,14 +922,6 @@ static int setup_ring(struct submitter *s)
 			perror("io_uring_register_buffers");
 			return 1;
 		}
-
-		if (dma_map) {
-			ret = io_uring_map_buffers(s);
-			if (ret < 0) {
-				perror("io_uring_map_buffers");
-				return 1;
-			}
-		}
 	}
 
 	if (register_files) {
@@ -1071,7 +1035,7 @@ static int submitter_init(struct submitter *s)
 	}
 
 	if (!init_printed) {
-		printf("polled=%d, fixedbufs=%d/%d, register_files=%d, buffered=%d, QD=%d\n", polled, fixedbufs, dma_map, register_files, buffered, depth);
+		printf("polled=%d, fixedbufs=%d, register_files=%d, buffered=%d, QD=%d\n", polled, fixedbufs, register_files, buffered, depth);
 		printf("%s", buf);
 		init_printed = 1;
 	}
@@ -1519,7 +1483,6 @@ static void usage(char *argv, int status)
 		" -b <int>  : Block size, default %d\n"
 		" -p <bool> : Polled IO, default %d\n"
 		" -B <bool> : Fixed buffers, default %d\n"
-		" -D <bool> : DMA map fixed buffers, default %d\n"
 		" -F <bool> : Register files, default %d\n"
 		" -n <int>  : Number of threads, default %d\n"
 		" -O <bool> : Use O_DIRECT, default %d\n"
@@ -1534,7 +1497,7 @@ static void usage(char *argv, int status)
 		" -P <bool> : Automatically place on device home node %d\n"
 		" -u <bool> : Use nvme-passthrough I/O, default %d\n",
 		argv, DEPTH, BATCH_SUBMIT, BATCH_COMPLETE, BS, polled,
-		fixedbufs, dma_map, register_files, nthreads, !buffered, do_nop,
+		fixedbufs, register_files, nthreads, !buffered, do_nop,
 		stats, runtime == 0 ? "unlimited" : runtime_str, random_io, aio,
 		use_sync, register_ring, numa_placement, pt);
 	exit(status);
@@ -1656,9 +1619,6 @@ int main(int argc, char *argv[])
 		case 'r':
 			runtime = atoi(optarg);
 			break;
-		case 'D':
-			dma_map = !!atoi(optarg);
-			break;
 		case 'R':
 			random_io = !!atoi(optarg);
 			break;
@@ -1694,8 +1654,6 @@ int main(int argc, char *argv[])
 		batch_complete = depth;
 	if (batch_submit > depth)
 		batch_submit = depth;
-	if (!fixedbufs && dma_map)
-		dma_map = 0;
 
 	submitter = calloc(nthreads, sizeof(*submitter) +
 				roundup_pow2(depth) * sizeof(struct iovec));
