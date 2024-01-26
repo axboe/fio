@@ -12,9 +12,9 @@ iodepth=16
 ; use the same prio class and prio level defined by the cmdprio_class
 ; and cmdprio options.
 [cmdprio]
-; 40% of read IOs are 64kB and 60% are 1MB. 100% of writes are 1MB.
+; 40% of read I/Os are 64kB and 60% are 1MB. 100% of writes are 1MB.
 ; 100% of the 64kB reads are executed with prio class 1 and prio level 0.
-; All other IOs are executed without a priority set.
+; All other I/Os are executed without a priority set.
 bssplit=64k/40:1024k/60,1024k/100
 cmdprio_bssplit=64k/100:1024k/0,1024k/0
 cmdprio_class=1
@@ -23,20 +23,20 @@ cmdprio=0
 ; Advanced cmdprio_bssplit format. Each non-zero percentage entry can
 ; use a different prio class and prio level (appended to each entry).
 [cmdprio-adv]
-; 40% of read IOs are 64kB and 60% are 1MB. 100% of writes are 1MB.
+; 40% of read I/Os are 64kB and 60% are 1MB. 100% of writes are 1MB.
 ; 25% of the 64kB reads are executed with prio class 1 and prio level 1,
 ; 75% of the 64kB reads are executed with prio class 3 and prio level 2.
-; All other IOs are executed without a priority set.
+; All other I/Os are executed without a priority set.
 stonewall
 bssplit=64k/40:1024k/60,1024k/100
 cmdprio_bssplit=64k/25/1/1:64k/75/3/2:1024k/0,1024k/0
 
 ; Identical to the previous example, but with a default priority defined.
 [cmdprio-adv-def]
-; 40% of read IOs are 64kB and 60% are 1MB. 100% of writes are 1MB.
+; 40% of read I/Os are 64kB and 60% are 1MB. 100% of writes are 1MB.
 ; 25% of the 64kB reads are executed with prio class 1 and prio level 1,
 ; 75% of the 64kB reads are executed with prio class 3 and prio level 2.
-; All other IOs are executed with prio class 2 and prio level 7.
+; All other I/Os are executed with prio class 2 and prio level 7.
 stonewall
 prioclass=2
 prio=7
