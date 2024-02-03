@@ -18,8 +18,8 @@
  */
 char *num2str(uint64_t num, int maxlen, int base, int pow2, enum n2s_unit units)
 {
-	const char *sistr[] = { "", "k", "M", "G", "T", "P", "E" };
-	const char *iecstr[] = { "", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei" };
+	const char *sistr[] = { "", "k", "M", "G", "T", "P", "E", "Z", "Y" };
+	const char *iecstr[] = { "", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi", "Yi" };
 	const char **unitprefix;
 	static const char *const unitstr[] = {
 		[N2S_NONE]	= "",
