@@ -2626,10 +2626,13 @@ with the caveat that when used on the command line, they must come after the
 		User datagram protocol V6.
 	**unix**
 		UNIX domain socket.
+	**vsock**
+		VSOCK protocol.
 
-	When the protocol is TCP or UDP, the port must also be given, as well as the
-	hostname if the job is a TCP listener or UDP reader. For unix sockets, the
+	When the protocol is TCP, UDP or VSOCK, the port must also be given, as well as the
+	hostname if the job is a TCP or VSOCK listener or UDP reader. For unix sockets, the
 	normal :option:`filename` option should be used and the port is invalid.
+	When the protocol is VSOCK, the :option:`hostname` is the CID of the remote VM.
 
 .. option:: listen : [netsplice] [net]
 

@@ -1,0 +1,14 @@
+# Example network vsock job, just defines a receiver
+[global]
+ioengine=net
+port=8888
+protocol=vsock
+bs=4k
+size=100g
+
+#set the below option to enable end-to-end data integrity tests
+#verify=md5
+
+[receiver]
+listen
+rw=read

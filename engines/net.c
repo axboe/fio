@@ -18,6 +18,16 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
+#ifdef CONFIG_VSOCK
+#include <linux/vm_sockets.h>
+#else
+struct sockaddr_vm {
+};
+#ifndef AF_VSOCK
+#define AF_VSOCK	-1
+#endif
+#endif
+
 #include "../fio.h"
 #include "../verify.h"
 #include "../optgroup.h"
@@ -30,6 +40,7 @@ struct netio_data {
 	struct sockaddr_in addr;
 	struct sockaddr_in6 addr6;
 	struct sockaddr_un addr_un;
+	struct sockaddr_vm addr_vm;
 	uint64_t udp_send_seq;
 	uint64_t udp_recv_seq;
 };
@@ -69,6 +80,7 @@ enum {
 	FIO_TYPE_UNIX	= 3,
 	FIO_TYPE_TCP_V6	= 4,
 	FIO_TYPE_UDP_V6	= 5,
+	FIO_TYPE_VSOCK_STREAM   = 6,
 };
 
 static int str_hostname_cb(void *data, const char *input);
@@ -125,6 +137,10 @@ static struct fio_option options[] = {
 			  { .ival = "unix",
 			    .oval = FIO_TYPE_UNIX,
 			    .help = "UNIX domain socket",
+			  },
+			  { .ival = "vsock",
+			    .oval = FIO_TYPE_VSOCK_STREAM,
+			    .help = "Virtual socket",
 			  },
 		},
 		.category = FIO_OPT_C_ENGINE,
@@ -221,6 +237,11 @@ static inline int is_tcp(struct netio_options *o)
 static inline int is_ipv6(struct netio_options *o)
 {
 	return o->proto == FIO_TYPE_UDP_V6 || o->proto == FIO_TYPE_TCP_V6;
+}
+
+static inline int is_vsock(struct netio_options *o)
+{
+	return o->proto == FIO_TYPE_VSOCK_STREAM;
 }
 
 static int set_window_size(struct thread_data *td, int fd)
@@ -732,6 +753,9 @@ static int fio_netio_connect(struct thread_data *td, struct fio_file *f)
 	} else if (o->proto == FIO_TYPE_UNIX) {
 		domain = AF_UNIX;
 		type = SOCK_STREAM;
+	} else if (is_vsock(o)) {
+		domain = AF_VSOCK;
+		type = SOCK_STREAM;
 	} else {
 		log_err("fio: bad network type %d\n", o->proto);
 		f->fd = -1;
@@ -809,7 +833,14 @@ static int fio_netio_connect(struct thread_data *td, struct fio_file *f)
 			close(f->fd);
 			return 1;
 		}
+	} else if (is_vsock(o)) {
+		socklen_t len = sizeof(nd->addr_vm);
 
+		if (connect(f->fd, (struct sockaddr *) &nd->addr_vm, len) < 0) {
+			td_verror(td, errno, "connect");
+			close(f->fd);
+			return 1;
+		}
 	} else {
 		struct sockaddr_un *addr = &nd->addr_un;
 		socklen_t len;
@@ -849,6 +880,9 @@ static int fio_netio_accept(struct thread_data *td, struct fio_file *f)
 	if (o->proto == FIO_TYPE_TCP) {
 		socklen = sizeof(nd->addr);
 		f->fd = accept(nd->listenfd, (struct sockaddr *) &nd->addr, &socklen);
+	} else if (is_vsock(o)) {
+		socklen = sizeof(nd->addr_vm);
+		f->fd = accept(nd->listenfd, (struct sockaddr *) &nd->addr_vm, &socklen);
 	} else {
 		socklen = sizeof(nd->addr6);
 		f->fd = accept(nd->listenfd, (struct sockaddr *) &nd->addr6, &socklen);
@@ -890,6 +924,9 @@ static void fio_netio_send_close(struct thread_data *td, struct fio_file *f)
 	if (is_ipv6(o)) {
 		to = (struct sockaddr *) &nd->addr6;
 		len = sizeof(nd->addr6);
+	} else if (is_vsock(o)) {
+		to = NULL;
+		len = 0;
 	} else {
 		to = (struct sockaddr *) &nd->addr;
 		len = sizeof(nd->addr);
@@ -960,6 +997,9 @@ static int fio_netio_send_open(struct thread_data *td, struct fio_file *f)
 	if (is_ipv6(o)) {
 		len = sizeof(nd->addr6);
 		to = (struct sockaddr *) &nd->addr6;
+	} else if (is_vsock(o)) {
+		len = sizeof(nd->addr_vm);
+		to = (struct sockaddr *) &nd->addr_vm;
 	} else {
 		len = sizeof(nd->addr);
 		to = (struct sockaddr *) &nd->addr;
@@ -1023,13 +1063,17 @@ static int fio_fill_addr(struct thread_data *td, const char *host, int af,
 
 	memset(&hints, 0, sizeof(hints));
 
-	if (is_tcp(o))
+	if (is_tcp(o) || is_vsock(o))
 		hints.ai_socktype = SOCK_STREAM;
 	else
 		hints.ai_socktype = SOCK_DGRAM;
 
 	if (is_ipv6(o))
 		hints.ai_family = AF_INET6;
+#ifdef CONFIG_VSOCK
+	else if (is_vsock(o))
+		hints.ai_family = AF_VSOCK;
+#endif
 	else
 		hints.ai_family = AF_INET;
 
@@ -1110,12 +1154,50 @@ static int fio_netio_setup_connect_unix(struct thread_data *td,
 	return 0;
 }
 
+static int fio_netio_setup_connect_vsock(struct thread_data *td,
+					const char *host, unsigned short port)
+{
+#ifdef CONFIG_VSOCK
+	struct netio_data *nd = td->io_ops_data;
+	struct sockaddr_vm *addr = &nd->addr_vm;
+	int cid;
+
+	if (!host) {
+		log_err("fio: connect with no host to connect to.\n");
+		if (td_read(td))
+			log_err("fio: did you forget to set 'listen'?\n");
+
+		td_verror(td, EINVAL, "no hostname= set");
+		return 1;
+	}
+
+	addr->svm_family = AF_VSOCK;
+	addr->svm_port = port;
+
+	if (host) {
+		cid = atoi(host);
+		if (cid < 0 || cid > UINT32_MAX) {
+			log_err("fio: invalid CID %d\n", cid);
+			return 1;
+		}
+		addr->svm_cid = cid;
+	}
+
+	return 0;
+#else
+	td_verror(td, -EINVAL, "vsock not supported");
+	return 1;
+#endif
+}
+
 static int fio_netio_setup_connect(struct thread_data *td)
 {
 	struct netio_options *o = td->eo;
 
 	if (is_udp(o) || is_tcp(o))
 		return fio_netio_setup_connect_inet(td, td->o.filename,o->port);
+	else if (is_vsock(o))
+		return fio_netio_setup_connect_vsock(td, td->o.filename, o->port);
 	else
 		return fio_netio_setup_connect_unix(td, td->o.filename);
 }
@@ -1268,6 +1350,47 @@ static int fio_netio_setup_listen_inet(struct thread_data *td, short port)
 	return 0;
 }
 
+static int fio_netio_setup_listen_vsock(struct thread_data *td, short port, int type)
+{
+#ifdef CONFIG_VSOCK
+	struct netio_data *nd = td->io_ops_data;
+	struct sockaddr_vm *addr = &nd->addr_vm;
+	int fd, opt;
+	socklen_t len;
+
+	fd = socket(AF_VSOCK, type, 0);
+	if (fd < 0) {
+		td_verror(td, errno, "socket");
+		return 1;
+	}
+
+	opt = 1;
+	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (void *) &opt, sizeof(opt)) < 0) {
+		td_verror(td, errno, "setsockopt");
+		close(fd);
+		return 1;
+	}
+
+	len = sizeof(*addr);
+
+	nd->addr_vm.svm_family = AF_VSOCK;
+	nd->addr_vm.svm_cid = VMADDR_CID_ANY;
+	nd->addr_vm.svm_port = port;
+
+	if (bind(fd, (struct sockaddr *) addr, len) < 0) {
+		td_verror(td, errno, "bind");
+		close(fd);
+		return 1;
+	}
+
+	nd->listenfd = fd;
+	return 0;
+#else
+	td_verror(td, -EINVAL, "vsock not supported");
+	return -1;
+#endif
+}
+
 static int fio_netio_setup_listen(struct thread_data *td)
 {
 	struct netio_data *nd = td->io_ops_data;
@@ -1276,6 +1399,8 @@ static int fio_netio_setup_listen(struct thread_data *td)
 
 	if (is_udp(o) || is_tcp(o))
 		ret = fio_netio_setup_listen_inet(td, o->port);
+	else if (is_vsock(o))
+		ret = fio_netio_setup_listen_vsock(td, o->port, SOCK_STREAM);
 	else
 		ret = fio_netio_setup_listen_unix(td, td->o.filename);
 
@@ -1311,6 +1436,9 @@ static int fio_netio_init(struct thread_data *td)
 	if (o->proto == FIO_TYPE_UNIX && o->port) {
 		log_err("fio: network IO port not valid with unix socket\n");
 		return 1;
+	} else if (is_vsock(o) && !o->port) {
+		log_err("fio: network IO requires port for vsock\n");
+		return 1;
 	} else if (o->proto != FIO_TYPE_UNIX && !o->port) {
 		log_err("fio: network IO requires port for tcp or udp\n");
 		return 1;
@@ -1318,7 +1446,7 @@ static int fio_netio_init(struct thread_data *td)
 
 	o->port += td->subjob_number;
 
-	if (!is_tcp(o)) {
+	if (!is_tcp(o) && !is_vsock(o)) {
 		if (o->listen) {
 			log_err("fio: listen only valid for TCP proto IO\n");
 			return 1;

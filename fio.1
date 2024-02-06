@@ -2376,11 +2376,16 @@ User datagram protocol V6.
 .TP
 .B unix
 UNIX domain socket.
+.TP
+.B vsock
+VSOCK protocol.
 .RE
 .P
-When the protocol is TCP or UDP, the port must also be given, as well as the
-hostname if the job is a TCP listener or UDP reader. For unix sockets, the
+When the protocol is TCP, UDP or VSOCK, the port must also be given, as well as the
+hostname if the job is a TCP or VSOCK listener or UDP reader. For unix sockets, the
 normal \fBfilename\fR option should be used and the port is invalid.
+When the protocol is VSOCK, the \fBhostname\fR is the CID of the remote VM.
+
 .RE
 .TP
 .BI (netsplice,net)listen

@@ -1,0 +1,22 @@
+# Example network vsock job, just defines two clients that send/recv data
+[global]
+ioengine=net
+
+port=8888
+protocol=vsock
+bs=4k
+size=100g
+
+#set the below option to enable end-to-end data integrity tests
+#verify=md5
+
+[receiver]
+listen
+rw=read
+
+[sender]
+# 1 (VMADDR_CID_LOCAL) is the well-known address
+# for local communication (loopback)
+hostname=1
+startdelay=1
+rw=write

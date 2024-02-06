@@ -1729,6 +1729,25 @@ fi
 print_config "TCP_NODELAY" "$tcp_nodelay"
 
 ##########################################
+# Check whether we have vsock
+if test "$vsock" != "yes" ; then
+  vsock="no"
+fi
+cat > $TMPC << EOF
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <linux/vm_sockets.h>
+int main(int argc, char **argv)
+{
+  return socket(AF_VSOCK, SOCK_STREAM, 0);
+}
+EOF
+if compile_prog "" "" "vsock"; then
+  vsock="yes"
+fi
+print_config "vsock" "$vsock"
+
+##########################################
 # Check whether we have SO_SNDBUF
 if test "$window_size" != "yes" ; then
   window_size="no"
@@ -3191,6 +3210,9 @@ if test "$pwritev2" = "yes" ; then
 fi
 if test "$ipv6" = "yes" ; then
   output_sym "CONFIG_IPV6"
+fi
+if test "$vsock" = "yes"; then
+  output_sym "CONFIG_VSOCK"
 fi
 if test "$http" = "yes" ; then
   output_sym "CONFIG_HTTP"
