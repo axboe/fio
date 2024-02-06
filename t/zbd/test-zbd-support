@@ -15,6 +15,7 @@ usage() {
 	echo -e "\t-w Reset all zones before executing each write test case"
 	echo -e "\t-o <max_open_zones> Run fio with max_open_zones limit"
 	echo -e "\t-t <test #> Run only a single test case with specified number"
+	echo -e "\t-s <test #> Start testing from the case with the specified number"
 	echo -e "\t-q Quit the test run after any failed test"
 	echo -e "\t-z Run fio with debug=zbd option"
 	echo -e "\t-u Use io_uring ioengine in place of libaio"
@@ -1602,6 +1603,7 @@ zbd_debug=
 max_open_zones_opt=
 quit_on_err=
 force_io_uring=
+start_test=1
 
 while [ "${1#-}" != "$1" ]; do
   case "$1" in
@@ -1615,6 +1617,7 @@ while [ "${1#-}" != "$1" ]; do
     -w) reset_before_write=1; shift;;
     -t) tests+=("$2"); shift; shift;;
     -o) max_open_zones_opt="${2}"; shift; shift;;
+    -s) start_test=$2; shift; shift;;
     -v) dynamic_analyzer=(valgrind "--read-var-info=yes");
 	shift;;
     -q) quit_on_err=1; shift;;
@@ -1694,6 +1697,7 @@ if [[ -b "$realdev" ]]; then
 		set_io_scheduler "$basename" none || exit $?
 		;;
 	esac
+
 elif [[ -c "$realdev" ]]; then
 	# For an SG node, we must have libzbc option specified
 	if [[ ! -n "$use_libzbc" ]]; then
@@ -1772,6 +1776,7 @@ trap 'intr=1' SIGINT
 ret=0
 
 for test_number in "${tests[@]}"; do
+    [ "${test_number}" -lt "${start_test}" ] && continue
     rm -f "${logfile}.${test_number}"
     unset SKIP_REASON
     echo -n "Running test $(printf "%02d" $test_number) ... "
