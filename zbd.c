@@ -104,8 +104,7 @@ static void zone_lock(struct thread_data *td, const struct fio_file *f,
 		      struct fio_zone_info *z)
 {
 #ifndef NDEBUG
-	struct zoned_block_device_info *zbd = f->zbd_info;
-	uint32_t const nz = z - zbd->zone_info;
+	unsigned int const nz = zbd_zone_idx(f, z);
 	/* A thread should never lock zones outside its working area. */
 	assert(f->min_zone <= nz && nz < f->max_zone);
 	assert(z->has_wp);
