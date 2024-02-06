@@ -674,9 +674,20 @@ static bool zbd_zone_align_file_sizes(struct thread_data *td,
 		return false;
 	}
 
+	if (td->o.td_ddir == TD_DDIR_READ) {
+		z = zbd_offset_to_zone(f, f->file_offset + f->io_size);
+		new_end = z->start;
+		if (f->file_offset + f->io_size > new_end) {
+			log_info("%s: rounded io_size from %"PRIu64" to %"PRIu64"\n",
+				 f->file_name, f->io_size,
+				 new_end - f->file_offset);
+			f->io_size = new_end - f->file_offset;
+		}
+		return true;
+	}
+
 	z = zbd_offset_to_zone(f, f->file_offset);
-	if ((f->file_offset != z->start) &&
-	    (td->o.td_ddir != TD_DDIR_READ)) {
+	if (f->file_offset != z->start) {
 		new_offset = zbd_zone_end(z);
 		if (new_offset >= f->file_offset + f->io_size) {
 			log_info("%s: io_size must be at least one zone\n",
@@ -692,8 +703,7 @@ static bool zbd_zone_align_file_sizes(struct thread_data *td,
 
 	z = zbd_offset_to_zone(f, f->file_offset + f->io_size);
 	new_end = z->start;
-	if ((td->o.td_ddir != TD_DDIR_READ) &&
-	    (f->file_offset + f->io_size != new_end)) {
+	if (f->file_offset + f->io_size != new_end) {
 		if (new_end <= f->file_offset) {
 			log_info("%s: io_size must be at least one zone\n",
 				 f->file_name);
