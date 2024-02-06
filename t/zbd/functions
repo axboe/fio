@@ -290,6 +290,28 @@ min_seq_write_size() {
 	fi
 }
 
+urswrz() {
+    local dev=$1
+
+    if [ -n "${sg_inq}" ] && [ ! -n "${use_libzbc}" ]; then
+	if ! ${sg_inq} -e --page=0xB6 --len=10 --hex "$dev" \
+		 > /dev/null 2>&1; then
+	    # Couldn't get URSWRZ bit. Assume the reads are unrestricted
+	    # because this configuration is more common.
+	    echo 1
+	else
+	    ${sg_inq} -e --page=0xB6 --len=10 --hex "$dev" | tail -1 |
+		{
+		    read -r offset b0 b1 b2 b3 b4 trailer && \
+			echo $(( $b4 & 0x01 )) || echo 0
+		}
+	fi
+    else
+	${zbc_info} "$dev" |
+	    sed -n 's/^[[:blank:]].*Read commands are \(un\)restricted*/\1/p' | grep -q ^ && echo 1 || echo 0
+    fi
+}
+
 is_zbc() {
 	local dev=$1
 

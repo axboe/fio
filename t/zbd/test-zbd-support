@@ -412,8 +412,16 @@ test4() {
     opts+=("--size=$size" "--thread=1" "--read_beyond_wp=1")
     opts+=("$(ioengine "psync")" "--rw=read" "--direct=1" "--disable_lat=1")
     opts+=("--zonemode=zbd" "--zonesize=${zone_size}")
-    run_fio "${opts[@]}" >> "${logfile}.${test_number}" 2>&1 || return $?
-    check_read $size || return $?
+    run_fio "${opts[@]}" >> "${logfile}.${test_number}" 2>&1
+    fio_rc=$?
+    if [[ $unrestricted_reads != 0 ]]; then
+	if [[ $fio_rc != 0 ]]; then
+		return "$fio_rc"
+	fi
+	check_read $size || return $?
+    else
+        [ $fio_rc == 0 ] && return 1 || return 0
+    fi
 }
 
 # Sequential write to sequential zones.
@@ -1664,6 +1672,7 @@ if [[ -b "$realdev" ]]; then
 		first_sequential_zone_sector=${result[0]}
 		sectors_per_zone=${result[1]}
 		zone_size=$((sectors_per_zone * 512))
+		unrestricted_reads=$(urswrz "$dev")
 		if ! max_open_zones=$(max_open_zones "$dev"); then
 			echo "Failed to determine maximum number of open zones"
 			exit 1
@@ -1681,6 +1690,7 @@ if [[ -b "$realdev" ]]; then
 		sectors_per_zone=$((zone_size / 512))
 		max_open_zones=128
 		max_active_zones=0
+		unrestricted_reads=1
 		set_io_scheduler "$basename" none || exit $?
 		;;
 	esac
@@ -1712,6 +1722,7 @@ elif [[ -c "$realdev" ]]; then
 	first_sequential_zone_sector=${result[0]}
 	sectors_per_zone=${result[1]}
 	zone_size=$((sectors_per_zone * 512))
+	unrestricted_reads=$(urswrz "$dev")
 	if ! max_open_zones=$(max_open_zones "$dev"); then
 		echo "Failed to determine maximum number of open zones"
 		exit 1
