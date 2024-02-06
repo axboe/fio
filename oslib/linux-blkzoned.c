@@ -242,6 +242,8 @@ int blkzoned_report_zones(struct thread_data *td, struct fio_file *f,
 	hdr->sector = offset >> 9;
 	ret = ioctl(fd, BLKREPORTZONE, hdr);
 	if (ret) {
+		log_err("%s: BLKREPORTZONE ioctl failed, ret=%d, err=%d.\n",
+			f->file_name, ret, -errno);
 		ret = -errno;
 		goto out;
 	}
