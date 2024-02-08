@@ -338,12 +338,20 @@ static void dump_verify_buffers(struct verify_header *hdr, struct vcont *vc)
 static void log_verify_failure(struct verify_header *hdr, struct vcont *vc)
 {
 	unsigned long long offset;
+	uint32_t len;
+	struct thread_data *td = vc->td;
 
 	offset = vc->io_u->verify_offset;
-	offset += vc->hdr_num * hdr->len;
+	if (td->o.verify != VERIFY_PATTERN_NO_HDR) {
+		len = hdr->len;
+		offset += vc->hdr_num * len;
+	} else {
+		len = vc->io_u->buflen;
+	}
+
 	log_err("%.8s: verify failed at file %s offset %llu, length %u"
 			" (requested block: offset=%llu, length=%llu, flags=%x)\n",
-			vc->name, vc->io_u->file->file_name, offset, hdr->len,
+			vc->name, vc->io_u->file->file_name, offset, len,
 			vc->io_u->verify_offset, vc->io_u->buflen, vc->io_u->flags);
 
 	if (vc->good_crc && vc->bad_crc) {
