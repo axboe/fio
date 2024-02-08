@@ -344,7 +344,7 @@ static void log_verify_failure(struct verify_header *hdr, struct vcont *vc)
 	offset = vc->io_u->verify_offset;
 	if (td->o.verify != VERIFY_PATTERN_NO_HDR) {
 		len = hdr->len;
-		offset += vc->hdr_num * len;
+		offset += (unsigned long long) vc->hdr_num * len;
 	} else {
 		len = vc->io_u->buflen;
 	}
