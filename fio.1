@@ -3765,12 +3765,14 @@ resulting in more precise time-related I/O statistics.
 Also see \fBlog_avg_msec\fR as well. Defaults to 1024.
 .TP
 .BI log_avg_msec \fR=\fPint
-By default, fio will log an entry in the iops, latency, or bw log for every
-I/O that completes. When writing to the disk log, that can quickly grow to a
-very large size. Setting this option makes fio average the each log entry
-over the specified period of time, reducing the resolution of the log. See
-\fBlog_window_value\fR as well. Defaults to 0, logging all entries.
-Also see \fBLOG FILE FORMATS\fR section.
+By default, fio will log an entry in the iops, latency, or bw log for every I/O
+that completes. When writing to the disk log, that can quickly grow to a very
+large size. Setting this option directs fio to instead record an average over
+the specified duration for each log entry, reducing the resolution of the log.
+When the job completes, fio will flush any accumulated latency log data, so the
+final log interval may not match the value specified by this option and there
+may even be duplicate timestamps. See \fBlog_window_value\fR as well. Defaults
+to 0, logging entries for each I/O. Also see \fBLOG FILE FORMATS\fR section.
 .TP
 .BI log_hist_msec \fR=\fPint
 Same as \fBlog_avg_msec\fR, but logs entries for completion latency
