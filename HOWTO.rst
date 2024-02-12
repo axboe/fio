@@ -4063,12 +4063,15 @@ Measurements and reporting
 
 .. option:: log_avg_msec=int
 
-	By default, fio will log an entry in the iops, latency, or bw log for every
-	I/O that completes. When writing to the disk log, that can quickly grow to a
-	very large size. Setting this option makes fio average the each log entry
-	over the specified period of time, reducing the resolution of the log.  See
-	:option:`log_window_value` as well. Defaults to 0, logging all entries.
-	Also see `Log File Formats`_.
+        By default, fio will log an entry in the iops, latency, or bw log for
+        every I/O that completes. When writing to the disk log, that can
+        quickly grow to a very large size. Setting this option directs fio to
+        instead record an average over the specified duration for each log
+        entry, reducing the resolution of the log. When the job completes, fio
+        will flush any accumulated latency log data, so the final log interval
+        may not match the value specified by this option and there may even be
+        duplicate timestamps. See :option:`log_window_value` as well. Defaults
+        to 0, logging entries for each I/O. Also see `Log File Formats`_.
 
 .. option:: log_hist_msec=int
 
