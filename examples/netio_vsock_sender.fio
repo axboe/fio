@@ -1,0 +1,17 @@
+# Example network vsock job, just defines a sender
+[global]
+ioengine=net
+port=8888
+protocol=vsock
+bs=4k
+size=100g
+
+#set the below option to enable end-to-end data integrity tests
+#verify=md5
+
+[sender]
+# set the 'hostname' option to the CID of the listening domain
+hostname=3
+startdelay=1
+rw=write
+
