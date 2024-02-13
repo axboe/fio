@@ -11,6 +11,7 @@
 #include <assert.h>
 #include <libxnvme.h>
 #include "fio.h"
+#include "verify.h"
 #include "zbd_types.h"
 #include "fdp.h"
 #include "optgroup.h"
@@ -345,6 +346,49 @@ static void xnvme_fioe_cleanup(struct thread_data *td)
 	td->io_ops_data = NULL;
 }
 
+static int _verify_options(struct thread_data *td, struct fio_file *f,
+			   struct xnvme_fioe_fwrap *fwrap)
+{
+	struct xnvme_fioe_options *o = td->eo;
+	unsigned int correct_md_size;
+
+	for_each_rw_ddir(ddir) {
+		if (td->o.min_bs[ddir] % fwrap->lba_nbytes || td->o.max_bs[ddir] % fwrap->lba_nbytes) {
+			if (!fwrap->lba_pow2) {
+				log_err("ioeng->_verify_options(%s): block size must be a multiple of %u "
+					"(LBA data size + Metadata size)\n", f->file_name, fwrap->lba_nbytes);
+			} else {
+				log_err("ioeng->_verify_options(%s): block size must be a multiple of LBA data size\n",
+					f->file_name);
+			}
+			return 1;
+		}
+		if (ddir == DDIR_TRIM)
+			continue;
+
+		correct_md_size = (td->o.max_bs[ddir] / fwrap->lba_nbytes) * fwrap->md_nbytes;
+		if (fwrap->md_nbytes && fwrap->lba_pow2 && (o->md_per_io_size < correct_md_size)) {
+			log_err("ioeng->_verify_options(%s): md_per_io_size should be at least %u bytes\n",
+				f->file_name, correct_md_size);
+			return 1;
+		}
+	}
+
+	/*
+	 * For extended logical block sizes we cannot use verify when
+	 * end to end data protection checks are enabled, as the PI
+	 * section of data buffer conflicts with verify.
+	 */
+	if (fwrap->md_nbytes && fwrap->geo->pi_type && !fwrap->lba_pow2 &&
+	    td->o.verify != VERIFY_NONE) {
+		log_err("ioeng->_verify_options(%s): for extended LBA, verify cannot be used when E2E data protection is enabled\n",
+			f->file_name);
+		return 1;
+	}
+
+	return 0;
+}
+
 /**
  * Helper function setting up device handles as addressed by the naming
  * convention of the given `fio_file` filename.
@@ -409,6 +453,11 @@ static int _dev_open(struct thread_data *td, struct fio_file *f)
 			fwrap->lba_pow2 = 1;
 		}
 		fwrap->md_nbytes = 0;
+	}
+
+	if (_verify_options(td, f, fwrap)) {
+		td_verror(td, EINVAL, "_dev_open");
+		goto failure;
 	}
 
 	fwrap->fio_file = f;
