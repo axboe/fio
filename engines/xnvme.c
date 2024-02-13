@@ -325,6 +325,7 @@ failure:
 static int xnvme_fioe_init(struct thread_data *td)
 {
 	struct xnvme_fioe_data *xd = NULL;
+	struct xnvme_fioe_options *o = td->eo;
 	struct fio_file *f;
 	unsigned int i;
 
@@ -347,12 +348,14 @@ static int xnvme_fioe_init(struct thread_data *td)
 		return 1;
 	}
 
-	xd->iovec = calloc(td->o.iodepth, sizeof(*xd->iovec));
-	if (!xd->iovec) {
-		free(xd->iocq);
-		free(xd);
-		log_err("ioeng->init(): !calloc(xd->iovec), err(%d)\n", errno);
-		return 1;
+	if (o->xnvme_iovec) {
+		xd->iovec = calloc(td->o.iodepth, sizeof(*xd->iovec));
+		if (!xd->iovec) {
+			free(xd->iocq);
+			free(xd);
+			log_err("ioeng->init(): !calloc(xd->iovec), err(%d)\n", errno);
+			return 1;
+		}
 	}
 
 	xd->prev = -1;
