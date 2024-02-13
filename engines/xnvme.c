@@ -30,8 +30,10 @@ struct xnvme_fioe_fwrap {
 
 	uint32_t ssw;
 	uint32_t lba_nbytes;
+	uint32_t md_nbytes;
+	uint32_t lba_pow2;
 
-	uint8_t _pad[24];
+	uint8_t _pad[16];
 };
 XNVME_STATIC_ASSERT(sizeof(struct xnvme_fioe_fwrap) == 64, "Incorrect size")
 
@@ -58,12 +60,16 @@ struct xnvme_fioe_data {
 	uint64_t nallocated;
 
 	struct iovec *iovec;
-
-	uint8_t _pad[8];
+	struct iovec *md_iovec;
 
 	struct xnvme_fioe_fwrap files[];
 };
 XNVME_STATIC_ASSERT(sizeof(struct xnvme_fioe_data) == 64, "Incorrect size")
+
+struct xnvme_fioe_request {
+	/* Separate metadata buffer pointer */
+	void *md_buf;
+};
 
 struct xnvme_fioe_options {
 	void *padding;
@@ -71,6 +77,7 @@ struct xnvme_fioe_options {
 	unsigned int sqpoll_thread;
 	unsigned int xnvme_dev_nsid;
 	unsigned int xnvme_iovec;
+	unsigned int md_per_io_size;
 	char *xnvme_be;
 	char *xnvme_mem;
 	char *xnvme_async;
@@ -171,6 +178,16 @@ static struct fio_option options[] = {
 		.category = FIO_OPT_C_ENGINE,
 		.group = FIO_OPT_G_XNVME,
 	},
+	{
+		.name	= "md_per_io_size",
+		.lname	= "Separate Metadata Buffer Size per I/O",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct xnvme_fioe_options, md_per_io_size),
+		.def	= "0",
+		.help	= "Size of separate metadata buffer per I/O (Default: 0)",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_XNVME,
+	},
 
 	{
 		.name = NULL,
@@ -249,6 +266,7 @@ static void xnvme_fioe_cleanup(struct thread_data *td)
 
 	free(xd->iocq);
 	free(xd->iovec);
+	free(xd->md_iovec);
 	free(xd);
 	td->io_ops_data = NULL;
 }
@@ -297,6 +315,12 @@ static int _dev_open(struct thread_data *td, struct fio_file *f)
 
 	fwrap->ssw = xnvme_dev_get_ssw(fwrap->dev);
 	fwrap->lba_nbytes = fwrap->geo->lba_nbytes;
+	fwrap->md_nbytes = fwrap->geo->nbytes_oob;
+
+	if (fwrap->geo->lba_extended)
+		fwrap->lba_pow2 = 0;
+	else
+		fwrap->lba_pow2 = 1;
 
 	fwrap->fio_file = f;
 	fwrap->fio_file->filetype = FIO_TYPE_BLOCK;
@@ -358,6 +382,17 @@ static int xnvme_fioe_init(struct thread_data *td)
 		}
 	}
 
+	if (o->xnvme_iovec && o->md_per_io_size) {
+		xd->md_iovec = calloc(td->o.iodepth, sizeof(*xd->md_iovec));
+		if (!xd->md_iovec) {
+			free(xd->iocq);
+			free(xd->iovec);
+			free(xd);
+			log_err("ioeng->init(): !calloc(xd->md_iovec), err(%d)\n", errno);
+			return 1;
+		}
+	}
+
 	xd->prev = -1;
 	td->io_ops_data = xd;
 
@@ -365,8 +400,8 @@ static int xnvme_fioe_init(struct thread_data *td)
 	{
 		if (_dev_open(td, f)) {
 			/*
-			 * Note: We are not freeing xd, iocq and iovec. This
-			 * will be done as part of cleanup routine.
+			 * Note: We are not freeing xd, iocq, iovec and md_iovec.
+			 * This will be done as part of cleanup routine.
 			 */
 			log_err("ioeng->init(): failed; _dev_open(%s)\n", f->file_name);
 			return 1;
@@ -421,13 +456,61 @@ static void xnvme_fioe_iomem_free(struct thread_data *td)
 
 static int xnvme_fioe_io_u_init(struct thread_data *td, struct io_u *io_u)
 {
+	struct xnvme_fioe_request *fio_req;
+	struct xnvme_fioe_options *o = td->eo;
+	struct xnvme_fioe_data *xd = td->io_ops_data;
+	struct xnvme_fioe_fwrap *fwrap = &xd->files[0];
+
+	if (!fwrap->dev) {
+		log_err("ioeng->io_u_init(): failed; no dev-handle\n");
+		return 1;
+	}
+
 	io_u->mmap_data = td->io_ops_data;
+	io_u->engine_data = NULL;
+
+	fio_req = calloc(1, sizeof(*fio_req));
+	if (!fio_req) {
+		log_err("ioeng->io_u_init(): !calloc(fio_req), err(%d)\n", errno);
+		return 1;
+	}
+
+	if (o->md_per_io_size) {
+		fio_req->md_buf = xnvme_buf_alloc(fwrap->dev, o->md_per_io_size);
+		if (!fio_req->md_buf) {
+			free(fio_req);
+			return 1;
+		}
+	}
+
+	io_u->engine_data = fio_req;
 
 	return 0;
 }
 
 static void xnvme_fioe_io_u_free(struct thread_data *td, struct io_u *io_u)
 {
+	struct xnvme_fioe_data *xd = NULL;
+	struct xnvme_fioe_fwrap *fwrap = NULL;
+	struct xnvme_fioe_request *fio_req = NULL;
+
+	if (!td->io_ops_data)
+		return;
+
+	xd = td->io_ops_data;
+	fwrap = &xd->files[0];
+
+	if (!fwrap->dev) {
+		log_err("ioeng->io_u_free(): failed no dev-handle\n");
+		return;
+	}
+
+	fio_req = io_u->engine_data;
+	if (fio_req->md_buf)
+		xnvme_buf_free(fwrap->dev, fio_req->md_buf);
+
+	free(fio_req);
+
 	io_u->mmap_data = NULL;
 }
 
@@ -504,6 +587,7 @@ static enum fio_q_status xnvme_fioe_queue(struct thread_data *td, struct io_u *i
 	struct xnvme_fioe_data *xd = td->io_ops_data;
 	struct xnvme_fioe_fwrap *fwrap;
 	struct xnvme_cmd_ctx *ctx;
+	struct xnvme_fioe_request *fio_req = io_u->engine_data;
 	uint32_t nsid;
 	uint64_t slba;
 	uint16_t nlb;
@@ -516,8 +600,13 @@ static enum fio_q_status xnvme_fioe_queue(struct thread_data *td, struct io_u *i
 	fwrap = &xd->files[io_u->file->fileno];
 	nsid = xnvme_dev_get_nsid(fwrap->dev);
 
-	slba = io_u->offset >> fwrap->ssw;
-	nlb = (io_u->xfer_buflen >> fwrap->ssw) - 1;
+	if (fwrap->lba_pow2) {
+		slba = io_u->offset >> fwrap->ssw;
+		nlb = (io_u->xfer_buflen >> fwrap->ssw) - 1;
+	} else {
+		slba = io_u->offset / fwrap->lba_nbytes;
+		nlb = (io_u->xfer_buflen / fwrap->lba_nbytes) - 1;
+	}
 
 	ctx = xnvme_queue_get_cmd_ctx(fwrap->queue);
 	ctx->async.cb_arg = io_u;
@@ -551,11 +640,22 @@ static enum fio_q_status xnvme_fioe_queue(struct thread_data *td, struct io_u *i
 	if (vectored_io) {
 		xd->iovec[io_u->index].iov_base = io_u->xfer_buf;
 		xd->iovec[io_u->index].iov_len = io_u->xfer_buflen;
-
-		err = xnvme_cmd_passv(ctx, &xd->iovec[io_u->index], 1, io_u->xfer_buflen, NULL, 0,
-				      0);
+		if (fwrap->md_nbytes && fwrap->lba_pow2) {
+			xd->md_iovec[io_u->index].iov_base = fio_req->md_buf;
+			xd->md_iovec[io_u->index].iov_len = fwrap->md_nbytes * (nlb + 1);
+			err = xnvme_cmd_passv(ctx, &xd->iovec[io_u->index], 1, io_u->xfer_buflen,
+					      &xd->md_iovec[io_u->index], 1,
+					      fwrap->md_nbytes * (nlb + 1));
+		} else {
+			err = xnvme_cmd_passv(ctx, &xd->iovec[io_u->index], 1, io_u->xfer_buflen,
+					      NULL, 0, 0);
+		}
 	} else {
-		err = xnvme_cmd_pass(ctx, io_u->xfer_buf, io_u->xfer_buflen, NULL, 0);
+		if (fwrap->md_nbytes && fwrap->lba_pow2)
+			err = xnvme_cmd_pass(ctx, io_u->xfer_buf, io_u->xfer_buflen,
+					     fio_req->md_buf, fwrap->md_nbytes * (nlb + 1));
+		else
+			err = xnvme_cmd_pass(ctx, io_u->xfer_buf, io_u->xfer_buflen, NULL, 0);
 	}
 	switch (err) {
 	case 0:

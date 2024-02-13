@@ -2491,7 +2491,7 @@ with the caveat that when used on the command line, they must come after the
         want fio to use placement identifier only at indices 0, 2 and 5 specify
         ``fdp_pli=0,2,5``.
 
-.. option:: md_per_io_size=int : [io_uring_cmd]
+.. option:: md_per_io_size=int : [io_uring_cmd] [xnvme]
 
 	Size in bytes for separate metadata buffer per IO. Default: 0.
 
