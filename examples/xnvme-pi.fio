@@ -1,0 +1,53 @@
+; README
+;
+; This job-file is intended to be used either as:
+;
+; # Use the xNVMe io-engine engine io_uring_cmd async. impl.
+; fio examples/xnvme-pi.fio \
+;   --ioengine=xnvme \
+;   --xnvme_async=io_uring_cmd \
+;   --filename=/dev/ng0n1
+;
+; # Use the xNVMe io-engine engine with nvme sync. impl.
+; fio examples/xnvme-pi.fio \
+;   --ioengine=xnvme \
+;   --xnvme_sync=nvme \
+;   --filename=/dev/ng0n1
+;
+; # Use the xNVMe io-engine engine with SPDK backend, note that you have to set the Namespace-id
+; fio examples/xnvme-pi.fio \
+;   --ioengine=xnvme \
+;   --xnvme_dev_nsid=1 \
+;   --filename=0000\\:01\\:00.0
+;
+; NOTE: The URI encoded in the filename above, the ":" must be escaped.
+;
+; On the command-line using two "\\":
+;
+; --filename=0000\\:01\\:00.0
+;
+; Within a fio-script using a single "\":
+;
+; filename=0000\:01\:00.0
+;
+; NOTE: This example configuration assumes that the NVMe device is formatted
+; with a separate metadata buffer. If you want to run on an extended LBA format
+; update the "bs" accordingly.
+;
+[global]
+size=100M
+iodepth=16
+bs=4K
+md_per_io_size=64
+pi_act=0
+pi_chk=GUARD,APPTAG,REFTAG
+apptag=0x0234
+apptag_mask=0xFFFF
+thread=1
+stonewall=1
+
+[write]
+rw=write
+
+[read]
+rw=read
