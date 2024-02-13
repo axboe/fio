@@ -2254,7 +2254,7 @@ identifier only at indices 0, 2 and 5 specify, you would set `fdp_pli=0,2,5`.
 .BI (io_uring_cmd,xnvme)md_per_io_size \fR=\fPint
 Size in bytes for separate metadata buffer per IO. Default: 0.
 .TP
-.BI (io_uring_cmd)pi_act \fR=\fPint
+.BI (io_uring_cmd,xnvme)pi_act \fR=\fPint
 Action to take when nvme namespace is formatted with protection information.
 If this is set to 1 and namespace is formatted with metadata size equal to
 protection information size, fio won't use separate metadata buffer or extended
@@ -2268,7 +2268,7 @@ For 16 bit CRC generation fio will use isa-l if available otherwise it will
 use the default slower generator.
 (see: https://github.com/intel/isa-l)
 .TP
-.BI (io_uring_cmd)pi_chk \fR=\fPstr[,str][,str]
+.BI (io_uring_cmd,xnvme)pi_chk \fR=\fPstr[,str][,str]
 Controls the protection information check. This can take one or more of these
 values. Default: none.
 .RS
@@ -2285,11 +2285,11 @@ Enables protection information checking of application tag field.
 .RE
 .RE
 .TP
-.BI (io_uring_cmd)apptag \fR=\fPint
+.BI (io_uring_cmd,xnvme)apptag \fR=\fPint
 Specifies logical block application tag value, if namespace is formatted to use
 end to end protection information. Default: 0x1234.
 .TP
-.BI (io_uring_cmd)apptag_mask \fR=\fPint
+.BI (io_uring_cmd,xnvme)apptag_mask \fR=\fPint
 Specifies logical block application tag mask value, if namespace is formatted
 to use end to end protection information. Default: 0xffff.
 .TP

@@ -2495,7 +2495,7 @@ with the caveat that when used on the command line, they must come after the
 
 	Size in bytes for separate metadata buffer per IO. Default: 0.
 
-.. option:: pi_act=int : [io_uring_cmd]
+.. option:: pi_act=int : [io_uring_cmd] [xnvme]
 
 	Action to take when nvme namespace is formatted with protection
 	information. If this is set to 1 and namespace is formatted with
@@ -2511,7 +2511,7 @@ with the caveat that when used on the command line, they must come after the
 	it will use the default slower generator.
 	(see: https://github.com/intel/isa-l)
 
-.. option:: pi_chk=str[,str][,str] : [io_uring_cmd]
+.. option:: pi_chk=str[,str][,str] : [io_uring_cmd] [xnvme]
 
 	Controls the protection information check. This can take one or more
 	of these values. Default: none.
@@ -2524,12 +2524,12 @@ with the caveat that when used on the command line, they must come after the
 	**APPTAG**
 		Enables protection information checking of application tag field.
 
-.. option:: apptag=int : [io_uring_cmd]
+.. option:: apptag=int : [io_uring_cmd] [xnvme]
 
 	Specifies logical block application tag value, if namespace is
 	formatted to use end to end protection information. Default: 0x1234.
 
-.. option:: apptag_mask=int : [io_uring_cmd]
+.. option:: apptag_mask=int : [io_uring_cmd] [xnvme]
 
 	Specifies logical block application tag mask value, if namespace is
 	formatted to use end to end protection information. Default: 0xffff.
