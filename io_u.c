@@ -2151,7 +2151,8 @@ static void io_u_update_bytes_done(struct thread_data *td,
 
 	if (td->runstate == TD_VERIFYING) {
 		td->bytes_verified += icd->bytes_done[DDIR_READ];
-		return;
+		if (td_write(td))
+			return;
 	}
 
 	for (ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++)
