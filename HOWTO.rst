@@ -2534,6 +2534,15 @@ with the caveat that when used on the command line, they must come after the
 	Specifies logical block application tag mask value, if namespace is
 	formatted to use end to end protection information. Default: 0xffff.
 
+.. option:: num_range=int : [io_uring_cmd]
+
+	For trim command this will be the number of ranges to trim per I/O
+	request. The number of logical blocks per range is determined by the
+	:option:`bs` option which should be a multiple of logical block size.
+	This cannot be used with read or write. Note that setting this
+	option > 1, :option:`log_offset` will not be able to log all the
+	offsets. Default: 1.
+
 .. option:: cpuload=int : [cpuio]
 
 	Attempt to use the specified percentage of CPU cycles. This is a mandatory

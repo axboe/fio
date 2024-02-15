@@ -80,6 +80,10 @@ struct io_u {
 
 	struct io_piece *ipo;
 
+	/*
+	 * number of trim ranges for this IO.
+	 */
+	unsigned int number_trim;
 	unsigned long long resid;
 	unsigned int error;
 

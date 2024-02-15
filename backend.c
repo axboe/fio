@@ -1333,7 +1333,7 @@ static int init_io_u(struct thread_data *td)
 int init_io_u_buffers(struct thread_data *td)
 {
 	struct io_u *io_u;
-	unsigned long long max_bs, min_write;
+	unsigned long long max_bs, min_write, trim_bs = 0;
 	int i, max_units;
 	int data_xfer = 1;
 	char *p;
@@ -1344,7 +1344,18 @@ int init_io_u_buffers(struct thread_data *td)
 	td->orig_buffer_size = (unsigned long long) max_bs
 					* (unsigned long long) max_units;
 
-	if (td_ioengine_flagged(td, FIO_NOIO) || !(td_read(td) || td_write(td)))
+	if (td_trim(td) && td->o.num_range > 1) {
+		trim_bs = td->o.num_range * sizeof(struct trim_range);
+		td->orig_buffer_size = trim_bs
+					* (unsigned long long) max_units;
+	}
+
+	/*
+	 * For reads, writes, and multi-range trim operations we need a
+	 * data buffer
+	 */
+	if (td_ioengine_flagged(td, FIO_NOIO) ||
+	    !(td_read(td) || td_write(td) || (td_trim(td) && td->o.num_range > 1)))
 		data_xfer = 0;
 
 	/*
@@ -1396,7 +1407,10 @@ int init_io_u_buffers(struct thread_data *td)
 				fill_verify_pattern(td, io_u->buf, max_bs, io_u, 0, 0);
 			}
 		}
-		p += max_bs;
+		if (td_trim(td) && td->o.num_range > 1)
+			p += trim_bs;
+		else
+			p += max_bs;
 	}
 
 	return 0;

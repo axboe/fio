@@ -2293,6 +2293,13 @@ end to end protection information. Default: 0x1234.
 Specifies logical block application tag mask value, if namespace is formatted
 to use end to end protection information. Default: 0xffff.
 .TP
+.BI (io_uring_cmd)num_range \fR=\fPint
+For trim command this will be the number of ranges to trim per I/O request.
+The number of logical blocks per range is determined by the \fBbs\fR option
+which should be a multiple of logical block size. This cannot be used with
+read or write. Note that setting this option > 1, \fBlog_offset\fR will not be
+able to log all the offsets. Default: 1.
+.TP
 .BI (cpuio)cpuload \fR=\fPint
 Attempt to use the specified percentage of CPU cycles. This is a mandatory
 option when using cpuio I/O engine.

@@ -2396,6 +2396,17 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_INVALID,
 	},
 	{
+		.name	= "num_range",
+		.lname	= "Number of ranges",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct thread_options, num_range),
+		.maxval	= MAX_TRIM_RANGE,
+		.help	= "Number of ranges for trim command",
+		.def	= "1",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
 		.name	= "bs",
 		.lname	= "Block size",
 		.alias	= "blocksize",
