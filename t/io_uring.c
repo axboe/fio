@@ -94,6 +94,7 @@ struct submitter {
 	unsigned long reaps;
 	unsigned long done;
 	unsigned long calls;
+	unsigned long io_errors;
 	volatile int finish;
 
 	__s32 *fds;
@@ -717,10 +718,14 @@ static int reap_events_uring(struct submitter *s)
 			f = &s->files[fileno];
 			f->pending_ios--;
 			if (cqe->res != bs) {
-				printf("io: unexpected ret=%d\n", cqe->res);
-				if (polled && cqe->res == -EOPNOTSUPP)
-					printf("Your filesystem/driver/kernel doesn't support polled IO\n");
-				return -1;
+				if (cqe->res == -ENODATA || cqe->res == -EIO) {
+					s->io_errors++;
+				} else {
+					printf("io: unexpected ret=%d\n", cqe->res);
+					if (polled && cqe->res == -EOPNOTSUPP)
+						printf("Your filesystem/driver/kernel doesn't support polled IO\n");
+					return -1;
+				}
 			}
 		}
 		if (stats) {
@@ -1102,10 +1107,14 @@ static int reap_events_aio(struct submitter *s, struct io_event *events, int evs
 
 		f->pending_ios--;
 		if (events[reaped].res != bs) {
-			printf("io: unexpected ret=%ld\n", events[reaped].res);
-			return -1;
-		}
-		if (stats) {
+			if (events[reaped].res == -ENODATA ||
+			    events[reaped].res == -EIO) {
+				s->io_errors++;
+			} else {
+				printf("io: unexpected ret=%ld\n", events[reaped].res);
+				return -1;
+			}
+		} else if (stats) {
 			int clock_index = data >> 32;
 
 			if (last_idx != clock_index) {
@@ -1550,7 +1559,7 @@ static void write_tsc_rate(void)
 int main(int argc, char *argv[])
 {
 	struct submitter *s;
-	unsigned long done, calls, reap;
+	unsigned long done, calls, reap, io_errors;
 	int i, j, flags, fd, opt, threads_per_f, threads_rem = 0, nfiles;
 	struct file f;
 	void *ret;
@@ -1661,7 +1670,7 @@ int main(int argc, char *argv[])
 		s = get_submitter(j);
 		s->numa_node = -1;
 		s->index = j;
-		s->done = s->calls = s->reaps = 0;
+		s->done = s->calls = s->reaps = s->io_errors = 0;
 	}
 
 	flags = O_RDONLY | O_NOATIME;
@@ -1746,11 +1755,12 @@ int main(int argc, char *argv[])
 #endif
 	}
 
-	reap = calls = done = 0;
+	reap = calls = done = io_errors = 0;
 	do {
 		unsigned long this_done = 0;
 		unsigned long this_reap = 0;
 		unsigned long this_call = 0;
+		unsigned long this_io_errors = 0;
 		unsigned long rpc = 0, ipc = 0;
 		unsigned long iops, bw;
 
@@ -1771,6 +1781,7 @@ int main(int argc, char *argv[])
 			this_done += s->done;
 			this_call += s->calls;
 			this_reap += s->reaps;
+			this_io_errors += s->io_errors;
 		}
 		if (this_call - calls) {
 			rpc = (this_done - done) / (this_call - calls);
@@ -1778,6 +1789,7 @@ int main(int argc, char *argv[])
 		} else
 			rpc = ipc = -1;
 		iops = this_done - done;
+		iops -= this_io_errors - io_errors;
 		if (bs > 1048576)
 			bw = iops * (bs / 1048576);
 		else
@@ -1805,12 +1817,16 @@ int main(int argc, char *argv[])
 		done = this_done;
 		calls = this_call;
 		reap = this_reap;
+		io_errors = this_io_errors;
 	} while (!finish);
 
 	for (j = 0; j < nthreads; j++) {
 		s = get_submitter(j);
 		pthread_join(s->thread, &ret);
 		close(s->ring_fd);
+
+		if (s->io_errors)
+			printf("%d: %lu IO errors\n", s->tid, s->io_errors);
 
 		if (stats) {
 			unsigned long nr;
