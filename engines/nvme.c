@@ -8,20 +8,20 @@
 #include "../crc/crc-t10dif.h"
 #include "../crc/crc64.h"
 
-static inline __u64 get_slba(struct nvme_data *data, struct io_u *io_u)
+static inline __u64 get_slba(struct nvme_data *data, __u64 offset)
 {
 	if (data->lba_ext)
-		return io_u->offset / data->lba_ext;
-	else
-		return io_u->offset >> data->lba_shift;
+		return offset / data->lba_ext;
+
+	return offset >> data->lba_shift;
 }
 
-static inline __u32 get_nlb(struct nvme_data *data, struct io_u *io_u)
+static inline __u32 get_nlb(struct nvme_data *data, __u64 len)
 {
 	if (data->lba_ext)
-		return io_u->xfer_buflen / data->lba_ext - 1;
-	else
-		return (io_u->xfer_buflen >> data->lba_shift) - 1;
+		return len / data->lba_ext - 1;
+
+	return (len >> data->lba_shift) - 1;
 }
 
 static void fio_nvme_generate_pi_16b_guard(struct nvme_data *data,
@@ -32,8 +32,8 @@ static void fio_nvme_generate_pi_16b_guard(struct nvme_data *data,
 	struct nvme_16b_guard_pif *pi;
 	unsigned char *buf = io_u->xfer_buf;
 	unsigned char *md_buf = io_u->mmap_data;
-	__u64 slba = get_slba(data, io_u);
-	__u32 nlb = get_nlb(data, io_u) + 1;
+	__u64 slba = get_slba(data, io_u->offset);
+	__u32 nlb = get_nlb(data, io_u->xfer_buflen) + 1;
 	__u32 lba_num = 0;
 	__u16 guard = 0;
 
@@ -99,8 +99,8 @@ static int fio_nvme_verify_pi_16b_guard(struct nvme_data *data,
 	struct fio_file *f = io_u->file;
 	unsigned char *buf = io_u->xfer_buf;
 	unsigned char *md_buf = io_u->mmap_data;
-	__u64 slba = get_slba(data, io_u);
-	__u32 nlb = get_nlb(data, io_u) + 1;
+	__u64 slba = get_slba(data, io_u->offset);
+	__u32 nlb = get_nlb(data, io_u->xfer_buflen) + 1;
 	__u32 lba_num = 0;
 	__u16 unmask_app, unmask_app_exp, guard = 0;
 
@@ -185,8 +185,8 @@ static void fio_nvme_generate_pi_64b_guard(struct nvme_data *data,
 	unsigned char *buf = io_u->xfer_buf;
 	unsigned char *md_buf = io_u->mmap_data;
 	uint64_t guard = 0;
-	__u64 slba = get_slba(data, io_u);
-	__u32 nlb = get_nlb(data, io_u) + 1;
+	__u64 slba = get_slba(data, io_u->offset);
+	__u32 nlb = get_nlb(data, io_u->xfer_buflen) + 1;
 	__u32 lba_num = 0;
 
 	if (data->pi_loc) {
@@ -251,9 +251,9 @@ static int fio_nvme_verify_pi_64b_guard(struct nvme_data *data,
 	struct fio_file *f = io_u->file;
 	unsigned char *buf = io_u->xfer_buf;
 	unsigned char *md_buf = io_u->mmap_data;
-	__u64 slba = get_slba(data, io_u);
+	__u64 slba = get_slba(data, io_u->offset);
 	__u64 ref, ref_exp, guard = 0;
-	__u32 nlb = get_nlb(data, io_u) + 1;
+	__u32 nlb = get_nlb(data, io_u->xfer_buflen) + 1;
 	__u32 lba_num = 0;
 	__u16 unmask_app, unmask_app_exp;
 
@@ -368,8 +368,8 @@ int fio_nvme_uring_cmd_prep(struct nvme_uring_cmd *cmd, struct io_u *io_u,
 		return -ENOTSUP;
 	}
 
-	slba = get_slba(data, io_u);
-	nlb = get_nlb(data, io_u);
+	slba = get_slba(data, io_u->offset);
+	nlb = get_nlb(data, io_u->xfer_buflen);
 
 	/* cdw10 and cdw11 represent starting lba */
 	cmd->cdw10 = slba & 0xffffffff;
@@ -400,7 +400,7 @@ void fio_nvme_pi_fill(struct nvme_uring_cmd *cmd, struct io_u *io_u,
 	struct nvme_data *data = FILE_ENG_DATA(io_u->file);
 	__u64 slba;
 
-	slba = get_slba(data, io_u);
+	slba = get_slba(data, io_u->offset);
 	cmd->cdw12 |= opts->io_flags;
 
 	if (data->pi_type && !(opts->io_flags & NVME_IO_PRINFO_PRACT)) {
