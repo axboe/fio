@@ -329,24 +329,40 @@ next:
 	return 0;
 }
 void fio_nvme_uring_cmd_trim_prep(struct nvme_uring_cmd *cmd, struct io_u *io_u,
-				  struct nvme_dsm_range *dsm)
+				  struct nvme_dsm *dsm)
 {
 	struct nvme_data *data = FILE_ENG_DATA(io_u->file);
+	struct trim_range *range;
+	uint8_t *buf_point;
+	int i;
 
 	cmd->opcode = nvme_cmd_dsm;
 	cmd->nsid = data->nsid;
-	cmd->cdw10 = 0;
 	cmd->cdw11 = NVME_ATTRIBUTE_DEALLOCATE;
-	cmd->addr = (__u64) (uintptr_t) dsm;
-	cmd->data_len = sizeof(*dsm);
+	cmd->addr = (__u64) (uintptr_t) (&dsm->range[0]);
 
-	dsm->slba = get_slba(data, io_u);
-	/* nlb is a 1-based value for deallocate */
-	dsm->nlb = get_nlb(data, io_u) + 1;
+	if (dsm->nr_ranges == 1) {
+		dsm->range[0].slba = get_slba(data, io_u->offset);
+		/* nlb is a 1-based value for deallocate */
+		dsm->range[0].nlb = get_nlb(data, io_u->xfer_buflen) + 1;
+		cmd->cdw10 = 0;
+		cmd->data_len = sizeof(struct nvme_dsm_range);
+	} else {
+		buf_point = io_u->xfer_buf;
+		for (i = 0; i < io_u->number_trim; i++) {
+			range = (struct trim_range *)buf_point;
+			dsm->range[i].slba = get_slba(data, range->start);
+			/* nlb is a 1-based value for deallocate */
+			dsm->range[i].nlb = get_nlb(data, range->len) + 1;
+			buf_point += sizeof(struct trim_range);
+		}
+		cmd->cdw10 = io_u->number_trim - 1;
+		cmd->data_len = io_u->number_trim * sizeof(struct nvme_dsm_range);
+	}
 }
 
 int fio_nvme_uring_cmd_prep(struct nvme_uring_cmd *cmd, struct io_u *io_u,
-			    struct iovec *iov, struct nvme_dsm_range *dsm)
+			    struct iovec *iov, struct nvme_dsm *dsm)
 {
 	struct nvme_data *data = FILE_ENG_DATA(io_u->file);
 	__u64 slba;
