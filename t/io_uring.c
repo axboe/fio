@@ -110,6 +110,7 @@ struct submitter {
 #endif
 
 	int numa_node;
+	int per_file_depth;
 	const char *filename;
 
 	struct file files[MAX_FDS];
@@ -491,11 +492,6 @@ static int io_uring_enter(struct submitter *s, unsigned int to_submit,
 #endif
 }
 
-static unsigned file_depth(struct submitter *s)
-{
-	return (depth + s->nr_files - 1) / s->nr_files;
-}
-
 static unsigned long long get_offset(struct submitter *s, struct file *f)
 {
 	unsigned long long offset;
@@ -517,7 +513,7 @@ static unsigned long long get_offset(struct submitter *s, struct file *f)
 	return offset;
 }
 
-static struct file *init_new_io(struct submitter *s)
+static struct file *get_next_file(struct submitter *s)
 {
 	struct file *f;
 
@@ -525,7 +521,7 @@ static struct file *init_new_io(struct submitter *s)
 		f = &s->files[0];
 	} else {
 		f = &s->files[s->cur_file];
-		if (f->pending_ios >= file_depth(s)) {
+		if (f->pending_ios >= s->per_file_depth) {
 			s->cur_file++;
 			if (s->cur_file == s->nr_files)
 				s->cur_file = 0;
@@ -547,7 +543,7 @@ static void init_io(struct submitter *s, unsigned index)
 		return;
 	}
 
-	f = init_new_io(s);
+	f = get_next_file(s);
 
 	if (register_files) {
 		sqe->flags = IOSQE_FIXED_FILE;
@@ -588,7 +584,7 @@ static void init_io_pt(struct submitter *s, unsigned index)
 	unsigned long long slba;
 	unsigned long long nlb;
 
-	f = init_new_io(s);
+	f = get_next_file(s);
 
 	offset = get_offset(s, f);
 
@@ -872,6 +868,7 @@ static int setup_aio(struct submitter *s)
 		fixedbufs = register_files = 0;
 	}
 
+	s->per_file_depth = (depth + s->nr_files - 1) / s->nr_files;
 	return io_queue_init(roundup_pow2(depth), &s->aio_ctx);
 #else
 	fprintf(stderr, "Legacy AIO not available on this system/build\n");
@@ -976,6 +973,7 @@ static int setup_ring(struct submitter *s)
 	for (i = 0; i < p.sq_entries; i++)
 		sring->array[i] = i;
 
+	s->per_file_depth = (depth + s->nr_files - 1) / s->nr_files;
 	return 0;
 }
 
@@ -1002,8 +1000,8 @@ static int submitter_init(struct submitter *s)
 	static int init_printed;
 	char buf[80];
 	s->tid = gettid();
-	printf("submitter=%d, tid=%d, file=%s, node=%d\n", s->index, s->tid,
-							s->filename, s->numa_node);
+	printf("submitter=%d, tid=%d, file=%s, nfiles=%d, node=%d\n", s->index, s->tid,
+							s->filename, s->nr_files, s->numa_node);
 
 	set_affinity(s);
 
@@ -1082,7 +1080,7 @@ static int prep_more_ios_aio(struct submitter *s, int max_ios, struct iocb *iocb
 	while (index < max_ios) {
 		struct iocb *iocb = &iocbs[index];
 
-		f = init_new_io(s);
+		f = get_next_file(s);
 
 		io_prep_pread(iocb, f->real_fd, s->iovecs[index].iov_base,
 				s->iovecs[index].iov_len, get_offset(s, f));
@@ -1388,7 +1386,7 @@ static void *submitter_sync_fn(void *data)
 		uint64_t offset;
 		struct file *f;
 
-		f = init_new_io(s);
+		f = get_next_file(s);
 
 #ifdef ARCH_HAVE_CPU_CLOCK
 		if (stats)
