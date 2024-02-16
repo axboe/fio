@@ -1619,8 +1619,8 @@ struct all_io_list *get_all_io_list(int save_mask, size_t *sz)
 		comps = fill_file_completions(td, s, &index);
 
 		s->no_comps = cpu_to_le64((uint64_t) comps);
-		s->depth = cpu_to_le64((uint64_t) td->o.iodepth);
-		s->nofiles = cpu_to_le64((uint64_t) td->o.nr_files);
+		s->depth = cpu_to_le32((uint32_t) td->o.iodepth);
+		s->nofiles = cpu_to_le32((uint32_t) td->o.nr_files);
 		s->numberio = cpu_to_le64((uint64_t) td->io_issues[DDIR_WRITE]);
 		s->index = cpu_to_le64((uint64_t) __td_index);
 		if (td->random_state.use64) {
