@@ -28,6 +28,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <sched.h>
+#include <libgen.h>
 
 #include "../arch/arch.h"
 #include "../os/os.h"
@@ -819,7 +820,7 @@ static void set_affinity(struct submitter *s)
 #endif
 }
 
-static int detect_node(struct submitter *s, const char *name)
+static int detect_node(struct submitter *s, char *name)
 {
 #ifdef CONFIG_LIBNUMA
 	const char *base = basename(name);
