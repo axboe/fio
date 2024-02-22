@@ -820,7 +820,7 @@ static void set_affinity(struct submitter *s)
 #endif
 }
 
-static int detect_node(struct submitter *s, const char *name)
+static int detect_node(struct submitter *s, char *name)
 {
 #ifdef CONFIG_LIBNUMA
 	const char *base = basename(name);
