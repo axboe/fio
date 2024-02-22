@@ -28,6 +28,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <sched.h>
+#include <libgen.h>
 
 #include "../arch/arch.h"
 #include "../os/os.h"
