@@ -647,7 +647,7 @@ static int fio_clock_source_cb(void *data, const char *str)
 	return 0;
 }
 
-static int str_rwmix_read_cb(void *data, unsigned long long *val)
+static int str_rwmix_read_cb(void *data, long long *val)
 {
 	struct thread_data *td = cb_data_to_td(data);
 
@@ -656,7 +656,7 @@ static int str_rwmix_read_cb(void *data, unsigned long long *val)
 	return 0;
 }
 
-static int str_rwmix_write_cb(void *data, unsigned long long *val)
+static int str_rwmix_write_cb(void *data, long long *val)
 {
 	struct thread_data *td = cb_data_to_td(data);
 
@@ -1625,7 +1625,7 @@ static int str_gtod_reduce_cb(void *data, int *il)
 	return 0;
 }
 
-static int str_offset_cb(void *data, unsigned long long *__val)
+static int str_offset_cb(void *data, long long *__val)
 {
 	struct thread_data *td = cb_data_to_td(data);
 	unsigned long long v = *__val;
@@ -1646,7 +1646,7 @@ static int str_offset_cb(void *data, unsigned long long *__val)
 	return 0;
 }
 
-static int str_offset_increment_cb(void *data, unsigned long long *__val)
+static int str_offset_increment_cb(void *data, long long *__val)
 {
 	struct thread_data *td = cb_data_to_td(data);
 	unsigned long long v = *__val;
@@ -1667,7 +1667,7 @@ static int str_offset_increment_cb(void *data, unsigned long long *__val)
 	return 0;
 }
 
-static int str_size_cb(void *data, unsigned long long *__val)
+static int str_size_cb(void *data, long long *__val)
 {
 	struct thread_data *td = cb_data_to_td(data);
 	unsigned long long v = *__val;
@@ -1711,7 +1711,7 @@ static int str_io_size_cb(void *data, unsigned long long *__val)
 	return 0;
 }
 
-static int str_zoneskip_cb(void *data, unsigned long long *__val)
+static int str_zoneskip_cb(void *data, long long *__val)
 {
 	struct thread_data *td = cb_data_to_td(data);
 	unsigned long long v = *__val;
