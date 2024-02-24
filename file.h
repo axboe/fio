@@ -101,6 +101,7 @@ struct fio_file {
 	uint64_t real_file_size;
 	uint64_t file_offset;
 	uint64_t io_size;
+	uint64_t start_offset_update;
 
 	struct fio_ruhs_info *ruhs_info;
 

@@ -122,6 +122,9 @@ void clear_io_state(struct thread_data *td, int all)
 	for_each_file(td, f, i) {
 		fio_file_clear_done(f);
 		f->file_offset = get_start_offset(td, f);
+		if (f->file_offset != f->start_offset_update) {
+			f->file_offset = f->start_offset_update;
+		}
 	}
 
 	/*

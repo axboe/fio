@@ -698,6 +698,7 @@ static bool zbd_zone_align_file_sizes(struct thread_data *td,
 			 new_offset);
 		f->io_size -= (new_offset - f->file_offset);
 		f->file_offset = new_offset;
+		f->start_offset_update = new_offset;
 	}
 
 	z = zbd_offset_to_zone(f, f->file_offset + f->io_size);
