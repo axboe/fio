@@ -108,6 +108,13 @@ extern unsigned long arch_flags;
 #include "arch-generic.h"
 #endif
 
+#if !defined(__x86_64__) && defined(CONFIG_SYNC_SYNC)
+static inline void tsc_barrier(void)
+{
+	__sync_synchronize();
+}
+#endif
+
 #include "../lib/ffz.h"
 /* IWYU pragma: end_exports */
 
