@@ -756,8 +756,9 @@ Time related parameters
 	CPU mask of other jobs.
 
 .. option:: job_start_clock_id=int
-   The clock_id passed to the call to `clock_gettime` used to record job_start
-   in the `json` output format. Default is 0, or CLOCK_REALTIME.
+
+        The clock_id passed to the call to `clock_gettime` used to record
+        job_start in the `json` output format. Default is 0, or CLOCK_REALTIME.
 
 
 Target file/device
