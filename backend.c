@@ -2094,14 +2094,14 @@ static void reap_threads(unsigned int *nr_running, uint64_t *t_rate,
 			 uint64_t *m_rate)
 {
 	unsigned int cputhreads, realthreads, pending;
-	int status, ret;
+	int ret;
 
 	/*
 	 * reap exited threads (TD_EXITED -> TD_REAPED)
 	 */
 	realthreads = pending = cputhreads = 0;
 	for_each_td(td) {
-		int flags = 0;
+		int flags = 0, status;
 
 		if (!strcmp(td->o.ioengine, "cpuio"))
 			cputhreads++;

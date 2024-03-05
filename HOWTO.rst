@@ -2786,7 +2786,7 @@ with the caveat that when used on the command line, they must come after the
 
 .. option:: sg_write_mode=str : [sg]
 
-	Specify the type of write commands to issue. This option can take three values:
+	Specify the type of write commands to issue. This option can take ten values:
 
 	**write**
 		This is the default where write opcodes are issued as usual.

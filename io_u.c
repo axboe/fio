@@ -1895,8 +1895,9 @@ struct io_u *get_io_u(struct thread_data *td)
 					io_u->buflen);
 			} else if ((td->flags & TD_F_SCRAMBLE_BUFFERS) &&
 				   !(td->flags & TD_F_COMPRESS) &&
-				   !(td->flags & TD_F_DO_VERIFY))
+				   !(td->flags & TD_F_DO_VERIFY)) {
 				do_scramble = 1;
+			}
 		} else if (io_u->ddir == DDIR_READ) {
 			/*
 			 * Reset the buf_filled parameters so next time if the

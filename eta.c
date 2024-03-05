@@ -215,8 +215,9 @@ static unsigned long thread_eta(struct thread_data *td)
 				perc = td->o.rwmix[DDIR_WRITE];
 
 			bytes_total += (bytes_total * perc) / 100;
-		} else
+		} else {
 			bytes_total <<= 1;
+		}
 	}
 
 	if (td->runstate == TD_RUNNING || td->runstate == TD_VERIFYING) {
@@ -228,8 +229,9 @@ static unsigned long thread_eta(struct thread_data *td)
 			perc = (double) bytes_done / (double) bytes_total;
 			if (perc > 1.0)
 				perc = 1.0;
-		} else
+		} else {
 			perc = 0.0;
+		}
 
 		if (td->o.time_based) {
 			if (timeout) {
@@ -395,7 +397,7 @@ static bool skip_eta()
  * Print status of the jobs we know about. This includes rate estimates,
  * ETA, thread state, etc.
  */
-bool calc_thread_status(struct jobs_eta *je, int force)
+static bool calc_thread_status(struct jobs_eta *je, int force)
 {
 	int unified_rw_rep;
 	bool any_td_in_ramp;
