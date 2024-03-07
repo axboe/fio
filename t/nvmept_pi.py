@@ -43,8 +43,7 @@ class DifDixTest(FioJobCmdTest):
 
         fio_args = [
             "--name=nvmept_pi",
-            "--ioengine=io_uring_cmd",
-            "--cmd_type=nvme",
+            f"--ioengine={self.fio_opts['ioengine']}",
             f"--filename={self.fio_opts['filename']}",
             f"--rw={self.fio_opts['rw']}",
             f"--bsrange={self.fio_opts['bsrange']}",
@@ -62,6 +61,12 @@ class DifDixTest(FioJobCmdTest):
             if opt in self.fio_opts:
                 option = f"--{opt}={self.fio_opts[opt]}"
                 fio_args.append(option)
+
+        if self.fio_opts['ioengine'] == 'io_uring_cmd':
+            fio_args.append('--cmd_type=nvme')
+        elif self.fio_opts['ioengine'] == 'xnvme':
+            fio_args.append('--thread=1')
+            fio_args.append('--xnvme_async=io_uring_cmd')
 
         super().setup(fio_args)
 
@@ -686,6 +691,7 @@ def parse_args():
                         '(e.g., /dev/ng0n1). WARNING: THIS IS A DESTRUCTIVE TEST', required=True)
     parser.add_argument('-l', '--lbaf', nargs='+', type=int,
                         help='list of lba formats to test')
+    parser.add_argument('-i', '--ioengine', default='io_uring_cmd')
     args = parser.parse_args()
 
     return args
@@ -906,6 +912,7 @@ def main():
 
     for test in TEST_LIST:
         test['fio_opts']['filename'] = args.dut
+        test['fio_opts']['ioengine'] = args.ioengine
 
     test_env = {
               'fio_path': fio_path,
