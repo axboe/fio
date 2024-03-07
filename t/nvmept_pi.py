@@ -49,7 +49,6 @@ class DifDixTest(FioJobCmdTest):
             f"--rw={self.fio_opts['rw']}",
             f"--bsrange={self.fio_opts['bsrange']}",
             f"--output={self.filenames['output']}",
-            f"--output-format={self.fio_opts['output-format']}",
             f"--md_per_io_size={self.fio_opts['md_per_io_size']}",
             f"--pi_act={self.fio_opts['pi_act']}",
             f"--pi_chk={self.fio_opts['pi_chk']}",
@@ -58,7 +57,8 @@ class DifDixTest(FioJobCmdTest):
         ]
         for opt in ['fixedbufs', 'nonvectored', 'force_async', 'registerfiles',
                     'sqthread_poll', 'sqthread_poll_cpu', 'hipri', 'nowait',
-                    'time_based', 'runtime', 'verify', 'io_size', 'offset', 'number_ios']:
+                    'time_based', 'runtime', 'verify', 'io_size', 'offset', 'number_ios',
+                    'output-format']:
             if opt in self.fio_opts:
                 option = f"--{opt}={self.fio_opts[opt]}"
                 fio_args.append(option)
@@ -622,7 +622,6 @@ TEST_LIST = [
         "fio_opts": {
             "rw": 'read',
             "number_ios": NUMBER_IOS,
-            "output-format": "json",
             "pi_act": 0,
             "apptag": "0x8888",
             "apptag_mask": "0x0FFF",
@@ -639,7 +638,6 @@ TEST_LIST = [
         "fio_opts": {
             "rw": 'read',
             "number_ios": NUMBER_IOS,
-            "output-format": "json",
             "pi_act": 0,
             "apptag": "0x8888",
             "apptag_mask": "0x0FFF",
@@ -660,7 +658,6 @@ TEST_LIST = [
         "fio_opts": {
             "rw": 'read',
             "number_ios": NUMBER_IOS,
-            "output-format": "json",
             "pi_act": 0,
             "apptag": "0x8888",
             "apptag_mask": "0x0FFF",
