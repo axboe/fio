@@ -3323,8 +3323,8 @@ I/O rate
 
 .. option:: rate_cycle=int
 
-	Average bandwidth for :option:`rate` and :option:`rate_min` over this number
-	of milliseconds. Defaults to 1000.
+        Average bandwidth for :option:`rate_min` and :option:`rate_iops_min`
+        over this number of milliseconds. Defaults to 1000.
 
 
 I/O latency
