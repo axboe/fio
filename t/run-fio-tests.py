@@ -860,6 +860,16 @@ TEST_LIST = [
         'requirements':     [],
     },
     {
+        'test_id':          30,
+        'test_class':       FioJobFileTest,
+        'job':              't0030.fio',
+        'success':          SUCCESS_DEFAULT,
+        'pre_job':          None,
+        'pre_success':      None,
+        'parameters':       ['--bandwidth-log'],
+        'requirements':     [],
+    },
+    {
         'test_id':          1000,
         'test_class':       FioExeTest,
         'exe':              't/axmap',
