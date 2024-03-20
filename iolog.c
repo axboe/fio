@@ -588,6 +588,8 @@ int init_iolog(struct thread_data *td)
 	if (ret)
 		td_verror(td, EINVAL, "failed initializing iolog");
 
+	init_disk_util(td);
+
 	return ret;
 }
 
