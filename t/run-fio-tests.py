@@ -870,6 +870,15 @@ TEST_LIST = [
         'requirements':     [],
     },
     {
+        'test_id':          31,
+        'test_class':       FioJobFileTest,
+        'job':              't0031.fio',
+        'success':          SUCCESS_DEFAULT,
+        'pre_job':          't0031-pre.fio',
+        'pre_success':      SUCCESS_DEFAULT,
+        'requirements':     [],
+    },
+    {
         'test_id':          1000,
         'test_class':       FioExeTest,
         'exe':              't/axmap',
