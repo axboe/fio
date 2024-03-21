@@ -876,7 +876,7 @@ TEST_LIST = [
         'success':          SUCCESS_DEFAULT,
         'pre_job':          't0031-pre.fio',
         'pre_success':      SUCCESS_DEFAULT,
-        'requirements':     [],
+        'requirements':     [Requirements.linux, Requirements.libaio],
     },
     {
         'test_id':          1000,
