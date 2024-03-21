@@ -28,6 +28,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <sched.h>
+#include <libgen.h>
 
 #include "../arch/arch.h"
 #include "../os/os.h"
@@ -94,6 +95,7 @@ struct submitter {
 	unsigned long reaps;
 	unsigned long done;
 	unsigned long calls;
+	unsigned long io_errors;
 	volatile int finish;
 
 	__s32 *fds;
@@ -109,6 +111,7 @@ struct submitter {
 #endif
 
 	int numa_node;
+	int per_file_depth;
 	const char *filename;
 
 	struct file files[MAX_FDS];
@@ -129,7 +132,6 @@ static int batch_complete = BATCH_COMPLETE;
 static int bs = BS;
 static int polled = 1;		/* use IO polling */
 static int fixedbufs = 1;	/* use fixed user buffers */
-static int dma_map;		/* pre-map DMA buffers */
 static int register_files = 1;	/* use fixed files */
 static int buffered = 0;	/* use buffered IO, not O_DIRECT */
 static int sq_thread_poll = 0;	/* use kernel submission/poller thread */
@@ -154,17 +156,6 @@ static int vectored = 1;
 static float plist[] = { 1.0, 5.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0,
 			80.0, 90.0, 95.0, 99.0, 99.5, 99.9, 99.95, 99.99 };
 static int plist_len = 17;
-
-#ifndef IORING_REGISTER_MAP_BUFFERS
-#define IORING_REGISTER_MAP_BUFFERS	26
-struct io_uring_map_buffers {
-	__s32	fd;
-	__u32	buf_start;
-	__u32	buf_end;
-	__u32	flags;
-	__u64	rsvd[2];
-};
-#endif
 
 static int nvme_identify(int fd, __u32 nsid, enum nvme_identify_cns cns,
 			 enum nvme_csi csi, void *data)
@@ -405,22 +396,6 @@ static void add_stat(struct submitter *s, int clock_index, int nr)
 #endif
 }
 
-static int io_uring_map_buffers(struct submitter *s)
-{
-	struct io_uring_map_buffers map = {
-		.fd		= s->files[0].real_fd,
-		.buf_end	= depth,
-	};
-
-	if (do_nop)
-		return 0;
-	if (s->nr_files > 1)
-		fprintf(stdout, "Mapping buffers may not work with multiple files\n");
-
-	return syscall(__NR_io_uring_register, s->ring_fd,
-			IORING_REGISTER_MAP_BUFFERS, &map, 1);
-}
-
 static int io_uring_register_buffers(struct submitter *s)
 {
 	if (do_nop)
@@ -518,11 +493,6 @@ static int io_uring_enter(struct submitter *s, unsigned int to_submit,
 #endif
 }
 
-static unsigned file_depth(struct submitter *s)
-{
-	return (depth + s->nr_files - 1) / s->nr_files;
-}
-
 static unsigned long long get_offset(struct submitter *s, struct file *f)
 {
 	unsigned long long offset;
@@ -544,7 +514,7 @@ static unsigned long long get_offset(struct submitter *s, struct file *f)
 	return offset;
 }
 
-static struct file *init_new_io(struct submitter *s)
+static struct file *get_next_file(struct submitter *s)
 {
 	struct file *f;
 
@@ -552,7 +522,7 @@ static struct file *init_new_io(struct submitter *s)
 		f = &s->files[0];
 	} else {
 		f = &s->files[s->cur_file];
-		if (f->pending_ios >= file_depth(s)) {
+		if (f->pending_ios >= s->per_file_depth) {
 			s->cur_file++;
 			if (s->cur_file == s->nr_files)
 				s->cur_file = 0;
@@ -574,7 +544,7 @@ static void init_io(struct submitter *s, unsigned index)
 		return;
 	}
 
-	f = init_new_io(s);
+	f = get_next_file(s);
 
 	if (register_files) {
 		sqe->flags = IOSQE_FIXED_FILE;
@@ -615,7 +585,7 @@ static void init_io_pt(struct submitter *s, unsigned index)
 	unsigned long long slba;
 	unsigned long long nlb;
 
-	f = init_new_io(s);
+	f = get_next_file(s);
 
 	offset = get_offset(s, f);
 
@@ -745,10 +715,14 @@ static int reap_events_uring(struct submitter *s)
 			f = &s->files[fileno];
 			f->pending_ios--;
 			if (cqe->res != bs) {
-				printf("io: unexpected ret=%d\n", cqe->res);
-				if (polled && cqe->res == -EOPNOTSUPP)
-					printf("Your filesystem/driver/kernel doesn't support polled IO\n");
-				return -1;
+				if (cqe->res == -ENODATA || cqe->res == -EIO) {
+					s->io_errors++;
+				} else {
+					printf("io: unexpected ret=%d\n", cqe->res);
+					if (polled && cqe->res == -EOPNOTSUPP)
+						printf("Your filesystem/driver/kernel doesn't support polled IO\n");
+					return -1;
+				}
 			}
 		}
 		if (stats) {
@@ -846,7 +820,7 @@ static void set_affinity(struct submitter *s)
 #endif
 }
 
-static int detect_node(struct submitter *s, const char *name)
+static int detect_node(struct submitter *s, char *name)
 {
 #ifdef CONFIG_LIBNUMA
 	const char *base = basename(name);
@@ -895,6 +869,7 @@ static int setup_aio(struct submitter *s)
 		fixedbufs = register_files = 0;
 	}
 
+	s->per_file_depth = (depth + s->nr_files - 1) / s->nr_files;
 	return io_queue_init(roundup_pow2(depth), &s->aio_ctx);
 #else
 	fprintf(stderr, "Legacy AIO not available on this system/build\n");
@@ -950,14 +925,6 @@ static int setup_ring(struct submitter *s)
 			perror("io_uring_register_buffers");
 			return 1;
 		}
-
-		if (dma_map) {
-			ret = io_uring_map_buffers(s);
-			if (ret < 0) {
-				perror("io_uring_map_buffers");
-				return 1;
-			}
-		}
 	}
 
 	if (register_files) {
@@ -1007,6 +974,7 @@ static int setup_ring(struct submitter *s)
 	for (i = 0; i < p.sq_entries; i++)
 		sring->array[i] = i;
 
+	s->per_file_depth = (depth + s->nr_files - 1) / s->nr_files;
 	return 0;
 }
 
@@ -1033,8 +1001,8 @@ static int submitter_init(struct submitter *s)
 	static int init_printed;
 	char buf[80];
 	s->tid = gettid();
-	printf("submitter=%d, tid=%d, file=%s, node=%d\n", s->index, s->tid,
-							s->filename, s->numa_node);
+	printf("submitter=%d, tid=%d, file=%s, nfiles=%d, node=%d\n", s->index, s->tid,
+							s->filename, s->nr_files, s->numa_node);
 
 	set_affinity(s);
 
@@ -1071,7 +1039,7 @@ static int submitter_init(struct submitter *s)
 	}
 
 	if (!init_printed) {
-		printf("polled=%d, fixedbufs=%d/%d, register_files=%d, buffered=%d, QD=%d\n", polled, fixedbufs, dma_map, register_files, buffered, depth);
+		printf("polled=%d, fixedbufs=%d, register_files=%d, buffered=%d, QD=%d\n", polled, fixedbufs, register_files, buffered, depth);
 		printf("%s", buf);
 		init_printed = 1;
 	}
@@ -1113,7 +1081,7 @@ static int prep_more_ios_aio(struct submitter *s, int max_ios, struct iocb *iocb
 	while (index < max_ios) {
 		struct iocb *iocb = &iocbs[index];
 
-		f = init_new_io(s);
+		f = get_next_file(s);
 
 		io_prep_pread(iocb, f->real_fd, s->iovecs[index].iov_base,
 				s->iovecs[index].iov_len, get_offset(s, f));
@@ -1138,10 +1106,14 @@ static int reap_events_aio(struct submitter *s, struct io_event *events, int evs
 
 		f->pending_ios--;
 		if (events[reaped].res != bs) {
-			printf("io: unexpected ret=%ld\n", events[reaped].res);
-			return -1;
-		}
-		if (stats) {
+			if (events[reaped].res == -ENODATA ||
+			    events[reaped].res == -EIO) {
+				s->io_errors++;
+			} else {
+				printf("io: unexpected ret=%ld\n", events[reaped].res);
+				return -1;
+			}
+		} else if (stats) {
 			int clock_index = data >> 32;
 
 			if (last_idx != clock_index) {
@@ -1415,7 +1387,7 @@ static void *submitter_sync_fn(void *data)
 		uint64_t offset;
 		struct file *f;
 
-		f = init_new_io(s);
+		f = get_next_file(s);
 
 #ifdef ARCH_HAVE_CPU_CLOCK
 		if (stats)
@@ -1519,7 +1491,6 @@ static void usage(char *argv, int status)
 		" -b <int>  : Block size, default %d\n"
 		" -p <bool> : Polled IO, default %d\n"
 		" -B <bool> : Fixed buffers, default %d\n"
-		" -D <bool> : DMA map fixed buffers, default %d\n"
 		" -F <bool> : Register files, default %d\n"
 		" -n <int>  : Number of threads, default %d\n"
 		" -O <bool> : Use O_DIRECT, default %d\n"
@@ -1534,7 +1505,7 @@ static void usage(char *argv, int status)
 		" -P <bool> : Automatically place on device home node %d\n"
 		" -u <bool> : Use nvme-passthrough I/O, default %d\n",
 		argv, DEPTH, BATCH_SUBMIT, BATCH_COMPLETE, BS, polled,
-		fixedbufs, dma_map, register_files, nthreads, !buffered, do_nop,
+		fixedbufs, register_files, nthreads, !buffered, do_nop,
 		stats, runtime == 0 ? "unlimited" : runtime_str, random_io, aio,
 		use_sync, register_ring, numa_placement, pt);
 	exit(status);
@@ -1587,7 +1558,7 @@ static void write_tsc_rate(void)
 int main(int argc, char *argv[])
 {
 	struct submitter *s;
-	unsigned long done, calls, reap;
+	unsigned long done, calls, reap, io_errors;
 	int i, j, flags, fd, opt, threads_per_f, threads_rem = 0, nfiles;
 	struct file f;
 	void *ret;
@@ -1656,9 +1627,6 @@ int main(int argc, char *argv[])
 		case 'r':
 			runtime = atoi(optarg);
 			break;
-		case 'D':
-			dma_map = !!atoi(optarg);
-			break;
 		case 'R':
 			random_io = !!atoi(optarg);
 			break;
@@ -1694,8 +1662,6 @@ int main(int argc, char *argv[])
 		batch_complete = depth;
 	if (batch_submit > depth)
 		batch_submit = depth;
-	if (!fixedbufs && dma_map)
-		dma_map = 0;
 
 	submitter = calloc(nthreads, sizeof(*submitter) +
 				roundup_pow2(depth) * sizeof(struct iovec));
@@ -1703,7 +1669,7 @@ int main(int argc, char *argv[])
 		s = get_submitter(j);
 		s->numa_node = -1;
 		s->index = j;
-		s->done = s->calls = s->reaps = 0;
+		s->done = s->calls = s->reaps = s->io_errors = 0;
 	}
 
 	flags = O_RDONLY | O_NOATIME;
@@ -1788,11 +1754,12 @@ int main(int argc, char *argv[])
 #endif
 	}
 
-	reap = calls = done = 0;
+	reap = calls = done = io_errors = 0;
 	do {
 		unsigned long this_done = 0;
 		unsigned long this_reap = 0;
 		unsigned long this_call = 0;
+		unsigned long this_io_errors = 0;
 		unsigned long rpc = 0, ipc = 0;
 		unsigned long iops, bw;
 
@@ -1813,6 +1780,7 @@ int main(int argc, char *argv[])
 			this_done += s->done;
 			this_call += s->calls;
 			this_reap += s->reaps;
+			this_io_errors += s->io_errors;
 		}
 		if (this_call - calls) {
 			rpc = (this_done - done) / (this_call - calls);
@@ -1820,6 +1788,7 @@ int main(int argc, char *argv[])
 		} else
 			rpc = ipc = -1;
 		iops = this_done - done;
+		iops -= this_io_errors - io_errors;
 		if (bs > 1048576)
 			bw = iops * (bs / 1048576);
 		else
@@ -1847,12 +1816,16 @@ int main(int argc, char *argv[])
 		done = this_done;
 		calls = this_call;
 		reap = this_reap;
+		io_errors = this_io_errors;
 	} while (!finish);
 
 	for (j = 0; j < nthreads; j++) {
 		s = get_submitter(j);
 		pthread_join(s->thread, &ret);
 		close(s->ring_fd);
+
+		if (s->io_errors)
+			printf("%d: %lu IO errors\n", s->tid, s->io_errors);
 
 		if (stats) {
 			unsigned long nr;

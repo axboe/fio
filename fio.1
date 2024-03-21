@@ -1434,7 +1434,7 @@ described in \fBblocksize\fR. Example:
 .RS
 .RS
 .P
-bsrange=1k\-4k,2k\-8k
+bsrange=1k\-4k,2k\-8k or bsrange=1k:4k,2k:8k
 .RE
 .RE
 .TP
@@ -2266,10 +2266,10 @@ By default, the job will cycle through all available Placement IDs, so use this
 to isolate these identifiers to specific jobs. If you want fio to use placement
 identifier only at indices 0, 2 and 5 specify, you would set `fdp_pli=0,2,5`.
 .TP
-.BI (io_uring_cmd)md_per_io_size \fR=\fPint
+.BI (io_uring_cmd,xnvme)md_per_io_size \fR=\fPint
 Size in bytes for separate metadata buffer per IO. Default: 0.
 .TP
-.BI (io_uring_cmd)pi_act \fR=\fPint
+.BI (io_uring_cmd,xnvme)pi_act \fR=\fPint
 Action to take when nvme namespace is formatted with protection information.
 If this is set to 1 and namespace is formatted with metadata size equal to
 protection information size, fio won't use separate metadata buffer or extended
@@ -2283,7 +2283,7 @@ For 16 bit CRC generation fio will use isa-l if available otherwise it will
 use the default slower generator.
 (see: https://github.com/intel/isa-l)
 .TP
-.BI (io_uring_cmd)pi_chk \fR=\fPstr[,str][,str]
+.BI (io_uring_cmd,xnvme)pi_chk \fR=\fPstr[,str][,str]
 Controls the protection information check. This can take one or more of these
 values. Default: none.
 .RS
@@ -2300,13 +2300,20 @@ Enables protection information checking of application tag field.
 .RE
 .RE
 .TP
-.BI (io_uring_cmd)apptag \fR=\fPint
+.BI (io_uring_cmd,xnvme)apptag \fR=\fPint
 Specifies logical block application tag value, if namespace is formatted to use
 end to end protection information. Default: 0x1234.
 .TP
-.BI (io_uring_cmd)apptag_mask \fR=\fPint
+.BI (io_uring_cmd,xnvme)apptag_mask \fR=\fPint
 Specifies logical block application tag mask value, if namespace is formatted
 to use end to end protection information. Default: 0xffff.
+.TP
+.BI (io_uring_cmd)num_range \fR=\fPint
+For trim command this will be the number of ranges to trim per I/O request.
+The number of logical blocks per range is determined by the \fBbs\fR option
+which should be a multiple of logical block size. This cannot be used with
+read or write. Note that setting this option > 1, \fBlog_offset\fR will not be
+able to log all the offsets. Default: 1.
 .TP
 .BI (cpuio)cpuload \fR=\fPint
 Attempt to use the specified percentage of CPU cycles. This is a mandatory
@@ -2391,11 +2398,16 @@ User datagram protocol V6.
 .TP
 .B unix
 UNIX domain socket.
+.TP
+.B vsock
+VSOCK protocol.
 .RE
 .P
-When the protocol is TCP or UDP, the port must also be given, as well as the
-hostname if the job is a TCP listener or UDP reader. For unix sockets, the
+When the protocol is TCP, UDP or VSOCK, the port must also be given, as well as the
+hostname if the job is a TCP or VSOCK listener or UDP reader. For unix sockets, the
 normal \fBfilename\fR option should be used and the port is invalid.
+When the protocol is VSOCK, the \fBhostname\fR is the CID of the remote VM.
+
 .RE
 .TP
 .BI (netsplice,net)listen
@@ -3067,7 +3079,7 @@ ignore the thinktime and continue doing IO at the specified rate, instead of
 entering a catch-up mode after thinktime is done.
 .TP
 .BI rate_cycle \fR=\fPint
-Average bandwidth for \fBrate\fR and \fBrate_min\fR over this number
+Average bandwidth for \fBrate_min\fR and \fBrate_iops_min\fR over this number
 of milliseconds. Defaults to 1000.
 .SS "I/O latency"
 .TP
@@ -3775,12 +3787,14 @@ resulting in more precise time-related I/O statistics.
 Also see \fBlog_avg_msec\fR as well. Defaults to 1024.
 .TP
 .BI log_avg_msec \fR=\fPint
-By default, fio will log an entry in the iops, latency, or bw log for every
-I/O that completes. When writing to the disk log, that can quickly grow to a
-very large size. Setting this option makes fio average the each log entry
-over the specified period of time, reducing the resolution of the log. See
-\fBlog_max_value\fR as well. Defaults to 0, logging all entries.
-Also see \fBLOG FILE FORMATS\fR section.
+By default, fio will log an entry in the iops, latency, or bw log for every I/O
+that completes. When writing to the disk log, that can quickly grow to a very
+large size. Setting this option directs fio to instead record an average over
+the specified duration for each log entry, reducing the resolution of the log.
+When the job completes, fio will flush any accumulated latency log data, so the
+final log interval may not match the value specified by this option and there
+may even be duplicate timestamps. See \fBlog_window_value\fR as well. Defaults
+to 0, logging entries for each I/O. Also see \fBLOG FILE FORMATS\fR section.
 .TP
 .BI log_hist_msec \fR=\fPint
 Same as \fBlog_avg_msec\fR, but logs entries for completion latency
@@ -3797,10 +3811,28 @@ the histogram logs enabled with \fBlog_hist_msec\fR. For each increment
 in coarseness, fio outputs half as many bins. Defaults to 0, for which
 histogram logs contain 1216 latency bins. See \fBLOG FILE FORMATS\fR section.
 .TP
-.BI log_max_value \fR=\fPbool
-If \fBlog_avg_msec\fR is set, fio logs the average over that window. If
-you instead want to log the maximum value, set this option to 1. Defaults to
-0, meaning that averaged values are logged.
+.BI log_window_value \fR=\fPstr "\fR,\fP log_max_value" \fR=\fPstr
+If \fBlog_avg_msec\fR is set, fio by default logs the average over that window.
+This option determines whether fio logs the average, maximum or both the
+values over the window. This only affects the latency logging, as both average
+and maximum values for iops or bw log will be same. Accepted values are:
+.RS
+.TP
+.B avg
+Log average value over the window. The default.
+.TP
+.B max
+Log maximum value in the window.
+.TP
+.B both
+Log both average and maximum value over the window.
+.TP
+.B 0
+Backward-compatible alias for \fBavg\fR.
+.TP
+.B 1
+Backward-compatible alias for \fBmax\fR.
+.RE
 .TP
 .BI log_offset \fR=\fPbool
 If this is set, the iolog options will include the byte offset for the I/O
@@ -4812,11 +4844,20 @@ number with the lowest 13 bits indicating the priority value (\fBprio\fR and
 (\fBprioclass\fR and \fBcmdprio_class\fR options).
 .P
 Fio defaults to logging every individual I/O but when windowed logging is set
-through \fBlog_avg_msec\fR, either the average (by default) or the maximum
-(\fBlog_max_value\fR is set) `value' seen over the specified period of time
-is recorded. Each `data direction' seen within the window period will aggregate
-its values in a separate row. Further, when using windowed logging the `block
-size' and `offset' entries will always contain 0.
+through \fBlog_avg_msec\fR, either the average (by default), the maximum
+(\fBlog_window_value\fR is set to max) `value' seen over the specified period of
+time, or both the average `value' and maximum `value1' (\fBlog_window_value\fR is
+set to both) is recorded. The log file format when both the values are reported
+takes this form:
+.RS
+.P
+time (msec), value, value1, data direction, block size (bytes), offset (bytes),
+command priority
+.RE
+.P
+Each `data direction' seen within the window period will aggregate its values
+in a separate row. Further, when using windowed logging the `block size' and
+`offset' entries will always contain 0.
 .SH CLIENT / SERVER
 Normally fio is invoked as a stand-alone application on the machine where the
 I/O workload should be generated. However, the backend and frontend of fio can

@@ -33,4 +33,4 @@ bsrange=512-4k
 # 			block sizes match
 # Buggy result: 	something else
 [bssplit]
-bsrange=512/25:1k:25:2k:25:4k/25
+bssplit=512/25:1k/:2k/:4k/

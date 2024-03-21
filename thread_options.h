@@ -353,6 +353,8 @@ struct thread_options {
 	unsigned long long offset_increment;
 	unsigned long long number_ios;
 
+	unsigned int num_range;
+
 	unsigned int sync_file_range;
 
 	unsigned long long latency_target;
@@ -711,6 +713,7 @@ struct thread_options_pack {
 	uint32_t fdp_plis[FIO_MAX_PLIS];
 	uint32_t fdp_nrpli;
 
+	uint32_t num_range;
 	/*
 	 * verify_pattern followed by buffer_pattern from the unpacked struct
 	 */

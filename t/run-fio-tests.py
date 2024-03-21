@@ -542,6 +542,17 @@ class FioJobFileTest_t0027(FioJobFileTest):
         if data != self.pattern:
             self.passed = False
 
+class FioJobFileTest_t0029(FioJobFileTest):
+    """Test loops option works with read-verify workload."""
+    def check_result(self):
+        super().check_result()
+
+        if not self.passed:
+            return
+
+        if self.json_data['jobs'][1]['read']['io_kbytes'] != 8:
+            self.passed = False
+
 class FioJobFileTest_iops_rate(FioJobFileTest):
     """Test consists of fio test job t0011
     Confirm that job0 iops == 1000
@@ -711,7 +722,7 @@ TEST_LIST = [
     {
         'test_id':          15,
         'test_class':       FioJobFileTest_t0015,
-        'job':              't0015-e78980ff.fio',
+        'job':              't0015-4e7e7898.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
         'pre_success':      None,
@@ -839,6 +850,26 @@ TEST_LIST = [
         'requirements':     [],
     },
     {
+        'test_id':          29,
+        'test_class':       FioJobFileTest_t0029,
+        'job':              't0029.fio',
+        'success':          SUCCESS_DEFAULT,
+        'pre_job':          None,
+        'pre_success':      None,
+        'output_format':    'json',
+        'requirements':     [],
+    },
+    {
+        'test_id':          30,
+        'test_class':       FioJobFileTest,
+        'job':              't0030.fio',
+        'success':          SUCCESS_DEFAULT,
+        'pre_job':          None,
+        'pre_success':      None,
+        'parameters':       ['--bandwidth-log'],
+        'requirements':     [],
+    },
+    {
         'test_id':          1000,
         'test_class':       FioExeTest,
         'exe':              't/axmap',
@@ -956,6 +987,14 @@ TEST_LIST = [
         'test_id':          1014,
         'test_class':       FioExeTest,
         'exe':              't/nvmept.py',
+        'parameters':       ['-f', '{fio_path}', '--dut', '{nvmecdev}'],
+        'success':          SUCCESS_DEFAULT,
+        'requirements':     [Requirements.linux, Requirements.nvmecdev],
+    },
+    {
+        'test_id':          1015,
+        'test_class':       FioExeTest,
+        'exe':              't/nvmept_trim.py',
         'parameters':       ['-f', '{fio_path}', '--dut', '{nvmecdev}'],
         'success':          SUCCESS_DEFAULT,
         'requirements':     [Requirements.linux, Requirements.nvmecdev],

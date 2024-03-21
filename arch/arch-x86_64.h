@@ -26,6 +26,11 @@ static inline unsigned long arch_ffz(unsigned long bitmask)
 	return bitmask;
 }
 
+static inline void tsc_barrier(void)
+{
+	__asm__ __volatile__("mfence":::"memory");
+}
+
 static inline unsigned long long get_cpu_clock(void)
 {
 	unsigned int lo, hi;

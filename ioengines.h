@@ -97,6 +97,8 @@ enum fio_ioengine_flags {
 	FIO_RO_NEEDS_RW_OPEN
 			= 1 << 18,	/* open files in rw mode even if we have a read job; only
 					   affects ioengines using generic_open_file */
+	FIO_MULTI_RANGE_TRIM
+			= 1 << 19,	/* ioengine supports trim with more than one range */
 };
 
 /*

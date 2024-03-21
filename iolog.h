@@ -26,13 +26,23 @@ struct io_hist {
 	struct flist_head list;
 };
 
+enum {
+	IO_LOG_SAMPLE_AVG = 0,
+	IO_LOG_SAMPLE_MAX,
+	IO_LOG_SAMPLE_BOTH,
+};
+
+struct io_sample_value {
+	uint64_t val0;
+	uint64_t val1;
+};
 
 union io_sample_data {
-	uint64_t val;
+	struct io_sample_value val;
 	struct io_u_plat_entry *plat_entry;
 };
 
-#define sample_val(value) ((union io_sample_data) { .val = value })
+#define sample_val(value) ((union io_sample_data) { .val.val0 = value })
 #define sample_plat(plat) ((union io_sample_data) { .plat_entry = plat })
 
 /*
@@ -154,8 +164,13 @@ struct io_log {
  * If the bit following the upper bit is set, then we have the priority
  */
 #define LOG_PRIO_SAMPLE_BIT	0x40000000U
+/*
+ * If the bit following prioity sample vit is set, we report both avg and max
+ */
+#define LOG_AVG_MAX_SAMPLE_BIT	0x20000000U
 
-#define LOG_SAMPLE_BITS		(LOG_OFFSET_SAMPLE_BIT | LOG_PRIO_SAMPLE_BIT)
+#define LOG_SAMPLE_BITS		(LOG_OFFSET_SAMPLE_BIT | LOG_PRIO_SAMPLE_BIT |\
+					LOG_AVG_MAX_SAMPLE_BIT)
 #define io_sample_ddir(io)	((io)->__ddir & ~LOG_SAMPLE_BITS)
 
 static inline void io_sample_set_ddir(struct io_log *log,

@@ -623,7 +623,7 @@ static void *clock_thread_fn(void *data)
 			seq = *t->seq;
 			if (seq == UINT_MAX)
 				break;
-			__sync_synchronize();
+			tsc_barrier();
 			tsc = get_cpu_clock();
 		} while (seq != atomic32_compare_and_swap(t->seq, seq, seq + 1));
 

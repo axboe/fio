@@ -11,6 +11,7 @@
 #include <assert.h>
 #include <libxnvme.h>
 #include "fio.h"
+#include "verify.h"
 #include "zbd_types.h"
 #include "fdp.h"
 #include "optgroup.h"
@@ -30,8 +31,10 @@ struct xnvme_fioe_fwrap {
 
 	uint32_t ssw;
 	uint32_t lba_nbytes;
+	uint32_t md_nbytes;
+	uint32_t lba_pow2;
 
-	uint8_t _pad[24];
+	uint8_t _pad[16];
 };
 XNVME_STATIC_ASSERT(sizeof(struct xnvme_fioe_fwrap) == 64, "Incorrect size")
 
@@ -58,12 +61,19 @@ struct xnvme_fioe_data {
 	uint64_t nallocated;
 
 	struct iovec *iovec;
-
-	uint8_t _pad[8];
+	struct iovec *md_iovec;
 
 	struct xnvme_fioe_fwrap files[];
 };
 XNVME_STATIC_ASSERT(sizeof(struct xnvme_fioe_data) == 64, "Incorrect size")
+
+struct xnvme_fioe_request {
+	/* Context for NVMe PI */
+	struct xnvme_pi_ctx pi_ctx;
+
+	/* Separate metadata buffer pointer */
+	void *md_buf;
+};
 
 struct xnvme_fioe_options {
 	void *padding;
@@ -71,6 +81,11 @@ struct xnvme_fioe_options {
 	unsigned int sqpoll_thread;
 	unsigned int xnvme_dev_nsid;
 	unsigned int xnvme_iovec;
+	unsigned int md_per_io_size;
+	unsigned int pi_act;
+	unsigned int apptag;
+	unsigned int apptag_mask;
+	unsigned int prchk;
 	char *xnvme_be;
 	char *xnvme_mem;
 	char *xnvme_async;
@@ -78,6 +93,20 @@ struct xnvme_fioe_options {
 	char *xnvme_admin;
 	char *xnvme_dev_subnqn;
 };
+
+static int str_pi_chk_cb(void *data, const char *str)
+{
+	struct xnvme_fioe_options *o = data;
+
+	if (strstr(str, "GUARD") != NULL)
+		o->prchk = XNVME_PI_FLAGS_GUARD_CHECK;
+	if (strstr(str, "REFTAG") != NULL)
+		o->prchk |= XNVME_PI_FLAGS_REFTAG_CHECK;
+	if (strstr(str, "APPTAG") != NULL)
+		o->prchk |= XNVME_PI_FLAGS_APPTAG_CHECK;
+
+	return 0;
+}
 
 static struct fio_option options[] = {
 	{
@@ -171,6 +200,56 @@ static struct fio_option options[] = {
 		.category = FIO_OPT_C_ENGINE,
 		.group = FIO_OPT_G_XNVME,
 	},
+	{
+		.name	= "md_per_io_size",
+		.lname	= "Separate Metadata Buffer Size per I/O",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct xnvme_fioe_options, md_per_io_size),
+		.def	= "0",
+		.help	= "Size of separate metadata buffer per I/O (Default: 0)",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_XNVME,
+	},
+	{
+		.name	= "pi_act",
+		.lname	= "Protection Information Action",
+		.type	= FIO_OPT_BOOL,
+		.off1	= offsetof(struct xnvme_fioe_options, pi_act),
+		.def	= "1",
+		.help	= "Protection Information Action bit (pi_act=1 or pi_act=0)",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_XNVME,
+	},
+	{
+		.name	= "pi_chk",
+		.lname	= "Protection Information Check",
+		.type	= FIO_OPT_STR_STORE,
+		.def	= NULL,
+		.help	= "Control of Protection Information Checking (pi_chk=GUARD,REFTAG,APPTAG)",
+		.cb	= str_pi_chk_cb,
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_XNVME,
+	},
+	{
+		.name	= "apptag",
+		.lname	= "Application Tag used in Protection Information",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct xnvme_fioe_options, apptag),
+		.def	= "0x1234",
+		.help	= "Application Tag used in Protection Information field (Default: 0x1234)",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_XNVME,
+	},
+	{
+		.name	= "apptag_mask",
+		.lname	= "Application Tag Mask",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct xnvme_fioe_options, apptag_mask),
+		.def	= "0xffff",
+		.help	= "Application Tag Mask used with Application Tag (Default: 0xffff)",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_XNVME,
+	},
 
 	{
 		.name = NULL,
@@ -181,11 +260,24 @@ static void cb_pool(struct xnvme_cmd_ctx *ctx, void *cb_arg)
 {
 	struct io_u *io_u = cb_arg;
 	struct xnvme_fioe_data *xd = io_u->mmap_data;
+	struct xnvme_fioe_request *fio_req = io_u->engine_data;
+	struct xnvme_fioe_fwrap *fwrap = &xd->files[io_u->file->fileno];
+	bool pi_act = (fio_req->pi_ctx.pi_flags >> 3);
+	int err;
 
 	if (xnvme_cmd_ctx_cpl_status(ctx)) {
 		xnvme_cmd_ctx_pr(ctx, XNVME_PR_DEF);
 		xd->ecount += 1;
 		io_u->error = EIO;
+	}
+
+	if (!io_u->error && fwrap->geo->pi_type && (io_u->ddir == DDIR_READ) && !pi_act) {
+		err = xnvme_pi_verify(&fio_req->pi_ctx, io_u->xfer_buf,
+				      fio_req->md_buf, io_u->xfer_buflen / fwrap->lba_nbytes);
+		if (err) {
+			xd->ecount += 1;
+			io_u->error = EIO;
+		}
 	}
 
 	xd->iocq[xd->completed++] = io_u;
@@ -249,8 +341,52 @@ static void xnvme_fioe_cleanup(struct thread_data *td)
 
 	free(xd->iocq);
 	free(xd->iovec);
+	free(xd->md_iovec);
 	free(xd);
 	td->io_ops_data = NULL;
+}
+
+static int _verify_options(struct thread_data *td, struct fio_file *f,
+			   struct xnvme_fioe_fwrap *fwrap)
+{
+	struct xnvme_fioe_options *o = td->eo;
+	unsigned int correct_md_size;
+
+	for_each_rw_ddir(ddir) {
+		if (td->o.min_bs[ddir] % fwrap->lba_nbytes || td->o.max_bs[ddir] % fwrap->lba_nbytes) {
+			if (!fwrap->lba_pow2) {
+				log_err("ioeng->_verify_options(%s): block size must be a multiple of %u "
+					"(LBA data size + Metadata size)\n", f->file_name, fwrap->lba_nbytes);
+			} else {
+				log_err("ioeng->_verify_options(%s): block size must be a multiple of LBA data size\n",
+					f->file_name);
+			}
+			return 1;
+		}
+		if (ddir == DDIR_TRIM)
+			continue;
+
+		correct_md_size = (td->o.max_bs[ddir] / fwrap->lba_nbytes) * fwrap->md_nbytes;
+		if (fwrap->md_nbytes && fwrap->lba_pow2 && (o->md_per_io_size < correct_md_size)) {
+			log_err("ioeng->_verify_options(%s): md_per_io_size should be at least %u bytes\n",
+				f->file_name, correct_md_size);
+			return 1;
+		}
+	}
+
+	/*
+	 * For extended logical block sizes we cannot use verify when
+	 * end to end data protection checks are enabled, as the PI
+	 * section of data buffer conflicts with verify.
+	 */
+	if (fwrap->md_nbytes && fwrap->geo->pi_type && !fwrap->lba_pow2 &&
+	    td->o.verify != VERIFY_NONE) {
+		log_err("ioeng->_verify_options(%s): for extended LBA, verify cannot be used when E2E data protection is enabled\n",
+			f->file_name);
+		return 1;
+	}
+
+	return 0;
 }
 
 /**
@@ -263,6 +399,7 @@ static void xnvme_fioe_cleanup(struct thread_data *td)
 static int _dev_open(struct thread_data *td, struct fio_file *f)
 {
 	struct xnvme_opts opts = xnvme_opts_from_fioe(td);
+	struct xnvme_fioe_options *o = td->eo;
 	struct xnvme_fioe_data *xd = td->io_ops_data;
 	struct xnvme_fioe_fwrap *fwrap;
 	int flags = 0;
@@ -297,6 +434,31 @@ static int _dev_open(struct thread_data *td, struct fio_file *f)
 
 	fwrap->ssw = xnvme_dev_get_ssw(fwrap->dev);
 	fwrap->lba_nbytes = fwrap->geo->lba_nbytes;
+	fwrap->md_nbytes = fwrap->geo->nbytes_oob;
+
+	if (fwrap->geo->lba_extended)
+		fwrap->lba_pow2 = 0;
+	else
+		fwrap->lba_pow2 = 1;
+
+	/*
+	 * When PI action is set and PI size is equal to metadata size, the
+	 * controller inserts/removes PI. So update the LBA data and metadata
+	 * sizes accordingly.
+	 */
+	if (o->pi_act && fwrap->geo->pi_type &&
+	    fwrap->geo->nbytes_oob == xnvme_pi_size(fwrap->geo->pi_format)) {
+		if (fwrap->geo->lba_extended) {
+			fwrap->lba_nbytes -= fwrap->geo->nbytes_oob;
+			fwrap->lba_pow2 = 1;
+		}
+		fwrap->md_nbytes = 0;
+	}
+
+	if (_verify_options(td, f, fwrap)) {
+		td_verror(td, EINVAL, "_dev_open");
+		goto failure;
+	}
 
 	fwrap->fio_file = f;
 	fwrap->fio_file->filetype = FIO_TYPE_BLOCK;
@@ -325,6 +487,7 @@ failure:
 static int xnvme_fioe_init(struct thread_data *td)
 {
 	struct xnvme_fioe_data *xd = NULL;
+	struct xnvme_fioe_options *o = td->eo;
 	struct fio_file *f;
 	unsigned int i;
 
@@ -347,12 +510,25 @@ static int xnvme_fioe_init(struct thread_data *td)
 		return 1;
 	}
 
-	xd->iovec = calloc(td->o.iodepth, sizeof(*xd->iovec));
-	if (!xd->iovec) {
-		free(xd->iocq);
-		free(xd);
-		log_err("ioeng->init(): !calloc(xd->iovec), err(%d)\n", errno);
-		return 1;
+	if (o->xnvme_iovec) {
+		xd->iovec = calloc(td->o.iodepth, sizeof(*xd->iovec));
+		if (!xd->iovec) {
+			free(xd->iocq);
+			free(xd);
+			log_err("ioeng->init(): !calloc(xd->iovec), err(%d)\n", errno);
+			return 1;
+		}
+	}
+
+	if (o->xnvme_iovec && o->md_per_io_size) {
+		xd->md_iovec = calloc(td->o.iodepth, sizeof(*xd->md_iovec));
+		if (!xd->md_iovec) {
+			free(xd->iocq);
+			free(xd->iovec);
+			free(xd);
+			log_err("ioeng->init(): !calloc(xd->md_iovec), err(%d)\n", errno);
+			return 1;
+		}
 	}
 
 	xd->prev = -1;
@@ -362,8 +538,8 @@ static int xnvme_fioe_init(struct thread_data *td)
 	{
 		if (_dev_open(td, f)) {
 			/*
-			 * Note: We are not freeing xd, iocq and iovec. This
-			 * will be done as part of cleanup routine.
+			 * Note: We are not freeing xd, iocq, iovec and md_iovec.
+			 * This will be done as part of cleanup routine.
 			 */
 			log_err("ioeng->init(): failed; _dev_open(%s)\n", f->file_name);
 			return 1;
@@ -418,13 +594,61 @@ static void xnvme_fioe_iomem_free(struct thread_data *td)
 
 static int xnvme_fioe_io_u_init(struct thread_data *td, struct io_u *io_u)
 {
+	struct xnvme_fioe_request *fio_req;
+	struct xnvme_fioe_options *o = td->eo;
+	struct xnvme_fioe_data *xd = td->io_ops_data;
+	struct xnvme_fioe_fwrap *fwrap = &xd->files[0];
+
+	if (!fwrap->dev) {
+		log_err("ioeng->io_u_init(): failed; no dev-handle\n");
+		return 1;
+	}
+
 	io_u->mmap_data = td->io_ops_data;
+	io_u->engine_data = NULL;
+
+	fio_req = calloc(1, sizeof(*fio_req));
+	if (!fio_req) {
+		log_err("ioeng->io_u_init(): !calloc(fio_req), err(%d)\n", errno);
+		return 1;
+	}
+
+	if (o->md_per_io_size) {
+		fio_req->md_buf = xnvme_buf_alloc(fwrap->dev, o->md_per_io_size);
+		if (!fio_req->md_buf) {
+			free(fio_req);
+			return 1;
+		}
+	}
+
+	io_u->engine_data = fio_req;
 
 	return 0;
 }
 
 static void xnvme_fioe_io_u_free(struct thread_data *td, struct io_u *io_u)
 {
+	struct xnvme_fioe_data *xd = NULL;
+	struct xnvme_fioe_fwrap *fwrap = NULL;
+	struct xnvme_fioe_request *fio_req = NULL;
+
+	if (!td->io_ops_data)
+		return;
+
+	xd = td->io_ops_data;
+	fwrap = &xd->files[0];
+
+	if (!fwrap->dev) {
+		log_err("ioeng->io_u_free(): failed no dev-handle\n");
+		return;
+	}
+
+	fio_req = io_u->engine_data;
+	if (fio_req->md_buf)
+		xnvme_buf_free(fwrap->dev, fio_req->md_buf);
+
+	free(fio_req);
+
 	io_u->mmap_data = NULL;
 }
 
@@ -499,8 +723,10 @@ static int xnvme_fioe_getevents(struct thread_data *td, unsigned int min, unsign
 static enum fio_q_status xnvme_fioe_queue(struct thread_data *td, struct io_u *io_u)
 {
 	struct xnvme_fioe_data *xd = td->io_ops_data;
+	struct xnvme_fioe_options *o = td->eo;
 	struct xnvme_fioe_fwrap *fwrap;
 	struct xnvme_cmd_ctx *ctx;
+	struct xnvme_fioe_request *fio_req = io_u->engine_data;
 	uint32_t nsid;
 	uint64_t slba;
 	uint16_t nlb;
@@ -513,8 +739,13 @@ static enum fio_q_status xnvme_fioe_queue(struct thread_data *td, struct io_u *i
 	fwrap = &xd->files[io_u->file->fileno];
 	nsid = xnvme_dev_get_nsid(fwrap->dev);
 
-	slba = io_u->offset >> fwrap->ssw;
-	nlb = (io_u->xfer_buflen >> fwrap->ssw) - 1;
+	if (fwrap->lba_pow2) {
+		slba = io_u->offset >> fwrap->ssw;
+		nlb = (io_u->xfer_buflen >> fwrap->ssw) - 1;
+	} else {
+		slba = io_u->offset / fwrap->lba_nbytes;
+		nlb = (io_u->xfer_buflen / fwrap->lba_nbytes) - 1;
+	}
 
 	ctx = xnvme_queue_get_cmd_ctx(fwrap->queue);
 	ctx->async.cb_arg = io_u;
@@ -545,14 +776,80 @@ static enum fio_q_status xnvme_fioe_queue(struct thread_data *td, struct io_u *i
 		return FIO_Q_COMPLETED;
 	}
 
+	if (fwrap->geo->pi_type && !o->pi_act) {
+		err = xnvme_pi_ctx_init(&fio_req->pi_ctx, fwrap->lba_nbytes,
+					fwrap->geo->nbytes_oob, fwrap->geo->lba_extended,
+					fwrap->geo->pi_loc, fwrap->geo->pi_type,
+					(o->pi_act << 3 | o->prchk), slba, o->apptag_mask,
+					o->apptag, fwrap->geo->pi_format);
+		if (err) {
+			log_err("ioeng->queue(): err: '%d'\n", err);
+
+			xnvme_queue_put_cmd_ctx(ctx->async.queue, ctx);
+
+			io_u->error = abs(err);
+			return FIO_Q_COMPLETED;
+		}
+
+		if (io_u->ddir == DDIR_WRITE)
+			xnvme_pi_generate(&fio_req->pi_ctx, io_u->xfer_buf, fio_req->md_buf,
+					  nlb + 1);
+	}
+
+	if (fwrap->geo->pi_type)
+		ctx->cmd.nvm.prinfo = (o->pi_act << 3 | o->prchk);
+
+	switch (fwrap->geo->pi_type) {
+	case XNVME_PI_TYPE1:
+	case XNVME_PI_TYPE2:
+		switch (fwrap->geo->pi_format) {
+		case XNVME_SPEC_NVM_NS_16B_GUARD:
+			if (o->prchk & XNVME_PI_FLAGS_REFTAG_CHECK)
+				ctx->cmd.nvm.ilbrt = (uint32_t)slba;
+			break;
+		case XNVME_SPEC_NVM_NS_64B_GUARD:
+			if (o->prchk & XNVME_PI_FLAGS_REFTAG_CHECK) {
+				ctx->cmd.nvm.ilbrt = (uint32_t)slba;
+				ctx->cmd.common.cdw03 = ((slba >> 32) & 0xffff);
+			}
+			break;
+		default:
+			break;
+		}
+		if (o->prchk & XNVME_PI_FLAGS_APPTAG_CHECK) {
+			ctx->cmd.nvm.lbat = o->apptag;
+			ctx->cmd.nvm.lbatm = o->apptag_mask;
+		}
+		break;
+	case XNVME_PI_TYPE3:
+		if (o->prchk & XNVME_PI_FLAGS_APPTAG_CHECK) {
+			ctx->cmd.nvm.lbat = o->apptag;
+			ctx->cmd.nvm.lbatm = o->apptag_mask;
+		}
+		break;
+	case XNVME_PI_DISABLE:
+		break;
+	}
+
 	if (vectored_io) {
 		xd->iovec[io_u->index].iov_base = io_u->xfer_buf;
 		xd->iovec[io_u->index].iov_len = io_u->xfer_buflen;
-
-		err = xnvme_cmd_passv(ctx, &xd->iovec[io_u->index], 1, io_u->xfer_buflen, NULL, 0,
-				      0);
+		if (fwrap->md_nbytes && fwrap->lba_pow2) {
+			xd->md_iovec[io_u->index].iov_base = fio_req->md_buf;
+			xd->md_iovec[io_u->index].iov_len = fwrap->md_nbytes * (nlb + 1);
+			err = xnvme_cmd_passv(ctx, &xd->iovec[io_u->index], 1, io_u->xfer_buflen,
+					      &xd->md_iovec[io_u->index], 1,
+					      fwrap->md_nbytes * (nlb + 1));
+		} else {
+			err = xnvme_cmd_passv(ctx, &xd->iovec[io_u->index], 1, io_u->xfer_buflen,
+					      NULL, 0, 0);
+		}
 	} else {
-		err = xnvme_cmd_pass(ctx, io_u->xfer_buf, io_u->xfer_buflen, NULL, 0);
+		if (fwrap->md_nbytes && fwrap->lba_pow2)
+			err = xnvme_cmd_pass(ctx, io_u->xfer_buf, io_u->xfer_buflen,
+					     fio_req->md_buf, fwrap->md_nbytes * (nlb + 1));
+		else
+			err = xnvme_cmd_pass(ctx, io_u->xfer_buf, io_u->xfer_buflen, NULL, 0);
 	}
 	switch (err) {
 	case 0:

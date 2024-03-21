@@ -618,6 +618,19 @@ static int fixup_options(struct thread_data *td)
 		ret |= 1;
 	}
 
+	if (td_trimwrite(td) && o->num_range > 1) {
+		log_err("fio: trimwrite cannot be used with multiple"
+			" ranges.\n");
+		ret |= 1;
+	}
+
+	if (td_trim(td) && o->num_range > 1 &&
+	    !td_ioengine_flagged(td, FIO_MULTI_RANGE_TRIM)) {
+		log_err("fio: can't use multiple ranges with IO engine %s\n",
+			td->io_ops->name);
+		ret |= 1;
+	}
+
 #ifndef CONFIG_PSHARED
 	if (!o->use_thread) {
 		log_info("fio: this platform does not support process shared"

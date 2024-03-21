@@ -408,6 +408,11 @@ struct nvme_dsm_range {
 	__le64	slba;
 };
 
+struct nvme_dsm {
+	__u32 nr_ranges;
+	struct nvme_dsm_range range[];
+};
+
 struct nvme_cmd_ext_io_opts {
 	__u32 io_flags;
 	__u16 apptag;
@@ -421,7 +426,7 @@ int fio_nvme_get_info(struct fio_file *f, __u64 *nlba, __u32 pi_act,
 		      struct nvme_data *data);
 
 int fio_nvme_uring_cmd_prep(struct nvme_uring_cmd *cmd, struct io_u *io_u,
-			    struct iovec *iov, struct nvme_dsm_range *dsm);
+			    struct iovec *iov, struct nvme_dsm *dsm);
 
 void fio_nvme_pi_fill(struct nvme_uring_cmd *cmd, struct io_u *io_u,
 		      struct nvme_cmd_ext_io_opts *opts);

@@ -647,7 +647,7 @@ static int fio_clock_source_cb(void *data, const char *str)
 	return 0;
 }
 
-static int str_rwmix_read_cb(void *data, unsigned long long *val)
+static int str_rwmix_read_cb(void *data, long long *val)
 {
 	struct thread_data *td = cb_data_to_td(data);
 
@@ -656,7 +656,7 @@ static int str_rwmix_read_cb(void *data, unsigned long long *val)
 	return 0;
 }
 
-static int str_rwmix_write_cb(void *data, unsigned long long *val)
+static int str_rwmix_write_cb(void *data, long long *val)
 {
 	struct thread_data *td = cb_data_to_td(data);
 
@@ -1625,7 +1625,7 @@ static int str_gtod_reduce_cb(void *data, int *il)
 	return 0;
 }
 
-static int str_offset_cb(void *data, unsigned long long *__val)
+static int str_offset_cb(void *data, long long *__val)
 {
 	struct thread_data *td = cb_data_to_td(data);
 	unsigned long long v = *__val;
@@ -1646,7 +1646,7 @@ static int str_offset_cb(void *data, unsigned long long *__val)
 	return 0;
 }
 
-static int str_offset_increment_cb(void *data, unsigned long long *__val)
+static int str_offset_increment_cb(void *data, long long *__val)
 {
 	struct thread_data *td = cb_data_to_td(data);
 	unsigned long long v = *__val;
@@ -1667,7 +1667,7 @@ static int str_offset_increment_cb(void *data, unsigned long long *__val)
 	return 0;
 }
 
-static int str_size_cb(void *data, unsigned long long *__val)
+static int str_size_cb(void *data, long long *__val)
 {
 	struct thread_data *td = cb_data_to_td(data);
 	unsigned long long v = *__val;
@@ -1711,7 +1711,7 @@ static int str_io_size_cb(void *data, unsigned long long *__val)
 	return 0;
 }
 
-static int str_zoneskip_cb(void *data, unsigned long long *__val)
+static int str_zoneskip_cb(void *data, long long *__val)
 {
 	struct thread_data *td = cb_data_to_td(data);
 	unsigned long long v = *__val;
@@ -2392,6 +2392,17 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= offsetof(struct thread_options, number_ios),
 		.help	= "Force job completion after this number of IOs",
 		.def	= "0",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
+		.name	= "num_range",
+		.lname	= "Number of ranges",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct thread_options, num_range),
+		.maxval	= MAX_TRIM_RANGE,
+		.help	= "Number of ranges for trim command",
+		.def	= "1",
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_INVALID,
 	},
@@ -4540,14 +4551,38 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_INVALID,
 	},
 	{
-		.name	= "log_max_value",
-		.lname	= "Log maximum instead of average",
-		.type	= FIO_OPT_BOOL,
+		.name	= "log_window_value",
+		.alias  = "log_max_value",
+		.lname	= "Log maximum, average or both values",
+		.type	= FIO_OPT_STR,
 		.off1	= offsetof(struct thread_options, log_max),
-		.help	= "Log max sample in a window instead of average",
-		.def	= "0",
+		.help	= "Log max, average or both sample in a window",
+		.def	= "avg",
 		.category = FIO_OPT_C_LOG,
 		.group	= FIO_OPT_G_INVALID,
+		.posval	= {
+			  { .ival = "avg",
+			    .oval = IO_LOG_SAMPLE_AVG,
+			    .help = "Log average value over the window",
+			  },
+			  { .ival = "max",
+			    .oval = IO_LOG_SAMPLE_MAX,
+			    .help = "Log maximum value in the window",
+			  },
+			  { .ival = "both",
+			    .oval = IO_LOG_SAMPLE_BOTH,
+			    .help = "Log both average and maximum values over the window"
+			  },
+			  /* Compatibility with former boolean values */
+			  { .ival = "0",
+			    .oval = IO_LOG_SAMPLE_AVG,
+			    .help = "Alias for 'avg'",
+			  },
+			  { .ival = "1",
+			    .oval = IO_LOG_SAMPLE_MAX,
+			    .help = "Alias for 'max'",
+			  },
+		},
 	},
 	{
 		.name	= "log_offset",

@@ -43,13 +43,11 @@ class DifDixTest(FioJobCmdTest):
 
         fio_args = [
             "--name=nvmept_pi",
-            "--ioengine=io_uring_cmd",
-            "--cmd_type=nvme",
+            f"--ioengine={self.fio_opts['ioengine']}",
             f"--filename={self.fio_opts['filename']}",
             f"--rw={self.fio_opts['rw']}",
             f"--bsrange={self.fio_opts['bsrange']}",
             f"--output={self.filenames['output']}",
-            f"--output-format={self.fio_opts['output-format']}",
             f"--md_per_io_size={self.fio_opts['md_per_io_size']}",
             f"--pi_act={self.fio_opts['pi_act']}",
             f"--pi_chk={self.fio_opts['pi_chk']}",
@@ -58,10 +56,17 @@ class DifDixTest(FioJobCmdTest):
         ]
         for opt in ['fixedbufs', 'nonvectored', 'force_async', 'registerfiles',
                     'sqthread_poll', 'sqthread_poll_cpu', 'hipri', 'nowait',
-                    'time_based', 'runtime', 'verify', 'io_size', 'offset', 'number_ios']:
+                    'time_based', 'runtime', 'verify', 'io_size', 'offset', 'number_ios',
+                    'output-format']:
             if opt in self.fio_opts:
                 option = f"--{opt}={self.fio_opts[opt]}"
                 fio_args.append(option)
+
+        if self.fio_opts['ioengine'] == 'io_uring_cmd':
+            fio_args.append('--cmd_type=nvme')
+        elif self.fio_opts['ioengine'] == 'xnvme':
+            fio_args.append('--thread=1')
+            fio_args.append('--xnvme_async=io_uring_cmd')
 
         super().setup(fio_args)
 
@@ -622,7 +627,6 @@ TEST_LIST = [
         "fio_opts": {
             "rw": 'read',
             "number_ios": NUMBER_IOS,
-            "output-format": "json",
             "pi_act": 0,
             "apptag": "0x8888",
             "apptag_mask": "0x0FFF",
@@ -639,7 +643,6 @@ TEST_LIST = [
         "fio_opts": {
             "rw": 'read',
             "number_ios": NUMBER_IOS,
-            "output-format": "json",
             "pi_act": 0,
             "apptag": "0x8888",
             "apptag_mask": "0x0FFF",
@@ -660,7 +663,6 @@ TEST_LIST = [
         "fio_opts": {
             "rw": 'read',
             "number_ios": NUMBER_IOS,
-            "output-format": "json",
             "pi_act": 0,
             "apptag": "0x8888",
             "apptag_mask": "0x0FFF",
@@ -689,6 +691,7 @@ def parse_args():
                         '(e.g., /dev/ng0n1). WARNING: THIS IS A DESTRUCTIVE TEST', required=True)
     parser.add_argument('-l', '--lbaf', nargs='+', type=int,
                         help='list of lba formats to test')
+    parser.add_argument('-i', '--ioengine', default='io_uring_cmd')
     args = parser.parse_args()
 
     return args
@@ -909,6 +912,7 @@ def main():
 
     for test in TEST_LIST:
         test['fio_opts']['filename'] = args.dut
+        test['fio_opts']['ioengine'] = args.ioengine
 
     test_env = {
               'fio_path': fio_path,

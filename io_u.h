@@ -53,6 +53,11 @@ struct io_u {
 	unsigned short clat_prio_index;
 
 	/*
+	 * number of trim ranges for this IO.
+	 */
+	unsigned int number_trim;
+
+	/*
 	 * Allocated/set buffer and length
 	 */
 	unsigned long long buflen;

@@ -81,7 +81,7 @@ struct ioring_data {
 
 	struct cmdprio cmdprio;
 
-	struct nvme_dsm_range *dsm;
+	struct nvme_dsm *dsm;
 };
 
 struct ioring_options {
@@ -385,6 +385,9 @@ static int fio_ioring_cmd_prep(struct thread_data *td, struct io_u *io_u)
 	struct fio_file *f = io_u->file;
 	struct nvme_uring_cmd *cmd;
 	struct io_uring_sqe *sqe;
+	struct nvme_dsm *dsm;
+	void *ptr = ld->dsm;
+	unsigned int dsm_size;
 
 	/* only supports nvme_uring_cmd */
 	if (o->cmd_type != FIO_URING_CMD_NVME)
@@ -423,9 +426,13 @@ static int fio_ioring_cmd_prep(struct thread_data *td, struct io_u *io_u)
 	}
 
 	cmd = (struct nvme_uring_cmd *)sqe->cmd;
+	dsm_size = sizeof(*ld->dsm) + td->o.num_range * sizeof(struct nvme_dsm_range);
+	ptr += io_u->index * dsm_size;
+	dsm = (struct nvme_dsm *)ptr;
+
 	return fio_nvme_uring_cmd_prep(cmd, io_u,
 			o->nonvectored ? NULL : &ld->iovecs[io_u->index],
-			&ld->dsm[io_u->index]);
+			dsm);
 }
 
 static struct io_u *fio_ioring_event(struct thread_data *td, int event)
@@ -1133,8 +1140,11 @@ static int fio_ioring_init(struct thread_data *td)
 {
 	struct ioring_options *o = td->eo;
 	struct ioring_data *ld;
+	struct nvme_dsm *dsm;
+	void *ptr;
+	unsigned int dsm_size;
 	unsigned long long md_size;
-	int ret;
+	int ret, i;
 
 	/* sqthread submission requires registered files */
 	if (o->sqpoll_thread)
@@ -1195,10 +1205,19 @@ static int fio_ioring_init(struct thread_data *td)
 	 * in zbd mode where trim means zone reset.
 	 */
 	if (!strcmp(td->io_ops->name, "io_uring_cmd") && td_trim(td) &&
-	    td->o.zone_mode == ZONE_MODE_ZBD)
+	    td->o.zone_mode == ZONE_MODE_ZBD) {
 		td->io_ops->flags |= FIO_ASYNCIO_SYNC_TRIM;
-	else
-		ld->dsm = calloc(td->o.iodepth, sizeof(*ld->dsm));
+	} else {
+		dsm_size = sizeof(*ld->dsm) +
+			td->o.num_range * sizeof(struct nvme_dsm_range);
+		ld->dsm = calloc(td->o.iodepth, dsm_size);
+		ptr = ld->dsm;
+		for (i = 0; i < td->o.iodepth; i++) {
+			dsm = (struct nvme_dsm *)ptr;
+			dsm->nr_ranges = td->o.num_range;
+			ptr += dsm_size;
+		}
+	}
 
 	return 0;
 }
@@ -1466,7 +1485,8 @@ static struct ioengine_ops ioengine_uring_cmd = {
 	.name			= "io_uring_cmd",
 	.version		= FIO_IOOPS_VERSION,
 	.flags			= FIO_NO_OFFLOAD | FIO_MEMALIGN | FIO_RAWIO |
-					FIO_ASYNCIO_SETS_ISSUE_TIME,
+					FIO_ASYNCIO_SETS_ISSUE_TIME |
+					FIO_MULTI_RANGE_TRIM,
 	.init			= fio_ioring_init,
 	.post_init		= fio_ioring_cmd_post_init,
 	.io_u_init		= fio_ioring_io_u_init,

@@ -175,7 +175,7 @@ class FioJobFileTest(FioExeTest):
 
         super().__init__(fio_path, success, testnum, artifact_root)
 
-    def setup(self, parameters=None):
+    def setup(self, parameters):
         """Setup instance variables for fio job test."""
 
         self.filenames['fio_output'] = f"{os.path.basename(self.fio_job)}.output"
@@ -185,6 +185,8 @@ class FioJobFileTest(FioExeTest):
             f"--output={self.filenames['fio_output']}",
             self.fio_job,
             ]
+        if parameters:
+            fio_args += parameters
 
         super().setup(fio_args)
 
@@ -206,7 +208,7 @@ class FioJobFileTest(FioExeTest):
                             self.testnum,
                             self.paths['artifacts'],
                             output_format=self.output_format)
-        precon.setup()
+        precon.setup(None)
         precon.run()
         precon.check_result()
         self.precon_failed = not precon.passed
@@ -412,7 +414,7 @@ def run_fio_tests(test_list, test_env, args):
                 fio_pre_success=fio_pre_success,
                 output_format=output_format)
             desc = config['job']
-            parameters = []
+            parameters = config['parameters'] if 'parameters' in config else None
         elif issubclass(config['test_class'], FioJobCmdTest):
             if not 'success' in config:
                 config['success'] = SUCCESS_DEFAULT
