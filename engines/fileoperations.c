@@ -90,6 +90,7 @@ static int open_file(struct thread_data *td, struct fio_file *f)
 {
 	struct timespec start;
 	int do_lat = !td->o.disable_lat;
+	struct fc_data *fcd = td->io_ops_data;
 
 	dprint(FD_FILE, "fd open %s\n", f->file_name);
 
@@ -105,9 +106,9 @@ static int open_file(struct thread_data *td, struct fio_file *f)
 	if (do_lat)
 		fio_gettime(&start, NULL);
 
-	if (((struct fc_data *)td->io_ops_data)->op_engine == FILE_OP_ENGINE)
+	if (fcd->op_engine == FILE_OP_ENGINE)
 		f->fd = open(f->file_name, O_CREAT|O_RDWR, 0600);
-	else if (((struct fc_data *)td->io_ops_data)->op_engine == DIR_OP_ENGINE)
+	else if (fcd->op_engine == DIR_OP_ENGINE)
 		f->fd = fio_mkdir(f->file_name, S_IFDIR);
 	else {
 		log_err("fio: unknown file/directory operation engine\n");
@@ -209,6 +210,7 @@ static int delete_file(struct thread_data *td, struct fio_file *f)
 {
 	struct timespec start;
 	int do_lat = !td->o.disable_lat;
+	struct fc_data *fcd = td->io_ops_data;
 	int ret;
 
 	dprint(FD_FILE, "fd delete %s\n", f->file_name);
@@ -225,9 +227,9 @@ static int delete_file(struct thread_data *td, struct fio_file *f)
 	if (do_lat)
 		fio_gettime(&start, NULL);
 
-	if (((struct fc_data *)td->io_ops_data)->op_engine == FILE_OP_ENGINE)
+	if (fcd->op_engine == FILE_OP_ENGINE)
 		ret = unlink(f->file_name);
-	else if (((struct fc_data *)td->io_ops_data)->op_engine == DIR_OP_ENGINE)
+	else if (fcd->op_engine == DIR_OP_ENGINE)
 		ret = rmdir(f->file_name);
 	else {
 		log_err("fio: unknown file/directory operation engine\n");
