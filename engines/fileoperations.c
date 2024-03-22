@@ -86,8 +86,6 @@ static int setup_dirs(struct thread_data *td)
 	return ret;
 }
 
-
-
 static int open_file(struct thread_data *td, struct fio_file *f)
 {
 	struct timespec start;
@@ -207,7 +205,6 @@ static int stat_file(struct thread_data *td, struct fio_file *f)
 	return 0;
 }
 
-
 static int delete_file(struct thread_data *td, struct fio_file *f)
 {
 	struct timespec start;
@@ -236,8 +233,6 @@ static int delete_file(struct thread_data *td, struct fio_file *f)
 		log_err("fio: unknown file/directory operation engine\n");
 		return 1;
 	}
-
-
 
 	if (ret == -1) {
 		char buf[FIO_VERROR_SIZE];
@@ -406,7 +401,6 @@ static struct ioengine_ops ioengine_dirdelete = {
 	.flags		= FIO_DISKLESSIO | FIO_SYNCIO | FIO_FAKEIO |
 				FIO_NOSTATS | FIO_NOFILEHASH,
 };
-
 
 static void fio_init fio_fileoperations_register(void)
 {
