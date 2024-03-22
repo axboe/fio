@@ -102,6 +102,8 @@ static void iolog_delay(struct thread_data *td, unsigned long delay)
 		ret = io_u_queued_complete(td, 0);
 		if (ret < 0)
 			td_verror(td, -ret, "io_u_queued_complete");
+		if (td->flags & TD_F_REGROW_LOGS)
+			regrow_logs(td);
 		if (utime_since_now(&ts) > delay)
 			break;
 	}

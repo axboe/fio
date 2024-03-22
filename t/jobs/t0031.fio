@@ -1,0 +1,7 @@
+[job]
+rw=read
+ioengine=libaio
+iodepth=128
+filename=t0030file
+read_iolog=iolog
+write_lat_log=lat_log
