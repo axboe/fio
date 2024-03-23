@@ -130,7 +130,7 @@ static inline uint32_t XXH_swap32 (uint32_t x)
 //**************************************
 // Architecture Macros
 //**************************************
-typedef enum { XXH_bigEndian=0, XXH_littleEndian=1 } XXH_endianess;
+typedef enum { XXH_bigEndian=0, XXH_littleEndian=1 } XXH_endianness;
 #ifndef XXH_CPU_LITTLE_ENDIAN   // It is possible to define XXH_CPU_LITTLE_ENDIAN externally, for example using a compiler switch
     static const int one = 1;
 #   define XXH_CPU_LITTLE_ENDIAN   (*(char*)(&one))
@@ -148,7 +148,7 @@ typedef enum { XXH_bigEndian=0, XXH_littleEndian=1 } XXH_endianess;
 //****************************
 typedef enum { XXH_aligned, XXH_unaligned } XXH_alignment;
 
-static uint32_t XXH_readLE32_align(const uint32_t* ptr, XXH_endianess endian, XXH_alignment align)
+static uint32_t XXH_readLE32_align(const uint32_t* ptr, XXH_endianness endian, XXH_alignment align)
 {
     if (align==XXH_unaligned)
         return endian==XXH_littleEndian ? A32(ptr) : XXH_swap32(A32(ptr));
@@ -156,13 +156,13 @@ static uint32_t XXH_readLE32_align(const uint32_t* ptr, XXH_endianess endian, XX
         return endian==XXH_littleEndian ? *ptr : XXH_swap32(*ptr);
 }
 
-static uint32_t XXH_readLE32(const uint32_t* ptr, XXH_endianess endian) { return XXH_readLE32_align(ptr, endian, XXH_unaligned); }
+static uint32_t XXH_readLE32(const uint32_t* ptr, XXH_endianness endian) { return XXH_readLE32_align(ptr, endian, XXH_unaligned); }
 
 
 //****************************
 // Simple Hash Functions
 //****************************
-static uint32_t XXH32_endian_align(const void* input, int len, uint32_t seed, XXH_endianess endian, XXH_alignment align)
+static uint32_t XXH32_endian_align(const void* input, int len, uint32_t seed, XXH_endianness endian, XXH_alignment align)
 {
     const uint8_t *p = (const uint8_t *)input;
     const uint8_t * const bEnd = p + len;
@@ -229,7 +229,7 @@ uint32_t XXH32(const void* input, uint32_t len, uint32_t seed)
     XXH32_update(state, input, len);
     return XXH32_digest(state);
 #else
-    XXH_endianess endian_detected = (XXH_endianess)XXH_CPU_LITTLE_ENDIAN;
+    XXH_endianness endian_detected = (XXH_endianness)XXH_CPU_LITTLE_ENDIAN;
 
 #  if !defined(XXH_USE_UNALIGNED_ACCESS)
     if ((((size_t)input) & 3))   // Input is aligned, let's leverage the speed advantage
@@ -282,7 +282,7 @@ void* XXH32_init (uint32_t seed)
 }
 
 
-static XXH_errorcode XXH32_update_endian (void* state_in, const void* input, int len, XXH_endianess endian)
+static XXH_errorcode XXH32_update_endian (void* state_in, const void* input, int len, XXH_endianness endian)
 {
     struct XXH_state32_t * state = (struct XXH_state32_t *) state_in;
     const uint8_t *p = (const uint8_t *)input;
@@ -348,7 +348,7 @@ static XXH_errorcode XXH32_update_endian (void* state_in, const void* input, int
 
 XXH_errorcode XXH32_update (void* state_in, const void* input, int len)
 {
-    XXH_endianess endian_detected = (XXH_endianess)XXH_CPU_LITTLE_ENDIAN;
+    XXH_endianness endian_detected = (XXH_endianness)XXH_CPU_LITTLE_ENDIAN;
 
     if ((endian_detected==XXH_littleEndian) || XXH_FORCE_NATIVE_FORMAT)
         return XXH32_update_endian(state_in, input, len, XXH_littleEndian);
@@ -358,7 +358,7 @@ XXH_errorcode XXH32_update (void* state_in, const void* input, int len)
 
 
 
-static uint32_t XXH32_intermediateDigest_endian (void* state_in, XXH_endianess endian)
+static uint32_t XXH32_intermediateDigest_endian (void* state_in, XXH_endianness endian)
 {
     struct XXH_state32_t * state = (struct XXH_state32_t *) state_in;
     const uint8_t *p = (const uint8_t *)state->memory;
@@ -402,7 +402,7 @@ static uint32_t XXH32_intermediateDigest_endian (void* state_in, XXH_endianess e
 
 uint32_t XXH32_intermediateDigest (void* state_in)
 {
-    XXH_endianess endian_detected = (XXH_endianess)XXH_CPU_LITTLE_ENDIAN;
+    XXH_endianness endian_detected = (XXH_endianness)XXH_CPU_LITTLE_ENDIAN;
 
     if ((endian_detected==XXH_littleEndian) || XXH_FORCE_NATIVE_FORMAT)
         return XXH32_intermediateDigest_endian(state_in, XXH_littleEndian);
