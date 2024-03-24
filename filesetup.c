@@ -1173,6 +1173,7 @@ int setup_files(struct thread_data *td)
 	need_extend = 0;
 	for_each_file(td, f, i) {
 		f->file_offset = get_start_offset(td, f);
+		f->start_offset_update = f->file_offset;
 
 		/*
 		 * Update ->io_size depending on options specified.
