@@ -971,13 +971,13 @@ Target file/device
 
 .. option:: unlink=bool
 
-	Unlink the job files when done. Not the default, as repeated runs of that
+	Unlink (delete) the job files when done. Not the default, as repeated runs of that
 	job would then waste time recreating the file set again and again. Default:
 	false.
 
 .. option:: unlink_each_loop=bool
 
-	Unlink job files after each iteration or loop.  Default: false.
+	Unlink (delete) job files after each iteration or loop.  Default: false.
 
 .. option:: zonemode=str
 
