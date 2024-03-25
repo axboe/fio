@@ -749,12 +749,12 @@ same data multiple times. Thus it will not work on non-seekable I/O engines
 (e.g. network, splice). Default: false.
 .TP
 .BI unlink \fR=\fPbool
-Unlink the job files when done. Not the default, as repeated runs of that
+Unlink (delete) the job files when done. Not the default, as repeated runs of that
 job would then waste time recreating the file set again and again. Default:
 false.
 .TP
 .BI unlink_each_loop \fR=\fPbool
-Unlink job files after each iteration or loop. Default: false.
+Unlink (delete) job files after each iteration or loop. Default: false.
 .TP
 .BI zonemode \fR=\fPstr
 Accepted values are:
