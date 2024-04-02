@@ -985,14 +985,14 @@ Target file/device
 
 		**none**
 				The :option:`zonerange`, :option:`zonesize`,
-				:option `zonecapacity` and option:`zoneskip`
+				:option:`zonecapacity` and :option:`zoneskip`
 				parameters are ignored.
 		**strided**
 				I/O happens in a single zone until
 				:option:`zonesize` bytes have been transferred.
 				After that number of bytes has been
 				transferred processing of the next zone
-				starts. :option `zonecapacity` is ignored.
+				starts. :option:`zonecapacity` is ignored.
 		**zbd**
 				Zoned block device mode. I/O happens
 				sequentially in each zone, even if random I/O
