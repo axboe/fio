@@ -271,7 +271,7 @@ static int str_fdp_pli_cb(void *data, const char *input)
 	strip_blank_end(str);
 
 	while ((v = strsep(&str, ",")) != NULL && i < FIO_MAX_DP_IDS) {
-		unsigned long long id = strtoll(v, NULL, 0);
+		unsigned long long id = strtoull(v, NULL, 0);
 		if (id > 0xFFFF) {
 			log_err("Placement IDs cannot exceed 0xFFFF\n");
 			free(p);
