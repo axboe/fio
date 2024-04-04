@@ -145,4 +145,5 @@ void dp_fill_dspec_data(struct thread_data *td, struct io_u *io_u)
 
 	io_u->dtype = td->o.dp_type == FIO_DP_FDP ? FDP_DIR_DTYPE : STREAMS_DIR_DTYPE;
 	io_u->dspec = dspec;
+	dprint(FD_IO, "dtype set to 0x%x, dspec set to 0x%x\n", io_u->dtype, io_u->dspec);
 }
