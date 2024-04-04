@@ -270,8 +270,15 @@ static int str_fdp_pli_cb(void *data, const char *input)
 	strip_blank_front(&str);
 	strip_blank_end(str);
 
-	while ((v = strsep(&str, ",")) != NULL && i < FIO_MAX_DP_IDS)
-		td->o.dp_ids[i++] = strtoll(v, NULL, 0);
+	while ((v = strsep(&str, ",")) != NULL && i < FIO_MAX_DP_IDS) {
+		unsigned long long id = strtoll(v, NULL, 0);
+		if (id > 0xFFFF) {
+			log_err("Placement IDs cannot exceed 0xFFFF\n");
+			free(p);
+			return 1;
+		}
+		td->o.dp_ids[i++] = id;
+	}
 	free(p);
 
 	qsort(td->o.dp_ids, i, sizeof(*td->o.dp_ids), fio_fdp_cmp);
