@@ -1794,8 +1794,9 @@ started on the result.
 .SS "I/O engine"
 .TP
 .BI ioengine \fR=\fPstr
-Defines how the job issues I/O to the file. The following types are defined:
-.RS
+fio supports 2 kinds of performance measurement: I/O and file/directory operation.
+
+I/O engines define how the job issues I/O to the file. The following types are defined:
 .RS
 .TP
 .B sync
@@ -1989,36 +1990,6 @@ ioengine `foo.o' in `/tmp'. The path can be either
 absolute or relative. See `engines/skeleton_external.c' in the fio source for
 details of writing an external I/O engine.
 .TP
-.B filecreate
-Simply create the files and do no I/O to them.  You still need to set
-\fBfilesize\fR so that all the accounting still occurs, but no actual I/O will be
-done other than creating the file.
-.TP
-.B filestat
-Simply do stat() and do no I/O to the file. You need to set 'filesize'
-and 'nrfiles', so that files will be created.
-This engine is to measure file lookup and meta data access.
-.TP
-.B filedelete
-Simply delete files by unlink() and do no I/O to the file. You need to set 'filesize'
-and 'nrfiles', so that files will be created.
-This engine is to measure file delete.
-.TP
-.B dircreate
-Simply create the directories and do no I/O to them.  You still need to set
-\fBfilesize\fR so that all the accounting still occurs, but no actual I/O will be
-done other than creating the directories.
-.TP
-.B dirstat
-Simply do stat() and do no I/O to the directory. You need to set 'filesize'
-and 'nrfiles', so that directories will be created.
-This engine is to measure directory lookup and meta data access.
-.TP
-.B dirdelete
-Simply delete directories by unlink() and do no I/O to the directory. You need to set 'filesize'
-and 'nrfiles', so that directories will be created.
-This engine is to measure directory delete.
-.TP
 .B libpmem
 Read and write using mmap I/O to a file on a filesystem
 mounted with DAX on a persistent memory device through the PMDK
@@ -2079,6 +2050,55 @@ instance is used per process, so all jobs setting option \fBthread\fR will share
 a single instance (with one queue per thread) and must specify compatible
 options. Note that some drivers don't allow several instances to access the same
 device or file simultaneously, but allow it for threads.
+.TP
+.RE
+.P
+File/directory operation engines define how the job operates file or directory.
+The following types are defined:
+.RS
+.TP
+.B filecreate
+Simply create the files and do no I/O to them.  You still need to
+set  \fBfilesize\fP so that all the accounting still occurs, but no
+actual I/O will be done other than creating the file.
+Example job file: filecreate-ioengine.fio.
+.TP
+.B filestat
+Simply do stat() and do no I/O to the file. You need to set \fBfilesize\fP
+and \fBnrfiles\fP, so that files will be created.
+This engine is to measure file lookup and meta data access.
+Example job file: filestat-ioengine.fio.
+.TP
+.B filedelete
+Simply delete the files by unlink() and do no I/O to them. You need to set \fBfilesize\fP
+and \fBnrfiles\fP, so that the files will be created.
+This engine is to measure file delete.
+Example job file: filedelete-ioengine.fio.
+.TP
+.B dircreate
+Simply create the directories and do no I/O to them.  You still need to
+set  \fBfilesize\fP so that all the accounting still occurs, but no
+actual I/O will be done other than creating the directories.
+Example job file: dircreate-ioengine.fio.
+.TP
+.B dirstat
+Simply do stat() and do no I/O to the directories. You need to set \fBfilesize\fP
+and \fBnrfiles\fP, so that directories will be created.
+This engine is to measure directory lookup and meta data access.
+Example job file: dirstat-ioengine.fio.
+.TP
+.B dirdelete
+Simply delete the directories by rmdir() and do no I/O to them. You need to set \fBfilesize\fP
+and \fBnrfiles\fP, so that the directories will be created.
+This engine is to measure directory delete.
+.TP
+.RE
+.P
+For file and directory operation engines, there is no I/O throughput, then the statistics \
+data in report have different meanings. The meaningful output indexes are: \fBiops\fP and \fBclat\fP. \
+\fBbw\fP is meaningless. Refer to section: "Interpreting the output" for more details.
+.RE
+.P
 .SS "I/O engine specific parameters"
 In addition, there are some parameters which are only valid when a specific
 \fBioengine\fR is in use. These are used identically to normal parameters,
@@ -4236,6 +4256,24 @@ submission to completion of the I/O pieces. For sync I/O, clat will
 usually be equal (or very close) to 0, as the time from submit to
 complete is basically just CPU time (I/O has already been done, see slat
 explanation).
+
+For file and directory operation engines, \fBclat\fP denotes the time
+to complete one file or directory operation.
+.RS
+.TP
+\fBfilecreate engine\fP:\tthe time cost to create a new file
+.TP
+\fBfilestat engine\fP:\tthe time cost to look up an existing file
+.TP
+\fBfiledelete engine\fP:\tthe time cost to delete a file
+.TP
+\fBdircreate engine\fP:\tthe time cost to create a new directory
+.TP
+\fBdirstat engine\fP:\tthe time cost to look up an existing directory
+.TP
+\fBdirdelete engine\fP:\tthe time cost to delete a directory
+.TP
+.RE
 .TP
 .B lat
 Total latency. Same names as slat and clat, this denotes the time from
@@ -4250,12 +4288,33 @@ xlat stats, but also includes the number of samples taken (\fIsamples\fR) and an
 approximate percentage of total aggregate bandwidth this thread received in its
 group (\fIper\fR). This last value is only really useful if the threads in this
 group are on the same disk, since they are then competing for disk access.
+
+For file and directory operation engines, \fBbw\fR is meaningless.
 .TP
 .B iops
 IOPS statistics based on measurements from discrete intervals.
 For details see the description for \fBbw\fR above. See
 \fBiopsavgtime\fR to control the duration of the intervals.
 Same values reported here as for \fBbw\fR except for percentage.
+
+For file and directory operation engines, \fBiops\fP is the most
+fundamental index to denote the performance.
+It means how many files or directories can be operated per second.
+.RS
+.TP
+\fBfilecreate engine\fP:\tnumber of files can be created per second
+.TP
+\fBfilestat engine\fP:\tnumber of files can be looked up per second
+.TP
+\fBfiledelete engine\fP:\tnumber of files can be deleted per second
+.TP
+\fBdircreate engine\fP:\tnumber of directories can be created per second
+.TP
+\fBdirstat engine\fP:\tnumber of directories can be looked up per second
+.TP
+\fBdirdelete engine\fP:\tnumber of directories can be deleted per second
+.TP
+.RE
 .TP
 .B lat (nsec/usec/msec)
 The distribution of I/O completion latencies. This is the time from when
