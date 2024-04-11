@@ -99,7 +99,7 @@ static void iolog_delay(struct thread_data *td, unsigned long delay)
 	fio_gettime(&ts, NULL);
 
 	while (delay && !td->terminate) {
-		ret = io_u_queued_complete(td, 0);
+		ret = io_u_queued_complete(td, 0, NULL);
 		if (ret < 0)
 			td_verror(td, -ret, "io_u_queued_complete");
 		if (td->flags & TD_F_REGROW_LOGS)

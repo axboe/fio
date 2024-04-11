@@ -233,7 +233,7 @@ static void cleanup_pending_aio(struct thread_data *td)
 	/*
 	 * get immediately available events, if any
 	 */
-	r = io_u_queued_complete(td, 0);
+	r = io_u_queued_complete(td, 0, NULL);
 
 	/*
 	 * now cancel remaining active events
@@ -252,7 +252,7 @@ static void cleanup_pending_aio(struct thread_data *td)
 	}
 
 	if (td->cur_depth)
-		r = io_u_queued_complete(td, td->cur_depth);
+		r = io_u_queued_complete(td, td->cur_depth, NULL);
 }
 
 /*
@@ -281,7 +281,7 @@ requeue:
 	switch (ret) {
 	case FIO_Q_QUEUED:
 		td_io_commit(td);
-		if (io_u_queued_complete(td, 1) < 0)
+		if (io_u_queued_complete(td, 1, NULL) < 0)
 			return true;
 		break;
 	case FIO_Q_COMPLETED:
@@ -433,7 +433,7 @@ static int wait_for_completions(struct thread_data *td, struct timespec *time)
 		fio_gettime(time, NULL);
 
 	do {
-		ret = io_u_queued_complete(td, min_evts);
+		ret = io_u_queued_complete(td, min_evts, NULL);
 		if (ret < 0)
 			break;
 	} while (full && (td->cur_depth > td->o.iodepth_low));
@@ -753,7 +753,7 @@ reap:
 		min_events = td->cur_depth;
 
 		if (min_events)
-			ret = io_u_queued_complete(td, min_events);
+			ret = io_u_queued_complete(td, min_events, NULL);
 	} else
 		cleanup_pending_aio(td);
 
@@ -1175,7 +1175,7 @@ reap:
 			i = td->cur_depth;
 
 		if (i) {
-			ret = io_u_queued_complete(td, i);
+			ret = io_u_queued_complete(td, i, NULL);
 			if (td->o.fill_device &&
 			    (td->error == ENOSPC || td->error == EDQUOT))
 				td->error = 0;
