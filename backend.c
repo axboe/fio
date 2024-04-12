@@ -1046,11 +1046,13 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 				goto reap;
 			break;
 		}
+
 		if (ddir_sync(io_u->ddir)) {
 			td->last_was_sync = true;
 		} else {
 			td->last_was_sync = false;
 		}
+
 		if (io_u->ddir == DDIR_WRITE && td->flags & TD_F_DO_VERIFY) {
 			if (!(io_u->flags & IO_U_F_PATTERN_DONE)) {
 				io_u_set(td, io_u, IO_U_F_PATTERN_DONE);
