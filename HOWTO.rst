@@ -1992,7 +1992,9 @@ I/O engine
 
 .. option:: ioengine=str
 
-	Defines how the job issues I/O to the file. The following types are defined:
+	fio supports 2 kinds of performance measurement: I/O and file/directory operation.
+
+	I/O engines define how the job issues I/O to the file. The following types are defined:
 
 		**sync**
 			Basic :manpage:`read(2)` or :manpage:`write(2)`
@@ -2177,36 +2179,6 @@ I/O engine
 			absolute or relative. See :file:`engines/skeleton_external.c` for
 			details of writing an external I/O engine.
 
-		**filecreate**
-			Simply create the files and do no I/O to them.  You still need to
-			set  `filesize` so that all the accounting still occurs, but no
-			actual I/O will be done other than creating the file.
-
-		**filestat**
-			Simply do stat() and do no I/O to the file. You need to set 'filesize'
-			and 'nrfiles', so that files will be created.
-			This engine is to measure file lookup and meta data access.
-
-		**filedelete**
-			Simply delete the files by unlink() and do no I/O to them. You need to set 'filesize'
-			and 'nrfiles', so that the files will be created.
-			This engine is to measure file delete.
-
-		**dircreate**
-			Simply create the directories and do no I/O to them.  You still need to
-			set  `filesize` so that all the accounting still occurs, but no
-			actual I/O will be done other than creating the directories.
-
-		**dirstat**
-			Simply do stat() and do no I/O to the directories. You need to set 'filesize'
-			and 'nrfiles', so that directories will be created.
-			This engine is to measure directory lookup and meta data access.
-
-		**dirdelete**
-			Simply delete the directories by rmdir() and do no I/O to them. You need to set 'filesize'
-			and 'nrfiles', so that the directories will be created.
-			This engine is to measure directory delete.
-
 		**libpmem**
 			Read and write using mmap I/O to a file on a filesystem
 			mounted with DAX on a persistent memory device through the PMDK
@@ -2275,6 +2247,50 @@ I/O engine
 			compatible options. Note that some drivers don't allow
 			several instances to access the same device or file
 			simultaneously, but allow it for threads.
+
+	File/directory operation engines define how the job operates file or directory. The
+	following types are defined:
+
+		**filecreate**
+			Simply create the files and do no I/O to them.  You still need to
+			set  `filesize` so that all the accounting still occurs, but no
+			actual I/O will be done other than creating the file.
+			Example job file: filecreate-ioengine.fio.
+
+		**filestat**
+			Simply do stat() and do no I/O to the file. You need to set 'filesize'
+			and 'nrfiles', so that files will be created.
+			This engine is to measure file lookup and meta data access.
+			Example job file: filestat-ioengine.fio.
+
+		**filedelete**
+			Simply delete the files by unlink() and do no I/O to them. You need to set 'filesize'
+			and 'nrfiles', so that the files will be created.
+			This engine is to measure file delete.
+			Example job file: filedelete-ioengine.fio.
+
+		**dircreate**
+			Simply create the directories and do no I/O to them.  You still need to
+			set  `filesize` so that all the accounting still occurs, but no
+			actual I/O will be done other than creating the directories.
+			Example job file: dircreate-ioengine.fio.
+
+		**dirstat**
+			Simply do stat() and do no I/O to the directories. You need to set 'filesize'
+			and 'nrfiles', so that directories will be created.
+			This engine is to measure directory lookup and meta data access.
+			Example job file: dirstat-ioengine.fio.
+
+		**dirdelete**
+			Simply delete the directories by rmdir() and do no I/O to them. You need to set 'filesize'
+			and 'nrfiles', so that the directories will be created.
+			This engine is to measure directory delete.
+			Example job file: dirdelete-ioengine.fio.
+
+		For file and directory operation engines, there is no I/O throughput, then the
+		statistics data in report have different meanings. The meaningful output indexes are: 'iops' and 'clat'.
+		'bw' is meaningless. Refer to section: "Interpreting the output" for more details.
+
 
 I/O engine specific parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -4583,6 +4599,21 @@ writes in the example above).  In the order listed, they denote:
                 commit if available) functions were completed to when the I/O's
                 completion was reaped by fio.
 
+		For file and directory operation engines, **clat** denotes the time
+		to complete one file or directory operation.
+
+		  **filecreate engine**:the time cost to create a new file
+
+		  **filestat engine**:	the time cost to look up an existing file
+
+		  **filedelete engine**:the time cost to delete a file
+
+		  **dircreate engine**:	the time cost to create a new directory
+
+		  **dirstat engine**:	the time cost to look up an existing directory
+
+		  **dirdelete engine**:	the time cost to delete a directory
+
 **lat**
 		Total latency. Same names as slat and clat, this denotes the time from
 		when fio created the I/O unit to completion of the I/O operation.
@@ -4601,11 +4632,29 @@ writes in the example above).  In the order listed, they denote:
 		are on the same disk, since they are then competing for disk
 		access.
 
+		For file and directory operation engines, **bw** is meaningless.
+
 **iops**
 		IOPS statistics based on measurements from discrete intervals.
 		For details see the description for bw above. See
 		:option:`iopsavgtime` to control the duration of the intervals.
 		Same values reported here as for bw except for percentage.
+
+		For file and directory operation engines, **iops** is the most
+		fundamental index to denote the performance.
+		It means how many files or directories can be operated per second.
+
+		  **filecreate engine**:number of files can be created per second
+
+		  **filestat engine**:	number of files can be looked up per second
+
+		  **filedelete engine**:number of files can be deleted per second
+
+		  **dircreate engine**:	number of directories can be created per second
+
+		  **dirstat engine**:	number of directories can be looked up per second
+
+		  **dirdelete engine**:	number of directories can be deleted per second
 
 **lat (nsec/usec/msec)**
 		The distribution of I/O completion latencies. This is the time from when
