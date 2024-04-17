@@ -6,3 +6,10 @@ Please confirm that your commit message(s) follow these guidelines:
    aren't something like a URL at 72-74 chars.
 4. Empty line
 5. Signed-off-by: Real Name <real@email.com>
+
+Reminders:
+
+1. If you modify struct thread_options, also make corresponding changes in
+   cconv.c and bump FIO_SERVER_VER in server.h
+2. If you change the ioengine interface (hooks, flags, etc), remember to bump
+   FIO_IOOPS_VERSION in ioengines.h.
