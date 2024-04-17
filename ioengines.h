@@ -72,33 +72,54 @@ struct ioengine_ops {
 	struct fio_option *options;
 };
 
-enum fio_ioengine_flags {
-	FIO_SYNCIO	= 1 << 0,	/* io engine has synchronous ->queue */
-	FIO_RAWIO	= 1 << 1,	/* some sort of direct/raw io */
-	FIO_DISKLESSIO	= 1 << 2,	/* no disk involved */
-	FIO_NOEXTEND	= 1 << 3,	/* engine can't extend file */
-	FIO_NODISKUTIL  = 1 << 4,	/* diskutil can't handle filename */
-	FIO_UNIDIR	= 1 << 5,	/* engine is uni-directional */
-	FIO_NOIO	= 1 << 6,	/* thread does only pseudo IO */
-	FIO_PIPEIO	= 1 << 7,	/* input/output no seekable */
-	FIO_BARRIER	= 1 << 8,	/* engine supports barriers */
-	FIO_MEMALIGN	= 1 << 9,	/* engine wants aligned memory */
-	FIO_BIT_BASED	= 1 << 10,	/* engine uses a bit base (e.g. uses Kbit as opposed to KB) */
-	FIO_FAKEIO	= 1 << 11,	/* engine pretends to do IO */
-	FIO_NOSTATS	= 1 << 12,	/* don't do IO stats */
-	FIO_NOFILEHASH	= 1 << 13,	/* doesn't hash the files for lookup later. */
-	FIO_ASYNCIO_SYNC_TRIM
-			= 1 << 14,	/* io engine has async ->queue except for trim */
-	FIO_NO_OFFLOAD	= 1 << 15,	/* no async offload */
-	FIO_ASYNCIO_SETS_ISSUE_TIME
-			= 1 << 16,	/* async ioengine with commit function that sets issue_time */
-	FIO_SKIPPABLE_IOMEM_ALLOC
-			= 1 << 17,	/* skip iomem_alloc & iomem_free if job sets mem/iomem */
-	FIO_RO_NEEDS_RW_OPEN
-			= 1 << 18,	/* open files in rw mode even if we have a read job; only
+enum {
+	__FIO_SYNCIO = 0,		/* io engine has synchronous ->queue */
+	__FIO_RAWIO,			/* some sort of direct/raw io */
+	__FIO_DISKLESSIO,		/* no disk involved */
+	__FIO_NOEXTEND,			/* engine can't extend file */
+	__FIO_NODISKUTIL,		/* diskutil can't handle filename */
+	__FIO_UNIDIR,			/* engine is uni-directional */
+	__FIO_NOIO,			/* thread does only pseudo IO */
+	__FIO_PIPEIO,			/* input/output no seekable */
+	__FIO_BARRIER,			/* engine supports barriers */
+	__FIO_MEMALIGN,			/* engine wants aligned memory */
+	__FIO_BIT_BASED,		/* engine uses a bit base (e.g. uses Kbit as opposed to
+					   KB) */
+	__FIO_FAKEIO,			/* engine pretends to do IO */
+	__FIO_NOSTATS,			/* don't do IO stats */
+	__FIO_NOFILEHASH,		/* doesn't hash the files for lookup later. */
+	__FIO_ASYNCIO_SYNC_TRIM,	/* io engine has async ->queue except for trim */
+	__FIO_NO_OFFLOAD,		/* no async offload */
+	__FIO_ASYNCIO_SETS_ISSUE_TIME,	/* async ioengine with commit function that sets
+					   issue_time */
+	__FIO_SKIPPABLE_IOMEM_ALLOC,	/* skip iomem_alloc & iomem_free if job sets mem/iomem */
+	__FIO_RO_NEEDS_RW_OPEN,		/* open files in rw mode even if we have a read job; only
 					   affects ioengines using generic_open_file */
-	FIO_MULTI_RANGE_TRIM
-			= 1 << 19,	/* ioengine supports trim with more than one range */
+	__FIO_MULTI_RANGE_TRIM,		/* ioengine supports trim with more than one range */
+	__FIO_IOENGINE_F_LAST,		/* not a real bit; used to count number of bits */
+};
+
+enum fio_ioengine_flags {
+	FIO_SYNCIO			= 1 << __FIO_SYNCIO,
+	FIO_RAWIO			= 1 << __FIO_RAWIO,
+	FIO_DISKLESSIO			= 1 << __FIO_DISKLESSIO,
+	FIO_NOEXTEND			= 1 << __FIO_NOEXTEND,
+	FIO_NODISKUTIL  		= 1 << __FIO_NODISKUTIL,
+	FIO_UNIDIR			= 1 << __FIO_UNIDIR,
+	FIO_NOIO			= 1 << __FIO_NOIO,
+	FIO_PIPEIO			= 1 << __FIO_PIPEIO,
+	FIO_BARRIER			= 1 << __FIO_BARRIER,
+	FIO_MEMALIGN			= 1 << __FIO_MEMALIGN,
+	FIO_BIT_BASED			= 1 << __FIO_BIT_BASED,
+	FIO_FAKEIO			= 1 << __FIO_FAKEIO,
+	FIO_NOSTATS			= 1 << __FIO_NOSTATS,
+	FIO_NOFILEHASH			= 1 << __FIO_NOFILEHASH,
+	FIO_ASYNCIO_SYNC_TRIM		= 1 << __FIO_ASYNCIO_SYNC_TRIM,
+	FIO_NO_OFFLOAD			= 1 << __FIO_NO_OFFLOAD,
+	FIO_ASYNCIO_SETS_ISSUE_TIME	= 1 << __FIO_ASYNCIO_SETS_ISSUE_TIME,
+	FIO_SKIPPABLE_IOMEM_ALLOC	= 1 << __FIO_SKIPPABLE_IOMEM_ALLOC,
+	FIO_RO_NEEDS_RW_OPEN		= 1 << __FIO_RO_NEEDS_RW_OPEN,
+	FIO_MULTI_RANGE_TRIM		= 1 << __FIO_MULTI_RANGE_TRIM,
 };
 
 /*
