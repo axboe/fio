@@ -706,8 +706,8 @@ enum {
 	TD_NR,
 };
 
-#define TD_ENG_FLAG_SHIFT	18
-#define TD_ENG_FLAG_MASK	((1ULL << 18) - 1)
+#define TD_ENG_FLAG_SHIFT	(__TD_F_LAST)
+#define TD_ENG_FLAG_MASK	((1ULL << (__TD_F_LAST)) - 1)
 
 static inline void td_set_ioengine_flags(struct thread_data *td)
 {
