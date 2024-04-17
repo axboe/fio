@@ -9,7 +9,7 @@
 #include "zbd_types.h"
 #include "fdp.h"
 
-#define FIO_IOOPS_VERSION	33
+#define FIO_IOOPS_VERSION	34
 
 #ifndef CONFIG_DYNAMIC_ENGINES
 #define FIO_STATIC	static
