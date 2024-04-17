@@ -974,7 +974,9 @@ static int setup_ring(struct submitter *s)
 	for (i = 0; i < p.sq_entries; i++)
 		sring->array[i] = i;
 
-	s->per_file_depth = (depth + s->nr_files - 1) / s->nr_files;
+	s->per_file_depth = INT_MAX;
+	if (s->nr_files)
+		s->per_file_depth = (depth + s->nr_files - 1) / s->nr_files;
 	return 0;
 }
 
