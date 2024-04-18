@@ -1066,7 +1066,7 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	}
 
 	if (td->o.fdp)
-		fdp_fill_dspec_data(td, io_u);
+		dp_fill_dspec_data(td, io_u);
 
 	if (io_u->offset + io_u->buflen > io_u->file->real_file_size) {
 		dprint(FD_IO, "io_u %p, off=0x%llx + len=0x%llx exceeds file size=0x%llx\n",

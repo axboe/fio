@@ -13,7 +13,7 @@
 #include "file.h"
 
 #include "pshared.h"
-#include "fdp.h"
+#include "dataplacement.h"
 
 static int fdp_ruh_info(struct thread_data *td, struct fio_file *f,
 			struct fio_ruhs_info *ruhs)
@@ -86,7 +86,7 @@ out:
 	return ret;
 }
 
-int fdp_init(struct thread_data *td)
+int dp_init(struct thread_data *td)
 {
 	struct fio_file *f;
 	int i, ret = 0;
@@ -107,7 +107,7 @@ void fdp_free_ruhs_info(struct fio_file *f)
 	f->ruhs_info = NULL;
 }
 
-void fdp_fill_dspec_data(struct thread_data *td, struct io_u *io_u)
+void dp_fill_dspec_data(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
 	struct fio_ruhs_info *ruhs = f->ruhs_info;

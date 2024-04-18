@@ -13,7 +13,7 @@
 #include "fio.h"
 #include "verify.h"
 #include "zbd_types.h"
-#include "fdp.h"
+#include "dataplacement.h"
 #include "optgroup.h"
 
 static pthread_mutex_t g_serialize = PTHREAD_MUTEX_INITIALIZER;

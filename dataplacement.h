@@ -1,5 +1,5 @@
-#ifndef FIO_FDP_H
-#define FIO_FDP_H
+#ifndef FIO_DATAPLACEMENT_H
+#define FIO_DATAPLACEMENT_H
 
 #include "io_u.h"
 
@@ -22,8 +22,8 @@ struct fio_ruhs_info {
 	uint16_t plis[];
 };
 
-int fdp_init(struct thread_data *td);
+int dp_init(struct thread_data *td);
 void fdp_free_ruhs_info(struct fio_file *f);
-void fdp_fill_dspec_data(struct thread_data *td, struct io_u *io_u);
+void dp_fill_dspec_data(struct thread_data *td, struct io_u *io_u);
 
-#endif /* FIO_FDP_H */
+#endif /* FIO_DATAPLACEMENT_H */

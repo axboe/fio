@@ -7,7 +7,7 @@
 #include "flist.h"
 #include "io_u.h"
 #include "zbd_types.h"
-#include "fdp.h"
+#include "dataplacement.h"
 
 #define FIO_IOOPS_VERSION	34
 
