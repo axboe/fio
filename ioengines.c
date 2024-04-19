@@ -436,6 +436,8 @@ enum fio_q_status td_io_queue(struct thread_data *td, struct io_u *io_u)
 			io_u_mark_depth(td, 1);
 			td->ts.total_io_u[io_u->ddir]++;
 		}
+
+		td->last_was_sync = ddir_sync(io_u->ddir);
 	} else if (ret == FIO_Q_QUEUED) {
 		td->io_u_queued++;
 
@@ -445,6 +447,8 @@ enum fio_q_status td_io_queue(struct thread_data *td, struct io_u *io_u)
 
 		if (td->io_u_queued >= td->o.iodepth_batch)
 			td_io_commit(td);
+
+		td->last_was_sync = ddir_sync(io_u->ddir);
 	}
 
 	if (!td_ioengine_flagged(td, FIO_SYNCIO) &&
