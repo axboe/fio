@@ -100,6 +100,56 @@ out:
 	return ret;
 }
 
+static int init_ruh_scheme(struct thread_data *td, struct fio_file *f)
+{
+	struct fio_ruhs_scheme *ruh_scheme;
+	FILE *scheme_fp;
+	unsigned long long start, end;
+	uint16_t pli;
+	int ret = 0;
+
+	if (td->o.dp_id_select != FIO_DP_SCHEME)
+		return 0;
+
+	/* Get the scheme from the file */
+	scheme_fp = fopen(td->o.dp_scheme_file, "r");
+
+	if (!scheme_fp) {
+		log_err("fio: ruh scheme failed to open scheme file %s\n",
+			 td->o.dp_scheme_file);
+		ret = -errno;
+		goto out;
+	}
+
+	ruh_scheme = scalloc(1, sizeof(*ruh_scheme));
+	if (!ruh_scheme) {
+		ret = -ENOMEM;
+		goto out_with_close_fp;
+	}
+
+	for (int i = 0;
+		i < DP_MAX_SCHEME_ENTRIES && fscanf(scheme_fp, "%llu,%llu,%hu\n", &start, &end, &pli) == 3;
+		i++) {
+
+		ruh_scheme->scheme_entries[i].start_offset = start;
+		ruh_scheme->scheme_entries[i].end_offset = end;
+		ruh_scheme->scheme_entries[i].pli = pli;
+		ruh_scheme->nr_schemes++;
+	}
+
+	if (fscanf(scheme_fp, "%llu,%llu,%hu\n", &start, &end, &pli) == 3)
+		log_info("fio: too many scheme entries in %s. Only the first %d scheme entries are applied\n",
+			 td->o.dp_scheme_file,
+			 DP_MAX_SCHEME_ENTRIES);
+
+	f->ruhs_scheme = ruh_scheme;
+
+out_with_close_fp:
+	fclose(scheme_fp);
+out:
+	return ret;
+}
+
 int dp_init(struct thread_data *td)
 {
 	struct fio_file *f;
@@ -107,6 +157,10 @@ int dp_init(struct thread_data *td)
 
 	for_each_file(td, f, i) {
 		ret = init_ruh_info(td, f);
+		if (ret)
+			break;
+
+		ret = init_ruh_scheme(td, f);
 		if (ret)
 			break;
 	}
@@ -119,6 +173,11 @@ void fdp_free_ruhs_info(struct fio_file *f)
 		return;
 	sfree(f->ruhs_info);
 	f->ruhs_info = NULL;
+
+	if (!f->ruhs_scheme)
+		return;
+	sfree(f->ruhs_scheme);
+	f->ruhs_scheme = NULL;
 }
 
 void dp_fill_dspec_data(struct thread_data *td, struct io_u *io_u)
@@ -138,6 +197,25 @@ void dp_fill_dspec_data(struct thread_data *td, struct io_u *io_u)
 			ruhs->pli_loc = 0;
 
 		dspec = ruhs->plis[ruhs->pli_loc++];
+	} else if (td->o.dp_id_select == FIO_DP_SCHEME) {
+		struct fio_ruhs_scheme *ruhs_scheme = f->ruhs_scheme;
+		unsigned long long offset = io_u->offset;
+		int i;
+
+		for (i = 0; i < ruhs_scheme->nr_schemes; i++) {
+			if (offset >= ruhs_scheme->scheme_entries[i].start_offset &&
+			    offset < ruhs_scheme->scheme_entries[i].end_offset) {
+				dspec = ruhs_scheme->scheme_entries[i].pli;
+				break;
+			}
+		}
+
+		/*
+		 * If the write offset is not affected by any scheme entry,
+		 * 0(default RUH) will be assigned to dspec
+		 */
+		if (i == ruhs_scheme->nr_schemes)
+			dspec = 0;
 	} else {
 		ruhs->pli_loc = rand_between(&td->fdp_state, 0, ruhs->nr_ruhs - 1);
 		dspec = ruhs->plis[ruhs->pli_loc];
