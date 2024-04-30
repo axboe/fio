@@ -1593,6 +1593,18 @@ test68() {
 	[[ $(grep -c "WRITE:" "${logfile}.${test_number}") == 1 ]]
 }
 
+# Test rw=rw and verify_backlog=1 options do not cause verify failure
+test69() {
+	require_zbd || return "$SKIP_TESTCASE"
+
+	prep_write
+	run_fio --name=job --filename="$dev" --time_based --runtime=15s \
+		--rw=rw --offset=$((first_sequential_zone_sector * 512)) \
+		"$(ioengine "libaio")" --iodepth=32 --randrepeat=0 \
+		--verify=crc32 --verify_backlog=1 --zonemode=zbd --direct=1 \
+		>> "${logfile}.${test_number}" 2>&1 || return $?
+}
+
 SECONDS=0
 tests=()
 dynamic_analyzer=()
