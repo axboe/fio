@@ -852,12 +852,15 @@ test31() {
     # To distribute the write target zones evenly, skip certain zones for every
     # write. Utilize zonemode strided for such write patterns.
     bs=$((128 * 1024))
+    off=$((first_sequential_zone_sector * 512))
+    size=$((disk_size - off))
     nz=$((max_open_zones))
     if [[ $nz -eq 0 ]]; then
 	nz=128
     fi
-    off=$((first_sequential_zone_sector * 512))
-    size=$((disk_size - off))
+    if ((size / zone_size < nz)); then
+	nz=$((size / zone_size))
+    fi
     inc=$(((size / nz / zone_size) * zone_size))
     opts=("--name=$dev" "--filename=$dev" "--rw=write" "--bs=${bs}")
     opts+=("--offset=$off" "--size=$((inc * nz))" "--io_size=$((bs * nz))")
