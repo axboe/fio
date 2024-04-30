@@ -1361,9 +1361,6 @@ void zbd_file_reset(struct thread_data *td, struct fio_file *f)
 	if (td->o.verify != VERIFY_NONE) {
 		verify_data_left = td->runstate == TD_VERIFYING ||
 			td->io_hist_len || td->verify_batch;
-		if (td->io_hist_len && td->o.verify_backlog)
-			verify_data_left =
-				td->io_hist_len % td->o.verify_backlog;
 		if (!verify_data_left)
 			zbd_reset_zones(td, f, zb, ze);
 	}
