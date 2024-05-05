@@ -33,11 +33,13 @@ static int init_dedupe_working_set_seeds_int2(struct thread_data *td, bool globa
 	 * Dedupe-ed pages will be generated using those seeds.
 	 */
 	td->num_unique_pages_ua = (td->o.size * (unsigned long long)td->o.dedupe_working_set_ua_percentage / 100) / td->o.min_bs[DDIR_WRITE];
+	
 	td->dedupe_working_set_states_ua = malloc(sizeof(struct frand_state) * td->num_unique_pages_ua);
 	if (!td->dedupe_working_set_states_ua) {
 		log_err("fio: could not allocate UA dedupe working set\n");
 		return 1;
 	}
+	
 	for (i = 0; i < td->num_unique_pages_ua; i++) {
 		frand_copy(&td->dedupe_working_set_states_ua[i], dedupe_working_set_state);
 		/*
