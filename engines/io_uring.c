@@ -82,11 +82,14 @@ struct ioring_data {
 	struct cmdprio cmdprio;
 
 	struct nvme_dsm *dsm;
+	uint32_t cdw12_flags[DDIR_RWDIR_CNT];
 };
 
 struct ioring_options {
 	struct thread_data *td;
 	unsigned int hipri;
+	unsigned int readfua;
+	unsigned int writefua;
 	struct cmdprio_options cmdprio_options;
 	unsigned int fixedbufs;
 	unsigned int registerfiles;
@@ -132,6 +135,26 @@ static struct fio_option options[] = {
 		.type	= FIO_OPT_STR_SET,
 		.off1	= offsetof(struct ioring_options, hipri),
 		.help	= "Use polled IO completions",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_IOURING,
+	},
+	{
+		.name	= "readfua",
+		.lname	= "Read fua flag support",
+		.type	= FIO_OPT_BOOL,
+		.off1	= offsetof(struct ioring_options, readfua),
+		.help	= "Set FUA flag (force unit access) for all Read operations",
+		.def	= "0",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_IOURING,
+	},
+	{
+		.name	= "writefua",
+		.lname	= "Write fua flag support",
+		.type	= FIO_OPT_BOOL,
+		.off1	= offsetof(struct ioring_options, writefua),
+		.help	= "Set FUA flag (force unit access) for all Write operations",
+		.def	= "0",
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_IOURING,
 	},
@@ -432,7 +455,7 @@ static int fio_ioring_cmd_prep(struct thread_data *td, struct io_u *io_u)
 
 	return fio_nvme_uring_cmd_prep(cmd, io_u,
 			o->nonvectored ? NULL : &ld->iovecs[io_u->index],
-			dsm);
+			dsm, ld->cdw12_flags[io_u->ddir]);
 }
 
 static struct io_u *fio_ioring_event(struct thread_data *td, int event)
@@ -1217,6 +1240,13 @@ static int fio_ioring_init(struct thread_data *td)
 			dsm->nr_ranges = td->o.num_range;
 			ptr += dsm_size;
 		}
+	}
+
+	if (!strcmp(td->io_ops->name, "io_uring_cmd")) {
+		if (o->readfua)
+			ld->cdw12_flags[DDIR_READ] = 1 << 30;
+		if (o->writefua)
+			ld->cdw12_flags[DDIR_WRITE] = 1 << 30;
 	}
 
 	return 0;
