@@ -103,6 +103,7 @@ struct fio_file {
 	uint64_t io_size;
 
 	struct fio_ruhs_info *ruhs_info;
+	struct fio_ruhs_scheme *ruhs_scheme;
 
 	/*
 	 * Zoned block device information. See also zonemode=zbd.

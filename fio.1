@@ -2294,9 +2294,14 @@ Choose a placement ID at random (uniform).
 .TP
 .B roundrobin
 Round robin over available placement IDs. This is the default.
+.TP
+.B scheme
+Choose a placement ID (index) based on the scheme file defined by
+the option \fBdp_scheme\fP.
 .RE
 .P
-The available placement ID (indices) are defined by the \fBplids\fR option.
+The available placement ID (indices) are defined by \fBplids\fR or
+\fBfdp_pli\fR option except for the case of \fBscheme\fP.
 .RE
 .TP
 .BI (io_uring_cmd,xnvme)plids=str, fdp_pli \fR=\fPstr
@@ -2306,6 +2311,31 @@ available Placement IDs, so use this to isolate these identifiers to specific
 jobs. If you want fio to use placement identifier only at indices 0, 2 and 5
 specify, you would set `plids=0,2,5`. For streams this should be a
 comma-separated list of Stream IDs.
+.TP
+.BI (io_uring_cmd,xnvme)\fR\fBdp_scheme\fP=str
+Defines which placement ID (index) to be selected based on offset(LBA) range.
+The file should contains one or more scheme entries in the following format:
+.sp
+.RS
+.RS
+0, 10737418240, 0
+.br
+10737418240, 21474836480, 1
+.br
+21474836480, 32212254720, 2
+.br
+\&...
+.RE
+.sp
+Each line, a scheme entry, contains start offset, end offset, and placement ID
+(index) separated by comma(,). If the write offset is within the range of a certain
+scheme entry(start offset ≤ offset < end offset), the corresponding placement ID
+(index) will be selected. If the write offset belongs to multiple scheme entries,
+the first matched scheme entry will be applied. If the offset is not within any range
+of scheme entry, dspec field will be set to 0, default RUH. (Caution: In case of
+multiple devices in a job, all devices of the job will be affected by the scheme. If
+this option is specified, the option \fBplids\fP or \fBfdp_pli\fP will be ignored.)
+.RE
 .TP
 .BI (io_uring_cmd,xnvme)md_per_io_size \fR=\fPint
 Size in bytes for separate metadata buffer per IO. Default: 0.

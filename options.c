@@ -287,6 +287,43 @@ static int str_fdp_pli_cb(void *data, const char *input)
 	return 0;
 }
 
+/* str_dp_scheme_cb() is a callback function for parsing the fdp_scheme option
+	This function validates the fdp_scheme filename. */
+static int str_dp_scheme_cb(void *data, const char *input)
+{
+	struct thread_data *td = cb_data_to_td(data);
+	struct stat sb;
+	char *filename;
+	int ret = 0;
+
+	if (parse_dryrun())
+		return 0;
+
+	filename = strdup(td->o.dp_scheme_file);
+	strip_blank_front(&filename);
+	strip_blank_end(filename);
+
+	strcpy(td->o.dp_scheme_file, filename);
+
+	if (lstat(filename, &sb) < 0){
+		ret = errno;
+		log_err("fio: lstat() error related to %s\n", filename);
+		td_verror(td, ret, "lstat");
+		goto out;
+	}
+
+	if (!S_ISREG(sb.st_mode)) {
+		ret = errno;
+		log_err("fio: %s is not a file\n", filename);
+		td_verror(td, ret, "S_ISREG");
+		goto out;
+	}
+
+out:
+	free(filename);
+	return ret;
+}
+
 static int str_bssplit_cb(void *data, const char *input)
 {
 	struct thread_data *td = cb_data_to_td(data);
@@ -3760,6 +3797,10 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .oval = FIO_DP_RR,
 			    .help = "Round robin select Placement IDs",
 			  },
+			  { .ival = "scheme",
+			    .oval = FIO_DP_SCHEME,
+			    .help = "Use a scheme(based on LBA) to select Placement IDs",
+			  },
 		},
 	},
 	{
@@ -3771,6 +3812,17 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= offsetof(struct thread_options, dp_ids),
 		.help	= "Sets which Data Placement ids to use (defaults to all for FDP)",
 		.hide	= 1,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
+		.name	= "dp_scheme",
+		.lname	= "Data Placement Scheme",
+		.type	= FIO_OPT_STR_STORE,
+		.cb	= str_dp_scheme_cb,
+		.off1	= offsetof(struct thread_options, dp_scheme_file),
+		.maxlen	= PATH_MAX,
+		.help	= "scheme file that specifies offset-RUH mapping",
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_INVALID,
 	},

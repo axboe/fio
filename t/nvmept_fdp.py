@@ -56,6 +56,7 @@ class FDPTest(FioJobCmdTest):
             f"--output={self.filenames['output']}",
             f"--output-format={self.fio_opts['output-format']}",
         ]
+
         for opt in ['fixedbufs', 'nonvectored', 'force_async', 'registerfiles',
                     'sqthread_poll', 'sqthread_poll_cpu', 'hipri', 'nowait',
                     'time_based', 'runtime', 'verify', 'io_size', 'num_range',
@@ -63,7 +64,7 @@ class FDPTest(FioJobCmdTest):
                     'size', 'rate', 'bs', 'bssplit', 'bsrange', 'randrepeat',
                     'buffer_pattern', 'verify_pattern', 'offset', 'fdp',
                     'fdp_pli', 'fdp_pli_select', 'dataplacement', 'plid_select',
-                    'plids', 'number_ios']:
+                    'plids', 'dp_scheme', 'number_ios']:
             if opt in self.fio_opts:
                 option = f"--{opt}={self.fio_opts[opt]}"
                 fio_args.append(option)
@@ -91,19 +92,20 @@ class FDPTest(FioJobCmdTest):
             return
 
         job = self.json_data['jobs'][0]
+        rw_fio_opts = self.fio_opts['rw'].split(':')[0]
 
-        if self.fio_opts['rw'] in ['read', 'randread']:
+        if rw_fio_opts in ['read', 'randread']:
             self.passed = self.check_all_ddirs(['read'], job)
-        elif self.fio_opts['rw'] in ['write', 'randwrite']:
+        elif rw_fio_opts in ['write', 'randwrite']:
             if 'verify' not in self.fio_opts:
                 self.passed = self.check_all_ddirs(['write'], job)
             else:
                 self.passed = self.check_all_ddirs(['read', 'write'], job)
-        elif self.fio_opts['rw'] in ['trim', 'randtrim']:
+        elif rw_fio_opts in ['trim', 'randtrim']:
             self.passed = self.check_all_ddirs(['trim'], job)
-        elif self.fio_opts['rw'] in ['readwrite', 'randrw']:
+        elif rw_fio_opts in ['readwrite', 'randrw']:
             self.passed = self.check_all_ddirs(['read', 'write'], job)
-        elif self.fio_opts['rw'] in ['trimwrite', 'randtrimwrite']:
+        elif rw_fio_opts in ['trimwrite', 'randtrimwrite']:
             self.passed = self.check_all_ddirs(['trim', 'write'], job)
         else:
             logging.error("Unhandled rw value %s", self.fio_opts['rw'])
@@ -128,12 +130,25 @@ class FDPMultiplePLIDTest(FDPTest):
         mapping = {
                     'nruhsd': FIO_FDP_NUMBER_PLIDS,
                     'max_ruamw': FIO_FDP_MAX_RUAMW,
+                    # parameters for 400, 401 tests
+                    'hole_size': 64*1024,
+                    'nios_for_scheme': FIO_FDP_NUMBER_PLIDS//2,
                 }
         if 'number_ios' in self.fio_opts and isinstance(self.fio_opts['number_ios'], str):
             self.fio_opts['number_ios'] = eval(self.fio_opts['number_ios'].format(**mapping))
+        if 'bs' in self.fio_opts and isinstance(self.fio_opts['bs'], str):
+            self.fio_opts['bs'] = eval(self.fio_opts['bs'].format(**mapping))
+        if 'rw' in self.fio_opts and isinstance(self.fio_opts['rw'], str):
+            self.fio_opts['rw'] = self.fio_opts['rw'].format(**mapping)
 
         super().setup(parameters)
-
+        
+        if 'dp_scheme' in self.fio_opts:
+            scheme_path = os.path.join(self.paths['test_dir'], self.fio_opts['dp_scheme'])
+            with open(scheme_path, mode='w') as f:
+                for i in range(mapping['nios_for_scheme']):
+                    f.write(f'{mapping["hole_size"] * 2 * i}, {mapping["hole_size"] * 2 * (i+1)}, {i}\n')
+ 
     def _check_result(self):
         if 'fdp_pli' in self.fio_opts:
             plid_list = self.fio_opts['fdp_pli'].split(',')
@@ -157,10 +172,12 @@ class FDPMultiplePLIDTest(FDPTest):
             self._check_robin(plid_list, fdp_status)
         elif select == "random":
             self._check_random(plid_list, fdp_status)
+        elif select == "scheme":
+            self._check_scheme(plid_list, fdp_status)
         else:
             logging.error("Unknown plid selection strategy %s", select)
             self.passed = False
-
+        
         super()._check_result()
 
     def _check_robin(self, plid_list, fdp_status):
@@ -219,6 +236,42 @@ class FDPMultiplePLIDTest(FDPTest):
             else:
                 logging.debug("Observed expected ruamw %d for idx %d, pid %d", ruhs['ruamw'], idx,
                               ruhs['pid'])
+
+    def _check_scheme(self, plid_list, fdp_status):
+        """
+        With scheme selection, a set of PLIDs touched by the scheme
+        """
+
+        PLID_IDX_POS = 2
+        plid_list_from_scheme = set()
+
+        scheme_path = os.path.join(self.paths['test_dir'], self.fio_opts['dp_scheme'])
+
+        with open(scheme_path) as f:
+            lines = f.readlines()
+            for line in lines:
+                line_elem = line.strip().replace(' ', '').split(',')
+                plid_list_from_scheme.add(int(line_elem[PLID_IDX_POS]))
+
+        logging.debug(f'plid_list_from_scheme: {plid_list_from_scheme}')
+
+        for idx, ruhs in enumerate(fdp_status['ruhss']):
+            if ruhs['pid'] in plid_list_from_scheme:
+                if ruhs['ruamw'] == FIO_FDP_MAX_RUAMW:
+                    logging.error("pid %d should be touched by the scheme. But ruamw of it(%d) equals to %d",
+                                    ruhs['pid'], ruhs['ruamw'], FIO_FDP_MAX_RUAMW)
+                    self.passed = False
+                else:
+                    logging.debug("pid %d should be touched by the scheme. ruamw of it(%d) is under %d",
+                                    ruhs['pid'], ruhs['ruamw'], FIO_FDP_MAX_RUAMW)
+            else:
+                if ruhs['ruamw'] == FIO_FDP_MAX_RUAMW:
+                    logging.debug("pid %d should not be touched by the scheme. ruamw of it(%d) equals to %d",
+                                    ruhs['pid'], ruhs['ruamw'], FIO_FDP_MAX_RUAMW)
+                else:
+                    logging.error("pid %d should not be touched by the scheme. But ruamw of it(%d) is under %d",
+                                    ruhs['pid'], ruhs['ruamw'], FIO_FDP_MAX_RUAMW)
+                    self.passed = False
 
 
 class FDPSinglePLIDTest(FDPTest):
@@ -673,6 +726,68 @@ TEST_LIST = [
             },
         "test_class": FDPTest,
         "success": SUCCESS_NONZERO,
+    },
+    # Specify invalid options related to dataplacement scheme
+    ## using old and new sets of options
+    {
+        "test_id": 302,
+        "fio_opts": {
+            "rw": 'write',
+            "bs": 4096,
+            "io_size": 4096,
+            "verify": "crc32c",
+            "fdp": 1,
+            "fdp_pli": 3,
+            "fdp_pli_select": "scheme",
+            "output-format": "normal",
+        },
+        "test_class": FDPTest,
+        "success": SUCCESS_NONZERO,
+    },
+    {
+        "test_id": 303,
+        "fio_opts": {
+            "rw": 'write',
+            "bs": 4096,
+            "io_size": 4096,
+            "verify": "crc32c",
+            "dataplacement": "fdp",
+            "plids": 3,
+            "plid_select": "scheme",
+            "output-format": "normal",
+        },
+        "test_class": FDPTest,
+        "success": SUCCESS_NONZERO,
+    },
+    # write to multiple PLIDs using scheme selection of PLIDs
+    ## using old and new sets of options
+    {
+        "test_id": 400,
+        "fio_opts": {
+            "rw": "write:{hole_size}",
+            "bs": "{hole_size}",
+            "number_ios": "{nios_for_scheme}",
+            "verify": "crc32c",
+            "fdp": 1,
+            "fdp_pli_select": "scheme",
+            "dp_scheme": "lba.scheme",            
+            "output-format": "json",
+            },
+        "test_class": FDPMultiplePLIDTest,
+    },
+    {
+        "test_id": 401,
+        "fio_opts": {
+            "rw": "write:{hole_size}",
+            "bs": "{hole_size}",
+            "number_ios": "{nios_for_scheme}",
+            "verify": "crc32c",
+            "dataplacement": "fdp",
+            "plid_select": "scheme",
+            "dp_scheme": "lba.scheme",
+            "output-format": "json",
+            },
+        "test_class": FDPMultiplePLIDTest,
     },
 ]
 

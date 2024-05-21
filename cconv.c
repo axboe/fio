@@ -94,6 +94,7 @@ int convert_thread_options_to_cpu(struct thread_options *o,
 	string_to_cpu(&o->ioscheduler, top->ioscheduler);
 	string_to_cpu(&o->profile, top->profile);
 	string_to_cpu(&o->cgroup, top->cgroup);
+	string_to_cpu(&o->dp_scheme_file, top->dp_scheme_file);
 
 	o->allow_create = le32_to_cpu(top->allow_create);
 	o->allow_mounted_write = le32_to_cpu(top->allow_mounted_write);
@@ -398,6 +399,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	string_to_net(top->ioscheduler, o->ioscheduler);
 	string_to_net(top->profile, o->profile);
 	string_to_net(top->cgroup, o->cgroup);
+	string_to_net(top->dp_scheme_file, o->dp_scheme_file);
 
 	top->allow_create = cpu_to_le32(o->allow_create);
 	top->allow_mounted_write = cpu_to_le32(o->allow_mounted_write);

@@ -2529,8 +2529,12 @@ with the caveat that when used on the command line, they must come after the
 			Round robin over available placement IDs. This is the
 			default.
 
-	The available placement ID (indices) are defined by the option
-	:option:`plids`.
+		**scheme**
+			Choose a placement ID (index) based on the scheme file defined by
+			the option :option:`dp_scheme`.
+
+	The available placement ID (indices) are defined by the option :option:`fdp_pli`
+	or :option:`plids` except for the case of **scheme**.
 
 .. option:: plids=str, fdp_pli=str : [io_uring_cmd] [xnvme]
 
@@ -2540,6 +2544,26 @@ with the caveat that when used on the command line, they must come after the
         identifiers to specific jobs. If you want fio to use FDP placement
         identifiers only at indices 0, 2 and 5 specify ``plids=0,2,5``. For
         streams this should be a comma-separated list of Stream IDs.
+
+.. option:: dp_scheme=str : [io_uring_cmd] [xnvme]
+
+	Defines which placement ID (index) to be selected based on offset(LBA) range.
+	The file should contains one or more scheme entries in the following format:
+
+		0, 10737418240, 0
+		10737418240, 21474836480, 1
+		21474836480, 32212254720, 2
+		...
+
+	Each line, a scheme entry, contains start offset, end offset, and placement ID
+	(index) separated by comma(,). If the write offset is within the range of a certain
+	scheme entry(start offset ≤ offset < end offset), the corresponding placement ID
+	(index) will be selected. If the write offset belongs to multiple scheme entries,
+	the first matched scheme entry will be applied. If the offset is not within any range
+	of scheme entry, dspec field will be set to 0, default RUH. (Caution: In case of
+	multiple devices in a job, all devices of the job will be affected by the scheme. If
+	this option is specified, the option :option:`plids` or :option:`fdp_pli` will be
+	ignored.)
 
 .. option:: md_per_io_size=int : [io_uring_cmd] [xnvme]
 
