@@ -140,8 +140,17 @@ static int ipo_special(struct thread_data *td, struct io_piece *ipo)
 			break;
 		}
 		ret = td_io_open_file(td, f);
-		if (!ret)
+		if (!ret) {
+			if (td->o.dp_type != FIO_DP_NONE) {
+				int dp_init_ret = dp_init(td);
+
+				if (dp_init_ret != 0) {
+					td_verror(td, dp_init_ret, "dp_init");
+					return -1;
+				}
+			}
 			break;
+		}
 		td_verror(td, ret, "iolog open file");
 		return -1;
 	case FIO_LOG_CLOSE_FILE:
@@ -232,6 +241,9 @@ int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 			if (ipo->delay > elapsed)
 				usec_sleep(td, (ipo->delay - elapsed) * 1000);
 		}
+
+		if (td->o.dp_type != FIO_DP_NONE)
+			dp_fill_dspec_data(td, io_u);
 
 		free(ipo);
 
