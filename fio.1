@@ -2632,11 +2632,11 @@ that "owns" the device also needs to support hipri (also known as iopoll
 and mq_poll). The MegaRAID driver is an example of a SCSI LLD.
 Default: clear (0) which does normal (interrupted based) IO.
 .TP
-.BI (sg)readfua \fR=\fPbool
+.BI (sg, io_uring_cmd)readfua \fR=\fPbool
 With readfua option set to 1, read operations include the force
 unit access (fua) flag. Default: 0.
 .TP
-.BI (sg)writefua \fR=\fPbool
+.BI (sg, io_uring_cmd)writefua \fR=\fPbool
 With writefua option set to 1, write operations include the force
 unit access (fua) flag. Default: 0.
 .TP

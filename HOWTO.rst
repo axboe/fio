@@ -2847,12 +2847,12 @@ with the caveat that when used on the command line, they must come after the
 	Specify stat system call type to measure lookup/getattr performance.
 	Default is **stat** for :manpage:`stat(2)`.
 
-.. option:: readfua=bool : [sg]
+.. option:: readfua=bool : [sg] [io_uring_cmd]
 
 	With readfua option set to 1, read operations include
 	the force unit access (fua) flag. Default is 0.
 
-.. option:: writefua=bool : [sg]
+.. option:: writefua=bool : [sg] [io_uring_cmd]
 
 	With writefua option set to 1, write operations include
 	the force unit access (fua) flag. Default is 0.

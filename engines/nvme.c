@@ -362,7 +362,8 @@ void fio_nvme_uring_cmd_trim_prep(struct nvme_uring_cmd *cmd, struct io_u *io_u,
 }
 
 int fio_nvme_uring_cmd_prep(struct nvme_uring_cmd *cmd, struct io_u *io_u,
-			    struct iovec *iov, struct nvme_dsm *dsm)
+			    struct iovec *iov, struct nvme_dsm *dsm,
+			    unsigned int cdw12_flags)
 {
 	struct nvme_data *data = FILE_ENG_DATA(io_u->file);
 	__u64 slba;
@@ -391,7 +392,7 @@ int fio_nvme_uring_cmd_prep(struct nvme_uring_cmd *cmd, struct io_u *io_u,
 	cmd->cdw10 = slba & 0xffffffff;
 	cmd->cdw11 = slba >> 32;
 	/* cdw12 represent number of lba's for read/write */
-	cmd->cdw12 = nlb | (io_u->dtype << 20);
+	cmd->cdw12 = nlb | (io_u->dtype << 20) | cdw12_flags;
 	cmd->cdw13 = io_u->dspec << 16;
 	if (iov) {
 		iov->iov_base = io_u->xfer_buf;
