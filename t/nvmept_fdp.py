@@ -64,7 +64,7 @@ class FDPTest(FioJobCmdTest):
                     'size', 'rate', 'bs', 'bssplit', 'bsrange', 'randrepeat',
                     'buffer_pattern', 'verify_pattern', 'offset', 'fdp',
                     'fdp_pli', 'fdp_pli_select', 'dataplacement', 'plid_select',
-                    'plids', 'dp_scheme', 'number_ios']:
+                    'plids', 'dp_scheme', 'number_ios', 'read_iolog']:
             if opt in self.fio_opts:
                 option = f"--{opt}={self.fio_opts[opt]}"
                 fio_args.append(option)
@@ -148,6 +148,18 @@ class FDPMultiplePLIDTest(FDPTest):
             with open(scheme_path, mode='w') as f:
                 for i in range(mapping['nios_for_scheme']):
                     f.write(f'{mapping["hole_size"] * 2 * i}, {mapping["hole_size"] * 2 * (i+1)}, {i}\n')
+
+        if 'read_iolog' in self.fio_opts:
+            read_iolog_path = os.path.join(self.paths['test_dir'], self.fio_opts['read_iolog'])
+            with open(read_iolog_path, mode='w') as f:
+                f.write('fio version 2 iolog\n')
+                f.write(f'{self.fio_opts["filename"]} add\n')
+                f.write(f'{self.fio_opts["filename"]} open\n')
+
+                for i in range(mapping['nios_for_scheme']):
+                    f.write(f'{self.fio_opts["filename"]} write {mapping["hole_size"] * 2 * i} {mapping["hole_size"]}\n')
+
+                f.write(f'{self.fio_opts["filename"]} close')
  
     def _check_result(self):
         if 'fdp_pli' in self.fio_opts:
@@ -787,6 +799,22 @@ TEST_LIST = [
             "dp_scheme": "lba.scheme",
             "output-format": "json",
             },
+        "test_class": FDPMultiplePLIDTest,
+    },
+    # check whether dataplacement works while replaying iologs
+    {
+        "test_id": 402,
+        "fio_opts": {
+            "rw": "write:{hole_size}",
+            "bs": "{hole_size}",
+            "number_ios": "{nios_for_scheme}",
+            "verify": "crc32c",
+            "read_iolog": "iolog",
+            "dataplacement": "fdp",
+            "plid_select": "scheme",
+            "dp_scheme": "lba.scheme",
+            "output-format": "json",
+        },
         "test_class": FDPMultiplePLIDTest,
     },
 ]
