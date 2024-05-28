@@ -532,7 +532,11 @@ static int ignore_error_type(struct thread_data *td, enum error_type_bit etype,
 		if (fname[0] == 'E') {
 			error[i] = str2error(fname);
 		} else {
-			error[i] = atoi(fname);
+			int base = 10;
+			if (!strncmp(fname, "0x", 2) ||
+					!strncmp(fname, "0X", 2))
+				base = 16;
+			error[i] = strtol(fname, NULL, base);
 			if (error[i] < 0)
 				error[i] = -error[i];
 		}
