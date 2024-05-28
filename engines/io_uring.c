@@ -34,6 +34,13 @@ enum uring_cmd_type {
 	FIO_URING_CMD_NVME = 1,
 };
 
+enum uring_cmd_write_mode {
+	FIO_URING_CMD_WMODE_WRITE = 1,
+	FIO_URING_CMD_WMODE_UNCOR,
+	FIO_URING_CMD_WMODE_ZEROES,
+	FIO_URING_CMD_WMODE_VERIFY,
+};
+
 struct io_sq_ring {
 	unsigned *head;
 	unsigned *tail;
@@ -83,6 +90,7 @@ struct ioring_data {
 
 	struct nvme_dsm *dsm;
 	uint32_t cdw12_flags[DDIR_RWDIR_CNT];
+	uint8_t write_opcode;
 };
 
 struct ioring_options {
@@ -90,6 +98,7 @@ struct ioring_options {
 	unsigned int hipri;
 	unsigned int readfua;
 	unsigned int writefua;
+	unsigned int write_mode;
 	struct cmdprio_options cmdprio_options;
 	unsigned int fixedbufs;
 	unsigned int registerfiles;
@@ -155,6 +164,34 @@ static struct fio_option options[] = {
 		.off1	= offsetof(struct ioring_options, writefua),
 		.help	= "Set FUA flag (force unit access) for all Write operations",
 		.def	= "0",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_IOURING,
+	},
+	{
+		.name	= "write_mode",
+		.lname	= "Additional Write commands support (Write Uncorrectable, Write Zeores)",
+		.type	= FIO_OPT_STR,
+		.off1	= offsetof(struct ioring_options, write_mode),
+		.help	= "Issue Write Uncorrectable or Zeroes command instaed of Write command",
+		.def	= "write",
+		.posval = {
+			  { .ival = "write",
+			    .oval = FIO_URING_CMD_WMODE_WRITE,
+			    .help = "Issue Write commands for write operations"
+			  },
+			  { .ival = "uncor",
+			    .oval = FIO_URING_CMD_WMODE_UNCOR,
+			    .help = "Issue Write Uncorrectable commands for write operations"
+			  },
+			  { .ival = "zeroes",
+			    .oval = FIO_URING_CMD_WMODE_ZEROES,
+			    .help = "Issue Write Zeroes commands for write operations"
+			  },
+			  { .ival = "verify",
+			    .oval = FIO_URING_CMD_WMODE_VERIFY,
+			    .help = "Issue Verify commands for write operations"
+			  },
+		},
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_IOURING,
 	},
@@ -455,7 +492,7 @@ static int fio_ioring_cmd_prep(struct thread_data *td, struct io_u *io_u)
 
 	return fio_nvme_uring_cmd_prep(cmd, io_u,
 			o->nonvectored ? NULL : &ld->iovecs[io_u->index],
-			dsm, ld->cdw12_flags[io_u->ddir]);
+			dsm, ld->write_opcode, ld->cdw12_flags[io_u->ddir]);
 }
 
 static struct io_u *fio_ioring_event(struct thread_data *td, int event)
@@ -1243,6 +1280,23 @@ static int fio_ioring_init(struct thread_data *td)
 	}
 
 	if (!strcmp(td->io_ops->name, "io_uring_cmd")) {
+		if (td_write(td)) {
+			switch (o->write_mode) {
+			case FIO_URING_CMD_WMODE_UNCOR:
+				ld->write_opcode = nvme_cmd_write_uncor;
+				break;
+			case FIO_URING_CMD_WMODE_ZEROES:
+				ld->write_opcode = nvme_cmd_write_zeroes;
+				break;
+			case FIO_URING_CMD_WMODE_VERIFY:
+				ld->write_opcode = nvme_cmd_verify;
+				break;
+			default:
+				ld->write_opcode = nvme_cmd_write;
+				break;
+			}
+		}
+
 		if (o->readfua)
 			ld->cdw12_flags[DDIR_READ] = 1 << 30;
 		if (o->writefua)
@@ -1368,6 +1422,14 @@ static int fio_ioring_cmd_open_file(struct thread_data *td, struct fio_file *f)
 		    td->o.verify != VERIFY_NONE) {
 			log_err("%s: for extended LBA, verify cannot be used when E2E data protection is enabled\n",
 				f->file_name);
+			td_verror(td, EINVAL, "fio_ioring_cmd_open_file");
+			return 1;
+		}
+
+		if (o->write_mode != FIO_URING_CMD_WMODE_WRITE &&
+		    !td_write(td)) {
+			log_err("%s: 'readwrite=|rw=' has no write\n",
+					f->file_name);
 			td_verror(td, EINVAL, "fio_ioring_cmd_open_file");
 			return 1;
 		}
