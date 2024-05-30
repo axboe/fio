@@ -145,7 +145,7 @@ static int ipo_special(struct thread_data *td, struct io_piece *ipo)
 				int dp_init_ret = dp_init(td);
 
 				if (dp_init_ret != 0) {
-					td_verror(td, dp_init_ret, "dp_init");
+					td_verror(td, abs(dp_init_ret), "dp_init");
 					return -1;
 				}
 			}
