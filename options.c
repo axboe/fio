@@ -263,28 +263,61 @@ static int fio_fdp_cmp(const void *p1, const void *p2)
 static int str_fdp_pli_cb(void *data, const char *input)
 {
 	struct thread_data *td = cb_data_to_td(data);
-	char *str, *p, *v;
-	int i = 0;
+	char *str, *p, *id1;
+	int i = 0, ret = 0;
 
 	p = str = strdup(input);
 	strip_blank_front(&str);
 	strip_blank_end(str);
 
-	while ((v = strsep(&str, ",")) != NULL && i < FIO_MAX_DP_IDS) {
-		unsigned long long id = strtoull(v, NULL, 0);
-		if (id > 0xFFFF) {
-			log_err("Placement IDs cannot exceed 0xFFFF\n");
-			free(p);
-			return 1;
+	while ((id1 = strsep(&str, ",")) != NULL) {
+		char *str2, *id2;
+		unsigned int start, end;
+
+		if (!strlen(id1))
+			break;
+
+		str2 = id1;
+		end = -1;
+		while ((id2 = strsep(&str2, "-")) != NULL) {
+			if (!strlen(id2))
+				break;
+
+			end = strtoull(id2, NULL, 0);
 		}
-		td->o.dp_ids[i++] = id;
+
+		start = strtoull(id1, NULL, 0);
+		if (end == -1)
+			end = start;
+		if (start > end) {
+			ret = 1;
+			break;
+		}
+
+		while (start <= end) {
+			if (i >= FIO_MAX_DP_IDS) {
+				log_err("fio: only %d IDs supported\n", FIO_MAX_DP_IDS);
+				ret = 1;
+				break;
+			}
+			if (start > 0xFFFF) {
+				log_err("Placement IDs cannot exceed 0xFFFF\n");
+				ret = 1;
+				break;
+			}
+			td->o.dp_ids[i++] = start++;
+		}
+
+		if (ret)
+			break;
 	}
+
 	free(p);
 
 	qsort(td->o.dp_ids, i, sizeof(*td->o.dp_ids), fio_fdp_cmp);
 	td->o.dp_nr_ids = i;
 
-	return 0;
+	return ret;
 }
 
 /* str_dp_scheme_cb() is a callback function for parsing the fdp_scheme option
