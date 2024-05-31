@@ -145,7 +145,7 @@ static int ipo_special(struct thread_data *td, struct io_piece *ipo)
 				int dp_init_ret = dp_init(td);
 
 				if (dp_init_ret != 0) {
-					td_verror(td, dp_init_ret, "dp_init");
+					td_verror(td, abs(dp_init_ret), "dp_init");
 					return -1;
 				}
 			}
@@ -236,14 +236,14 @@ int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 						io_u->buflen, io_u->file->file_name);
 			if (ipo->delay)
 				iolog_delay(td, ipo->delay);
+
+			if (td->o.dp_type != FIO_DP_NONE)
+				dp_fill_dspec_data(td, io_u);
 		} else {
 			elapsed = mtime_since_genesis();
 			if (ipo->delay > elapsed)
 				usec_sleep(td, (ipo->delay - elapsed) * 1000);
 		}
-
-		if (td->o.dp_type != FIO_DP_NONE)
-			dp_fill_dspec_data(td, io_u);
 
 		free(ipo);
 
