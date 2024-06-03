@@ -652,12 +652,20 @@ static void client_signal_handler(void)
 
 	memset(&act, 0, sizeof(act));
 	act.sa_handler = sig_int;
+	#if defined(__QNX__)
+	act.sa_flags = SA_NOCLDSTOP;
+	#else
 	act.sa_flags = SA_RESTART;
+	#endif
 	sigaction(SIGINT, &act, NULL);
 
 	memset(&act, 0, sizeof(act));
 	act.sa_handler = sig_int;
+	#if defined(__QNX__)
+	act.sa_flags = SA_NOCLDSTOP;
+	#else
 	act.sa_flags = SA_RESTART;
+	#endif
 	sigaction(SIGTERM, &act, NULL);
 
 /* Windows uses SIGBREAK as a quit signal from other applications */
@@ -670,7 +678,11 @@ static void client_signal_handler(void)
 
 	memset(&act, 0, sizeof(act));
 	act.sa_handler = sig_show_status;
+	#if defined(__QNX__)
+	act.sa_flags = SA_NOCLDSTOP;
+	#else
 	act.sa_flags = SA_RESTART;
+	#endif
 	sigaction(SIGUSR1, &act, NULL);
 }
 
