@@ -130,6 +130,7 @@ class FDPMultiplePLIDTest(FDPTest):
         mapping = {
                     'nruhsd': FIO_FDP_NUMBER_PLIDS,
                     'max_ruamw': FIO_FDP_MAX_RUAMW,
+                    'maxplid': FIO_FDP_NUMBER_PLIDS-1,
                     # parameters for 400, 401 tests
                     'hole_size': 64*1024,
                     'nios_for_scheme': FIO_FDP_NUMBER_PLIDS//2,
@@ -140,6 +141,10 @@ class FDPMultiplePLIDTest(FDPTest):
             self.fio_opts['bs'] = eval(self.fio_opts['bs'].format(**mapping))
         if 'rw' in self.fio_opts and isinstance(self.fio_opts['rw'], str):
             self.fio_opts['rw'] = self.fio_opts['rw'].format(**mapping)
+        if 'plids' in self.fio_opts and isinstance(self.fio_opts['plids'], str):
+            self.fio_opts['plids'] = self.fio_opts['plids'].format(**mapping)
+        if 'fdp_pli' in self.fio_opts and isinstance(self.fio_opts['fdp_pli'], str):
+            self.fio_opts['fdp_pli'] = self.fio_opts['fdp_pli'].format(**mapping)
 
         super().setup(parameters)
         
@@ -167,9 +172,17 @@ class FDPMultiplePLIDTest(FDPTest):
         elif 'plids' in self.fio_opts:
             plid_list = self.fio_opts['plids'].split(',')
         else:
-            plid_list = list(range(FIO_FDP_NUMBER_PLIDS))
+            plid_list = [str(i) for i in range(FIO_FDP_NUMBER_PLIDS)]
 
-        plid_list = sorted([int(i) for i in plid_list])
+        range_ids = []
+        for plid in plid_list:
+            if '-' in plid:
+                [start, end] = plid.split('-')
+                range_ids.extend(list(range(int(start), int(end)+1)))
+            else:
+                range_ids.append(int(plid))
+
+        plid_list = sorted(range_ids)
         logging.debug("plid_list: %s", str(plid_list))
 
         fdp_status = get_fdp_status(self.fio_opts['filename'])
@@ -707,6 +720,121 @@ TEST_LIST = [
             },
         "test_class": FDPMultiplePLIDTest,
     },
+    ### use 3-4 to specify plids
+    {
+        "test_id": 204,
+        "fio_opts": {
+            "rw": 'randwrite',
+            "bs": 4096,
+            "number_ios": "{max_ruamw}-1",
+            "verify": "crc32c",
+            "fdp": 1,
+            "fdp_pli": "1,3-4",
+            "fdp_pli_select": "random",
+            "output-format": "json",
+            },
+        "test_class": FDPMultiplePLIDTest,
+    },
+    {
+        "test_id": 205,
+        "fio_opts": {
+            "rw": 'randwrite',
+            "bs": 4096,
+            "number_ios": "{max_ruamw}-1",
+            "verify": "crc32c",
+            "dataplacement": "fdp",
+            "plids": "1,3-4",
+            "plid_select": "random",
+            "output-format": "json",
+            },
+        "test_class": FDPMultiplePLIDTest,
+    },
+    ### use 1-3 to specify plids
+    {
+        "test_id": 206,
+        "fio_opts": {
+            "rw": 'randwrite',
+            "bs": 4096,
+            "number_ios": "{max_ruamw}-1",
+            "verify": "crc32c",
+            "fdp": 1,
+            "fdp_pli": "1-3",
+            "fdp_pli_select": "random",
+            "output-format": "json",
+            },
+        "test_class": FDPMultiplePLIDTest,
+    },
+    {
+        "test_id": 207,
+        "fio_opts": {
+            "rw": 'randwrite',
+            "bs": 4096,
+            "number_ios": "{max_ruamw}-1",
+            "verify": "crc32c",
+            "dataplacement": "fdp",
+            "plids": "1-3",
+            "plid_select": "random",
+            "output-format": "json",
+            },
+        "test_class": FDPMultiplePLIDTest,
+    },
+    ### use multiple ranges to specify plids
+    {
+        "test_id": 208,
+        "fio_opts": {
+            "rw": 'randwrite',
+            "bs": 4096,
+            "number_ios": "{max_ruamw}-1",
+            "verify": "crc32c",
+            "fdp": 1,
+            "fdp_pli": "1-2,3-3",
+            "fdp_pli_select": "random",
+            "output-format": "json",
+            },
+        "test_class": FDPMultiplePLIDTest,
+    },
+    {
+        "test_id": 209,
+        "fio_opts": {
+            "rw": 'randwrite',
+            "bs": 4096,
+            "number_ios": "{max_ruamw}-1",
+            "verify": "crc32c",
+            "dataplacement": "fdp",
+            "plids": "1-2,3-3",
+            "plid_select": "random",
+            "output-format": "json",
+            },
+        "test_class": FDPMultiplePLIDTest,
+    },
+    {
+        "test_id": 210,
+        "fio_opts": {
+            "rw": 'randwrite',
+            "bs": 4096,
+            "number_ios": "{max_ruamw}-1",
+            "verify": "crc32c",
+            "fdp": 1,
+            "fdp_pli": "0-{maxplid}",
+            "fdp_pli_select": "random",
+            "output-format": "json",
+            },
+        "test_class": FDPMultiplePLIDTest,
+    },
+    {
+        "test_id": 211,
+        "fio_opts": {
+            "rw": 'randwrite',
+            "bs": 4096,
+            "number_ios": "{max_ruamw}-1",
+            "verify": "crc32c",
+            "dataplacement": "fdp",
+            "fdp_pli": "0-{maxplid}",
+            "plid_select": "random",
+            "output-format": "json",
+            },
+        "test_class": FDPMultiplePLIDTest,
+    },
     # Specify invalid options fdp=1 and dataplacement=none
     {
         "test_id": 300,
@@ -768,6 +896,64 @@ TEST_LIST = [
             "plid_select": "scheme",
             "output-format": "normal",
         },
+        "test_class": FDPTest,
+        "success": SUCCESS_NONZERO,
+    },
+    ## Specify invalid ranges with start > end
+    {
+        "test_id": 304,
+        "fio_opts": {
+            "rw": 'write',
+            "bs": 4096,
+            "io_size": 4096,
+            "verify": "crc32c",
+            "fdp": 1,
+            "plids": "3-1",
+            "output-format": "normal",
+            },
+        "test_class": FDPTest,
+        "success": SUCCESS_NONZERO,
+    },
+    {
+        "test_id": 305,
+        "fio_opts": {
+            "rw": 'write',
+            "bs": 4096,
+            "io_size": 4096,
+            "verify": "crc32c",
+            "fdp": 1,
+            "fdp_pli": "3-1",
+            "output-format": "normal",
+            },
+        "test_class": FDPTest,
+        "success": SUCCESS_NONZERO,
+    },
+    ## Specify too many plids
+    {
+        "test_id": 306,
+        "fio_opts": {
+            "rw": 'write',
+            "bs": 4096,
+            "io_size": 4096,
+            "verify": "crc32c",
+            "fdp": 1,
+            "plids": "0-65535",
+            "output-format": "normal",
+            },
+        "test_class": FDPTest,
+        "success": SUCCESS_NONZERO,
+    },
+    {
+        "test_id": 307,
+        "fio_opts": {
+            "rw": 'write',
+            "bs": 4096,
+            "io_size": 4096,
+            "verify": "crc32c",
+            "fdp": 1,
+            "fdp_pli": "0-65535",
+            "output-format": "normal",
+            },
         "test_class": FDPTest,
         "success": SUCCESS_NONZERO,
     },
