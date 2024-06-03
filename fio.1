@@ -2640,6 +2640,26 @@ unit access (fua) flag. Default: 0.
 With writefua option set to 1, write operations include the force
 unit access (fua) flag. Default: 0.
 .TP
+.BI (io_uring_cmd)write_mode \fR=\fPstr
+Specifies the type of write operation.  Defaults to 'write'.
+.RS
+.RS
+.TP
+.B write
+Use Write commands for write operations
+.TP
+.B uncor
+Use Write Uncorrectable commands for write opreations
+.TP
+.B zeroes
+Use Write Zeroes commands for write operations
+.TP
+.B verify
+Use Verify commands for write operations
+.TP
+.RE
+.RE
+.TP
 .BI (sg)sg_write_mode \fR=\fPstr
 Specify the type of write commands to issue. This option can take multiple
 values:

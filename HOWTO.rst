@@ -2857,6 +2857,22 @@ with the caveat that when used on the command line, they must come after the
 	With writefua option set to 1, write operations include
 	the force unit access (fua) flag. Default is 0.
 
+.. option:: write_mode=str : [io_uring_cmd]
+
+        Specifies the type of write operation.  Defaults to 'write'.
+
+                **write**
+                        Use Write commands for write operations
+
+                **uncor**
+                        Use Write Uncorrectable commands for write opreations
+
+                **zeroes**
+                        Use Write Zeroes commands for write operations
+
+                **verify**
+                        Use Verify commands for write operations
+
 .. option:: sg_write_mode=str : [sg]
 
 	Specify the type of write commands to issue. This option can take ten values:
