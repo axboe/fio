@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <stdint.h>
 
 #include "../fio.h"
 #include "../optgroup.h"
