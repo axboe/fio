@@ -21,6 +21,13 @@
 
 #include "../file.h"
 
+/* QNX is not supporting SA_RESTART. Use SA_NOCLDSTOP instead of it */
+#ifndef SA_RESTART
+#define SA_RESTART SA_NOCLDSTOP
+#endif
+
+#define FIO_NO_HAVE_SHM_H
+
 typedef uint64_t __u64;
 typedef unsigned int __u32;
 
