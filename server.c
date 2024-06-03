@@ -2743,9 +2743,15 @@ static void set_sig_handlers(void)
 	struct sigaction act = {
 		.sa_handler = sig_int,
 		#if defined(__QNX__)
+<<<<<<< HEAD
 		act.sa_flags = SA_NOCLDSTOP,
 		#else
 		act.sa_flags = SA_RESTART,
+=======
+		.sa_flags = SA_NOCLDSTOP,
+		#else
+		.sa_flags = SA_RESTART,
+>>>>>>> Support platform QNX OS
 		#endif
 	};
 
