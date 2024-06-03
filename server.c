@@ -2742,7 +2742,11 @@ static void set_sig_handlers(void)
 {
 	struct sigaction act = {
 		.sa_handler = sig_int,
+		#if defined(__QNX__)
+		.sa_flags = SA_NOCLDSTOP,
+		#else
 		.sa_flags = SA_RESTART,
+		#endif
 	};
 
 	sigaction(SIGINT, &act, NULL);
