@@ -2865,7 +2865,7 @@ with the caveat that when used on the command line, they must come after the
                         Use Write commands for write operations
 
                 **uncor**
-                        Use Write Uncorrectable commands for write opreations
+                        Use Write Uncorrectable commands for write operations
 
                 **zeroes**
                         Use Write Zeroes commands for write operations
