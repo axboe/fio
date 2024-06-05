@@ -6,7 +6,7 @@
 #define STREAMS_DIR_DTYPE	1
 #define FDP_DIR_DTYPE		2
 #define FDP_MAX_RUHS		128
-#define FIO_MAX_DP_IDS 		16
+#define FIO_MAX_DP_IDS 		128
 #define DP_MAX_SCHEME_ENTRIES	32
 
 /*
