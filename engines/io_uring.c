@@ -1545,6 +1545,8 @@ static int fio_ioring_cmd_fetch_ruhs(struct thread_data *td, struct fio_file *f,
 		goto free;
 
 	fruhs_info->nr_ruhs = le16_to_cpu(ruhs->nruhsd);
+	if (fruhs_info->nr_ruhs > FDP_MAX_RUHS)
+		fruhs_info->nr_ruhs = FDP_MAX_RUHS;
 	for (i = 0; i < fruhs_info->nr_ruhs; i++)
 		fruhs_info->plis[i] = le16_to_cpu(ruhs->ruhss[i].pid);
 free:
