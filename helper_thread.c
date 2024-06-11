@@ -418,6 +418,8 @@ int helper_thread_create(struct fio_sem *startup_sem, struct sk_out *sk_out)
 	int ret;
 
 	hd = scalloc(1, sizeof(*hd));
+	if (!hd)
+		return 1;
 
 	setup_disk_util();
 	steadystate_setup();
