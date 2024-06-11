@@ -80,7 +80,6 @@ static int do_rand_allocs(void)
 			if (!error) {
 				e = scalloc(1, LARGESMALLOC);
 				if (!e) {
-					error = true;
 					ret++;
 					printf("failure allocating %u bytes at %lu allocated during sfree phase\n",
 						LARGESMALLOC, total);
