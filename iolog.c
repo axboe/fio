@@ -840,6 +840,7 @@ void setup_log(struct io_log **log, struct log_params *p,
 	struct flist_head *list;
 
 	l = scalloc(1, sizeof(*l));
+	assert(l);
 	INIT_FLIST_HEAD(&l->io_logs);
 	l->log_type = p->log_type;
 	l->log_offset = p->log_offset;
