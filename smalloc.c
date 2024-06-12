@@ -566,6 +566,10 @@ void *smalloc(size_t size)
 
 void *scalloc(size_t nmemb, size_t size)
 {
+	/*
+	 * smalloc_pool (called by smalloc) will zero the memory, so we don't
+	 * need to do it here.
+	 */
 	return smalloc(nmemb * size);
 }
 
