@@ -280,7 +280,7 @@ static int fio_libnfs_open(struct thread_data *td, struct fio_file *f)
 	nfs_data = calloc(1, sizeof(struct nfs_data));
 	nfs_data->options = options;
 
-	if (td->o.td_ddir == TD_DDIR_WRITE)
+	if (td->o.td_ddir == TD_DDIR_WRITE || td->o.td_ddir == TD_DDIR_RANDWRITE)
 		flags |= O_CREAT | O_RDWR;
 	else
 		flags |= O_RDWR;
