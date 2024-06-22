@@ -39,6 +39,7 @@ enum uring_cmd_write_mode {
 	FIO_URING_CMD_WMODE_UNCOR,
 	FIO_URING_CMD_WMODE_ZEROES,
 	FIO_URING_CMD_WMODE_VERIFY,
+	FIO_URING_CMD_WMODE_FLUSH,
 };
 
 struct io_sq_ring {
