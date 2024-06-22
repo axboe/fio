@@ -466,6 +466,7 @@ enum fio_q_status td_io_queue(struct thread_data *td, struct io_u *io_u)
 		}
 	}
 
+	td->last_ddir_issued = ddir;
 	return ret;
 }
 
