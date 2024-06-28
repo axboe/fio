@@ -3,6 +3,8 @@
 
 #define FIO_ARCH	(arch_mips)
 
+#define __SANE_USERSPACE_TYPES__
+
 #define read_barrier()		__asm__ __volatile__("": : :"memory")
 #define write_barrier()		__asm__ __volatile__("": : :"memory")
 #define nop			__asm__ __volatile__("": : :"memory")
