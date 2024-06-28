@@ -755,7 +755,7 @@ static enum fio_ddir get_rw_ddir(struct thread_data *td)
 	 * See if it's time to fsync/fdatasync/sync_file_range first,
 	 * and if not then move on to check regular I/Os.
 	 */
-	if (should_fsync(td)) {
+	if (should_fsync(td) && td->last_ddir_issued != DDIR_READ) {
 		if (td->o.fsync_blocks && td->io_issues[DDIR_WRITE] &&
 		    !(td->io_issues[DDIR_WRITE] % td->o.fsync_blocks))
 			return DDIR_SYNC;
@@ -815,7 +815,7 @@ static void set_rw_ddir(struct thread_data *td, struct io_u *io_u)
 	if (td->o.zone_mode == ZONE_MODE_ZBD)
 		ddir = zbd_adjust_ddir(td, io_u, ddir);
 
-	if (td_trimwrite(td)) {
+	if (td_trimwrite(td) && !ddir_sync(ddir)) {
 		struct fio_file *f = io_u->file;
 		if (f->last_start[DDIR_WRITE] == f->last_start[DDIR_TRIM])
 			ddir = DDIR_TRIM;

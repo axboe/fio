@@ -381,6 +381,11 @@ int fio_nvme_uring_cmd_prep(struct nvme_uring_cmd *cmd, struct io_u *io_u,
 	case DDIR_TRIM:
 		fio_nvme_uring_cmd_trim_prep(cmd, io_u, dsm);
 		return 0;
+	case DDIR_SYNC:
+	case DDIR_DATASYNC:
+		cmd->opcode = nvme_cmd_flush;
+		cmd->nsid = data->nsid;
+		return 0;
 	default:
 		return -ENOTSUP;
 	}
