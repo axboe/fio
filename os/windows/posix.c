@@ -873,10 +873,12 @@ ssize_t writev(int fildes, const struct iovec *iov, int iovcnt)
 	return bytes_written;
 }
 
+#ifndef _WIN32
 long long strtoll(const char *restrict str, char **restrict endptr, int base)
 {
 	return _strtoi64(str, endptr, base);
 }
+#endif
 
 int poll(struct pollfd fds[], nfds_t nfds, int timeout)
 {
