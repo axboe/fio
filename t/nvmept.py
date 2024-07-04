@@ -87,6 +87,53 @@ class PassThruTest(FioJobCmdTest):
             self.passed = False
 
 
+class FlushTest(FioJobCmdTest):
+    def setup(self, parameters):
+        fio_args = [
+            "--name=nvmept-flush",
+            "--ioengine=io_uring_cmd",
+            "--cmd_type=nvme",
+            "--randrepeat=0",
+            f"--filename={self.fio_opts['filename']}",
+            f"--rw={self.fio_opts['rw']}",
+            f"--output={self.filenames['output']}",
+            f"--output-format={self.fio_opts['output-format']}",
+        ]
+
+        for opt in ['fixedbufs', 'nonvectored', 'force_async', 'registerfiles',
+                    'sqthread_poll', 'sqthread_poll_cpu', 'hipri', 'nowait',
+                    'time_based', 'runtime', 'verify', 'io_size', 'num_range',
+                    'iodepth', 'iodepth_batch', 'iodepth_batch_complete',
+                    'size', 'rate', 'bs', 'bssplit', 'bsrange', 'randrepeat',
+                    'buffer_pattern', 'verify_pattern', 'offset', 'fdp',
+                    'fdp_pli', 'fdp_pli_select', 'dataplacement', 'plid_select',
+                    'plids', 'dp_scheme', 'number_ios', 'read_iolog', 'fsync']:
+            if opt in self.fio_opts:
+                option = f"--{opt}={self.fio_opts[opt]}"
+                fio_args.append(option)
+
+        super().setup(fio_args)
+
+    def check_result(self):
+        super().check_result()
+
+        job = self.json_data['jobs'][0]
+
+        rw = self.fio_opts['rw']
+        fsync = self.fio_opts['fsync']
+
+        nr_write = job['write']['total_ios']
+        nr_sync = job['sync']['total_ios']
+
+        nr_sync_exp = nr_write // fsync
+
+        # The actual number of DDIR_SYNC issued might miss one DDIR_SYNC command
+        # when the last command issued was DDIR_WRITE command.
+        if not ((nr_sync == nr_sync_exp) or (nr_sync + 1 == nr_sync_exp)):
+            logging.error(f"nr_write={nr_write}, nr_sync={nr_sync}, fsync={fsync}")
+            self.passed = False
+
+
 TEST_LIST = [
     {
         "test_id": 1,
@@ -254,6 +301,50 @@ TEST_LIST = [
             "output-format": "json",
             },
         "test_class": PassThruTest,
+    },
+    {
+        "test_id": 16,
+        "fio_opts": {
+            "rw": 'read',
+            "bs": 4096,
+            "number_ios": 10,
+            "fsync": 1,
+            "output-format": "json",
+            },
+        "test_class": FlushTest,
+    },
+    {
+        "test_id": 17,
+        "fio_opts": {
+            "rw": 'write',
+            "bs": 4096,
+            "number_ios": 10,
+            "fsync": 1,
+            "output-format": "json",
+            },
+        "test_class": FlushTest,
+    },
+    {
+        "test_id": 18,
+        "fio_opts": {
+            "rw": 'readwrite',
+            "bs": 4096,
+            "number_ios": 10,
+            "fsync": 1,
+            "output-format": "json",
+            },
+        "test_class": FlushTest,
+    },
+    {
+        "test_id": 19,
+        "fio_opts": {
+            "rw": 'trimwrite',
+            "bs": 4096,
+            "number_ios": 10,
+            "fsync": 1,
+            "output-format": "json",
+            },
+        "test_class": FlushTest,
     },
 ]
 
