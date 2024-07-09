@@ -259,7 +259,7 @@ struct thread_data {
 	volatile int runstate;
 	volatile bool terminate;
 	bool last_was_sync;
-	enum fio_ddir last_ddir;
+	enum fio_ddir last_ddir_completed;
 
 	int mmapfd;
 
