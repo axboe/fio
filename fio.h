@@ -258,8 +258,9 @@ struct thread_data {
 	size_t orig_buffer_size;
 	volatile int runstate;
 	volatile bool terminate;
-	bool last_was_sync;
+
 	enum fio_ddir last_ddir_completed;
+	enum fio_ddir last_ddir_issued;
 
 	int mmapfd;
 
@@ -629,7 +630,7 @@ static inline bool multi_range_trim(struct thread_data *td, struct io_u *io_u)
 
 static inline bool should_fsync(struct thread_data *td)
 {
-	if (td->last_was_sync)
+	if (ddir_sync(td->last_ddir_issued))
 		return false;
 	if (td_write(td) || td->o.override_sync)
 		return true;
