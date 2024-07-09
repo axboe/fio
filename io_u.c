@@ -755,7 +755,7 @@ static enum fio_ddir get_rw_ddir(struct thread_data *td)
 	 * See if it's time to fsync/fdatasync/sync_file_range first,
 	 * and if not then move on to check regular I/Os.
 	 */
-	if (should_fsync(td)) {
+	if (should_fsync(td) && td->last_ddir_issued == DDIR_WRITE) {
 		if (td->o.fsync_blocks && td->io_issues[DDIR_WRITE] &&
 		    !(td->io_issues[DDIR_WRITE] % td->o.fsync_blocks))
 			return DDIR_SYNC;
