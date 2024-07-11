@@ -101,7 +101,6 @@ static void reset_io_counters(struct thread_data *td, int all)
 
 	td->zone_bytes = 0;
 
-	td->last_was_sync = false;
 	td->rwmix_issues = 0;
 
 	/*

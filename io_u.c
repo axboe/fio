@@ -755,7 +755,7 @@ static enum fio_ddir get_rw_ddir(struct thread_data *td)
 	 * See if it's time to fsync/fdatasync/sync_file_range first,
 	 * and if not then move on to check regular I/Os.
 	 */
-	if (should_fsync(td)) {
+	if (should_fsync(td) && td->last_ddir_issued == DDIR_WRITE) {
 		if (td->o.fsync_blocks && td->io_issues[DDIR_WRITE] &&
 		    !(td->io_issues[DDIR_WRITE] % td->o.fsync_blocks))
 			return DDIR_SYNC;
@@ -815,7 +815,7 @@ static void set_rw_ddir(struct thread_data *td, struct io_u *io_u)
 	if (td->o.zone_mode == ZONE_MODE_ZBD)
 		ddir = zbd_adjust_ddir(td, io_u, ddir);
 
-	if (td_trimwrite(td)) {
+	if (td_trimwrite(td) && !ddir_sync(ddir)) {
 		struct fio_file *f = io_u->file;
 		if (f->last_start[DDIR_WRITE] == f->last_start[DDIR_TRIM])
 			ddir = DDIR_TRIM;
@@ -1757,7 +1757,7 @@ static bool check_get_trim(struct thread_data *td, struct io_u *io_u)
 		if (get_next_trim(td, io_u))
 			return true;
 	} else if (!(td->io_hist_len % td->o.trim_backlog) &&
-		     td->last_ddir != DDIR_READ) {
+		     td->last_ddir_completed != DDIR_READ) {
 		td->trim_batch = td->o.trim_batch;
 		if (!td->trim_batch)
 			td->trim_batch = td->o.trim_backlog;
@@ -1779,7 +1779,7 @@ static bool check_get_verify(struct thread_data *td, struct io_u *io_u)
 		if (td->verify_batch)
 			get_verify = 1;
 		else if (!(td->io_hist_len % td->o.verify_backlog) &&
-			 td->last_ddir != DDIR_READ) {
+			 td->last_ddir_completed != DDIR_READ) {
 			td->verify_batch = td->o.verify_batch;
 			if (!td->verify_batch)
 				td->verify_batch = td->o.verify_backlog;
@@ -2122,7 +2122,7 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 		return;
 	}
 
-	td->last_ddir = ddir;
+	td->last_ddir_completed = ddir;
 
 	if (!io_u->error && ddir_rw(ddir)) {
 		unsigned long long bytes = io_u->xfer_buflen - io_u->resid;
