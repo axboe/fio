@@ -54,15 +54,14 @@ typedef unsigned int __u32;
 static inline int blockdev_size(struct fio_file *f, unsigned long long *bytes)
 {
 	struct stat statbuf;
+
 	if (fstat(f->fd, &statbuf) == -1) {
-		perror("fstat");
-	} else {
-		*bytes = (unsigned long long)(statbuf.st_blocksize * statbuf.st_nblocks);
-		return 0;
+		*bytes = 0;
+		return errno;
 	}
 
-	*bytes = 0;
-	return errno;
+	*bytes = (unsigned long long)(statbuf.st_blocksize * statbuf.st_nblocks);
+	return 0;
 }
 
 static inline int blockdev_invalidate_cache(struct fio_file *f)
