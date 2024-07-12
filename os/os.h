@@ -24,6 +24,7 @@ enum {
 	os_windows,
 	os_android,
 	os_dragonfly,
+	os_qnx,
 
 	os_nr,
 };
@@ -39,6 +40,8 @@ typedef enum {
 #include "os-freebsd.h"
 #elif defined(__OpenBSD__)
 #include "os-openbsd.h"
+#elif defined(__QNX__)
+#include "os-qnx.h"
 #elif defined(__NetBSD__)
 #include "os-netbsd.h"
 #elif defined(__sun__)

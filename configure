@@ -366,6 +366,8 @@ elif check_define __sun__ ; then
   CFLAGS="$CFLAGS -D_REENTRANT"
 elif check_define _WIN32 ; then
   targetos='CYGWIN'
+elif check_define __QNX__ ; then
+  targetos='QNX'
 else
   targetos=`uname -s`
 fi
@@ -465,6 +467,9 @@ CYGWIN*)
   sched_idle="yes"
   pthread_condattr_setclock="no"
   pthread_affinity="no"
+  ;;
+QNX)
+  LIBS="-lsocket"
   ;;
 esac
 
@@ -1090,6 +1095,7 @@ if test "$have_vasprintf" != "yes" ; then
 fi
 cat > $TMPC << EOF
 #include <stdio.h>
+#include <stdarg.h>
 
 int main(int argc, char **argv)
 {
