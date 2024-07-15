@@ -43,11 +43,8 @@ static int fdp_ruh_info(struct thread_data *td, struct fio_file *f,
 static int init_ruh_info(struct thread_data *td, struct fio_file *f)
 {
 	struct fio_ruhs_info *ruhs, *tmp;
+	uint32_t nr_ruhs;
 	int i, ret;
-
-	ruhs = scalloc(1, sizeof(*ruhs) + FDP_MAX_RUHS * sizeof(*ruhs->plis));
-	if (!ruhs)
-		return -ENOMEM;
 
 	/* set up the data structure used for FDP to work with the supplied stream IDs */
 	if (td->o.dp_type == FIO_DP_STREAMS) {
@@ -55,6 +52,10 @@ static int init_ruh_info(struct thread_data *td, struct fio_file *f)
 			log_err("fio: stream IDs must be provided for dataplacement=streams\n");
 			return -EINVAL;
 		}
+		ruhs = scalloc(1, sizeof(*ruhs) + FDP_MAX_RUHS * sizeof(*ruhs->plis));
+		if (!ruhs)
+			return -ENOMEM;
+
 		ruhs->nr_ruhs = td->o.dp_nr_ids;
 		for (int i = 0; i < ruhs->nr_ruhs; i++)
 			ruhs->plis[i] = td->o.dp_ids[i];
@@ -63,6 +64,11 @@ static int init_ruh_info(struct thread_data *td, struct fio_file *f)
 		return 0;
 	}
 
+	/*
+	 * Since we don't know the actual number of ruhs. Only fetch the header.
+	 * We will reallocate this buffer and then fetch all the ruhs again.
+	 */
+	ruhs = calloc(1, sizeof(*ruhs));
 	ret = fdp_ruh_info(td, f, ruhs);
 	if (ret) {
 		log_info("fio: ruh info failed for %s (%d)\n",
@@ -70,19 +76,38 @@ static int init_ruh_info(struct thread_data *td, struct fio_file *f)
 		goto out;
 	}
 
-	if (ruhs->nr_ruhs > FDP_MAX_RUHS)
-		ruhs->nr_ruhs = FDP_MAX_RUHS;
-
-	if (td->o.dp_nr_ids == 0) {
-		f->ruhs_info = ruhs;
-		return 0;
+	nr_ruhs = ruhs->nr_ruhs;
+	ruhs = realloc(ruhs, sizeof(*ruhs) + nr_ruhs * sizeof(*ruhs->plis));
+	if (!ruhs) {
+		log_info("fio: ruhs buffer realloc failed for %s\n",
+			 f->file_name);
+		ret = -ENOMEM;
+		goto out;
 	}
 
-	for (i = 0; i < td->o.dp_nr_ids; i++) {
-		if (td->o.dp_ids[i] >= ruhs->nr_ruhs) {
+	ruhs->nr_ruhs = nr_ruhs;
+	ret = fdp_ruh_info(td, f, ruhs);
+	if (ret) {
+		log_info("fio: ruh info failed for %s (%d)\n",
+			 f->file_name, -ret);
+		goto out;
+	}
+
+	if (td->o.dp_nr_ids == 0) {
+		if (ruhs->nr_ruhs > FDP_MAX_RUHS)
+			ruhs->nr_ruhs = FDP_MAX_RUHS;
+	} else {
+		if (td->o.dp_nr_ids > FDP_MAX_RUHS) {
 			ret = -EINVAL;
 			goto out;
 		}
+		for (i = 0; i < td->o.dp_nr_ids; i++) {
+			if (td->o.dp_ids[i] >= ruhs->nr_ruhs) {
+				ret = -EINVAL;
+				goto out;
+			}
+		}
+		ruhs->nr_ruhs = td->o.dp_nr_ids;
 	}
 
 	tmp = scalloc(1, sizeof(*tmp) + ruhs->nr_ruhs * sizeof(*tmp->plis));
@@ -91,12 +116,23 @@ static int init_ruh_info(struct thread_data *td, struct fio_file *f)
 		goto out;
 	}
 
+	if (td->o.dp_nr_ids == 0) {
+		for (i = 0; i < ruhs->nr_ruhs; i++)
+			tmp->plis[i] = ruhs->plis[i];
+
+		tmp->nr_ruhs = ruhs->nr_ruhs;
+		f->ruhs_info = tmp;
+		free(ruhs);
+
+		return 0;
+	}
+
 	tmp->nr_ruhs = td->o.dp_nr_ids;
 	for (i = 0; i < td->o.dp_nr_ids; i++)
 		tmp->plis[i] = ruhs->plis[td->o.dp_ids[i]];
 	f->ruhs_info = tmp;
 out:
-	sfree(ruhs);
+	free(ruhs);
 	return ret;
 }
 
