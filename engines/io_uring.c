@@ -1533,10 +1533,12 @@ static int fio_ioring_cmd_fetch_ruhs(struct thread_data *td, struct fio_file *f,
 				     struct fio_ruhs_info *fruhs_info)
 {
 	struct nvme_fdp_ruh_status *ruhs;
-	int bytes, ret, i;
+	int bytes, nr_ruhs, ret, i;
 
-	bytes = sizeof(*ruhs) + FDP_MAX_RUHS * sizeof(struct nvme_fdp_ruh_status_desc);
-	ruhs = scalloc(1, bytes);
+	nr_ruhs = fruhs_info->nr_ruhs;
+	bytes = sizeof(*ruhs) + fruhs_info->nr_ruhs * sizeof(struct nvme_fdp_ruh_status_desc);
+
+	ruhs = calloc(1, bytes);
 	if (!ruhs)
 		return -ENOMEM;
 
@@ -1545,12 +1547,10 @@ static int fio_ioring_cmd_fetch_ruhs(struct thread_data *td, struct fio_file *f,
 		goto free;
 
 	fruhs_info->nr_ruhs = le16_to_cpu(ruhs->nruhsd);
-	if (fruhs_info->nr_ruhs > FDP_MAX_RUHS)
-		fruhs_info->nr_ruhs = FDP_MAX_RUHS;
-	for (i = 0; i < fruhs_info->nr_ruhs; i++)
+	for (i = 0; i < nr_ruhs; i++)
 		fruhs_info->plis[i] = le16_to_cpu(ruhs->ruhss[i].pid);
 free:
-	sfree(ruhs);
+	free(ruhs);
 	return ret;
 }
 
