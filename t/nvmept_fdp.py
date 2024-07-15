@@ -36,6 +36,10 @@ from pathlib import Path
 from fiotestlib import FioJobCmdTest, run_fio_tests
 from fiotestcommon import SUCCESS_NONZERO
 
+# This needs to match FIO_MAX_DP_IDS and DP_MAX_SCHEME_ENTRIES in
+# dataplacement.h
+FIO_MAX_DP_IDS = 128
+DP_MAX_SCHEME_ENTRIES = 32
 
 class FDPTest(FioJobCmdTest):
     """
@@ -133,7 +137,7 @@ class FDPMultiplePLIDTest(FDPTest):
                     'maxplid': FIO_FDP_NUMBER_PLIDS-1,
                     # parameters for 400, 401 tests
                     'hole_size': 64*1024,
-                    'nios_for_scheme': FIO_FDP_NUMBER_PLIDS//2,
+                    'nios_for_scheme': min(FIO_FDP_NUMBER_PLIDS//2, DP_MAX_SCHEME_ENTRIES),
                 }
         if 'number_ios' in self.fio_opts and isinstance(self.fio_opts['number_ios'], str):
             self.fio_opts['number_ios'] = eval(self.fio_opts['number_ios'].format(**mapping))
@@ -212,9 +216,10 @@ class FDPMultiplePLIDTest(FDPTest):
         """
         ruamw = [FIO_FDP_MAX_RUAMW] * FIO_FDP_NUMBER_PLIDS
 
-        remainder = int(self.fio_opts['number_ios'] % len(plid_list))
-        whole = int((self.fio_opts['number_ios'] - remainder) / len(plid_list))
-        logging.debug("PLIDs in the list should receive %d writes; %d PLIDs will receive one extra",
+        number_ios = self.fio_opts['number_ios'] % (len(plid_list)*FIO_FDP_MAX_RUAMW)
+        remainder = int(number_ios % len(plid_list))
+        whole = int((number_ios - remainder) / len(plid_list))
+        logging.debug("PLIDs in the list should show they have received %d writes; %d PLIDs will receive one extra",
                       whole, remainder)
 
         for plid in plid_list:
@@ -225,6 +230,9 @@ class FDPMultiplePLIDTest(FDPTest):
         logging.debug("Expected ruamw values: %s", str(ruamw))
 
         for idx, ruhs in enumerate(fdp_status['ruhss']):
+            if idx >= FIO_FDP_NUMBER_PLIDS:
+                break
+
             if ruhs['ruamw'] != ruamw[idx]:
                 logging.error("RUAMW mismatch with idx %d, pid %d, expected %d, observed %d", idx,
                               ruhs['pid'], ruamw[idx], ruhs['ruamw'])
@@ -1053,7 +1061,7 @@ def main():
         test['fio_opts']['filename'] = args.dut
 
     fdp_status = get_fdp_status(args.dut)
-    FIO_FDP_NUMBER_PLIDS = fdp_status['nruhsd']
+    FIO_FDP_NUMBER_PLIDS = min(fdp_status['nruhsd'], 128)
     update_all_ruhs(args.dut)
     FIO_FDP_MAX_RUAMW = check_all_ruhs(args.dut)
     if not FIO_FDP_MAX_RUAMW:
