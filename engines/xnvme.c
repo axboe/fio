@@ -1253,7 +1253,7 @@ static int xnvme_fioe_fetch_ruhs(struct thread_data *td, struct fio_file *f,
 	struct xnvme_dev *dev;
 	struct xnvme_spec_ruhs *ruhs;
 	struct xnvme_cmd_ctx ctx;
-	uint32_t ruhs_nbytes;
+	uint32_t ruhs_nbytes, nr_ruhs;
 	uint32_t nsid;
 	int err = 0, err_lock;
 
@@ -1276,7 +1276,8 @@ static int xnvme_fioe_fetch_ruhs(struct thread_data *td, struct fio_file *f,
 		goto exit;
 	}
 
-	ruhs_nbytes = sizeof(*ruhs) + (FDP_MAX_RUHS * sizeof(struct xnvme_spec_ruhs_desc));
+	nr_ruhs = fruhs_info->nr_ruhs;
+	ruhs_nbytes = sizeof(*ruhs) + (fruhs_info->nr_ruhs * sizeof(struct xnvme_spec_ruhs_desc));
 	ruhs = xnvme_buf_alloc(dev, ruhs_nbytes);
 	if (!ruhs) {
 		err = -errno;
@@ -1296,7 +1297,7 @@ static int xnvme_fioe_fetch_ruhs(struct thread_data *td, struct fio_file *f,
 	}
 
 	fruhs_info->nr_ruhs = ruhs->nruhsd;
-	for (uint32_t idx = 0; idx < fruhs_info->nr_ruhs; ++idx) {
+	for (uint32_t idx = 0; idx < nr_ruhs; ++idx) {
 		fruhs_info->plis[idx] = le16_to_cpu(ruhs->desc[idx].pi);
 	}
 
