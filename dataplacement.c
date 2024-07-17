@@ -52,7 +52,7 @@ static int init_ruh_info(struct thread_data *td, struct fio_file *f)
 			log_err("fio: stream IDs must be provided for dataplacement=streams\n");
 			return -EINVAL;
 		}
-		ruhs = scalloc(1, sizeof(*ruhs) + FDP_MAX_RUHS * sizeof(*ruhs->plis));
+		ruhs = scalloc(1, sizeof(*ruhs) + FIO_MAX_DP_IDS * sizeof(*ruhs->plis));
 		if (!ruhs)
 			return -ENOMEM;
 
@@ -71,16 +71,16 @@ static int init_ruh_info(struct thread_data *td, struct fio_file *f)
 	ruhs = calloc(1, sizeof(*ruhs));
 	ret = fdp_ruh_info(td, f, ruhs);
 	if (ret) {
-		log_info("fio: ruh info failed for %s (%d)\n",
-			 f->file_name, -ret);
+		log_err("fio: ruh info failed for %s (%d)\n",
+			f->file_name, -ret);
 		goto out;
 	}
 
 	nr_ruhs = ruhs->nr_ruhs;
 	ruhs = realloc(ruhs, sizeof(*ruhs) + nr_ruhs * sizeof(*ruhs->plis));
 	if (!ruhs) {
-		log_info("fio: ruhs buffer realloc failed for %s\n",
-			 f->file_name);
+		log_err("fio: ruhs buffer realloc failed for %s\n",
+			f->file_name);
 		ret = -ENOMEM;
 		goto out;
 	}
@@ -88,21 +88,20 @@ static int init_ruh_info(struct thread_data *td, struct fio_file *f)
 	ruhs->nr_ruhs = nr_ruhs;
 	ret = fdp_ruh_info(td, f, ruhs);
 	if (ret) {
-		log_info("fio: ruh info failed for %s (%d)\n",
-			 f->file_name, -ret);
+		log_err("fio: ruh info failed for %s (%d)\n",
+			f->file_name, -ret);
 		goto out;
 	}
 
 	if (td->o.dp_nr_ids == 0) {
-		if (ruhs->nr_ruhs > FDP_MAX_RUHS)
-			ruhs->nr_ruhs = FDP_MAX_RUHS;
+		if (ruhs->nr_ruhs > FIO_MAX_DP_IDS)
+			ruhs->nr_ruhs = FIO_MAX_DP_IDS;
 	} else {
-		if (td->o.dp_nr_ids > FDP_MAX_RUHS) {
-			ret = -EINVAL;
-			goto out;
-		}
 		for (i = 0; i < td->o.dp_nr_ids; i++) {
 			if (td->o.dp_ids[i] >= ruhs->nr_ruhs) {
+				log_err("fio: for %s PID index %d must be smaller than %d\n",
+					f->file_name, td->o.dp_ids[i],
+					ruhs->nr_ruhs);
 				ret = -EINVAL;
 				goto out;
 			}
@@ -152,7 +151,7 @@ static int init_ruh_scheme(struct thread_data *td, struct fio_file *f)
 
 	if (!scheme_fp) {
 		log_err("fio: ruh scheme failed to open scheme file %s\n",
-			 td->o.dp_scheme_file);
+			td->o.dp_scheme_file);
 		ret = -errno;
 		goto out;
 	}

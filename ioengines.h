@@ -9,7 +9,7 @@
 #include "zbd_types.h"
 #include "dataplacement.h"
 
-#define FIO_IOOPS_VERSION	34
+#define FIO_IOOPS_VERSION	35
 
 #ifndef CONFIG_DYNAMIC_ENGINES
 #define FIO_STATIC	static
