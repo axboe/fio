@@ -71,16 +71,16 @@ static int init_ruh_info(struct thread_data *td, struct fio_file *f)
 	ruhs = calloc(1, sizeof(*ruhs));
 	ret = fdp_ruh_info(td, f, ruhs);
 	if (ret) {
-		log_info("fio: ruh info failed for %s (%d)\n",
-			 f->file_name, -ret);
+		log_err("fio: ruh info failed for %s (%d)\n",
+			f->file_name, -ret);
 		goto out;
 	}
 
 	nr_ruhs = ruhs->nr_ruhs;
 	ruhs = realloc(ruhs, sizeof(*ruhs) + nr_ruhs * sizeof(*ruhs->plis));
 	if (!ruhs) {
-		log_info("fio: ruhs buffer realloc failed for %s\n",
-			 f->file_name);
+		log_err("fio: ruhs buffer realloc failed for %s\n",
+			f->file_name);
 		ret = -ENOMEM;
 		goto out;
 	}
@@ -88,8 +88,8 @@ static int init_ruh_info(struct thread_data *td, struct fio_file *f)
 	ruhs->nr_ruhs = nr_ruhs;
 	ret = fdp_ruh_info(td, f, ruhs);
 	if (ret) {
-		log_info("fio: ruh info failed for %s (%d)\n",
-			 f->file_name, -ret);
+		log_err("fio: ruh info failed for %s (%d)\n",
+			f->file_name, -ret);
 		goto out;
 	}
 
@@ -151,7 +151,7 @@ static int init_ruh_scheme(struct thread_data *td, struct fio_file *f)
 
 	if (!scheme_fp) {
 		log_err("fio: ruh scheme failed to open scheme file %s\n",
-			 td->o.dp_scheme_file);
+			td->o.dp_scheme_file);
 		ret = -errno;
 		goto out;
 	}
