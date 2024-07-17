@@ -52,7 +52,7 @@ static int init_ruh_info(struct thread_data *td, struct fio_file *f)
 			log_err("fio: stream IDs must be provided for dataplacement=streams\n");
 			return -EINVAL;
 		}
-		ruhs = scalloc(1, sizeof(*ruhs) + FDP_MAX_RUHS * sizeof(*ruhs->plis));
+		ruhs = scalloc(1, sizeof(*ruhs) + FIO_MAX_DP_IDS * sizeof(*ruhs->plis));
 		if (!ruhs)
 			return -ENOMEM;
 
@@ -94,15 +94,14 @@ static int init_ruh_info(struct thread_data *td, struct fio_file *f)
 	}
 
 	if (td->o.dp_nr_ids == 0) {
-		if (ruhs->nr_ruhs > FDP_MAX_RUHS)
-			ruhs->nr_ruhs = FDP_MAX_RUHS;
+		if (ruhs->nr_ruhs > FIO_MAX_DP_IDS)
+			ruhs->nr_ruhs = FIO_MAX_DP_IDS;
 	} else {
-		if (td->o.dp_nr_ids > FDP_MAX_RUHS) {
-			ret = -EINVAL;
-			goto out;
-		}
 		for (i = 0; i < td->o.dp_nr_ids; i++) {
 			if (td->o.dp_ids[i] >= ruhs->nr_ruhs) {
+				log_err("fio: for %s PID index %d must be smaller than %d\n",
+					f->file_name, td->o.dp_ids[i],
+					ruhs->nr_ruhs);
 				ret = -EINVAL;
 				goto out;
 			}
