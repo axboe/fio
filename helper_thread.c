@@ -110,7 +110,7 @@ static void block_signals(void)
 	sigset_t sigmask;
 
 	int ret;
-	(void)ret; // Suppress unused variable warning
+	(void)ret; /* Suppress unused variable warning */
 
 	ret = pthread_sigmask(SIG_UNBLOCK, NULL, &sigmask);
 	assert(ret == 0);
