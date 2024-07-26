@@ -9,7 +9,7 @@
 #include <sys/statvfs.h>
 #include <sys/ioctl.h>
 #include <sys/utsname.h>
-#include <sys/sysctl.h>
+#include <sys/syspage.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/dcmd_cam.h>
@@ -71,11 +71,17 @@ static inline int blockdev_invalidate_cache(struct fio_file *f)
 
 static inline unsigned long long os_phys_mem(void)
 {
-	int mib[2] = { CTL_HW, HW_PHYSMEM64 };
-	uint64_t mem;
-	size_t len = sizeof(mem);
+	uint64_t mem = 0;
+	const char *const strings = SYSPAGE_ENTRY(strings)->data;
+	const struct asinfo_entry *const begin = SYSPAGE_ENTRY(asinfo);
+	const struct asinfo_entry *const end = begin + SYSPAGE_ENTRY_SIZE(asinfo) / SYSPAGE_ELEMENT_SIZE(asinfo);
 
-	sysctl(mib, 2, &mem, &len, NULL, 0);
+	assert(SYSPAGE_ELEMENT_SIZE(asinfo) == sizeof(struct asinfo_entry));
+
+	for (const struct asinfo_entry *e = begin; e < end; ++e) {
+		if (!strcmp(strings + e->name, "ram"))
+			mem += e->end - e->start + 1;
+	}
 	return mem;
 }
 
