@@ -52,7 +52,7 @@ static int init_ruh_info(struct thread_data *td, struct fio_file *f)
 			log_err("fio: stream IDs must be provided for dataplacement=streams\n");
 			return -EINVAL;
 		}
-		ruhs = scalloc(1, sizeof(*ruhs) + FIO_MAX_DP_IDS * sizeof(*ruhs->plis));
+		ruhs = scalloc(1, sizeof(*ruhs) + td->o.dp_nr_ids * sizeof(*ruhs->plis));
 		if (!ruhs)
 			return -ENOMEM;
 
