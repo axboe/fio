@@ -1,19 +1,29 @@
 # Example test for the HTTP engine's S3 support against Amazon AWS.
 # Obviously, you have to adjust the S3 credentials; for this example,
 # they're passed in via the environment.
-#
+# For non-AWS S3 implementations, refer to your S3 vendor's region 
+# settings. Note that the region value appears twice, in http_host and 
+# http_s3_region.
+# This example uses virtual-hosted-style requests:
+# https://bucket-name.s3.region-code.amazonaws.com/k/e.y
+# For path-style, prefix the key with the bucket name in the filename
+# so that filename=/bucket-name/k/e.y:
+# https://s3.region-code.amazonaws.com/bucket-name/k/e.y
+
+# Reference for Virtual-hosted-style vs. Path-style URLs:
+# https://docs.aws.amazon.com/AmazonS3/latest/userguide/VirtualHosting.html
 
 [global]
 ioengine=http
 name=test
 direct=1
-filename=/larsmb-fio-test/object
+filename=/k/e.y
 http_verbose=0
 https=on
 http_mode=s3
 http_s3_key=${S3_KEY}
 http_s3_keyid=${S3_ID}
-http_host=s3.eu-central-1.amazonaws.com
+http_host=bucket-name.s3.eu-central-1.amazonaws.com
 http_s3_region=eu-central-1
 group_reporting
 

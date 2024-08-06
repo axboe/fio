@@ -805,6 +805,11 @@ Target file/device
 	Note: Windows and FreeBSD (refer to geom(4)) prevent write access to areas
 	of the disk containing in-use data (e.g. filesystems).
 
+	For HTTP and S3 access, specify a valid URL path or S3 key, respectively.
+	A filename for path-style S3 includes a bucket name (:file:`/bucket/k/e.y`)
+	while a virtual-hosted-style S3 filename :file:`/k/e.y` does not because 
+	its bucket name is specified in :option:`http_host`.
+
 	The filename "`-`" is a reserved name, meaning *stdin* or *stdout*.  Which
 	of the two depends on the read/write direction set.
 
@@ -2934,8 +2939,13 @@ with the caveat that when used on the command line, they must come after the
 
 .. option:: http_host=str : [http]
 
-	Hostname to connect to. For S3, this could be the bucket hostname.
-	Default is **localhost**
+	Hostname to connect to. HTTP port 80 is used automatically when the value of 
+	the https parameter is *off*, and HTTPS port 443 if it is *on*. A 
+	virtual-hosted-style S3 hostname starts with a bucket name, while a 
+	path-style S3 hostname does not. See 
+	https://docs.aws.amazon.com/AmazonS3/latest/userguide/VirtualHosting.html for 
+	detailed examples.
+	Default is **localhost** (path-style S3 hostname)
 
 .. option:: http_user=str : [http]
 

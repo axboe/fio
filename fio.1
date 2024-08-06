@@ -585,6 +585,11 @@ the first device, `\\\\.\\PhysicalDrive1' for the second etc.
 Note: Windows and FreeBSD prevent write access to areas
 of the disk containing in-use data (e.g. filesystems).
 .P
+For HTTP and S3 access, specify a valid URL path or S3 key, respectively. 
+A filename for path-style S3 includes a bucket name (`/bucket/k/e.y') 
+while a virtual-hosted-style S3 filename (`/k/e.y') does not because its 
+bucket name is specified in \fBhttp_host\fR.
+.P
 The filename `\-' is a reserved name, meaning *stdin* or *stdout*. Which
 of the two depends on the read/write direction set.
 .RE
@@ -2554,8 +2559,10 @@ Touching all objects affects ceph caches and likely impacts test results.
 Enabled by default.
 .TP
 .BI (http)http_host \fR=\fPstr
-Hostname to connect to. For S3, this could be the bucket name. Default
-is \fBlocalhost\fR
+Hostname to connect to.  HTTP port 80 is used automatically when the value 
+of the \fBhttps\fP parameter is \fRoff\fP, and HTTPS port 443 if it is \Ron\fP.  
+A virtual-hosted-style S3 hostname starts with a bucket name, while a 
+path-style S3 hostname does not.  Default is \fBlocalhost\fR.
 .TP
 .BI (http)http_user \fR=\fPstr
 Username for HTTP authentication.
