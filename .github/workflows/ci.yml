@@ -5,6 +5,38 @@ on:
   pull_request:
 
 jobs:
+  build-containers:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        container:
+        - {os: 'debian', dh: 'debian', ver: 'bookworm', target_arch: 'x86_64'}
+        - {os: 'fedora', dh: 'fedora', ver: '40', target_arch: 'x86_64'}
+        - {os: 'ubuntu', dh: 'ubuntu', ver: 'noble', target_arch: 'i686'}
+        - {os: 'ubuntu', dh: 'ubuntu', ver: 'noble', target_arch: 'x86_64'}
+
+    container:
+      image: ${{ matrix.container.dh }}:${{ matrix.container.ver }}
+      env:
+        CI_TARGET_BUILD: Linux
+        CI_TARGET_ARCH: ${{ matrix.container.target_arch }}
+        CI_TARGET_OS: ${{ matrix.container.os }}
+        CI_TARGET_OS_VER: ${{ matrix.container.ver }}
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+    - name: Install dependencies
+      run:  ./ci/actions-install.sh
+    - name: Build
+      run:  ./ci/actions-build.sh
+    - name: Smoke test
+      run:  ./ci/actions-smoke-test.sh
+    - name: Full test
+      run:  ./ci/actions-full-test.sh
+
   build:
     runs-on: ${{ matrix.os }}
     strategy:

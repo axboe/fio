@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # This script expects to be invoked from the base fio directory.
 set -eu
 
@@ -29,7 +29,16 @@ main() {
                 return 1
             fi
             ;;
-        */linux)
+        */linux | */ubuntu)
+            case "${CI_TARGET_ARCH}" in
+                "x86_64")
+                    configure_flags+=(
+                        "--enable-cuda"
+                    )
+                    ;;
+	    esac
+	    ;;&
+        */linux | */ubuntu | */debian | */fedora)
             case "${CI_TARGET_ARCH}" in
                 "i686")
                     extra_cflags="${extra_cflags} -m32"
@@ -37,7 +46,6 @@ main() {
                     ;;
                 "x86_64")
                     configure_flags+=(
-                        "--enable-cuda"
                         "--enable-libiscsi"
                         "--enable-libnbd"
                     )
