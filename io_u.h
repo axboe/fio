@@ -169,6 +169,8 @@ bool queue_full(const struct thread_data *);
 int do_io_u_sync(const struct thread_data *, struct io_u *);
 int do_io_u_trim(struct thread_data *, struct io_u *);
 
+bool time_to_ddir_sync(const struct thread_data *);
+
 #ifdef FIO_INC_DEBUG
 static inline void dprint_io_u(struct io_u *io_u, const char *p)
 {
