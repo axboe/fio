@@ -628,7 +628,7 @@ static inline bool multi_range_trim(struct thread_data *td, struct io_u *io_u)
 	return false;
 }
 
-static inline bool should_fsync(struct thread_data *td)
+static inline bool should_fsync(const struct thread_data *td)
 {
 	if (ddir_sync(td->last_ddir_issued))
 		return false;
