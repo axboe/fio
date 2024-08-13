@@ -1005,8 +1005,9 @@ int main(int argc, char **argv)
   return pd != NULL;
 }
 EOF
-if test "$disable_rdma" != "yes" && compile_prog "" "-libverbs" "libverbs" ; then
+if test "$disable_rdma" != "yes" && compile_prog "" "-libverbs -lnl-3 -lnl-route-3" "libverbs" ; then
     libverbs="yes"
+    LIBS="-libverbs -lnl-3 -lnl-route-3 $LIBS"
 fi
 print_config "libverbs" "$libverbs"
 
@@ -1024,8 +1025,9 @@ int main(int argc, char **argv)
   return 0;
 }
 EOF
-if test "$disable_rdma" != "yes" && compile_prog "" "-lrdmacm" "rdma"; then
+if test "$disable_rdma" != "yes" && compile_prog "" "-lrdmacm -lnl-3 -lnl-route-3" "rdma"; then
     rdmacm="yes"
+    LIBS="-lrdmacm $LIBS"
 fi
 print_config "rdmacm" "$rdmacm"
 
@@ -1044,8 +1046,9 @@ int main(void)
   return 0;
 }
 EOF
-if test "$disable_rdma" != "yes" && compile_prog "" "-lrpma" "rpma"; then
+if test "$disable_rdma" != "yes" && compile_prog "" "$(pkg-config --static --libs librpma)" "rpma"; then
     librpma="yes"
+    LIBS="$(pkg-config --static --libs librpma) $LIBS"
 fi
 print_config "librpma" "$librpma"
 
