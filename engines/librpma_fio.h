@@ -162,7 +162,7 @@ int librpma_fio_client_getevents(struct thread_data *td, unsigned int min,
 
 struct io_u *librpma_fio_client_event(struct thread_data *td, int event);
 
-char *librpma_fio_client_errdetails(struct io_u *io_u);
+char *librpma_fio_client_errdetails(struct thread_data *td, struct io_u *io_u);
 
 static inline int librpma_fio_client_io_read(struct thread_data *td,
 		struct io_u *io_u, int flags)

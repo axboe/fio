@@ -1154,7 +1154,7 @@ int fio_sgio_close(struct thread_data *td, struct fio_file *f)
  * Build an error string with details about the driver, host or scsi
  * error contained in the sg header Caller will use as necessary.
  */
-static char *fio_sgio_errdetails(struct io_u *io_u)
+static char *fio_sgio_errdetails(struct thread_data *td, struct io_u *io_u)
 {
 	struct sg_io_hdr *hdr = &io_u->hdr;
 #define MAXERRDETAIL 1024

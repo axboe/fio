@@ -1963,7 +1963,7 @@ static void __io_u_log_error(struct thread_data *td, struct io_u *io_u)
 	zbd_log_err(td, io_u);
 
 	if (td->io_ops->errdetails) {
-		char *err = td->io_ops->errdetails(io_u);
+		char *err = td->io_ops->errdetails(td, io_u);
 
 		log_err("fio: %s\n", err);
 		free(err);

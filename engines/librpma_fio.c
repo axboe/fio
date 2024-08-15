@@ -790,7 +790,7 @@ struct io_u *librpma_fio_client_event(struct thread_data *td, int event)
 	return io_u;
 }
 
-char *librpma_fio_client_errdetails(struct io_u *io_u)
+char *librpma_fio_client_errdetails(struct thread_data *td, struct io_u *io_u)
 {
 	/* get the string representation of an error */
 	enum ibv_wc_status status = io_u->error;
