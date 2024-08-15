@@ -554,6 +554,39 @@ static struct io_u *fio_ioring_cmd_event(struct thread_data *td, int event)
 	return io_u;
 }
 
+static char *fio_ioring_cmd_errdetails(struct thread_data *td,
+				       struct io_u *io_u)
+{
+	struct ioring_options *o = td->eo;
+	unsigned int sct = (io_u->error >> 8) & 0x7;
+	unsigned int sc = io_u->error & 0xff;
+#define MAXERRDETAIL 1024
+#define MAXMSGCHUNK 128
+	char *msg, msgchunk[MAXMSGCHUNK];
+
+	msg = calloc(1, MAXERRDETAIL);
+	strcpy(msg, "io_uring_cmd: ");
+
+	snprintf(msgchunk, MAXMSGCHUNK, "%s: ", io_u->file->file_name);
+	strlcat(msg, msgchunk, MAXERRDETAIL);
+
+	if (o->cmd_type == FIO_URING_CMD_NVME) {
+		strlcat(msg, "cq entry status (", MAXERRDETAIL);
+
+		snprintf(msgchunk, MAXMSGCHUNK, "sct=0x%02x; ", sct);
+		strlcat(msg, msgchunk, MAXERRDETAIL);
+
+		snprintf(msgchunk, MAXMSGCHUNK, "sc=0x%02x)", sc);
+		strlcat(msg, msgchunk, MAXERRDETAIL);
+	} else {
+		/* Print status code in generic */
+		snprintf(msgchunk, MAXMSGCHUNK, "status=0x%x", io_u->error);
+		strlcat(msg, msgchunk, MAXERRDETAIL);
+	}
+
+	return msg;
+}
+
 static int fio_ioring_cqring_reap(struct thread_data *td, unsigned int events,
 				   unsigned int max)
 {
@@ -1590,6 +1623,7 @@ static struct ioengine_ops ioengine_uring_cmd = {
 	.commit			= fio_ioring_commit,
 	.getevents		= fio_ioring_getevents,
 	.event			= fio_ioring_cmd_event,
+	.errdetails		= fio_ioring_cmd_errdetails,
 	.cleanup		= fio_ioring_cleanup,
 	.open_file		= fio_ioring_cmd_open_file,
 	.close_file		= fio_ioring_cmd_close_file,
