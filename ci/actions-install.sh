@@ -50,6 +50,7 @@ DPKGCFG
             pkgs+=(
                 libglusterfs-dev
                 libgoogle-perftools-dev
+                libisal-dev
                 libiscsi-dev
                 libnbd-dev
                 libpmem-dev
@@ -107,6 +108,7 @@ install_fedora() {
         cmake \
         cunit-devel \
         flex-devel \
+        isa-l-devel \
         kernel-devel \
         libaio-devel \
         libgfapi-devel \
