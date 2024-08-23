@@ -1077,7 +1077,8 @@ void td_fill_rand_seeds(struct thread_data *td)
 		use64);
 	init_rand_seed(&td->rwmix_state, td->rand_seeds[FIO_RAND_MIX_OFF], false);
 
-	if (td->o.file_service_type == FIO_FSERVICE_RANDOM)
+	if (td->o.file_service_type == FIO_FSERVICE_RANDOM ||
+	    td->o.file_service_type == FIO_FSERVICE_RANDOM1)
 		init_rand_seed(&td->next_file_state, td->rand_seeds[FIO_RAND_FILE_OFF], use64);
 	else if (td->o.file_service_type & __FIO_FSERVICE_NONUNIFORM)
 		init_rand_file_service(td);

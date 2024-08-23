@@ -1061,6 +1061,8 @@ static int str_fst_cb(void *data, const char *str)
 	case FIO_FSERVICE_RANDOM:
 	case FIO_FSERVICE_RR:
 	case FIO_FSERVICE_SEQ:
+	case FIO_FSERVICE_RANDOM1:
+	case FIO_FSERVICE_RR1:
 		nr = get_opt_postfix(str);
 		if (nr) {
 			td->file_service_nr = atoi(nr);
@@ -2765,6 +2767,14 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			  { .ival = "sequential",
 			    .oval = FIO_FSERVICE_SEQ,
 			    .help = "Finish one file before moving to the next",
+			  },
+			  { .ival = "random1",
+			    .oval = FIO_FSERVICE_RANDOM1,
+			    .help = "Choose a file at random (uniform) non-repeating",
+			  },
+			  { .ival = "roundrobin1",
+			    .oval = FIO_FSERVICE_RR1,
+			    .help = "Round robin non-repeating",
 			  },
 		},
 		.parent = "nrfiles",
