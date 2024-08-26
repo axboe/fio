@@ -38,7 +38,7 @@ main() {
                     ;;
 	    esac
 	    ;;&
-        */linux | */ubuntu | */debian | */fedora)
+        */linux | */ubuntu | */debian | */fedora | */alma | */oracle | */rocky)
             case "${CI_TARGET_ARCH}" in
                 "i686")
                     extra_cflags="${extra_cflags} -m32"

@@ -14,6 +14,9 @@ jobs:
         container:
         - {os: 'debian', dh: 'debian', ver: 'bookworm', target_arch: 'x86_64'}
         - {os: 'fedora', dh: 'fedora', ver: '40', target_arch: 'x86_64'}
+        - {os: 'alma', dh: 'almalinux', ver: '9', target_arch: 'x86_64'}
+        - {os: 'oracle', dh: 'oraclelinux', ver: '9', target_arch: 'x86_64'}
+        - {os: 'rocky', dh: 'rockylinux', ver: '9', target_arch: 'x86_64'}
         - {os: 'ubuntu', dh: 'ubuntu', ver: 'noble', target_arch: 'i686'}
         - {os: 'ubuntu', dh: 'ubuntu', ver: 'noble', target_arch: 'x86_64'}
 

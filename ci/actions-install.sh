@@ -102,34 +102,85 @@ DPKGCFG
     fi
 }
 
+# Fedora and related distributions
 install_fedora() {
-    dnf install -y \
-        bison-devel \
-        cmake \
-        cunit-devel \
-        flex-devel \
-        isa-l-devel \
-        kernel-devel \
-        libaio-devel \
-        libgfapi-devel \
-        libibverbs-devel \
-        libiscsi-devel \
-        libnbd-devel \
-        libnfs-devel \
-        libpmem-devel \
-        libpmem2-devel \
-        librbd-devel \
-        numactl-devel \
-        protobuf-c-devel \
-        python3-scipy \
-        python3-sphinx \
-        python3-statsmodels \
-        unzip \
-        valgrind-devel \
-        wget \
+    pkgs=(
+        bison-devel
+        git
+        cmake
+        flex-devel
+        gperftools
+        isa-l-devel
+        kernel-devel
+        libaio-devel
+        libibverbs-devel
+        libiscsi-devel
+        libnbd-devel
+        libnfs-devel
+        libpmem-devel
+        libpmem2-devel
+        librbd-devel
+        numactl-devel
+        protobuf-c-devel
+        python3-scipy
+        python3-sphinx
+        sudo
+        unzip
+        valgrind-devel
+        wget
+    )
+
+    case "${CI_TARGET_OS}" in
+        "fedora")
+            pkgs+=(
+                cunit-devel
+                libgfapi-devel
+                python3-statsmodels
+            )
+            ;;
+        "rocky" | "alma" | "oracle")
+            pkgs+=(
+                CUnit-devel
+                python-pip
+            )
+            ;;&
+        "rocky" | "alma")
+            pkgs+=(
+                glusterfs-api-devel
+            )
+            ;;
+    esac
+    dnf install -y "${pkgs[@]}"
 
     # install librpma from sources
     ci/actions-install-librpma.sh
+}
+
+install_rhel_clone() {
+    dnf install -y epel-release
+    install_fedora
+
+    # I could not find a python3-statsmodels package in the repos
+    pip3 install statsmodels
+}
+
+install_oracle() {
+    dnf config-manager --set-enabled ol9_codeready_builder
+    install_rhel_clone
+}
+
+install_alma() {
+    dnf install -y 'dnf-command(config-manager)'
+    dnf config-manager --set-enabled crb
+    dnf install -y almalinux-release-devel
+    install_rhel_clone
+}
+
+install_rocky() {
+    dnf install -y 'dnf-command(config-manager)'
+    dnf config-manager --set-enabled crb
+    dnf config-manager --set-enabled devel
+    install_rhel_clone
 }
 
 install_debian() {
