@@ -4223,6 +4223,13 @@ Measurements and reporting
 	entry as well as the other data values. Defaults to 0 meaning that
 	offsets are not present in logs. Also see `Log File Formats`_.
 
+.. option:: log_prio=bool
+
+	If this is set, the *Command priority* field in `Log File Formats`_
+	shows the priority value and the IO priority class of the command.
+	Otherwise, the field shows if the command has the highest RT
+	priority class or not. Also see	`Log File Formats`_.
+
 .. option:: log_compression=int
 
 	If this is set, fio will compress the I/O logs as it goes, to keep the
@@ -5213,8 +5220,16 @@ The entry's *block size* is always in bytes. The *offset* is the position in byt
 from the start of the file for that particular I/O. The logging of the offset can be
 toggled with :option:`log_offset`.
 
-*Command priority* is 0 for normal priority and 1 for high priority. This is controlled
-by the ioengine specific :option:`cmdprio_percentage`.
+If :option:`log_prio` is not set, the entry's *Command priority* is 1 for an IO
+executed with the highest RT priority class (:option:`prioclass` =1 or
+:option:`cmdprio_class` =1) and 0 otherwise. This is controlled by the
+:option:`prioclass` option and the ioengine specific
+:option:`cmdprio_percentage`  :option:`cmdprio_class` options. If
+:option:`log_prio` is set, the entry's *Command priority* is the priority set
+for the IO, as a 16-bits hexadecimal number with the lowest 13 bits indicating
+the priority value (:option:`prio` and :option:`cmdprio` options) and the
+highest 3 bits indicating the IO priority class (:option:`prioclass` and
+:option:`cmdprio_class` options).
 
 Fio defaults to logging every individual I/O but when windowed logging is set
 through :option:`log_avg_msec`, either the average (by default), the maximum

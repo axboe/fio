@@ -3933,9 +3933,10 @@ entry as well as the other data values. Defaults to 0 meaning that
 offsets are not present in logs. Also see \fBLOG FILE FORMATS\fR section.
 .TP
 .BI log_prio \fR=\fPbool
-If this is set, the iolog options will include the I/O priority for the I/O
-entry as well as the other data values. Defaults to 0 meaning that
-I/O priorities are not present in logs. Also see \fBLOG FILE FORMATS\fR section.
+If this is set, the `Command priority` field in \fBLOG FILE FORMATS\fR
+shows the priority value and the IO priority class of the command.
+Otherwise, the field shows if the command has the highest RT priority
+class or not. Also see \fBLOG FILE FORMATS\fR section.
 .TP
 .BI log_compression \fR=\fPint
 If this is set, fio will compress the I/O logs as it goes, to keep the
