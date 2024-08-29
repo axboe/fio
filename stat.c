@@ -3297,16 +3297,24 @@ add_lat_percentile_prio_sample(struct thread_stat *ts, unsigned long long nsec,
 
 void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 		     unsigned long long nsec, unsigned long long bs,
-		     uint64_t offset, unsigned int ioprio,
-		     unsigned short clat_prio_index)
+		     struct io_u *io_u)
 {
 	const bool needs_lock = td_async_processing(td);
 	unsigned long elapsed, this_window;
 	struct thread_stat *ts = &td->ts;
 	struct io_log *iolog = td->clat_hist_log;
+	uint64_t offset = 0;
+	unsigned int ioprio = 0;
+	unsigned short clat_prio_index = 0;
 
 	if (needs_lock)
 		__td_io_u_lock(td);
+
+	if (io_u) {
+		offset = io_u->offset;
+		ioprio = io_u->ioprio;
+		clat_prio_index = io_u->clat_prio_index;
+	}
 
 	add_stat_sample(&ts->clat_stat[ddir], nsec);
 
@@ -3381,24 +3389,27 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 		__td_io_u_unlock(td);
 }
 
-void add_slat_sample(struct thread_data *td, enum fio_ddir ddir,
-		     unsigned long long nsec, unsigned long long bs,
-		     uint64_t offset, unsigned int ioprio)
+void add_slat_sample(struct thread_data *td, struct io_u *io_u)
 {
 	const bool needs_lock = td_async_processing(td);
 	struct thread_stat *ts = &td->ts;
+	enum fio_ddir ddir;
+	unsigned long long nsec;
 
+	ddir = io_u->ddir;
 	if (!ddir_rw(ddir))
 		return;
 
 	if (needs_lock)
 		__td_io_u_lock(td);
 
+	nsec = ntime_since(&io_u->start_time, &io_u->issue_time);
+
 	add_stat_sample(&ts->slat_stat[ddir], nsec);
 
 	if (td->slat_log)
-		add_log_sample(td, td->slat_log, sample_val(nsec), ddir, bs,
-			       offset, ioprio);
+		add_log_sample(td, td->slat_log, sample_val(nsec), ddir,
+			       io_u->xfer_buflen, io_u->offset, io_u->ioprio);
 
 	if (ts->slat_percentiles)
 		add_lat_percentile_sample(ts, nsec, ddir, FIO_SLAT);
@@ -3409,8 +3420,7 @@ void add_slat_sample(struct thread_data *td, enum fio_ddir ddir,
 
 void add_lat_sample(struct thread_data *td, enum fio_ddir ddir,
 		    unsigned long long nsec, unsigned long long bs,
-		    uint64_t offset, unsigned int ioprio,
-		    unsigned short clat_prio_index)
+		    struct io_u * io_u)
 {
 	const bool needs_lock = td_async_processing(td);
 	struct thread_stat *ts = &td->ts;
@@ -3425,7 +3435,7 @@ void add_lat_sample(struct thread_data *td, enum fio_ddir ddir,
 
 	if (td->lat_log)
 		add_log_sample(td, td->lat_log, sample_val(nsec), ddir, bs,
-			       offset, ioprio);
+			       io_u->offset, io_u->ioprio);
 
 	/*
 	 * When lat_percentiles=1 (default 0), the reported per priority
@@ -3439,8 +3449,9 @@ void add_lat_sample(struct thread_data *td, enum fio_ddir ddir,
 	 */
 	if (ts->lat_percentiles) {
 		add_lat_percentile_sample(ts, nsec, ddir, FIO_LAT);
-		add_lat_percentile_prio_sample(ts, nsec, ddir, clat_prio_index);
-		add_stat_prio_sample(ts->clat_prio[ddir], clat_prio_index,
+		add_lat_percentile_prio_sample(ts, nsec, ddir,
+					       io_u->clat_prio_index);
+		add_stat_prio_sample(ts->clat_prio[ddir], io_u->clat_prio_index,
 				     nsec);
 	}
 	if (needs_lock)

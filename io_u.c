@@ -2016,8 +2016,7 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 		unsigned long long tnsec;
 
 		tnsec = ntime_since(&io_u->start_time, &icd->time);
-		add_lat_sample(td, idx, tnsec, bytes, io_u->offset,
-			       io_u->ioprio, io_u->clat_prio_index);
+		add_lat_sample(td, idx, tnsec, bytes, io_u);
 
 		if (td->flags & TD_F_PROFILE_OPS) {
 			struct prof_io_ops *ops = &td->prof_io_ops;
@@ -2038,8 +2037,7 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 
 	if (ddir_rw(idx)) {
 		if (!td->o.disable_clat) {
-			add_clat_sample(td, idx, llnsec, bytes, io_u->offset,
-					io_u->ioprio, io_u->clat_prio_index);
+			add_clat_sample(td, idx, llnsec, bytes, io_u);
 			io_u_mark_latency(td, llnsec);
 		}
 
@@ -2301,15 +2299,9 @@ int io_u_queued_complete(struct thread_data *td, int min_evts)
 void io_u_queued(struct thread_data *td, struct io_u *io_u)
 {
 	if (!td->o.disable_slat && ramp_time_over(td) && td->o.stats) {
-		unsigned long slat_time;
-
-		slat_time = ntime_since(&io_u->start_time, &io_u->issue_time);
-
 		if (td->parent)
 			td = td->parent;
-
-		add_slat_sample(td, io_u->ddir, slat_time, io_u->xfer_buflen,
-				io_u->offset, io_u->ioprio);
+		add_slat_sample(td, io_u);
 	}
 }
 

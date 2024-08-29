@@ -129,7 +129,7 @@ static int open_file(struct thread_data *td, struct fio_file *f)
 		uint64_t nsec;
 
 		nsec = ntime_since_now(&start);
-		add_clat_sample(td, data->stat_ddir, nsec, 0, 0, 0, 0);
+		add_clat_sample(td, data->stat_ddir, nsec, 0, NULL);
 	}
 
 	return 0;
@@ -200,7 +200,7 @@ static int stat_file(struct thread_data *td, struct fio_file *f)
 		uint64_t nsec;
 
 		nsec = ntime_since_now(&start);
-		add_clat_sample(td, data->stat_ddir, nsec, 0, 0, 0, 0);
+		add_clat_sample(td, data->stat_ddir, nsec, 0, NULL);
 	}
 
 	return 0;
@@ -250,7 +250,7 @@ static int delete_file(struct thread_data *td, struct fio_file *f)
 		uint64_t nsec;
 
 		nsec = ntime_since_now(&start);
-		add_clat_sample(td, data->stat_ddir, nsec, 0, 0, 0, 0);
+		add_clat_sample(td, data->stat_ddir, nsec, 0, NULL);
 	}
 
 	return 0;
