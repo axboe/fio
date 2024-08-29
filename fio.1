@@ -3938,6 +3938,12 @@ shows the priority value and the IO priority class of the command.
 Otherwise, the field shows if the command has the highest RT priority
 class or not. Also see \fBLOG FILE FORMATS\fR section.
 .TP
+.BI log_issue_time \fR=\fPbool
+If this is set, the iolog options will include the command issue time for the
+I/O entry as well as the other data values. Defaults to 0 meaning that command
+issue times are not present in logs. Also see \fBLOG FILE FORMATS\fR section.
+This option shall be set together with \fBwrite_lat_log\fR and \fBlog_offset\fR.
+.TP
 .BI log_compression \fR=\fPint
 If this is set, fio will compress the I/O logs as it goes, to keep the
 memory footprint lower. When a log reaches the specified size, that chunk is
@@ -4933,7 +4939,7 @@ and IOPS. The logs share a common format, which looks like this:
 .RS
 .P
 time (msec), value, data direction, block size (bytes), offset (bytes),
-command priority
+command priority, issue time (nsec)
 .RE
 .P
 `Time' for the log entry is always in milliseconds. The `value' logged depends
@@ -4976,6 +4982,11 @@ number with the lowest 13 bits indicating the priority value (\fBprio\fR and
 \fBcmdprio\fR options) and the highest 3 bits indicating the IO priority class
 (\fBprioclass\fR and \fBcmdprio_class\fR options).
 .P
+The entry's `issue time` is the command issue time in nanoseconds. The logging
+of the issue time can be toggled with \fBlog_issue_time\fR. This field has valid
+values in completion latency log file (clat), or submit latency log file (slat).
+The field has value 0 in other log files.
+.P
 Fio defaults to logging every individual I/O but when windowed logging is set
 through \fBlog_avg_msec\fR, either the average (by default), the maximum
 (\fBlog_window_value\fR is set to max) `value' seen over the specified period of
@@ -4985,12 +4996,12 @@ takes this form:
 .RS
 .P
 time (msec), value, value1, data direction, block size (bytes), offset (bytes),
-command priority
+command priority, issue time (nsec)
 .RE
 .P
 Each `data direction' seen within the window period will aggregate its values
-in a separate row. Further, when using windowed logging the `block size' and
-`offset' entries will always contain 0.
+in a separate row. Further, when using windowed logging the `block size',
+`offset' and `issue time` entries will always contain 0.
 .SH CLIENT / SERVER
 Normally fio is invoked as a stand-alone application on the machine where the
 I/O workload should be generated. However, the backend and frontend of fio can

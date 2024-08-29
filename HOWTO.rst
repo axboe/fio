@@ -4230,6 +4230,14 @@ Measurements and reporting
 	Otherwise, the field shows if the command has the highest RT
 	priority class or not. Also see	`Log File Formats`_.
 
+.. option:: log_issue_time=bool
+
+	If this is set, the iolog options will include the command issue time
+	for the I/O entry as well as the other data values. Defaults to 0
+	meaning that command issue times are not present in logs. Also see
+	`Log File Formats`_. This option shall be set together with
+	:option:`write_lat_log` and :option:`log_offset`.
+
 .. option:: log_compression=int
 
 	If this is set, fio will compress the I/O logs as it goes, to keep the
@@ -5195,7 +5203,7 @@ Fio supports a variety of log file formats, for logging latencies, bandwidth,
 and IOPS. The logs share a common format, which looks like this:
 
     *time* (`msec`), *value*, *data direction*, *block size* (`bytes`),
-    *offset* (`bytes`), *command priority*
+    *offset* (`bytes`), *command priority*, *issue time* (`nsec`)
 
 *Time* for the log entry is always in milliseconds. The *value* logged depends
 on the type of log, it will be one of the following:
@@ -5231,6 +5239,11 @@ the priority value (:option:`prio` and :option:`cmdprio` options) and the
 highest 3 bits indicating the IO priority class (:option:`prioclass` and
 :option:`cmdprio_class` options).
 
+The entry's *issue time* is the command issue time in nanoseconds. The logging
+of the issue time can be toggled with :option:`log_issue_time`. This field has
+valid values in completion latency log file (clat), or submit latency log file
+(slat). The field has value 0 in other logs files.
+
 Fio defaults to logging every individual I/O but when windowed logging is set
 through :option:`log_avg_msec`, either the average (by default), the maximum
 (:option:`log_window_value` is set to max) *value* seen over the specified period
@@ -5239,12 +5252,12 @@ is set to both) is recorded. The log file format when both the values are report
 takes this form:
 
     *time* (`msec`), *value*, *value1*, *data direction*, *block size* (`bytes`),
-    *offset* (`bytes`), *command priority*
+    *offset* (`bytes`), *command priority*, *issue time* (`nsec`)
 
 
 Each *data direction* seen within the window period will aggregate its values in a
-separate row. Further, when using windowed logging the *block size* and *offset*
-entries will always contain 0.
+separate row. Further, when using windowed logging the *block size*, *offset*
+and *issue time* entries will always contain 0.
 
 
 Client/Server
