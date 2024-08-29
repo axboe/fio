@@ -1031,7 +1031,7 @@ print_config "rdmacm" "$rdmacm"
 
 ##########################################
 # librpma probe
-# The librpma engines require librpma>=v0.11.0 with rpma_cq_get_wc().
+# The librpma engine requires librpma>=v0.10.0 with rpma_mr_advise().
 if test "$librpma" != "yes" ; then
   librpma="no"
 fi
@@ -1039,7 +1039,7 @@ cat > $TMPC << EOF
 #include <librpma.h>
 int main(void)
 {
-  void *ptr = rpma_cq_get_wc;
+  void *ptr = rpma_mr_advise;
   (void) ptr; /* unused */
   return 0;
 }
