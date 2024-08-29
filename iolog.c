@@ -1009,13 +1009,42 @@ static void flush_hist_samples(FILE *f, int hist_coarseness, void *samples,
 	}
 }
 
+static int print_sample_fields(char **p, size_t *left, const char *fmt, ...) {
+	va_list ap;
+	int ret;
+
+	va_start(ap, fmt);
+	ret = vsnprintf(*p, *left, fmt, ap);
+	if (ret < 0 || ret >= *left) {
+		log_err("sample file write failed: %d\n", ret);
+		return -1;
+	}
+	va_end(ap);
+
+	*p += ret;
+	*left -= ret;
+
+	return 0;
+}
+
+/*
+ * flush_samples - Generate output for log samples
+ * Each sample output is built using a temporary buffer. This buffer size
+ * assumptions are:
+ * - Each sample has less than 10 fields
+ * - Each sample field fits in 25 characters (20 digits for 64 bit number
+ *   and a few bytes delimiter)
+ */
 void flush_samples(FILE *f, void *samples, uint64_t sample_size)
 {
 	struct io_sample *s;
-	int log_offset, log_prio, log_avg_max;
+	struct io_sample_offset *sa;
+	bool log_offset, log_prio, log_avg_max;
 	uint64_t i, nr_samples;
-	unsigned int prio_val;
-	const char *fmt;
+	char buf[256];
+	char *p;
+	size_t left;
+	int ret;
 
 	if (!sample_size)
 		return;
@@ -1025,75 +1054,49 @@ void flush_samples(FILE *f, void *samples, uint64_t sample_size)
 	log_prio = (s->__ddir & LOG_PRIO_SAMPLE_BIT) != 0;
 	log_avg_max = (s->__ddir & LOG_AVG_MAX_SAMPLE_BIT) != 0;
 
-	if (log_offset) {
-		if (log_prio) {
-			if (log_avg_max)
-				fmt = "%" PRIu64 ", %" PRId64 ", %" PRId64 ", %u, %llu, %llu, 0x%04x\n";
-			else
-				fmt = "%" PRIu64 ", %" PRId64 ", %u, %llu, %llu, 0x%04x\n";
-		} else {
-			if (log_avg_max)
-				fmt = "%" PRIu64 ", %" PRId64 ", %" PRId64 ", %u, %llu, %llu, %u\n";
-			else
-				fmt = "%" PRIu64 ", %" PRId64 ", %u, %llu, %llu, %u\n";
-		}
-	} else {
-		if (log_prio) {
-			if (log_avg_max)
-				fmt = "%" PRIu64 ", %" PRId64 ", %" PRId64 ", %u, %llu, 0x%04x\n";
-			else
-				fmt = "%" PRIu64 ", %" PRId64 ", %u, %llu, 0x%04x\n";
-		} else {
-			if (log_avg_max)
-				fmt = "%" PRIu64 ", %" PRId64 ", %" PRId64 ", %u, %llu, %u\n";
-			else
-				fmt = "%" PRIu64 ", %" PRId64 ", %u, %llu, %u\n";
-		}
-	}
-
 	nr_samples = sample_size / __log_entry_sz(log_offset);
 
 	for (i = 0; i < nr_samples; i++) {
 		s = __get_sample(samples, log_offset, i);
+		sa = (void *) s;
+		p = buf;
+		left = sizeof(buf);
+
+		ret = print_sample_fields(&p, &left, "%" PRIu64 ", %" PRId64,
+					  s->time, s->data.val.val0);
+		if (ret)
+			return;
+
+		if (log_avg_max) {
+			ret = print_sample_fields(&p, &left, ", %" PRId64,
+						  s->data.val.val1);
+			if (ret)
+				return;
+		}
+
+		ret = print_sample_fields(&p, &left, ", %u, %llu",
+					  io_sample_ddir(s),
+					  (unsigned long long) s->bs);
+		if (ret)
+			return;
+
+		if (log_offset) {
+			ret = print_sample_fields(&p, &left, ", %llu",
+						  (unsigned long long) sa->offset);
+			if (ret)
+				return;
+		}
 
 		if (log_prio)
-			prio_val = s->priority;
+			ret = print_sample_fields(&p, &left, ", 0x%04x",
+						  s->priority);
 		else
-			prio_val = ioprio_value_is_class_rt(s->priority);
+			ret = print_sample_fields(&p, &left, ", %u",
+						  ioprio_value_is_class_rt(s->priority));
+		if (ret)
+			return;
 
-		if (!log_offset) {
-			if (log_avg_max)
-				fprintf(f, fmt,
-					s->time,
-					s->data.val.val0,
-					s->data.val.val1,
-					io_sample_ddir(s), (unsigned long long) s->bs,
-					prio_val);
-			else
-				fprintf(f, fmt,
-					s->time,
-					s->data.val.val0,
-					io_sample_ddir(s), (unsigned long long) s->bs,
-					prio_val);
-		} else {
-			struct io_sample_offset *so = (void *) s;
-
-			if (log_avg_max)
-				fprintf(f, fmt,
-					s->time,
-					s->data.val.val0,
-					s->data.val.val1,
-					io_sample_ddir(s), (unsigned long long) s->bs,
-					(unsigned long long) so->offset,
-					prio_val);
-			else
-				fprintf(f, fmt,
-					s->time,
-					s->data.val.val0,
-					io_sample_ddir(s), (unsigned long long) s->bs,
-					(unsigned long long) so->offset,
-					prio_val);
-		}
+		fprintf(f, "%s\n", buf);
 	}
 }
 
