@@ -4717,6 +4717,16 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.category = FIO_OPT_C_LOG,
 		.group	= FIO_OPT_G_INVALID,
 	},
+	{
+		.name	= "log_issue_time",
+		.lname	= "Log IO issue time",
+		.type	= FIO_OPT_BOOL,
+		.off1	= offsetof(struct thread_options, log_issue_time),
+		.help	= "Include IO issue time for each log entry",
+		.def	= "0",
+		.category = FIO_OPT_C_LOG,
+		.group	= FIO_OPT_G_INVALID,
+	},
 #ifdef CONFIG_ZLIB
 	{
 		.name	= "log_compression",

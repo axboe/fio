@@ -30,6 +30,7 @@ struct log_sample {
 	uint64_t bs;
 	uint64_t offset;
 	uint16_t priority;
+	uint64_t issue_time;
 };
 
 struct fio_sem *stat_sem;
@@ -3066,6 +3067,9 @@ static void __add_log_sample(struct io_log *iolog, unsigned long t,
 		if (iolog->log_offset)
 			s->aux[IOS_AUX_OFFSET_INDEX] = sample->offset;
 
+		if (iolog->log_issue_time)
+			s->aux[IOS_AUX_ISSUE_TIME_INDEX] = sample->issue_time;
+
 		cur_log->nr_samples++;
 		return;
 	}
@@ -3160,7 +3164,7 @@ static void __add_stat_to_log(struct io_log *iolog, enum fio_ddir ddir,
 	 * had actual samples done.
 	 */
 	if (iolog->avg_window[ddir].samples) {
-		struct log_sample sample = { {{ 0, 0 }}, ddir, 0, 0, 0 };
+		struct log_sample sample = { {{ 0, 0 }}, ddir, 0, 0, 0, 0 };
 		union io_sample_data *d = &sample.data;
 
 		if (log_max == IO_LOG_SAMPLE_AVG) {
@@ -3258,7 +3262,7 @@ void add_agg_sample(union io_sample_data data, enum fio_ddir ddir,
 		    unsigned long long bs)
 {
 	struct io_log *iolog;
-	struct log_sample sample = { data, ddir, bs, 0, 0 };
+	struct log_sample sample = { data, ddir, bs, 0, 0, 0 };
 
 	if (!ddir_rw(ddir))
 		return;
@@ -3336,7 +3340,8 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 
 	if (td->clat_log) {
 		struct log_sample sample = { sample_val(nsec), ddir, bs,
-			offset, ioprio };
+			offset, ioprio,
+			ntime_since(&td->epoch, &io_u->issue_time) };
 
 		add_log_sample(td, td->clat_log, &sample);
 	}
@@ -3366,7 +3371,7 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 			uint64_t *io_u_plat;
 			struct io_u_plat_entry *dst;
 			struct log_sample sample = { {{ 0, 0 }}, ddir, bs,
-				offset, ioprio };
+				offset, ioprio, 0 };
 
 			/*
 			 * Make a byte-for-byte copy of the latency histogram
@@ -3418,7 +3423,8 @@ void add_slat_sample(struct thread_data *td, struct io_u *io_u)
 
 	if (td->slat_log) {
 		struct log_sample sample = { sample_val(nsec), ddir,
-			io_u->xfer_buflen, io_u->offset, io_u->ioprio };
+			io_u->xfer_buflen, io_u->offset, io_u->ioprio,
+			ntime_since(&td->epoch, &io_u->issue_time) };
 
 		add_log_sample(td, td->slat_log, &sample);
 	}
@@ -3447,7 +3453,7 @@ void add_lat_sample(struct thread_data *td, enum fio_ddir ddir,
 
 	if (td->lat_log) {
 		struct log_sample sample = { sample_val(nsec), ddir, bs,
-			io_u->offset, io_u->ioprio };
+			io_u->offset, io_u->ioprio, 0 };
 
 		add_log_sample(td, td->lat_log, &sample);
 	}
@@ -3492,7 +3498,7 @@ void add_bw_sample(struct thread_data *td, struct io_u *io_u,
 
 	if (td->bw_log) {
 		struct log_sample sample = { sample_val(rate), io_u->ddir,
-			bytes, io_u->offset, io_u->ioprio };
+			bytes, io_u->offset, io_u->ioprio, 0 };
 
 		add_log_sample(td, td->bw_log, &sample);
 	}
@@ -3545,7 +3551,7 @@ static int __add_samples(struct thread_data *td, struct timespec *parent_tv,
 
 		if (log) {
 			struct log_sample sample = {
-				sample_val(rate), ddir, 0, 0, 0 };
+				sample_val(rate), ddir, 0, 0, 0, 0 };
 
 			if (td->o.min_bs[ddir] == td->o.max_bs[ddir])
 				sample.bs = td->o.min_bs[ddir];
@@ -3589,7 +3595,7 @@ void add_iops_sample(struct thread_data *td, struct io_u *io_u,
 
 	if (td->iops_log) {
 		struct log_sample sample = { sample_val(1), io_u->ddir, bytes,
-			io_u->offset, io_u->ioprio };
+			io_u->offset, io_u->ioprio, 0 };
 
 		add_log_sample(td, td->iops_log, &sample);
 	}

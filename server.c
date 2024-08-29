@@ -2298,6 +2298,10 @@ int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
 			if (log->log_offset)
 				s->aux[IOS_AUX_OFFSET_INDEX] =
 					cpu_to_le64(s->aux[IOS_AUX_OFFSET_INDEX]);
+
+			if (log->log_issue_time)
+				s->aux[IOS_AUX_ISSUE_TIME_INDEX] =
+					cpu_to_le64(s->aux[IOS_AUX_ISSUE_TIME_INDEX]);
 		}
 	}
 

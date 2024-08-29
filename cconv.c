@@ -216,6 +216,7 @@ int convert_thread_options_to_cpu(struct thread_options *o,
 	o->log_max = le32_to_cpu(top->log_max);
 	o->log_offset = le32_to_cpu(top->log_offset);
 	o->log_prio = le32_to_cpu(top->log_prio);
+	o->log_issue_time = le32_to_cpu(top->log_issue_time);
 	o->log_gz = le32_to_cpu(top->log_gz);
 	o->log_gz_store = le32_to_cpu(top->log_gz_store);
 	o->log_alternate_epoch = le32_to_cpu(top->log_alternate_epoch);
@@ -458,6 +459,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->log_max = cpu_to_le32(o->log_max);
 	top->log_offset = cpu_to_le32(o->log_offset);
 	top->log_prio = cpu_to_le32(o->log_prio);
+	top->log_issue_time = cpu_to_le32(o->log_issue_time);
 	top->log_gz = cpu_to_le32(o->log_gz);
 	top->log_gz_store = cpu_to_le32(o->log_gz_store);
 	top->log_alternate_epoch = cpu_to_le32(o->log_alternate_epoch);

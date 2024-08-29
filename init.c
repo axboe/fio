@@ -1621,11 +1621,17 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			.log_type = IO_LOG_TYPE_LAT,
 			.log_offset = o->log_offset,
 			.log_prio = o->log_prio,
+			.log_issue_time = o->log_issue_time,
 			.log_gz = o->log_gz,
 			.log_gz_store = o->log_gz_store,
 		};
 		const char *pre = make_log_name(o->lat_log_file, o->name);
 		const char *suf;
+
+		if (o->log_issue_time && !o->log_offset) {
+			log_err("fio: log_issue_time option requires write_lat_log and log_offset options\n");
+			goto err;
+		}
 
 		if (p.log_gz_store)
 			suf = "log.fz";
@@ -1650,6 +1656,9 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			setup_log(&td->clat_log, &p, logname);
 		}
 
+	} else if (o->log_issue_time) {
+		log_err("fio: log_issue_time option requires write_lat_log and log_offset options\n");
+		goto err;
 	}
 
 	if (o->write_hist_log) {
@@ -1661,6 +1670,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			.log_type = IO_LOG_TYPE_HIST,
 			.log_offset = o->log_offset,
 			.log_prio = o->log_prio,
+			.log_issue_time = o->log_issue_time,
 			.log_gz = o->log_gz,
 			.log_gz_store = o->log_gz_store,
 		};
@@ -1693,6 +1703,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			.log_type = IO_LOG_TYPE_BW,
 			.log_offset = o->log_offset,
 			.log_prio = o->log_prio,
+			.log_issue_time = o->log_issue_time,
 			.log_gz = o->log_gz,
 			.log_gz_store = o->log_gz_store,
 		};
@@ -1725,6 +1736,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 			.log_type = IO_LOG_TYPE_IOPS,
 			.log_offset = o->log_offset,
 			.log_prio = o->log_prio,
+			.log_issue_time = o->log_issue_time,
 			.log_gz = o->log_gz,
 			.log_gz_store = o->log_gz_store,
 		};

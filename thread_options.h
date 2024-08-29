@@ -400,6 +400,7 @@ struct thread_options {
 
 	unsigned int log_entries;
 	unsigned int log_prio;
+	unsigned int log_issue_time;
 };
 
 #define FIO_TOP_STR_MAX		256
@@ -708,6 +709,7 @@ struct thread_options_pack {
 
 	uint32_t log_entries;
 	uint32_t log_prio;
+	uint32_t log_issue_time;
 
 	uint32_t fdp;
 	uint32_t dp_type;

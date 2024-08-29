@@ -1388,8 +1388,8 @@ static void handle_eta(struct fio_client *client, struct fio_net_cmd *cmd)
 static void client_flush_hist_samples(FILE *f, int hist_coarseness, void *samples,
 				      uint64_t sample_size)
 {
-	struct io_sample *s;
-	int log_offset;
+	struct io_sample *s, *s_tmp;
+	bool log_offset, log_issue_time;
 	uint64_t i, j, nr_samples;
 	struct io_u_plat_entry *entry;
 	uint64_t *io_u_plat;
@@ -1399,15 +1399,17 @@ static void client_flush_hist_samples(FILE *f, int hist_coarseness, void *sample
 	if (!sample_size)
 		return;
 
-	s = __get_sample(samples, 0, 0);
+	s = __get_sample(samples, 0, 0, 0);
 	log_offset = (s->__ddir & LOG_OFFSET_SAMPLE_BIT) != 0;
+	log_issue_time = (s->__ddir & LOG_ISSUE_TIME_SAMPLE_BIT) != 0;
 
-	nr_samples = sample_size / __log_entry_sz(log_offset);
+	nr_samples = sample_size / __log_entry_sz(log_offset, log_issue_time);
 
 	for (i = 0; i < nr_samples; i++) {
 
-		s = (struct io_sample *)((char *)__get_sample(samples, log_offset, i) +
-			i * sizeof(struct io_u_plat_entry));
+		s_tmp = __get_sample(samples, log_offset, log_issue_time, i);
+		s = (struct io_sample *)((char *)s_tmp +
+					 i * sizeof(struct io_u_plat_entry));
 
 		entry = s->data.plat_entry;
 		io_u_plat = entry->io_u_plat;
@@ -1595,6 +1597,7 @@ static struct cmd_iolog_pdu *convert_iolog_gz(struct fio_net_cmd *cmd,
 	uint64_t nr_samples;
 	size_t total;
 	char *p;
+	size_t log_entry_size;
 
 	stream.zalloc = Z_NULL;
 	stream.zfree = Z_NULL;
@@ -1610,11 +1613,13 @@ static struct cmd_iolog_pdu *convert_iolog_gz(struct fio_net_cmd *cmd,
 	 */
 	nr_samples = le64_to_cpu(pdu->nr_samples);
 
+	log_entry_size = __log_entry_sz(le32_to_cpu(pdu->log_offset),
+					le32_to_cpu(pdu->log_issue_time));
 	if (pdu->log_type == IO_LOG_TYPE_HIST)
-		total = nr_samples * (__log_entry_sz(le32_to_cpu(pdu->log_offset)) +
-					sizeof(struct io_u_plat_entry));
+		total = nr_samples * (log_entry_size +
+				      sizeof(struct io_u_plat_entry));
 	else
-		total = nr_samples * __log_entry_sz(le32_to_cpu(pdu->log_offset));
+		total = nr_samples * log_entry_size;
 	ret = malloc(total + sizeof(*pdu));
 	ret->nr_samples = nr_samples;
 
@@ -1703,6 +1708,7 @@ static struct cmd_iolog_pdu *convert_iolog(struct fio_net_cmd *cmd,
 	ret->compressed		= le32_to_cpu(ret->compressed);
 	ret->log_offset		= le32_to_cpu(ret->log_offset);
 	ret->log_prio		= le32_to_cpu(ret->log_prio);
+	ret->log_issue_time	= le32_to_cpu(ret->log_issue_time);
 	ret->log_hist_coarseness = le32_to_cpu(ret->log_hist_coarseness);
 	ret->per_job_logs	= le32_to_cpu(ret->per_job_logs);
 
@@ -1713,7 +1719,7 @@ static struct cmd_iolog_pdu *convert_iolog(struct fio_net_cmd *cmd,
 	for (i = 0; i < ret->nr_samples; i++) {
 		struct io_sample *s;
 
-		s = __get_sample(samples, ret->log_offset, i);
+		s = __get_sample(samples, ret->log_offset, ret->log_issue_time, i);
 		if (ret->log_type == IO_LOG_TYPE_HIST)
 			s = (struct io_sample *)((char *)s + sizeof(struct io_u_plat_entry) * i);
 
@@ -1729,6 +1735,10 @@ static struct cmd_iolog_pdu *convert_iolog(struct fio_net_cmd *cmd,
 		if (ret->log_offset)
 			s->aux[IOS_AUX_OFFSET_INDEX] =
 				le64_to_cpu(s->aux[IOS_AUX_OFFSET_INDEX]);
+
+		if (ret->log_issue_time)
+			s->aux[IOS_AUX_ISSUE_TIME_INDEX] =
+				le64_to_cpu(s->aux[IOS_AUX_ISSUE_TIME_INDEX]);
 
 		if (ret->log_type == IO_LOG_TYPE_HIST) {
 			s->data.plat_entry = (struct io_u_plat_entry *)(((char *)s) + sizeof(*s));

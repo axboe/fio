@@ -62,6 +62,7 @@ struct io_sample {
  */
 enum {
 	IOS_AUX_OFFSET_INDEX,
+	IOS_AUX_ISSUE_TIME_INDEX,
 };
 
 enum {
@@ -123,6 +124,11 @@ struct io_log {
 	unsigned int log_prio;
 
 	/*
+	 * Log I/O issuing time
+	 */
+	unsigned int log_issue_time;
+
+	/*
 	 * Max size of log entries before a chunk is compressed
 	 */
 	unsigned int log_gz;
@@ -171,9 +177,14 @@ struct io_log {
  * If the bit following prioity sample vit is set, we report both avg and max
  */
 #define LOG_AVG_MAX_SAMPLE_BIT	0x20000000U
+/*
+ * If the bit following AVG_MAX_SAMPLE_BIT is set, we report the issue time also
+ */
+#define LOG_ISSUE_TIME_SAMPLE_BIT	0x10000000U
 
 #define LOG_SAMPLE_BITS		(LOG_OFFSET_SAMPLE_BIT | LOG_PRIO_SAMPLE_BIT |\
-					LOG_AVG_MAX_SAMPLE_BIT)
+					LOG_AVG_MAX_SAMPLE_BIT |\
+					LOG_ISSUE_TIME_SAMPLE_BIT)
 #define io_sample_ddir(io)	((io)->__ddir & ~LOG_SAMPLE_BITS)
 
 static inline void io_sample_set_ddir(struct io_log *log,
@@ -183,11 +194,14 @@ static inline void io_sample_set_ddir(struct io_log *log,
 	io->__ddir = ddir | log->log_ddir_mask;
 }
 
-static inline size_t __log_entry_sz(bool log_offset)
+static inline size_t __log_entry_sz(bool log_offset, bool log_issue_time)
 {
 	size_t ret = sizeof(struct io_sample);
 
 	if (log_offset)
+		ret += sizeof(uint64_t);
+
+	if (log_issue_time)
 		ret += sizeof(uint64_t);
 
 	return ret;
@@ -195,7 +209,7 @@ static inline size_t __log_entry_sz(bool log_offset)
 
 static inline size_t log_entry_sz(struct io_log *log)
 {
-	return __log_entry_sz(log->log_offset);
+	return __log_entry_sz(log->log_offset, log->log_issue_time);
 }
 
 static inline size_t log_sample_sz(struct io_log *log, struct io_logs *cur_log)
@@ -203,10 +217,12 @@ static inline size_t log_sample_sz(struct io_log *log, struct io_logs *cur_log)
 	return cur_log->nr_samples * log_entry_sz(log);
 }
 
-static inline struct io_sample *__get_sample(void *samples, int log_offset,
+static inline struct io_sample *__get_sample(void *samples, bool log_offset,
+					     bool log_issue_time,
 					     uint64_t sample)
 {
-	uint64_t sample_offset = sample * __log_entry_sz(log_offset);
+	uint64_t sample_offset = sample *
+		__log_entry_sz(log_offset, log_issue_time);
 	return (struct io_sample *) ((char *) samples + sample_offset);
 }
 
@@ -219,7 +235,8 @@ static inline struct io_sample *get_sample(struct io_log *iolog,
 					   struct io_logs *cur_log,
 					   uint64_t sample)
 {
-	return __get_sample(cur_log->log, iolog->log_offset, sample);
+	return __get_sample(cur_log->log,
+			    iolog->log_offset, iolog->log_issue_time, sample);
 }
 
 enum {
@@ -295,6 +312,7 @@ struct log_params {
 	int log_type;
 	int log_offset;
 	int log_prio;
+	int log_issue_time;
 	int log_gz;
 	int log_gz_store;
 	int log_compress;
