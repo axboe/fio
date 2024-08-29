@@ -54,7 +54,6 @@ DPKGCFG
                 libiscsi-dev
                 libnbd-dev
                 libpmem-dev
-                libpmemblk-dev
                 librbd-dev
                 libtcmalloc-minimal4
                 libibverbs-dev
