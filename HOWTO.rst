@@ -2667,7 +2667,7 @@ with the caveat that when used on the command line, they must come after the
 		this will be the starting port number since fio will use a range of
 		ports.
 
-   [rdma], [librpma_*]
+   [rdma]
 
 		The port to use for RDMA-CM communication. This should be the same value
 		on the client and the server side.
@@ -2677,20 +2677,6 @@ with the caveat that when used on the command line, they must come after the
 	The hostname or IP address to use for TCP, UDP or RDMA-CM based I/O.  If the job
 	is a TCP listener or UDP reader, the hostname is not used and must be omitted
 	unless it is a valid UDP multicast address.
-
-.. option:: serverip=str : [librpma_*]
-
-	The IP address to be used for RDMA-CM based I/O.
-
-.. option:: direct_write_to_pmem=bool : [librpma_*]
-
-	Set to 1 only when Direct Write to PMem from the remote host is possible.
-	Otherwise, set to 0.
-
-.. option:: busy_wait_polling=bool : [librpma_*_server]
-
-	Set to 0 to wait for completion instead of busy-wait polling completion.
-	Default: 1.
 
 .. option:: interface=str : [netsplice] [net]
 
