@@ -3063,11 +3063,8 @@ static void __add_log_sample(struct io_log *iolog, unsigned long t,
 		s->bs = sample->bs;
 		s->priority = sample->priority;
 
-		if (iolog->log_offset) {
-			struct io_sample_offset *so = (void *) s;
-
-			so->offset = sample->offset;
-		}
+		if (iolog->log_offset)
+			s->aux[IOS_AUX_OFFSET_INDEX] = sample->offset;
 
 		cur_log->nr_samples++;
 		return;

@@ -2295,11 +2295,9 @@ int fio_send_iolog(struct thread_data *td, struct io_log *log, const char *name)
 			s->__ddir	= __cpu_to_le32(s->__ddir);
 			s->bs		= cpu_to_le64(s->bs);
 
-			if (log->log_offset) {
-				struct io_sample_offset *so = (void *) s;
-
-				so->offset = cpu_to_le64(so->offset);
-			}
+			if (log->log_offset)
+				s->aux[IOS_AUX_OFFSET_INDEX] =
+					cpu_to_le64(s->aux[IOS_AUX_OFFSET_INDEX]);
 		}
 	}
 

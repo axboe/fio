@@ -1038,7 +1038,6 @@ static int print_sample_fields(char **p, size_t *left, const char *fmt, ...) {
 void flush_samples(FILE *f, void *samples, uint64_t sample_size)
 {
 	struct io_sample *s;
-	struct io_sample_offset *sa;
 	bool log_offset, log_prio, log_avg_max;
 	uint64_t i, nr_samples;
 	char buf[256];
@@ -1058,7 +1057,6 @@ void flush_samples(FILE *f, void *samples, uint64_t sample_size)
 
 	for (i = 0; i < nr_samples; i++) {
 		s = __get_sample(samples, log_offset, i);
-		sa = (void *) s;
 		p = buf;
 		left = sizeof(buf);
 
@@ -1082,7 +1080,7 @@ void flush_samples(FILE *f, void *samples, uint64_t sample_size)
 
 		if (log_offset) {
 			ret = print_sample_fields(&p, &left, ", %llu",
-						  (unsigned long long) sa->offset);
+						  (unsigned long long) s->aux[IOS_AUX_OFFSET_INDEX]);
 			if (ret)
 				return;
 		}

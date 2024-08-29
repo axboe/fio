@@ -54,11 +54,14 @@ struct io_sample {
 	uint32_t __ddir;
 	uint16_t priority;
 	uint64_t bs;
+	uint64_t aux[];
 };
 
-struct io_sample_offset {
-	struct io_sample s;
-	uint64_t offset;
+/*
+ * Enumerate indexes of auxiliary log data in struct io_sample aux[] array
+ */
+enum {
+	IOS_AUX_OFFSET_INDEX,
 };
 
 enum {
@@ -180,12 +183,14 @@ static inline void io_sample_set_ddir(struct io_log *log,
 	io->__ddir = ddir | log->log_ddir_mask;
 }
 
-static inline size_t __log_entry_sz(int log_offset)
+static inline size_t __log_entry_sz(bool log_offset)
 {
+	size_t ret = sizeof(struct io_sample);
+
 	if (log_offset)
-		return sizeof(struct io_sample_offset);
-	else
-		return sizeof(struct io_sample);
+		ret += sizeof(uint64_t);
+
+	return ret;
 }
 
 static inline size_t log_entry_sz(struct io_log *log)

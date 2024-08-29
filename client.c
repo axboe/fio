@@ -1726,11 +1726,9 @@ static struct cmd_iolog_pdu *convert_iolog(struct fio_net_cmd *cmd,
 		s->bs		= le64_to_cpu(s->bs);
 		s->priority	= le16_to_cpu(s->priority);
 
-		if (ret->log_offset) {
-			struct io_sample_offset *so = (void *) s;
-
-			so->offset = le64_to_cpu(so->offset);
-		}
+		if (ret->log_offset)
+			s->aux[IOS_AUX_OFFSET_INDEX] =
+				le64_to_cpu(s->aux[IOS_AUX_OFFSET_INDEX]);
 
 		if (ret->log_type == IO_LOG_TYPE_HIST) {
 			s->data.plat_entry = (struct io_u_plat_entry *)(((char *)s) + sizeof(*s));
