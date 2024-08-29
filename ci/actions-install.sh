@@ -146,9 +146,6 @@ install_fedora() {
             ;;
     esac
     dnf install -y "${pkgs[@]}"
-
-    # install librpma from sources
-    ci/actions-install-librpma.sh
 }
 
 install_rhel_clone() {
