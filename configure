@@ -1031,16 +1031,17 @@ print_config "rdmacm" "$rdmacm"
 
 ##########################################
 # librpma probe
-# The librpma engine requires librpma>=v0.10.0 with rpma_mr_advise().
 if test "$librpma" != "yes" ; then
   librpma="no"
 fi
 cat > $TMPC << EOF
+#include <stdio.h>
 #include <librpma.h>
-int main(void)
+int main(int argc, char **argv)
 {
-  void *ptr = rpma_mr_advise;
-  (void) ptr; /* unused */
+  enum rpma_conn_event event = RPMA_CONN_REJECTED;
+  (void) event; /* unused */
+  rpma_log_set_threshold(RPMA_LOG_THRESHOLD, RPMA_LOG_LEVEL_INFO);
   return 0;
 }
 EOF
