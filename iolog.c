@@ -1022,6 +1022,7 @@ static int print_sample_fields(char **p, size_t *left, const char *fmt, ...) {
 	ret = vsnprintf(*p, *left, fmt, ap);
 	if (ret < 0 || ret >= *left) {
 		log_err("sample file write failed: %d\n", ret);
+		va_end(ap);
 		return -1;
 	}
 	va_end(ap);
