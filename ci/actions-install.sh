@@ -82,8 +82,9 @@ DPKGCFG
 	python3-sphinx
 	python3-statsmodels
 	sudo
+	${EXTRA_PKGS:-}
     )
-    if [ "${GITHUB_JOB}" == "build-containers" ]; then
+    if [ "${GITHUB_JOB}" == "build-containers" ] || [ "${GITHUB_JOB}" == "qemu-guest" ]; then
         pkgs+=(
             bison
             build-essential
@@ -121,6 +122,7 @@ install_fedora() {
         python3-sphinx
         sudo
         valgrind-devel
+	${EXTRA_PKGS:-}
     )
 
     case "${CI_TARGET_OS}" in
