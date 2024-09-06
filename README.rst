@@ -53,11 +53,10 @@ see REPORTING-BUGS.
 
 An automated mail detailing recent commits is automatically sent to the list at
 most daily. The list address is fio@vger.kernel.org, subscribe by sending an
-email to majordomo@vger.kernel.org with
+email to fio+subscribe@vger.kernel.org or visit
+https://subspace.kernel.org/vger.kernel.org.html.
 
-	subscribe fio
-
-in the body of the email. Archives can be found here:
+Archives can be found here:
 
 	https://www.spinics.net/lists/fio/
 
