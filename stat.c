@@ -3340,8 +3340,11 @@ void add_clat_sample(struct thread_data *td, enum fio_ddir ddir,
 
 	if (td->clat_log) {
 		struct log_sample sample = { sample_val(nsec), ddir, bs,
-			offset, ioprio,
-			ntime_since(&td->epoch, &io_u->issue_time) };
+			offset, ioprio, 0 };
+
+		if (io_u)
+			sample.issue_time =
+				ntime_since(&td->epoch, &io_u->issue_time);
 
 		add_log_sample(td, td->clat_log, &sample);
 	}
