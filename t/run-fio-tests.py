@@ -945,6 +945,16 @@ TEST_LIST = [
         'requirements':     [Requirements.linux, Requirements.libaio],
     },
     {
+        'test_id':          35,
+        'test_class':       FioJobFileTest,
+        'job':              't0035.fio',
+        'success':          SUCCESS_DEFAULT,
+        'pre_job':          None,
+        'pre_success':      None,
+        'pre_success':      SUCCESS_DEFAULT,
+        'requirements':     [],
+    },
+    {
         'test_id':          1000,
         'test_class':       FioExeTest,
         'exe':              't/axmap',
