@@ -1,0 +1,36 @@
+# Data verification with atomic writes
+#
+# Some background on atomic writes:
+#
+# The main selling point of atomic writes is that it is guaranteed writes
+# to storage will not be torn for a power failure or kernel crash.
+
+# Another aspect of atomic writes is that they handle racing writes and
+# reads, such that a read racing with a write will see all the data from
+# the write or none. Well, SCSI and NVMe guarantee this if using
+# RWF_ATOMIC, but it is not formally stated as a feature of RWF_ATOMIC.
+#
+# Fio verify mode can be used to prove that atomic writes can make "safe"
+# racing reads and writes. This done by having many jobs in a xsum verify
+# mode. In this way, xsums should be correct, although a job may be
+# reading a data block written by another job; however
+# verify_write_sequence must be disabled, as it cannot be helped that data
+# blocks will be out of sequence between with many jobs.
+#
+# Atomic write limits:
+# For a block device, the max block size for atomic=1 is in
+# /sys/block/sdXXX/queue/atomic_write_unit_max_bytes
+# or this value can also be read with a statx syscall on the bdev file.
+
+[write-and-verify]
+rw=randwrite
+bs=4k
+direct=1
+ioengine=libaio
+iodepth=16
+verify=crc64
+atomic=1
+verify_write_sequence=0
+numjobs=10
+# Use /dev/XXX or filename
+filename=/dev/XXX
