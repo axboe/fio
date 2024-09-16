@@ -156,6 +156,7 @@ struct thread_options {
 	unsigned int experimental_verify;
 	unsigned int verify_state;
 	unsigned int verify_state_save;
+	unsigned int verify_write_sequence;
 	unsigned int use_thread;
 	unsigned int unlink;
 	unsigned int unlink_each_loop;

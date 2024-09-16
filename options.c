@@ -3397,6 +3397,17 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_VERIFY,
 	},
+	{
+		.name	= "verify_write_sequence",
+		.lname	= "Verify write sequence number",
+		.off1	= offsetof(struct thread_options, verify_write_sequence),
+		.type	= FIO_OPT_BOOL,
+		.def	= "1",
+		.help	= "Verify header write sequence number",
+		.parent	= "verify",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_VERIFY,
+	},
 #ifdef FIO_HAVE_TRIM
 	{
 		.name	= "trim_percentage",

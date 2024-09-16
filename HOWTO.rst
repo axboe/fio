@@ -4002,6 +4002,17 @@ Verification
         instead resets the file after the write phase and then replays I/Os for
         the verification phase.
 
+.. option:: verify_write_sequence=bool
+
+        Verify the header write sequence number. In a scenario with multiple jobs,
+        verification of the write sequence number may fail. Disabling this option
+        will mean that write sequence number checking is skipped. Doing that can be
+        useful for testing atomic writes, as it means that checksum verification can
+        still be attempted. For when :option:`atomic` is enabled, checksum
+        verification is expected to succeed (while write sequence checking can still
+        fail).
+        Defaults to true.
+
 .. option:: trim_percentage=int
 
 	Number of verify blocks to discard/trim.

@@ -3726,6 +3726,14 @@ Enable experimental verification. Standard verify records I/O metadata for
 later use during the verification phase. Experimental verify instead resets the
 file after the write phase and then replays I/Os for the verification phase.
 .TP
+.BI verify_write_sequence \fR=\fPbool
+Verify the header write sequence number. In a scenario with multiple jobs,
+verification of the write sequence number may fail. Disabling this option
+will mean that write sequence number checking is skipped. Doing that can be
+useful for testing atomic writes, as it means that checksum verification can
+still be attempted. For when \fBatomic\fR is enabled, checksum verification
+is expected to succeed (while write sequence checking can still fail).
+.TP
 .BI trim_percentage \fR=\fPint
 Number of verify blocks to discard/trim.
 .TP
