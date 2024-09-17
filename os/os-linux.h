@@ -62,6 +62,7 @@
 #define FIO_HAVE_BYTEORDER_FUNCS
 #define FIO_HAVE_PWRITEV2
 #define FIO_HAVE_SHM_ATTACH_REMOVED
+#define FIO_HAVE_RWF_ATOMIC
 
 #ifdef MAP_HUGETLB
 #define FIO_HAVE_MMAP_HUGE
@@ -326,6 +327,10 @@ static inline int fio_set_sched_idle(void)
 #endif
 #ifndef RWF_NOWAIT
 #define RWF_NOWAIT	0x00000008
+#endif
+
+#ifndef RWF_ATOMIC
+#define RWF_ATOMIC	0x00000040
 #endif
 
 #ifndef RWF_WRITE_LIFE_SHIFT

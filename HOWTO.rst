@@ -2501,6 +2501,20 @@ with the caveat that when used on the command line, they must come after the
 	For direct I/O, requests will only succeed if cache invalidation isn't required,
 	file blocks are fully allocated and the disk request could be issued immediately.
 
+.. option:: atomic=bool : [pvsync2] [libaio] [io_uring]
+
+	This option means that writes are issued with torn-write protection, meaning
+	that for a power fail or kernel crash, all or none of the data from the write
+	will be stored, but never a mix of old and new data. Torn-write protection is
+	also known as atomic writes.
+
+	This option sets the RWF_ATOMIC flag (supported from the 6.11 Linux kernel) on
+	a per-IO basis.
+
+	Writes with RWF_ATOMIC set will be rejected by the kernel when the file does
+	not support torn-write protection. To learn a file's torn-write limits, issue
+	statx with STATX_WRITE_ATOMIC.
+
 .. option:: fdp=bool : [io_uring_cmd] [xnvme]
 
 	Enable Flexible Data Placement mode for write commands.
@@ -3987,6 +4001,17 @@ Verification
         for later use during the verification phase. Experimental verify
         instead resets the file after the write phase and then replays I/Os for
         the verification phase.
+
+.. option:: verify_write_sequence=bool
+
+        Verify the header write sequence number. In a scenario with multiple jobs,
+        verification of the write sequence number may fail. Disabling this option
+        will mean that write sequence number checking is skipped. Doing that can be
+        useful for testing atomic writes, as it means that checksum verification can
+        still be attempted. For when :option:`atomic` is enabled, checksum
+        verification is expected to succeed (while write sequence checking can still
+        fail).
+        Defaults to true.
 
 .. option:: trim_percentage=int
 

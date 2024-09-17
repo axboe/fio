@@ -853,6 +853,20 @@ static int fixup_options(struct thread_data *td)
 		    (o->max_bs[DDIR_WRITE] % o->verify_interval))
 			o->verify_interval = gcd(o->min_bs[DDIR_WRITE],
 							o->max_bs[DDIR_WRITE]);
+
+		if (td->o.verify_only)
+			o->verify_write_sequence = 0;
+	}
+
+	if (td->o.oatomic) {
+		if (!td_ioengine_flagged(td, FIO_ATOMICWRITES)) {
+			log_err("fio: engine does not support atomic writes\n");
+			td->o.oatomic = 0;
+			ret |= 1;
+		}
+
+		if (!td_write(td))
+			td->o.oatomic = 0;
 	}
 
 	if (o->pre_read) {
