@@ -82,10 +82,7 @@ DPKGCFG
         pkgs+=(
             bison
             build-essential
-            cmake
             flex
-            unzip
-            wget
             zlib1g-dev
         )
     fi
@@ -101,7 +98,6 @@ install_fedora() {
     pkgs=(
         bison-devel
         git
-        cmake
         flex-devel
         gperftools
         isa-l-devel
@@ -119,9 +115,7 @@ install_fedora() {
         python3-scipy
         python3-sphinx
         sudo
-        unzip
         valgrind-devel
-        wget
     )
 
     case "${CI_TARGET_OS}" in
