@@ -6,16 +6,18 @@ SCRIPT_DIR=$(dirname "$0")
 # shellcheck disable=SC1091
 . "${SCRIPT_DIR}/common.sh"
 
+_sudo() {
+    if type -P sudo >/dev/null; then
+        sudo "$@"
+    else
+        "$@"
+    fi
+}
+
 install_ubuntu() {
     local pkgs
 
-    if [ "${GITHUB_JOB}" == "build-containers" ]; then
-        # containers run as root and do not have sudo
-        apt update
-        apt -y install sudo
-    fi
-
-    cat <<DPKGCFG | sudo tee /etc/dpkg/dpkg.cfg.d/dpkg-speedup > /dev/null
+    cat <<DPKGCFG | _sudo tee /etc/dpkg/dpkg.cfg.d/dpkg-speedup > /dev/null
 # Skip fsync
 force-unsafe-io
 # Don't install documentation
@@ -36,7 +38,7 @@ DPKGCFG
     )
     case "${CI_TARGET_ARCH}" in
         "i686")
-            sudo dpkg --add-architecture i386
+            _sudo dpkg --add-architecture i386
             pkgs=("${pkgs[@]/%/:i386}")
             pkgs+=(
                 gcc-multilib
@@ -62,7 +64,7 @@ DPKGCFG
             )
 	    if apt list --installed | grep -c "libunwind-14-dev"; then
 		    echo "Removing libunwind-14-dev because of conflicts with libunwind-dev"
-		    sudo apt remove -y libunwind-14-dev
+		    _sudo apt remove -y libunwind-14-dev
 	    fi
 	    if [ "${CI_TARGET_OS}" == "linux" ] || [ "${CI_TARGET_OS}" == "ubuntu" ]; then
 	        # Only for Ubuntu
@@ -79,6 +81,7 @@ DPKGCFG
         python3-scipy
 	python3-sphinx
 	python3-statsmodels
+	sudo
     )
     if [ "${GITHUB_JOB}" == "build-containers" ]; then
         pkgs+=(
@@ -90,9 +93,9 @@ DPKGCFG
     fi
 
     echo "Updating APT..."
-    sudo apt-get -qq update
+    _sudo apt-get -qq update
     echo "Installing packages... ${pkgs[@]}"
-    sudo apt-get install -o APT::Immediate-Configure=false --no-install-recommends -qq -y "${pkgs[@]}"
+    _sudo apt-get install -o APT::Immediate-Configure=false --no-install-recommends -qq -y "${pkgs[@]}"
 }
 
 # Fedora and related distributions
