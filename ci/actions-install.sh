@@ -60,8 +60,10 @@ DPKGCFG
                 librdmacm-dev
 	        pkg-config
             )
-	    echo "Removing libunwind-14-dev because of conflicts with libunwind-dev"
-	    sudo apt remove -y libunwind-14-dev
+	    if apt list --installed | grep -c "libunwind-14-dev"; then
+		    echo "Removing libunwind-14-dev because of conflicts with libunwind-dev"
+		    sudo apt remove -y libunwind-14-dev
+	    fi
 	    if [ "${CI_TARGET_OS}" == "linux" ] || [ "${CI_TARGET_OS}" == "ubuntu" ]; then
 	        # Only for Ubuntu
 		pkgs+=(
