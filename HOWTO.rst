@@ -2883,6 +2883,15 @@ with the caveat that when used on the command line, they must come after the
                 **verify**
                         Use Verify commands for write operations
 
+.. option:: verify_mode=str : [io_uring_cmd]
+
+        Specifies the type of command to be used in the verification phase.  Defaults to 'read'.
+
+                **read**
+                        Use Read commands for data verification
+                **compare**
+                        Use Compare commands for data verification
+
 .. option:: sg_write_mode=str : [sg]
 
 	Specify the type of write commands to issue. This option can take ten values:
