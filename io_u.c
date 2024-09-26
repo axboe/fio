@@ -1956,7 +1956,8 @@ static void __io_u_log_error(struct thread_data *td, struct io_u *io_u)
 	log_err("fio: io_u error%s%s: %s: %s offset=%llu, buflen=%llu\n",
 		io_u->file ? " on file " : "",
 		io_u->file ? io_u->file->file_name : "",
-		strerror(io_u->error),
+		(io_u->flags & IO_U_F_DEVICE_ERROR) ?
+			"Device-specific error" : strerror(io_u->error),
 		io_ddir_name(io_u->ddir),
 		io_u->offset, io_u->xfer_buflen);
 
@@ -1965,8 +1966,10 @@ static void __io_u_log_error(struct thread_data *td, struct io_u *io_u)
 	if (td->io_ops->errdetails) {
 		char *err = td->io_ops->errdetails(td, io_u);
 
-		log_err("fio: %s\n", err);
-		free(err);
+		if (err) {
+			log_err("fio: %s\n", err);
+			free(err);
+		}
 	}
 
 	if (!td->error)

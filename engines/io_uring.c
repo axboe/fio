@@ -528,12 +528,9 @@ static struct io_u *fio_ioring_cmd_event(struct thread_data *td, int event)
 	cqe = &ld->cq_ring.cqes[index];
 	io_u = (struct io_u *) (uintptr_t) cqe->user_data;
 
-	if (cqe->res != 0) {
-		io_u->error = abs(cqe->res);
-		return io_u;
-	} else {
-		io_u->error = 0;
-	}
+	io_u->error = cqe->res;
+	if (io_u->error != 0)
+		goto ret;
 
 	if (o->cmd_type == FIO_URING_CMD_NVME) {
 		data = FILE_ENG_DATA(io_u->file);
@@ -544,6 +541,16 @@ static struct io_u *fio_ioring_cmd_event(struct thread_data *td, int event)
 		}
 	}
 
+ret:
+	/*
+	 * If IO_U_F_DEVICE_ERROR is not set, io_u->error will be parsed as an
+	 * errno, otherwise device-specific error value (status value in CQE).
+	 */
+	if ((int)io_u->error > 0)
+		io_u_set(td, io_u, IO_U_F_DEVICE_ERROR);
+	else
+		io_u_clear(td, io_u, IO_U_F_DEVICE_ERROR);
+	io_u->error = abs(io_u->error);
 	return io_u;
 }
 
@@ -556,6 +563,9 @@ static char *fio_ioring_cmd_errdetails(struct thread_data *td,
 #define MAXERRDETAIL 1024
 #define MAXMSGCHUNK 128
 	char *msg, msgchunk[MAXMSGCHUNK];
+
+	if (!(io_u->flags & IO_U_F_DEVICE_ERROR))
+		return NULL;
 
 	msg = calloc(1, MAXERRDETAIL);
 	strcpy(msg, "io_uring_cmd: ");
