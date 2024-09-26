@@ -77,6 +77,7 @@ enum nvme_io_opcode {
 	nvme_cmd_write			= 0x01,
 	nvme_cmd_read			= 0x02,
 	nvme_cmd_write_uncor		= 0x04,
+	nvme_cmd_compare		= 0x05,
 	nvme_cmd_write_zeroes		= 0x08,
 	nvme_cmd_dsm			= 0x09,
 	nvme_cmd_verify			= 0x0c,
@@ -431,7 +432,8 @@ int fio_nvme_get_info(struct fio_file *f, __u64 *nlba, __u32 pi_act,
 
 int fio_nvme_uring_cmd_prep(struct nvme_uring_cmd *cmd, struct io_u *io_u,
 			    struct iovec *iov, struct nvme_dsm *dsm,
-			    uint8_t write_opcode, unsigned int cdw12_flags);
+			    uint8_t read_opcode, uint8_t write_opcode,
+			    unsigned int cdw12_flags);
 
 void fio_nvme_pi_fill(struct nvme_uring_cmd *cmd, struct io_u *io_u,
 		      struct nvme_cmd_ext_io_opts *opts);

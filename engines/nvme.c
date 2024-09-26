@@ -363,7 +363,8 @@ void fio_nvme_uring_cmd_trim_prep(struct nvme_uring_cmd *cmd, struct io_u *io_u,
 
 int fio_nvme_uring_cmd_prep(struct nvme_uring_cmd *cmd, struct io_u *io_u,
 			    struct iovec *iov, struct nvme_dsm *dsm,
-			    uint8_t write_opcode, unsigned int cdw12_flags)
+			    uint8_t read_opcode, uint8_t write_opcode,
+			    unsigned int cdw12_flags)
 {
 	struct nvme_data *data = FILE_ENG_DATA(io_u->file);
 	__u64 slba;
@@ -373,7 +374,7 @@ int fio_nvme_uring_cmd_prep(struct nvme_uring_cmd *cmd, struct io_u *io_u,
 
 	switch (io_u->ddir) {
 	case DDIR_READ:
-		cmd->opcode = nvme_cmd_read;
+		cmd->opcode = read_opcode;
 		break;
 	case DDIR_WRITE:
 		cmd->opcode = write_opcode;

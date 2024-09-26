@@ -901,6 +901,13 @@ int verify_io_u(struct thread_data *td, struct io_u **io_u_ptr)
 	if (td_ioengine_flagged(td, FIO_FAKEIO))
 		return 0;
 
+	/*
+	 * If data has already been verified from the device, we can skip
+	 * the actual verification phase here.
+	 */
+	if (io_u->flags & IO_U_F_VER_IN_DEV)
+		return 0;
+
 	if (io_u->flags & IO_U_F_TRIMMED) {
 		ret = verify_trimmed_io_u(td, io_u);
 		goto done;

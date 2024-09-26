@@ -2675,6 +2675,20 @@ Use Verify commands for write operations
 .RE
 .RE
 .TP
+.BI (io_uring_cmd)verify_mode \fR=\fPstr
+Specifies the type of command to be used in the verification phase. Defaults to 'read'.
+.RS
+.RS
+.TP
+.B read
+Use Read commands for data verification
+.TP
+.B compare
+Use Compare commands for data verification
+.TP
+.RE
+.RE
+.TP
 .BI (sg)sg_write_mode \fR=\fPstr
 Specify the type of write commands to issue. This option can take multiple
 values:
