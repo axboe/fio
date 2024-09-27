@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: "50 3 * * *"  # daily at 4:50 UTC (00:50 EST)
 
