@@ -57,12 +57,18 @@ jobs:
     env:
       DISTRO: debian-12
       SSHCMD: ssh root@localhost -p 2022
+      SCPCMD: scp -P 2022
       CI_TARGET_BUILD: linux
       CI_TARGET_OS: debian
 
     steps:
     - name: Check out repository
       uses: actions/checkout@v4
+
+    - name: Create tarball containing repository
+      run: |
+        git archive --format=tar.gz -o fio-src.tar.gz --prefix=fio/ HEAD
+        git log -1
 
     - name: Create guest VM image
       uses: ./.github/actions/create-guest-image
@@ -83,11 +89,10 @@ jobs:
         host_key: true
         options: ${{ matrix.device }}
 
-    - name: Clone fio on guest
+    - name: Transfer fio source to guest
       run: |
-          $SSHCMD "apt-get update && apt-get install -qq git"
-          $SSHCMD "git clone https://github.com/taiki-e/checkout-action --branch v1.3.0"
-          $SSHCMD "mkdir fio && cd fio && ../checkout-action/main.sh && git log -1"
+          $SCPCMD fio-src.tar.gz root@localhost:/root/
+          $SSHCMD "tar xzf fio-src.tar.gz"
 
     - name: Install dependencies on guest
       run: $SSHCMD "cd fio && ./ci/actions-install.sh"
