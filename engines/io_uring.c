@@ -589,7 +589,7 @@ ret:
 		io_u_set(td, io_u, IO_U_F_DEVICE_ERROR);
 	else
 		io_u_clear(td, io_u, IO_U_F_DEVICE_ERROR);
-	io_u->error = io_u->error;
+	io_u->error = abs((int)io_u->error);
 	return io_u;
 }
 
