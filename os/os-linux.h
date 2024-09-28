@@ -430,4 +430,6 @@ static inline bool os_cpu_has(cpu_features feature)
 	return have_feature;
 }
 
+#define FIO_USE_O_EXCL
+
 #endif

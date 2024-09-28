@@ -323,7 +323,14 @@ int blkzoned_reset_wp(struct thread_data *td, struct fio_file *f,
 	/* If the file is not yet opened, open it for this function. */
 	fd = f->fd;
 	if (fd < 0) {
-		fd = open(f->file_name, O_RDWR | O_LARGEFILE);
+		int flags = O_RDWR | O_LARGEFILE;
+
+#ifdef FIO_USE_O_EXCL
+		if (!td->o.allow_mounted_write)
+			flags |= O_EXCL;
+#endif
+
+		fd = open(f->file_name, flags);
 		if (fd < 0)
 			return -errno;
 	}

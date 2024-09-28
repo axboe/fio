@@ -719,6 +719,7 @@ int generic_open_file(struct thread_data *td, struct fio_file *f)
 	int is_std = 0;
 	int flags = 0;
 	int from_hash = 0;
+	int write_flags = O_RDWR;
 
 	dprint(FD_FILE, "fd open %s\n", f->file_name);
 
@@ -744,10 +745,15 @@ int generic_open_file(struct thread_data *td, struct fio_file *f)
 	if (f->filetype != FIO_TYPE_FILE)
 		flags |= FIO_O_NOATIME;
 
+#ifdef FIO_USE_O_EXCL
+	if (!td->o.allow_mounted_write && (flags & O_CREAT) == 0)
+		write_flags |= O_EXCL;
+#endif
+
 open_again:
 	if (td_write(td)) {
 		if (!read_only)
-			flags |= O_RDWR;
+			flags |= write_flags;
 
 		if (td->o.verify_only) {
 			flags &= ~O_RDWR;
@@ -763,7 +769,7 @@ open_again:
 			from_hash = file_lookup_open(f, flags);
 	} else if (td_read(td)) {
 		if (td_ioengine_flagged(td, FIO_RO_NEEDS_RW_OPEN) && !read_only)
-			flags |= O_RDWR;
+			flags |= write_flags;
 		else
 			flags |= O_RDONLY;
 
@@ -774,7 +780,7 @@ open_again:
 	} else if (td_trim(td)) {
 		assert(!td_rw(td)); /* should have matched above */
 		if (!read_only)
-			flags |= O_RDWR;
+			flags |= write_flags;
 		from_hash = file_lookup_open(f, flags);
 	}
 
