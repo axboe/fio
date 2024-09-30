@@ -699,14 +699,15 @@ static int reap_events_uring(struct submitter *s)
 {
 	struct io_cq_ring *ring = &s->cq_ring;
 	struct io_uring_cqe *cqe;
-	unsigned head, reaped = 0;
+	unsigned tail, head, reaped = 0;
 	int last_idx = -1, stat_nr = 0;
 
 	head = *ring->head;
+	tail = atomic_load_acquire(ring->tail);
 	do {
 		struct file *f;
 
-		if (head == atomic_load_acquire(ring->tail))
+		if (head == tail)
 			break;
 		cqe = &ring->cqes[head & cq_ring_mask];
 		if (!do_nop) {
@@ -755,16 +756,17 @@ static int reap_events_uring_pt(struct submitter *s)
 {
 	struct io_cq_ring *ring = &s->cq_ring;
 	struct io_uring_cqe *cqe;
-	unsigned head, reaped = 0;
+	unsigned head, tail, reaped = 0;
 	int last_idx = -1, stat_nr = 0;
 	unsigned index;
 	int fileno;
 
 	head = *ring->head;
+	tail = atomic_load_acquire(ring->tail);
 	do {
 		struct file *f;
 
-		if (head == atomic_load_acquire(ring->tail))
+		if (head == tail)
 			break;
 		index = head & cq_ring_mask;
 		cqe = &ring->cqes[index << 1];
