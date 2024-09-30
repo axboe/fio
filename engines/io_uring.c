@@ -84,6 +84,7 @@ struct ioring_data {
 	struct io_cq_ring cq_ring;
 	unsigned cq_ring_mask;
 
+	int async_trim_fail;
 	int queued;
 	int cq_ring_off;
 	unsigned iodepth;
@@ -373,6 +374,10 @@ static int io_uring_enter(struct ioring_data *ld, unsigned int to_submit,
 #endif
 }
 
+#ifndef BLOCK_URING_CMD_DISCARD
+#define BLOCK_URING_CMD_DISCARD	_IO(0x12, 0)
+#endif
+
 static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 {
 	struct ioring_data *ld = td->io_ops_data;
@@ -448,6 +453,16 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 				sqe->fsync_flags |= IORING_FSYNC_DATASYNC;
 			sqe->opcode = IORING_OP_FSYNC;
 		}
+	} else if (io_u->ddir == DDIR_TRIM) {
+		sqe->opcode = IORING_OP_URING_CMD;
+		sqe->addr = io_u->offset;
+		sqe->addr3 = io_u->xfer_buflen;
+		sqe->rw_flags = 0;
+		sqe->len = sqe->off = 0;
+		sqe->ioprio = 0;
+		sqe->cmd_op = BLOCK_URING_CMD_DISCARD;
+		sqe->__pad1 = 0;
+		sqe->file_index = 0;
 	}
 
 	if (o->force_async && ++ld->prepped == o->force_async) {
@@ -539,13 +554,23 @@ static struct io_u *fio_ioring_event(struct thread_data *td, int event)
 	cqe = &ld->cq_ring.cqes[index];
 	io_u = (struct io_u *) (uintptr_t) cqe->user_data;
 
+	/* trim returns 0 on success */
+	if (cqe->res == io_u->xfer_buflen ||
+	    (io_u->ddir == DDIR_TRIM && !cqe->res)) {
+		io_u->error = 0;
+		return io_u;
+	}
+
 	if (cqe->res != io_u->xfer_buflen) {
+		if (io_u->ddir == DDIR_TRIM) {
+			ld->async_trim_fail = 1;
+			cqe->res = 0;
+		}
 		if (cqe->res > io_u->xfer_buflen)
 			io_u->error = -cqe->res;
 		else
 			io_u->resid = io_u->xfer_buflen - cqe->res;
-	} else
-		io_u->error = 0;
+	}
 
 	return io_u;
 }
@@ -737,7 +762,8 @@ static enum fio_q_status fio_ioring_queue(struct thread_data *td,
 	if (ld->queued == ld->iodepth)
 		return FIO_Q_BUSY;
 
-	if (io_u->ddir == DDIR_TRIM && td->io_ops->flags & FIO_ASYNCIO_SYNC_TRIM) {
+	/* if async trim has been tried and failed, punt to sync */
+	if (io_u->ddir == DDIR_TRIM && ld->async_trim_fail) {
 		if (ld->queued)
 			return FIO_Q_BUSY;
 
@@ -1632,9 +1658,8 @@ free:
 static struct ioengine_ops ioengine_uring = {
 	.name			= "io_uring",
 	.version		= FIO_IOOPS_VERSION,
-	.flags			= FIO_ASYNCIO_SYNC_TRIM | FIO_NO_OFFLOAD |
-					FIO_ASYNCIO_SETS_ISSUE_TIME |
-					FIO_ATOMICWRITES,
+	.flags			= FIO_NO_OFFLOAD | FIO_ASYNCIO_SETS_ISSUE_TIME |
+				  FIO_ATOMICWRITES,
 	.init			= fio_ioring_init,
 	.post_init		= fio_ioring_post_init,
 	.io_u_init		= fio_ioring_io_u_init,
