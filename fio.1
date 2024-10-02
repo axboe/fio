@@ -5142,8 +5142,13 @@ containing two hostnames `h1' and `h2' with IP addresses 192.168.10.120 and
 .PD
 .RE
 .P
+This behavior can be disabled by the \fBunique_filename\fR option.
+.P
 Terse output in client/server mode will differ slightly from what is produced
 when fio is run in stand-alone mode. See the terse output section for details.
+.P
+Also, if one fio invocation runs workloads on multiple servers, fio will
+provide at the end an aggregate summary report for all workloads.
 .SH AUTHORS
 .B fio
 was written by Jens Axboe <axboe@kernel.dk>.

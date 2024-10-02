@@ -5385,5 +5385,10 @@ containing two hostnames ``h1`` and ``h2`` with IP addresses 192.168.10.120 and
 	/mnt/nfs/fio/192.168.10.120.fileio.tmp
 	/mnt/nfs/fio/192.168.10.121.fileio.tmp
 
+This behavior can be disabled by the :option:`unique_filename` option.
+
 Terse output in client/server mode will differ slightly from what is produced
 when fio is run in stand-alone mode. See the terse output section for details.
+
+Also, if one fio invocation runs workloads on multiple servers, fio will
+provide at the end an aggregate summary report for all workloads.
