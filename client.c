@@ -1128,6 +1128,16 @@ static void handle_ts(struct fio_client *client, struct fio_net_cmd *cmd)
 	sum_thread_stats(&client_ts, &p->ts);
 	sum_group_stats(&client_gs, &p->rs);
 
+	if (!client_ts.members) {
+		/* Arbitrarily use the percentile toggles and percentile list
+		 * from the first thread_stat that comes our way */
+		client_ts.slat_percentiles = p->ts.slat_percentiles;
+		client_ts.clat_percentiles = p->ts.clat_percentiles;
+		client_ts.lat_percentiles = p->ts.lat_percentiles;
+
+		for (int i = 0; i < FIO_IO_U_LIST_MAX_LEN; i++)
+			client_ts.percentile_list[i] = p->ts.percentile_list[i];
+	}
 	client_ts.members++;
 	client_ts.thread_number = p->ts.thread_number;
 	client_ts.groupid = p->ts.groupid;
