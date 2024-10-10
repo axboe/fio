@@ -104,6 +104,7 @@ struct ioring_options {
 	unsigned int hipri;
 	unsigned int readfua;
 	unsigned int writefua;
+	unsigned int deac;
 	unsigned int write_mode;
 	unsigned int verify_mode;
 	struct cmdprio_options cmdprio_options;
@@ -354,6 +355,16 @@ static struct fio_option options[] = {
 		.off1	= offsetof(struct ioring_options, apptag_mask),
 		.def	= "0xffff",
 		.help	= "Application Tag Mask used with Application Tag (Default: 0xffff)",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_IOURING,
+	},
+	{
+		.name	= "deac",
+		.lname	= "Deallocate bit for write zeroes command",
+		.type	= FIO_OPT_BOOL,
+		.off1	= offsetof(struct ioring_options, deac),
+		.help	= "Set DEAC (deallocate) flag for write zeroes command",
+		.def	= "0",
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_IOURING,
 	},
@@ -1388,6 +1399,8 @@ static int fio_ioring_init(struct thread_data *td)
 				break;
 			case FIO_URING_CMD_WMODE_ZEROES:
 				ld->write_opcode = nvme_cmd_write_zeroes;
+				if (o->deac)
+					ld->cdw12_flags[DDIR_WRITE] = 1 << 25;
 				break;
 			case FIO_URING_CMD_WMODE_VERIFY:
 				ld->write_opcode = nvme_cmd_verify;
