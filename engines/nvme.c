@@ -406,7 +406,11 @@ int fio_nvme_uring_cmd_prep(struct nvme_uring_cmd *cmd, struct io_u *io_u,
 		cmd->addr = (__u64)(uintptr_t)iov;
 		cmd->data_len = 1;
 	} else {
-		cmd->addr = (__u64)(uintptr_t)io_u->xfer_buf;
+		/* no buffer for write zeroes */
+		if (cmd->opcode != nvme_cmd_write_zeroes)
+			cmd->addr = (__u64)(uintptr_t)io_u->xfer_buf;
+		else
+			cmd->addr = (__u64)(uintptr_t)NULL;
 		cmd->data_len = io_u->xfer_buflen;
 	}
 	if (data->lba_shift && data->ms) {
