@@ -12,7 +12,7 @@ runs:
   using: "composite"
   steps:
     - name: Install QEMU build dependencies
-      run: sudo apt-get -qq install libglib2.0-dev libfdt-dev libpixman-1-dev ninja-build flex bison libsdl2-dev libaio-dev python3-tomli libslirp-dev
+      run: sudo apt update && sudo apt-get -qq install libglib2.0-dev libfdt-dev libpixman-1-dev ninja-build flex bison libsdl2-dev libaio-dev python3-tomli libslirp-dev
       shell: bash
 
     - name: Build and install QEMU

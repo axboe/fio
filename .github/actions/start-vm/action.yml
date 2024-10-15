@@ -24,7 +24,7 @@ runs:
   steps:
     - name: install wait-for-it
       shell: bash
-      run: sudo apt-get -qq install wait-for-it
+      run: sudo apt update && sudo apt-get -qq install wait-for-it
     - name: Start VM in background
       shell: bash
       run: |

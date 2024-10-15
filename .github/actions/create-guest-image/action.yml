@@ -15,7 +15,7 @@ runs:
   using: "composite"
   steps:
     - name: Install libguestfs
-      run: sudo apt-get -qq install libguestfs-tools
+      run: sudo apt update && sudo apt-get -qq install libguestfs-tools
       shell: bash
     - name: Setup steps for virt-builder
       run: |
