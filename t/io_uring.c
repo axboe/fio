@@ -398,11 +398,20 @@ static void add_stat(struct submitter *s, int clock_index, int nr)
 
 static int io_uring_register_buffers(struct submitter *s)
 {
+	int ret;
+
 	if (do_nop)
 		return 0;
 
-	return syscall(__NR_io_uring_register, s->ring_fd,
-			IORING_REGISTER_BUFFERS, s->iovecs, roundup_pow2(depth));
+	/*
+	 * All iovecs are filled in case of readv, but it's all contig
+	 * from vec0. Just register a single buffer for all buffers.
+	 */
+	s->iovecs[0].iov_len = bs * roundup_pow2(depth);
+	ret = syscall(__NR_io_uring_register, s->ring_fd,
+			IORING_REGISTER_BUFFERS, s->iovecs, 1);
+	s->iovecs[0].iov_len = bs;
+	return ret;
 }
 
 static int io_uring_register_files(struct submitter *s)
@@ -557,7 +566,7 @@ static void init_io(struct submitter *s, unsigned index)
 		sqe->opcode = IORING_OP_READ_FIXED;
 		sqe->addr = (unsigned long) s->iovecs[index].iov_base;
 		sqe->len = bs;
-		sqe->buf_index = index;
+		sqe->buf_index = 0;
 	} else if (!vectored) {
 		sqe->opcode = IORING_OP_READ;
 		sqe->addr = (unsigned long) s->iovecs[index].iov_base;
@@ -1003,10 +1012,12 @@ static int submitter_init(struct submitter *s)
 {
 	int i, nr_batch, err;
 	static int init_printed;
+	void *mem, *ptr;
 	char buf[80];
+
 	s->tid = gettid();
-	printf("submitter=%d, tid=%d, file=%s, nfiles=%d, node=%d\n", s->index, s->tid,
-							s->filename, s->nr_files, s->numa_node);
+	printf("submitter=%d, tid=%d, file=%s, nfiles=%d, node=%d\n", s->index,
+				s->tid, s->filename, s->nr_files, s->numa_node);
 
 	set_affinity(s);
 
@@ -1016,14 +1027,11 @@ static int submitter_init(struct submitter *s)
 	for (i = 0; i < MAX_FDS; i++)
 		s->files[i].fileno = i;
 
-	for (i = 0; i < roundup_pow2(depth); i++) {
-		void *buf;
-
-		buf = allocate_mem(s, bs);
-		if (!buf)
-			return -1;
-		s->iovecs[i].iov_base = buf;
+	mem = allocate_mem(s, bs * roundup_pow2(depth));
+	for (i = 0, ptr = mem; i < roundup_pow2(depth); i++) {
+		s->iovecs[i].iov_base = ptr;
 		s->iovecs[i].iov_len = bs;
+		ptr += bs;
 	}
 
 	if (use_sync) {
