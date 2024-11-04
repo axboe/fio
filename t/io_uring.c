@@ -137,6 +137,7 @@ static int buffered = 0;	/* use buffered IO, not O_DIRECT */
 static int sq_thread_poll = 0;	/* use kernel submission/poller thread */
 static int sq_thread_cpu = -1;	/* pin above thread to this CPU */
 static int do_nop = 0;		/* no-op SQ ring commands */
+static int use_files = 1;
 static int nthreads = 1;
 static int stats = 0;		/* generate IO stats */
 static int aio = 0;		/* use libaio */
@@ -400,9 +401,6 @@ static int io_uring_register_buffers(struct submitter *s)
 {
 	int ret;
 
-	if (do_nop)
-		return 0;
-
 	/*
 	 * All iovecs are filled in case of readv, but it's all contig
 	 * from vec0. Just register a single buffer for all buffers.
@@ -417,9 +415,6 @@ static int io_uring_register_buffers(struct submitter *s)
 static int io_uring_register_files(struct submitter *s)
 {
 	int i;
-
-	if (do_nop)
-		return 0;
 
 	s->fds = calloc(s->nr_files, sizeof(__s32));
 	for (i = 0; i < s->nr_files; i++) {
@@ -548,12 +543,23 @@ static void init_io(struct submitter *s, unsigned index)
 	struct io_uring_sqe *sqe = &s->sqes[index];
 	struct file *f;
 
+	f = get_next_file(s);
+
 	if (do_nop) {
+		if (register_files) {
+			sqe->fd = f->fixed_fd;
+			sqe->rw_flags = (1U << 1) | (1U << 2);
+		} else {
+			sqe->fd = f->real_fd;
+			sqe->rw_flags = (1U << 1);
+		}
+		if (fixedbufs)
+			sqe->rw_flags |= (1U << 3);
+		sqe->rw_flags |= (1U << 0);
+		sqe->len = bs;
 		sqe->opcode = IORING_OP_NOP;
 		return;
 	}
-
-	f = get_next_file(s);
 
 	if (register_files) {
 		sqe->flags = IOSQE_FIXED_FILE;
@@ -719,7 +725,7 @@ static int reap_events_uring(struct submitter *s)
 		if (head == tail)
 			break;
 		cqe = &ring->cqes[head & cq_ring_mask];
-		if (!do_nop) {
+		if (use_files) {
 			int fileno = cqe->user_data & 0xffffffff;
 
 			f = &s->files[fileno];
@@ -1691,7 +1697,7 @@ int main(int argc, char *argv[])
 	j = 0;
 	i = optind;
 	nfiles = argc - i;
-	if (!do_nop) {
+	if (use_files) {
 		if (!nfiles) {
 			printf("No files specified\n");
 			usage(argv[0], 1);
@@ -1704,7 +1710,7 @@ int main(int argc, char *argv[])
 			threads_rem = nthreads - threads_per_f * nfiles;
 		}
 	}
-	while (!do_nop && i < argc) {
+	while (use_files && i < argc) {
 		int k, limit;
 
 		memset(&f, 0, sizeof(f));
