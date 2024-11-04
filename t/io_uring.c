@@ -546,16 +546,16 @@ static void init_io(struct submitter *s, unsigned index)
 	f = get_next_file(s);
 
 	if (do_nop) {
+		sqe->rw_flags = IORING_NOP_FILE;
 		if (register_files) {
 			sqe->fd = f->fixed_fd;
-			sqe->rw_flags = (1U << 1) | (1U << 2);
+			sqe->rw_flags |= IORING_NOP_FIXED_FILE;
 		} else {
 			sqe->fd = f->real_fd;
-			sqe->rw_flags = (1U << 1);
 		}
 		if (fixedbufs)
-			sqe->rw_flags |= (1U << 3);
-		sqe->rw_flags |= (1U << 0);
+			sqe->rw_flags |= IORING_NOP_FIXED_BUFFER;
+		sqe->rw_flags |= IORING_NOP_INJECT_RESULT;
 		sqe->len = bs;
 		sqe->opcode = IORING_OP_NOP;
 		return;
