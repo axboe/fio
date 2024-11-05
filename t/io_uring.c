@@ -1006,7 +1006,7 @@ static void *allocate_mem(struct submitter *s, int size)
 		return numa_alloc_onnode(size, s->numa_node);
 #endif
 
-	if (posix_memalign(&buf, t_io_uring_page_size, bs)) {
+	if (posix_memalign(&buf, t_io_uring_page_size, size)) {
 		printf("failed alloc\n");
 		return NULL;
 	}
