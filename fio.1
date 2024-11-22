@@ -2361,7 +2361,9 @@ this option is specified, the option \fBplids\fP or \fBfdp_pli\fP will be ignore
 .RE
 .TP
 .BI (io_uring_cmd,xnvme)md_per_io_size \fR=\fPint
-Size in bytes for separate metadata buffer per IO. Default: 0.
+Size in bytes for separate metadata buffer per IO. For io_uring_cmd these
+buffers are allocated using malloc regardless of what is set for \fBiomem\fR.
+Default: 0.
 .TP
 .BI (io_uring_cmd,xnvme)pi_act \fR=\fPint
 Action to take when nvme namespace is formatted with protection information.

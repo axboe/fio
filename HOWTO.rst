@@ -2591,7 +2591,9 @@ with the caveat that when used on the command line, they must come after the
 
 .. option:: md_per_io_size=int : [io_uring_cmd] [xnvme]
 
-	Size in bytes for separate metadata buffer per IO. Default: 0.
+        Size in bytes for separate metadata buffer per IO. For io_uring_cmd
+        these buffers are allocated using malloc regardless of what is set for
+        :option:`iomem`. Default: 0.
 
 .. option:: pi_act=int : [io_uring_cmd] [xnvme]
 
