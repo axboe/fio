@@ -1353,14 +1353,8 @@ static int fio_ioring_init(struct thread_data *td)
 		md_size += page_mask + td->o.mem_align;
 		if (td->o.mem_align && td->o.mem_align > page_size)
 			md_size += td->o.mem_align - page_size;
-		if (td->o.mem_type == MEM_MALLOC) {
-			ld->md_buf = malloc(md_size);
-			if (!ld->md_buf) {
-				free(ld);
-				return 1;
-			}
-		} else {
-			log_err("fio: Only iomem=malloc or mem=malloc is supported\n");
+		ld->md_buf = malloc(md_size);
+		if (!ld->md_buf) {
 			free(ld);
 			return 1;
 		}
