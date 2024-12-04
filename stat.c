@@ -507,6 +507,7 @@ static struct thread_stat *gen_mixed_ddir_stats_from_ts(struct thread_stat *ts)
 	ts_lcl->slat_percentiles = ts->slat_percentiles;
 	ts_lcl->percentile_precision = ts->percentile_precision;
 	memcpy(ts_lcl->percentile_list, ts->percentile_list, sizeof(ts->percentile_list));
+	ts_lcl->sig_figs = ts->sig_figs;
 
 	sum_thread_stats(ts_lcl, ts);
 
