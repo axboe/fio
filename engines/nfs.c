@@ -157,16 +157,28 @@ static int queue_write(struct fio_libnfs_options *o, struct io_u *io_u)
 {
 	struct nfs_data *nfs_data = io_u->engine_data;
 
+#ifdef LIBNFS_API_V2
+	return nfs_pwrite_async(o->context, nfs_data->nfsfh,
+				io_u->buf, io_u->buflen, io_u->offset,
+				nfs_callback, io_u);
+#else
 	return nfs_pwrite_async(o->context, nfs_data->nfsfh, io_u->offset,
 				io_u->buflen, io_u->buf, nfs_callback, io_u);
+#endif
 }
 
 static int queue_read(struct fio_libnfs_options *o, struct io_u *io_u)
 {
 	struct nfs_data *nfs_data = io_u->engine_data;
 
+#ifdef LIBNFS_API_V2
+	return nfs_pread_async(o->context, nfs_data->nfsfh,
+				io_u->buf, io_u->buflen, io_u->offset,
+				nfs_callback, io_u);
+#else
 	return nfs_pread_async(o->context, nfs_data->nfsfh, io_u->offset,
 				io_u->buflen, nfs_callback, io_u);
+#endif
 }
 
 static enum fio_q_status fio_libnfs_queue(struct thread_data *td,
