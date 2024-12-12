@@ -7,6 +7,8 @@
 #ifndef FIO_NVME_H
 #define FIO_NVME_H
 
+#define __SANE_USERSPACE_TYPES__
+
 #include <linux/nvme_ioctl.h>
 #include "../fio.h"
 
