@@ -61,7 +61,7 @@ int sum_stat_clients;
 static int sum_stat_nr;
 static struct buf_output allclients;
 static struct json_object *root = NULL;
-static struct json_object *job_opt_object = NULL;
+static struct json_object *global_opt_object = NULL;
 static struct json_array *clients_array = NULL;
 static struct json_array *du_array = NULL;
 
@@ -189,8 +189,8 @@ static void fio_client_json_init(void)
 	json_object_add_value_int(root, "timestamp", time_p);
 	json_object_add_value_string(root, "time", time_buf);
 
-	job_opt_object = json_create_object();
-	json_object_add_value_object(root, "global options", job_opt_object);
+	global_opt_object = json_create_object();
+	json_object_add_value_object(root, "global options", global_opt_object);
 	clients_array = json_create_array();
 	json_object_add_value_array(root, "client_stats", clients_array);
 	du_array = json_create_array();
@@ -215,7 +215,7 @@ static void fio_client_json_fini(void)
 
 	json_free_object(root);
 	root = NULL;
-	job_opt_object = NULL;
+	global_opt_object = NULL;
 	clients_array = NULL;
 	du_array = NULL;
 }
@@ -1171,10 +1171,10 @@ static void handle_job_opt(struct fio_client *client, struct fio_net_cmd *cmd)
 	pdu->groupid = le32_to_cpu(pdu->groupid);
 
 	if (pdu->global) {
-		if (!job_opt_object)
+		if (!global_opt_object)
 			return;
 
-		json_object_add_value_string(job_opt_object,
+		json_object_add_value_string(global_opt_object,
 					     (const char *)pdu->name,
 					     (const char *)pdu->value);
 	} else if (client->opt_lists) {
