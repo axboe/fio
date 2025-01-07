@@ -42,6 +42,7 @@ struct fio_client {
 	char *name;
 
 	struct flist_head *opt_lists;
+	struct json_object *global_opts;
 
 	int state;
 

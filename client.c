@@ -62,6 +62,7 @@ static int sum_stat_nr;
 static struct buf_output allclients;
 static struct json_object *root = NULL;
 static struct json_object *global_opt_object = NULL;
+static struct json_array *global_opt_array = NULL;
 static struct json_array *clients_array = NULL;
 static struct json_array *du_array = NULL;
 
@@ -189,8 +190,13 @@ static void fio_client_json_init(void)
 	json_object_add_value_int(root, "timestamp", time_p);
 	json_object_add_value_string(root, "time", time_buf);
 
-	global_opt_object = json_create_object();
-	json_object_add_value_object(root, "global options", global_opt_object);
+	if (nr_clients == 1) {
+		global_opt_object = json_create_object();
+		json_object_add_value_object(root, "global options", global_opt_object);
+	} else {
+		global_opt_array = json_create_array();
+		json_object_add_value_array(root, "global options", global_opt_array);
+	}
 	clients_array = json_create_array();
 	json_object_add_value_array(root, "client_stats", clients_array);
 	du_array = json_create_array();
@@ -216,6 +222,7 @@ static void fio_client_json_fini(void)
 	json_free_object(root);
 	root = NULL;
 	global_opt_object = NULL;
+	global_opt_array = NULL;
 	clients_array = NULL;
 	du_array = NULL;
 }
@@ -1116,11 +1123,13 @@ static void handle_ts(struct fio_client *client, struct fio_net_cmd *cmd)
 		opt_list = &client->opt_lists[p->ts.thread_number - 1];
 
 	tsobj = show_thread_status(&p->ts, &p->rs, opt_list, &client->buf);
-	client->did_stat = true;
 	if (tsobj) {
 		json_object_add_client_info(tsobj, client);
 		json_array_add_value_object(clients_array, tsobj);
+		if (!client->did_stat && client->global_opts)
+			json_array_add_value_object(global_opt_array, client->global_opts);
 	}
+	client->did_stat = true;
 
 	if (sum_stat_clients <= 1)
 		return;
@@ -1171,12 +1180,31 @@ static void handle_job_opt(struct fio_client *client, struct fio_net_cmd *cmd)
 	pdu->groupid = le32_to_cpu(pdu->groupid);
 
 	if (pdu->global) {
-		if (!global_opt_object)
+		struct json_object *global_opts;
+
+		if (!global_opt_object && !global_opt_array)
 			return;
 
-		json_object_add_value_string(global_opt_object,
+		/*
+		 * If we have only one server connection, add it to the single
+		 * global option dictionary. When we have connections to
+		 * multiple servers, add the global option to the
+		 * server-specific dictionary.
+		 */
+		if (global_opt_object) {
+			global_opts = global_opt_object;
+		} else {
+			if (!client->global_opts) {
+				client->global_opts = json_create_object();
+				json_object_add_client_info(client->global_opts, client);
+			}
+			global_opts = client->global_opts;
+		}
+
+		json_object_add_value_string(global_opts,
 					     (const char *)pdu->name,
 					     (const char *)pdu->value);
+		return;
 	} else if (client->opt_lists) {
 		struct flist_head *opt_list = &client->opt_lists[pdu->groupid];
 		struct print_option *p;
