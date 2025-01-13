@@ -1,0 +1,7 @@
+[test]
+ioengine=null
+iodepth=2
+filesize=1T
+time_based
+runtime=3s
+slat_percentiles=1
