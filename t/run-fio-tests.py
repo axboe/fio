@@ -931,7 +931,6 @@ TEST_LIST = [
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
         'pre_success':      None,
-        'pre_success':      SUCCESS_DEFAULT,
         'requirements':     [Requirements.linux, Requirements.libaio],
     },
     {
@@ -941,7 +940,6 @@ TEST_LIST = [
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
         'pre_success':      None,
-        'pre_success':      SUCCESS_DEFAULT,
         'requirements':     [Requirements.linux, Requirements.libaio],
     },
     {
@@ -951,7 +949,6 @@ TEST_LIST = [
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
         'pre_success':      None,
-        'pre_success':      SUCCESS_DEFAULT,
         'requirements':     [],
     },
     {
