@@ -1608,6 +1608,35 @@ test69() {
 		>> "${logfile}.${test_number}" 2>&1 || return $?
 }
 
+# Test max_open_zones and job_max_open_zones do not error out for non-write jobs
+test70() {
+	require_zbd || return "$SKIP_TESTCASE"
+
+	reset_zone "${dev}" -1
+
+	# Write data to two zones and make them open
+	run_fio_on_seq "$(ioengine "psync")" --io_size="$min_seq_write_size" \
+		       --rw=write --offset_increment=1z --numjobs=2 \
+		       --group_reporting=1 >> "${logfile}.${test_number}" 2>&1
+
+	# Confirm max_open_zones=1 for read workload does not fail
+	run_fio_on_seq "$(ioengine "psync")" --io_size="$min_seq_write_size" \
+		       --rw=read --max_open_zones=1 \
+		       >> "${logfile}.${test_number}" 2>&1 || return $?
+
+	# Confirm job_max_open_zones=1 for read workload does not fail
+	run_fio_on_seq "$(ioengine "psync")" --io_size="$min_seq_write_size" \
+		       --rw=read --job_max_open_zones=1 \
+		       >> "${logfile}.${test_number}" 2>&1
+	grep -q 'valid only for write jobs' \
+	     "${logfile}.${test_number}" || return $?
+
+	# Confirm max_open_zones=1 for trim workload does not fail
+	run_fio_on_seq "$(ioengine "psync")" --rw=trim --io_size=1z \
+		       --bs="$zone_size" --max_open_zones=1 \
+		       >> "${logfile}.${test_number}" 2>&1
+}
+
 SECONDS=0
 tests=()
 dynamic_analyzer=()
