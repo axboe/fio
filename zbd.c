@@ -1265,6 +1265,16 @@ int zbd_setup_files(struct thread_data *td)
 		}
 
 		/*
+		 * If this job does not do write operations, skip open zone
+		 * condition check.
+		 */
+		if (!td_write(td)) {
+			if (td->o.job_max_open_zones)
+				log_info("'job_max_open_zones' is valid only for write jobs\n");
+			continue;
+		}
+
+		/*
 		 * The per job max open zones limit cannot be used without a
 		 * global max open zones limit. (As the tracking of open zones
 		 * is disabled when there is no global max open zones limit.)
