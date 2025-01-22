@@ -1388,16 +1388,10 @@ int setup_files(struct thread_data *td)
 	if (err)
 		goto err_out;
 
-	/*
-	 * iolog already set the total io size, if we read back
-	 * stored entries.
-	 */
-	if (!o->read_iolog_file) {
-		if (o->io_size)
-			td->total_io_size = o->io_size * o->loops;
-		else
-			td->total_io_size = o->size * o->loops;
-	}
+	if (o->io_size)
+		td->total_io_size = o->io_size * o->loops;
+	else
+		td->total_io_size = o->size * o->loops;
 
 done:
 	if (td->o.zone_mode == ZONE_MODE_ZBD) {
