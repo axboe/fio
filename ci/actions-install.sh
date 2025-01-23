@@ -89,6 +89,7 @@ DPKGCFG
             bison
             build-essential
             flex
+            procps
             zlib1g-dev
         )
     fi
