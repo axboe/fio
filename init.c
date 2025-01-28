@@ -874,6 +874,17 @@ static int fixup_options(struct thread_data *td)
 		}
 
 		/*
+		 * Verify header should not be offset beyond the verify
+		 * interval.
+		 */
+		if (o->verify_offset + sizeof(struct verify_header) >
+		    o->verify_interval) {
+			log_err("fio: cannot offset verify header beyond the "
+				"verify interval.\n");
+			ret |= 1;
+		}
+
+		/*
 		 * Disable rand_seed check when we have verify_backlog,
 		 * zone reset frequency for zonemode=zbd, or norandommap.
 		 * Unless we were explicitly asked to enable it.

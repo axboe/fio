@@ -3656,7 +3656,8 @@ same offset with multiple outstanding I/Os.
 .TP
 .BI verify_offset \fR=\fPint
 Swap the verification header with data somewhere else in the block before
-writing. It is swapped back before verifying.
+writing. It is swapped back before verifying. This should be within the range
+of \fBverify_interval\fR.
 .TP
 .BI verify_interval \fR=\fPint
 Write the verification header at a finer granularity than the

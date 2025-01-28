@@ -3931,7 +3931,8 @@ Verification
 .. option:: verify_offset=int
 
 	Swap the verification header with data somewhere else in the block before
-	writing. It is swapped back before verifying.
+	writing. It is swapped back before verifying. This should be within the
+	range of :option:`verify_interval`.
 
 .. option:: verify_interval=int
 
