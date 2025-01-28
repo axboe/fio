@@ -1107,6 +1107,14 @@ TEST_LIST = [
         'success':          SUCCESS_DEFAULT,
         'requirements':     [Requirements.linux],
     },
+    {
+        'test_id':          1017,
+        'test_class':       FioExeTest,
+        'exe':              't/verify.py',
+        'parameters':       ['-f', '{fio_path}'],
+        'success':          SUCCESS_LONG,
+        'requirements':     [],
+    },
 ]
 
 
