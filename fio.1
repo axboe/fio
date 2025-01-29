@@ -1371,9 +1371,8 @@ and that some blocks may be read/written more than once. If this option is
 used with \fBverify\fR then \fBverify_header_seed\fR will be disabled. If this
 option is used with \fBverify\fR and multiple blocksizes (via \fBbsrange\fR),
 only intact blocks are verified, i.e., partially-overwritten blocks are
-ignored.  With an async I/O engine and an I/O depth > 1, it is possible for
-the same block to be overwritten, which can cause verification errors.  Either
-do not use norandommap in this case, or also use the lfsr random generator.
+ignored. With an async I/O engine and an I/O depth > 1, header write sequence
+number verification will be disabled. See \fBverify_write_sequence\fR.
 .TP
 .BI softrandommap \fR=\fPbool
 See \fBnorandommap\fR. If fio runs with the random block map enabled and

@@ -1568,9 +1568,8 @@ I/O type
 	disabled. If this option is used with :option:`verify` and multiple blocksizes
 	(via :option:`bsrange`), only intact blocks are verified, i.e.,
 	partially-overwritten blocks are ignored. With an async I/O engine and an I/O
-	depth > 1, it is possible for the same block to be overwritten, which can
-	cause verification errors. Either do not use norandommap in this case, or also
-	use the lfsr random generator.
+	depth > 1, header write sequence number verification will be disabled. See
+	:option:`verify_write_sequence`.
 
 .. option:: softrandommap=bool
 
