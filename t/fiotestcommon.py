@@ -101,7 +101,7 @@ class Requirements():
         Requirements._unittests = os.path.exists(unittest_path)
 
         Requirements._cpucount4 = multiprocessing.cpu_count() >= 4
-        Requirements._nvmecdev = args.nvmecdev
+        Requirements._nvmecdev = args.nvmecdev if hasattr(args, 'nvmecdev') else False
 
         req_list = [
                 Requirements.linux,
