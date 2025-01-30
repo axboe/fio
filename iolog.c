@@ -306,7 +306,7 @@ void log_io_piece(struct thread_data *td, struct io_u *io_u)
 	 * the rb insert/lookup for handling. Sort writes if we have offset
 	 * modifier which can also create duplicate blocks.
 	 */
-	if (file_randommap(td, ipo->file) && !fio_offset_overlap_risk(td)) {
+	if (!fio_offset_overlap_risk(td)) {
 		INIT_FLIST_HEAD(&ipo->list);
 		flist_add_tail(&ipo->list, &td->io_hist_list);
 		ipo->flags |= IP_F_ONLIST;

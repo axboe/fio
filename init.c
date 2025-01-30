@@ -886,13 +886,12 @@ static int fixup_options(struct thread_data *td)
 
 		/*
 		 * Disable rand_seed check when we have verify_backlog,
-		 * zone reset frequency for zonemode=zbd, norandommap, or
-		 * offset modifiers.
+		 * zone reset frequency for zonemode=zbd, or if we are using
+		 * an RB tree for IO history logs.
 		 * Unless we were explicitly asked to enable it.
 		 */
 		if (!td_write(td) || (td->flags & TD_F_VER_BACKLOG) ||
-		    o->zrf.u.f || o->norandommap ||
-		    fio_offset_overlap_risk(td)) {
+		    o->zrf.u.f || fio_offset_overlap_risk(td)) {
 			if (!fio_option_is_set(o, verify_header_seed))
 				o->verify_header_seed = 0;
 		}
