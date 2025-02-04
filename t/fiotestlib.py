@@ -260,12 +260,13 @@ class FioJobFileTest(FioExeTest):
             return
 
         #
-        # Sometimes fio informational messages are included at the top of the
-        # JSON output, especially under Windows. Try to decode output as JSON
-        # data, skipping everything until the first {
+        # Sometimes fio informational messages are included outside the JSON
+        # output, especially under Windows. Try to decode output as JSON data,
+        # skipping outside the first { and last }
         #
         lines = file_data.splitlines()
-        file_data = '\n'.join(lines[lines.index("{"):])
+        last = len(lines) - lines[::-1].index("}")
+        file_data = '\n'.join(lines[lines.index("{"):last])
         try:
             self.json_data = json.loads(file_data)
         except json.JSONDecodeError:
@@ -320,12 +321,13 @@ class FioJobCmdTest(FioExeTest):
             file_data = file.read()
 
         #
-        # Sometimes fio informational messages are included at the top of the
-        # JSON output, especially under Windows. Try to decode output as JSON
-        # data, skipping everything until the first {
+        # Sometimes fio informational messages are included outside the JSON
+        # output, especially under Windows. Try to decode output as JSON data,
+        # skipping outside the first { and last }
         #
         lines = file_data.splitlines()
-        file_data = '\n'.join(lines[lines.index("{"):])
+        last = len(lines) - lines[::-1].index("}")
+        file_data = '\n'.join(lines[lines.index("{"):last])
         try:
             self.json_data = json.loads(file_data)
         except json.JSONDecodeError:
