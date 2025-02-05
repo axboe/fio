@@ -139,7 +139,7 @@ class FioExeTest(FioTest):
         if 'stderr_empty' in self.success:
             if self.success['stderr_empty']:
                 if stderr_size != 0:
-                    self.failure_reason = f"{self.failure_reason} stderr not empty,"
+                    self.failure_reason = f"{self.failure_reason} stderr not empty size {stderr_size},"
                     self.passed = False
             else:
                 if stderr_size == 0:
