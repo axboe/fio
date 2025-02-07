@@ -3832,8 +3832,9 @@ Verification
 	of the job. Each verification method also implies verification of special
 	header, which is written to the beginning of each block. This header also
 	includes meta information, like offset of the block, block number, timestamp
-	when block was written, etc.  :option:`verify` can be combined with
-	:option:`verify_pattern` option.  The allowed values are:
+	when block was written, initial seed value used to generate the buffer
+	contents etc. :option:`verify` can be combined with :option:`verify_pattern`
+	option.  The allowed values are:
 
 		**md5**
 			Use an md5 sum of the data area and store it in the header of
@@ -4030,6 +4031,15 @@ Verification
         verification is expected to succeed (while write sequence checking can still
         fail).
         Defaults to true.
+
+.. option:: verify_header_seed=bool
+
+	Verify the header seed value which was used to generate the buffer contents.
+	In certain scenarios with read / verify only workloads, when
+	:option:`norandommap` is enabled, with offset modifiers
+	(refer :option:`readwrite` and :option:`rw_sequencer`) etc verification of
+	header seed may fail. Disabling this option will mean that header seed
+	checking is skipped. Defaults to true.
 
 .. option:: trim_percentage=int
 

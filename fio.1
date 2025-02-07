@@ -3556,8 +3556,9 @@ If writing to a file, fio can verify the file contents after each iteration
 of the job. Each verification method also implies verification of special
 header, which is written to the beginning of each block. This header also
 includes meta information, like offset of the block, block number, timestamp
-when block was written, etc. \fBverify\fR can be combined with
-\fBverify_pattern\fR option. The allowed values are:
+when block was written, initial seed value used to generate the buffer
+contents, etc. \fBverify\fR can be combined with \fBverify_pattern\fR option.
+The allowed values are:
 .RS
 .RS
 .TP
@@ -3752,6 +3753,13 @@ will mean that write sequence number checking is skipped. Doing that can be
 useful for testing atomic writes, as it means that checksum verification can
 still be attempted. For when \fBatomic\fR is enabled, checksum verification
 is expected to succeed (while write sequence checking can still fail).
+.TP
+.BI verify_header_seed \fR=\fPbool
+Verify the header seed value which was used to generate the buffer contents.
+In certain scenarios with read / verify only workloads, when \fBnorandommap\fR
+is enabled, with offset modifiers (refer options \fBreadwrite\fR and
+\fBrw_sequencer\fR), etc verification of header seed may fail. Disabling this
+option will mean that header seed checking is skipped. Defaults to true.
 .TP
 .BI trim_percentage \fR=\fPint
 Number of verify blocks to discard/trim.

@@ -157,6 +157,7 @@ struct thread_options {
 	unsigned int verify_state;
 	unsigned int verify_state_save;
 	unsigned int verify_write_sequence;
+	unsigned int verify_header_seed;
 	unsigned int use_thread;
 	unsigned int unlink;
 	unsigned int unlink_each_loop;
@@ -485,7 +486,7 @@ struct thread_options_pack {
 	uint32_t verify_state;
 	uint32_t verify_state_save;
 	uint32_t verify_write_sequence;
-	uint32_t pad2;
+	uint32_t verify_header_seed;
 	uint32_t use_thread;
 	uint32_t unlink;
 	uint32_t unlink_each_loop;

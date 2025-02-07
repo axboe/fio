@@ -833,7 +833,7 @@ static int verify_header(struct io_u *io_u, struct thread_data *td,
 			hdr->len, hdr_len);
 		goto err;
 	}
-	if (hdr->rand_seed != io_u->rand_seed) {
+	if (td->o.verify_header_seed && (hdr->rand_seed != io_u->rand_seed)) {
 		log_err("verify: bad header rand_seed %"PRIu64
 			", wanted %"PRIu64,
 			hdr->rand_seed, io_u->rand_seed);
