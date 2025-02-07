@@ -858,6 +858,17 @@ static int fixup_options(struct thread_data *td)
 			if (!fio_option_is_set(o, verify_write_sequence))
 				o->verify_write_sequence = 0;
 		}
+
+		/*
+		 * Disable rand_seed check when we have verify_backlog, or
+		 * zone reset frequency for zonemode=zbd.
+		 * Unless we were explicitly asked to enable it.
+		 */
+		if (!td_rw(td) || (td->flags & TD_F_VER_BACKLOG) ||
+		    o->zrf.u.f) {
+			if (!fio_option_is_set(o, verify_header_seed))
+				o->verify_header_seed = 0;
+		}
 	}
 
 	if (td->o.oatomic) {
