@@ -628,7 +628,7 @@ static void init_io_pt(struct submitter *s, unsigned index)
 	cmd->data_len = bs;
 	if (fixedbufs) {
 		sqe->uring_cmd_flags = IORING_URING_CMD_FIXED;
-		sqe->buf_index = index;
+		sqe->buf_index = 0;
 	}
 	cmd->nsid = f->nsid;
 	cmd->opcode = 2;
