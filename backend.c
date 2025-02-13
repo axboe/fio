@@ -1234,8 +1234,18 @@ static int init_file_completion_logging(struct thread_data *td,
 	if (td->o.verify == VERIFY_NONE || !td->o.verify_state_save)
 		return 0;
 
+	/*
+	 * Async IO completion order may be different from issue order. Double
+	 * the number of write completions to cover the case the writes issued
+	 * earlier complete slowly and fall in the last write log entries.
+	 */
+	td->last_write_comp_depth = depth;
+	if (!td_ioengine_flagged(td, FIO_SYNCIO))
+		td->last_write_comp_depth += depth;
+
 	for_each_file(td, f, i) {
-		f->last_write_comp = scalloc(depth, sizeof(uint64_t));
+		f->last_write_comp = scalloc(td->last_write_comp_depth,
+					     sizeof(uint64_t));
 		if (!f->last_write_comp)
 			goto cleanup;
 	}

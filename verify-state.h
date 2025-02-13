@@ -31,8 +31,9 @@ struct file_comp {
 };
 
 struct thread_io_list {
-	uint64_t no_comps;
-	uint32_t depth;
+	uint64_t no_comps; /* Number of completions saved for the thread */
+	uint32_t depth; /* I/O depth of the job that saves the verify state */
+	uint32_t max_no_comps_per_file;
 	uint32_t nofiles;
 	uint64_t numberio;
 	uint64_t index;
@@ -46,7 +47,7 @@ struct all_io_list {
 	struct thread_io_list state[0];
 };
 
-#define VSTATE_HDR_VERSION	0x03
+#define VSTATE_HDR_VERSION	0x04
 
 struct verify_state_hdr {
 	uint64_t version;
@@ -73,7 +74,7 @@ static inline size_t __thread_io_list_sz(uint32_t depth, uint32_t nofiles)
 
 static inline size_t thread_io_list_sz(struct thread_io_list *s)
 {
-	return __thread_io_list_sz(le32_to_cpu(s->depth), le32_to_cpu(s->nofiles));
+	return __thread_io_list_sz(le32_to_cpu(s->max_no_comps_per_file), le32_to_cpu(s->nofiles));
 }
 
 static inline struct thread_io_list *io_list_next(struct thread_io_list *s)

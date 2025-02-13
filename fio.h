@@ -387,6 +387,7 @@ struct thread_data {
 	struct fio_sem *sem;
 	uint64_t bytes_done[DDIR_RWDIR_CNT];
 	uint64_t bytes_verified;
+	uint32_t last_write_comp_depth;
 
 	uint64_t *thinktime_blocks_counter;
 	struct timespec last_thinktime;

@@ -2074,7 +2074,7 @@ static void file_log_write_comp(const struct thread_data *td, struct fio_file *f
 
 	idx = f->last_write_idx++;
 	f->last_write_comp[idx] = offset;
-	if (f->last_write_idx == td->o.iodepth)
+	if (f->last_write_idx == td->last_write_comp_depth)
 		f->last_write_idx = 0;
 }
 
