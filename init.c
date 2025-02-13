@@ -864,7 +864,7 @@ static int fixup_options(struct thread_data *td)
 		 * zone reset frequency for zonemode=zbd.
 		 * Unless we were explicitly asked to enable it.
 		 */
-		if (!td_rw(td) || (td->flags & TD_F_VER_BACKLOG) ||
+		if (!td_write(td) || (td->flags & TD_F_VER_BACKLOG) ||
 		    o->zrf.u.f) {
 			if (!fio_option_is_set(o, verify_header_seed))
 				o->verify_header_seed = 0;
