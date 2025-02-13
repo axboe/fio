@@ -1892,5 +1892,7 @@ int verify_state_should_stop(struct thread_data *td, struct io_u *io_u)
 	/*
 	 * Not found, we have to stop
 	 */
+	log_info("Stop verify because offset %llu in %s is not recorded in verify state\n",
+		 io_u->verify_offset, f->file_name);
 	return 1;
 }
