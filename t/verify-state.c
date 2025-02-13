@@ -23,6 +23,7 @@ static void show_s(struct thread_io_list *s, unsigned int no_s)
 	printf("Name:\t\t%s\n", s->name);
 	printf("Completions:\t%llu\n", (unsigned long long) s->no_comps);
 	printf("Depth:\t\t%llu\n", (unsigned long long) s->depth);
+	printf("Max completions per file:\t\t%lu\n", (unsigned long) s->max_no_comps_per_file);
 	printf("Number IOs:\t%llu\n", (unsigned long long) s->numberio);
 	printf("Index:\t\t%llu\n", (unsigned long long) s->index);
 
@@ -46,6 +47,7 @@ static void show(struct thread_io_list *s, size_t size)
 
 		s->no_comps = le64_to_cpu(s->no_comps);
 		s->depth = le32_to_cpu(s->depth);
+		s->max_no_comps_per_file = le32_to_cpu(s->max_no_comps_per_file);
 		s->nofiles = le32_to_cpu(s->nofiles);
 		s->numberio = le64_to_cpu(s->numberio);
 		s->index = le64_to_cpu(s->index);
@@ -57,9 +59,9 @@ static void show(struct thread_io_list *s, size_t size)
 
 		show_s(s, no_s);
 		no_s++;
-		size -= __thread_io_list_sz(s->depth, s->nofiles);
+		size -= __thread_io_list_sz(s->max_no_comps_per_file, s->nofiles);
 		s = (struct thread_io_list *)((char *) s +
-			__thread_io_list_sz(s->depth, s->nofiles));
+			__thread_io_list_sz(s->max_no_comps_per_file, s->nofiles));
 	} while (size != 0);
 }
 
@@ -90,7 +92,7 @@ static void show_verify_state(void *buf, size_t size)
 		return;
 	}
 
-	if (hdr->version == 0x03)
+	if (hdr->version == 0x04)
 		show(s, size);
 	else
 		log_err("Unsupported version %d\n", (int) hdr->version);
