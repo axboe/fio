@@ -3636,10 +3636,17 @@ Only pretend to verify. Useful for testing internals with
 .RE
 .P
 This option can be used for repeated burn\-in tests of a system to make sure
-that the written data is also correctly read back. If the data direction
-given is a read or random read, fio will assume that it should verify a
-previously written file. If the data direction includes any form of write,
-the verify will be of the newly written data.
+that the written data is also correctly read back.
+.P
+If the data direction given is a read or random read, fio will assume that it
+should verify a previously written file. In this scenario fio will not verify
+the block number written in the header. The header seed won't be verified,
+unless its explicitly requested by setting \fBverify_header_seed\fR option.
+Note in this scenario the header seed check will only work if the read
+invocation exactly matches the original write invocation.
+.P
+If the data direction includes any form of write, the verify will be of the
+newly written data.
 .P
 To avoid false verification errors, do not use the norandommap option when
 verifying data with async I/O engines and I/O depths > 1.  Or use the

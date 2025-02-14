@@ -3909,10 +3909,18 @@ Verification
 			:option:`ioengine`\=null, not for much else.
 
 	This option can be used for repeated burn-in tests of a system to make sure
-	that the written data is also correctly read back. If the data direction
-	given is a read or random read, fio will assume that it should verify a
-	previously written file. If the data direction includes any form of write,
-	the verify will be of the newly written data.
+	that the written data is also correctly read back.
+
+	If the data direction given is a read or random read, fio will assume that
+	it should verify a previously written file. In this scenario fio will not
+	verify the block number written in the header. The header seed won't be
+	verified, unless its explicitly requested by setting
+	:option:`verify_header_seed`. Note in this scenario the header seed check
+	will only work if the read invocation exactly matches the original write
+	invocation.
+
+	If the data direction includes any form of write, the verify will be of the
+	newly written data.
 
 	To avoid false verification errors, do not use the norandommap option when
 	verifying data with async I/O engines and I/O depths > 1.  Or use the
