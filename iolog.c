@@ -301,11 +301,12 @@ void log_io_piece(struct thread_data *td, struct io_u *io_u)
 	}
 
 	/*
-	 * Only sort writes if we don't have a random map in which case we need
-	 * to check for duplicate blocks and drop the old one, which we rely on
-	 * the rb insert/lookup for handling.
+	 * Sort writes if we don't have a random map in which case we need to
+	 * check for duplicate blocks and drop the old one, which we rely on
+	 * the rb insert/lookup for handling. Sort writes if we have offset
+	 * modifier which can also create duplicate blocks.
 	 */
-	if (file_randommap(td, ipo->file)) {
+	if (file_randommap(td, ipo->file) && !fio_offset_overlap_risk(td)) {
 		INIT_FLIST_HEAD(&ipo->list);
 		flist_add_tail(&ipo->list, &td->io_hist_list);
 		ipo->flags |= IP_F_ONLIST;

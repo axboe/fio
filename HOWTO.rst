@@ -1185,7 +1185,9 @@ I/O type
 	pattern, then the *<nr>* value specified will be **added** to the generated
 	offset for each I/O turning sequential I/O into sequential I/O with holes.
 	For instance, using ``rw=write:4k`` will skip 4k for every write.  Also see
-	the :option:`rw_sequencer` option.
+	the :option:`rw_sequencer` option. If this is used with :option:`verify`
+	then :option:`verify_header_seed` will be disabled, unless its explicitly
+	enabled.
 
 .. option:: rw_sequencer=str
 

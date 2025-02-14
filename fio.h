@@ -800,6 +800,14 @@ extern void lat_target_reset(struct thread_data *);
 	    	 (i) < (td)->o.nr_files && ((f) = (td)->files[i]) != NULL; \
 		 (i)++)
 
+static inline bool fio_offset_overlap_risk(struct thread_data *td)
+{
+	if (td->o.ddir_seq_add || (td->o.ddir_seq_nr > 1))
+		return true;
+
+	return false;
+}
+
 static inline bool fio_fill_issue_time(struct thread_data *td)
 {
 	if (td->o.read_iolog_file ||
