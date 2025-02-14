@@ -854,8 +854,10 @@ static int fixup_options(struct thread_data *td)
 			o->verify_interval = gcd(o->min_bs[DDIR_WRITE],
 							o->max_bs[DDIR_WRITE]);
 
-		if (td->o.verify_only)
-			o->verify_write_sequence = 0;
+		if (o->verify_only) {
+			if (!fio_option_is_set(o, verify_write_sequence))
+				o->verify_write_sequence = 0;
+		}
 	}
 
 	if (td->o.oatomic) {

@@ -3544,7 +3544,8 @@ Do not perform specified workload, only verify data still matches previous
 invocation of this workload. This option allows one to check data multiple
 times at a later date without overwriting it. This option makes sense only
 for workloads that write data, and does not support workloads with the
-\fBtime_based\fR option set.
+\fBtime_based\fR option set. \fBverify_write_sequence\fR option will be
+disabled in this mode, unless its explicitly enabled.
 .TP
 .BI do_verify \fR=\fPbool
 Run the verify phase after a write phase. Only valid if \fBverify\fR is
