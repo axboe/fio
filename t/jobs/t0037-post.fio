@@ -1,0 +1,12 @@
+[global]
+filename=t0037file.1:t0037file.2:t0037file.3:t0037file.4
+verify=md5
+ioengine=libaio
+iodepth=32
+size=512k
+loops=4
+
+[job]
+readwrite=read
+verify_state_load=1
+

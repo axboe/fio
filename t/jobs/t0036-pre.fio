@@ -1,0 +1,8 @@
+[global]
+filename=t0036file
+verify=md5
+size=512k
+
+[job]
+readwrite=write
+verify_state_save=1
