@@ -2515,6 +2515,10 @@ with the caveat that when used on the command line, they must come after the
 	not support torn-write protection. To learn a file's torn-write limits, issue
 	statx with STATX_WRITE_ATOMIC.
 
+.. option:: libaio_vectored=bool : [libaio]
+
+    Submit vectored read and write requests.
+
 .. option:: fdp=bool : [io_uring_cmd] [xnvme]
 
 	Enable Flexible Data Placement mode for write commands.
