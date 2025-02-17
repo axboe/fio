@@ -537,6 +537,7 @@ static int verify_io_u_sha512(struct verify_header *hdr, struct vcont *vc)
 
 	fio_sha512_init(&sha512_ctx);
 	fio_sha512_update(&sha512_ctx, p, hdr->len - hdr_size(vc->td, hdr));
+	fio_sha512_final(&sha512_ctx);
 
 	if (!memcmp(vh->sha512, sha512_ctx.buf, sizeof(sha512)))
 		return 0;
@@ -1092,6 +1093,7 @@ static void fill_sha512(struct verify_header *hdr, void *p, unsigned int len)
 
 	fio_sha512_init(&sha512_ctx);
 	fio_sha512_update(&sha512_ctx, p, len);
+	fio_sha512_final(&sha512_ctx);
 }
 
 static void fill_sha256(struct verify_header *hdr, void *p, unsigned int len)

@@ -195,3 +195,60 @@ void fio_sha512_update(struct fio_sha512_ctx *sctx, const uint8_t *data,
 	/* erase our data */
 	memset(sctx->W, 0, sizeof(sctx->W));
 }
+
+void fio_sha512_final(struct fio_sha512_ctx *sctx)
+{
+	uint8_t *hash = sctx->buf;
+	static uint8_t padding[128] = { 0x80, };
+	unsigned int index, pad_len;
+	uint8_t bits[128];
+	uint64_t t2;
+	uint32_t t;
+	int i, j;
+
+        index = pad_len = t = i = j = 0;
+        t2 = 0;
+
+	/* Save number of bits */
+	t = sctx->count[0];
+	bits[15] = t; t>>=8;
+	bits[14] = t; t>>=8;
+	bits[13] = t; t>>=8;
+	bits[12] = t;
+	t = sctx->count[1];
+	bits[11] = t; t>>=8;
+	bits[10] = t; t>>=8;
+	bits[9 ] = t; t>>=8;
+	bits[8 ] = t;
+	t = sctx->count[2];
+	bits[7 ] = t; t>>=8;
+	bits[6 ] = t; t>>=8;
+	bits[5 ] = t; t>>=8;
+	bits[4 ] = t;
+	t = sctx->count[3];
+	bits[3 ] = t; t>>=8;
+	bits[2 ] = t; t>>=8;
+	bits[1 ] = t; t>>=8;
+	bits[0 ] = t;
+
+	/* Pad out to 112 mod 128. */
+	index = (sctx->count[0] >> 3) & 0x7f;
+	pad_len = (index < 112) ? (112 - index) : ((128+112) - index);
+	fio_sha512_update(sctx, padding, pad_len);
+
+	/* Append length (before padding) */
+	fio_sha512_update(sctx, bits, 16);
+
+	/* Store state in digest */
+	for (i = j = 0; i < 8; i++, j += 8) {
+		t2 = sctx->state[i];
+		hash[j+7] = (char)t2 & 0xff; t2>>=8;
+		hash[j+6] = (char)t2 & 0xff; t2>>=8;
+		hash[j+5] = (char)t2 & 0xff; t2>>=8;
+		hash[j+4] = (char)t2 & 0xff; t2>>=8;
+		hash[j+3] = (char)t2 & 0xff; t2>>=8;
+		hash[j+2] = (char)t2 & 0xff; t2>>=8;
+		hash[j+1] = (char)t2 & 0xff; t2>>=8;
+		hash[j  ] = (char)t2 & 0xff;
+	}
+}

@@ -12,5 +12,6 @@ struct fio_sha512_ctx {
 
 void fio_sha512_init(struct fio_sha512_ctx *);
 void fio_sha512_update(struct fio_sha512_ctx *, const uint8_t *, unsigned int);
+void fio_sha512_final(struct fio_sha512_ctx *sctx);
 
 #endif
