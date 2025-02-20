@@ -114,6 +114,7 @@ struct ioring_options {
 	unsigned int sqpoll_set;
 	unsigned int sqpoll_cpu;
 	unsigned int nonvectored;
+	unsigned int uncached;
 	unsigned int nowait;
 	unsigned int force_async;
 	unsigned int md_per_io_size;
@@ -271,7 +272,11 @@ static struct fio_option options[] = {
 	{
 		.name	= "uncached",
 		.lname	= "Uncached",
-		.type	= FIO_OPT_SOFT_DEPRECATED,
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct ioring_options, uncached),
+		.help	= "Use RWF_DONTCACHE for buffered read/writes",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_IOURING,
 	},
 	{
 		.name	= "nowait",
@@ -432,6 +437,8 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 			}
 		}
 		sqe->rw_flags = 0;
+		if (!td->o.odirect && o->uncached)
+			sqe->rw_flags |= RWF_DONTCACHE;
 		if (o->nowait)
 			sqe->rw_flags |= RWF_NOWAIT;
 		if (td->o.oatomic && io_u->ddir == DDIR_WRITE)
@@ -513,6 +520,8 @@ static int fio_ioring_cmd_prep(struct thread_data *td, struct io_u *io_u)
 		sqe->fd = f->fd;
 	}
 	sqe->rw_flags = 0;
+	if (!td->o.odirect && o->uncached)
+		sqe->rw_flags |= RWF_DONTCACHE;
 	if (o->nowait)
 		sqe->rw_flags |= RWF_NOWAIT;
 
