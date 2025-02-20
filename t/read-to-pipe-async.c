@@ -35,6 +35,7 @@
 #include <assert.h>
 
 #include "../flist.h"
+#include "../log.h"
 
 #include "compiler/compiler.h"
 
