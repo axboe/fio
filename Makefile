@@ -365,7 +365,7 @@ T_DEDUPE_PROGS = t/fio-dedupe
 T_VS_OBJS = t/verify-state.o t/log.o crc/crc32c.o crc/crc32c-intel.o crc/crc32c-arm64.o t/debug.o
 T_VS_PROGS = t/fio-verify-state
 
-T_PIPE_ASYNC_OBJS = t/read-to-pipe-async.o
+T_PIPE_ASYNC_OBJS = t/read-to-pipe-async.o t/log.o
 T_PIPE_ASYNC_PROGS = t/read-to-pipe-async
 
 T_IOU_RING_OBJS = t/io_uring.o lib/rand.o lib/pattern.o lib/strntol.o
