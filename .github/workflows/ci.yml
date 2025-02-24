@@ -4,6 +4,8 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+  schedule:
+    - cron: "35 5 * * *"  # 5:35 UTC which is 0:35 ET
 
 jobs:
   build-containers:

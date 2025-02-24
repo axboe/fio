@@ -33,6 +33,19 @@ main() {
 
     fi
 
+    # If we are running a nightly test just run the verify tests.
+    # Otherwise skip the verify test script because it takes so long.
+    if [ "${GITHUB_EVENT_NAME}" == "schedule" ]; then
+	args+=(
+	    --run-only
+	    1017
+	)
+    else
+	skip+=(
+	    1017
+	)
+    fi
+
     echo python3 t/run-fio-tests.py --skip "${skip[@]}" "${args[@]}"
     python3 t/run-fio-tests.py --skip "${skip[@]}" "${args[@]}"
     make -C doc html
