@@ -2686,7 +2686,9 @@ Specifies the type of command to be used in the verification phase. Defaults to 
 Use Read commands for data verification
 .TP
 .B compare
-Use Compare commands for data verification
+Use Compare commands for data verification.  This option is only valid with
+specific pattern(s), which means it *must* be given with `verify=pattern` and
+`verify_pattern=<pattern>`.
 .TP
 .RE
 .RE
