@@ -2896,7 +2896,9 @@ with the caveat that when used on the command line, they must come after the
                 **read**
                         Use Read commands for data verification
                 **compare**
-                        Use Compare commands for data verification
+                        Use Compare commands for data verification.  This option is only valid with
+                        specific pattern(s), which means it *must* be given with `verify=pattern` and
+                        `verify_pattern=<pattern>`.
 
 .. option:: sg_write_mode=str : [sg]
 
