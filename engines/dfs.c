@@ -16,7 +16,7 @@ static pthread_mutex_t	daos_mutex = PTHREAD_MUTEX_INITIALIZER;
 daos_handle_t		poh;  /* pool handle */
 daos_handle_t		coh;  /* container handle */
 daos_oclass_id_t	cid = OC_UNKNOWN;  /* object class */
-dfs_t			*dfs; /* dfs mount reference */
+dfs_t			*daosfs; /* dfs mount reference */
 
 struct daos_iou {
 	struct io_u	*io_u;
@@ -184,7 +184,7 @@ static int daos_fio_global_init(struct thread_data *td)
 	}
 
 	/* Mount encapsulated filesystem */
-	rc = dfs_mount(poh, coh, O_RDWR, &dfs);
+	rc = dfs_mount(poh, coh, O_RDWR, &daosfs);
 	if (rc) {
 		log_err("Failed to mount DFS namespace: %d\n", rc);
 		td_verror(td, rc, "dfs_mount");
@@ -205,7 +205,7 @@ static int daos_fio_global_cleanup()
 	int rc;
 	int ret = 0;
 
-	rc = dfs_umount(dfs);
+	rc = dfs_umount(daosfs);
 	if (rc) {
 		log_err("failed to umount dfs: %d\n", rc);
 		ret = rc;
@@ -336,7 +336,7 @@ static int daos_fio_get_file_size(struct thread_data *td, struct fio_file *f)
 	if (!daos_initialized)
 		return 0;
 
-	rc = dfs_stat(dfs, NULL, file_name, &stbuf);
+	rc = dfs_stat(daosfs, NULL, file_name, &stbuf);
 	if (rc) {
 		log_err("Failed to stat %s: %d\n", f->file_name, rc);
 		td_verror(td, rc, "dfs_stat");
@@ -387,7 +387,7 @@ static int daos_fio_open(struct thread_data *td, struct fio_file *f)
 		flags |= O_RDONLY;
 	}
 
-	rc = dfs_open(dfs, NULL, f->file_name,
+	rc = dfs_open(daosfs, NULL, f->file_name,
 		      S_IFREG | S_IRUSR | S_IWUSR,
 		      flags, cid, eo->chsz, NULL, &dd->obj);
 	if (rc) {
@@ -405,7 +405,7 @@ static int daos_fio_unlink(struct thread_data *td, struct fio_file *f)
 
 	dprint(FD_FILE, "dfs remove %s\n", f->file_name);
 
-	rc = dfs_remove(dfs, NULL, f->file_name, false, NULL);
+	rc = dfs_remove(daosfs, NULL, f->file_name, false, NULL);
 	if (rc) {
 		log_err("Failed to remove %s: %d\n", f->file_name, rc);
 		td_verror(td, rc, "dfs_remove");
@@ -523,7 +523,7 @@ static enum fio_q_status daos_fio_queue(struct thread_data *td,
 
 	switch (io_u->ddir) {
 	case DDIR_WRITE:
-		rc = dfs_write(dfs, dd->obj, &io->sgl, offset, &io->ev);
+		rc = dfs_write(daosfs, dd->obj, &io->sgl, offset, &io->ev);
 		if (rc) {
 			log_err("dfs_write failed: %d\n", rc);
 			io_u->error = rc;
@@ -531,7 +531,7 @@ static enum fio_q_status daos_fio_queue(struct thread_data *td,
 		}
 		break;
 	case DDIR_READ:
-		rc = dfs_read(dfs, dd->obj, &io->sgl, offset, &io->size,
+		rc = dfs_read(daosfs, dd->obj, &io->sgl, offset, &io->size,
 			      &io->ev);
 		if (rc) {
 			log_err("dfs_read failed: %d\n", rc);
