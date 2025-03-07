@@ -1,0 +1,27 @@
+; Using the psync ioengine, random write to a (zoned) block device. Write
+; target zones are chosen randomly among the first 8 zones starting from device
+; offset corresponding to the 524th zone of the device (524 x 256 MB). Simulate
+; garbage collection operation using zone_reset_threshold and
+; zone_reset_frequency options. The zone resets happen when total written data
+; bytes is beyond 70% of 8 zones, and 8 = 1 / 0.125 blocks are written. This
+; example does not specify max_open_zones. The limit of maximum open zones is
+; obtained from the target block device.
+
+[global]
+name=zbd-rand-write-gc
+group_reporting
+rw=randwrite
+zonemode=zbd
+zonesize=256M
+bs=32M
+direct=1
+time_based
+runtime=40
+
+[dev1]
+filename=/dev/sdb
+size=8z
+offset=524z
+ioengine=psync
+zone_reset_threshold=0.7
+zone_reset_frequency=0.125

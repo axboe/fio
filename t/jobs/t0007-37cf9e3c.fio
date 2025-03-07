@@ -1,0 +1,12 @@
+# Expected result: fio reads 87040KB of data:
+# first read is at offset 0, then 2nd read is at offset 1.5m, then the 3rd
+# read is at offset 3m, and after the last read at offset 127m - we have only
+# read 87,040K data.
+# Buggy result: fio reads the full 128MB of data
+[foo]
+size=128mb
+rw=read:512k
+bs=1m
+norandommap
+write_iolog=log
+direct=1

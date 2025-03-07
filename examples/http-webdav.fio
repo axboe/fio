@@ -1,0 +1,26 @@
+[global]
+ioengine=http
+rw=randwrite
+name=test
+direct=1
+http_verbose=0
+http_mode=webdav
+https=off
+http_host=localhost
+filename_format=/dav/bucket.$jobnum
+group_reporting
+bs=64k
+size=1M
+
+[create]
+numjobs=16
+rw=randwrite
+io_size=10M
+verify=sha256
+
+# This will delete all created objects again
+[trim]
+stonewall
+numjobs=16
+rw=trim
+io_size=1M

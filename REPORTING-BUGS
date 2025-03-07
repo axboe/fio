@@ -1,0 +1,42 @@
+Reporting a bug
+---------------
+
+...via the mailing list
+=======================
+
+If you notice anything that seems like a fio bug or want to ask fio related
+questions, please send a plain-text only email to the list
+(fio@vger.kernel.org, see README) about it. If you are not running the newest
+release of fio please upgrade first.
+
+When reporting a bug, you'll need to include:
+
+1) A description of what you think the bug is
+2) Environment (e.g. Linux distro version, kernel version). This is mostly
+   needed if it's a build bug.
+3) The output from fio --version .
+4) How to reproduce. Please include a full list of the parameters
+   passed to fio and the job file used (if any).
+
+A bug report can't have too much information. Any time information that
+is left out and has to be asked for will add to the turn-around time
+of getting to the bottom of the issue, and an eventual fix.
+
+That's it!
+
+...via GitHub issues
+====================
+
+Please create an issue in the GitHub issue tracker
+(https://github.com/axboe/fio/issues ) but observe the following:
+
+a) If you are asking a question on how to do something ("How do I/Why is?")
+   please send it to the mailing list and not GitHub issues. The fio project
+   uses GitHub issues for reproducible bugs/enhancement requests.
+b) Please reproduce your bug using the latest fio listed on
+   https://github.com/axboe/fio/releases (see the Source and Building sections
+   of the README for how to build fio from source).
+c) Include all of the information requested in the mailing list section above
+   (description, environment, version, reproduction steps and all job parameters).
+
+Thanks!

@@ -1,0 +1,87 @@
+#################################################
+# Hardcode defragmentation patterns
+# Please be careful, it can trigger kernel panic
+#################################################
+[global]
+ioengine=e4defrag
+group_reporting
+directory=/scratch
+nrfiles=1
+filesize=100M
+size=100M
+donorname=file.def
+bs=32k
+
+###########
+# Run several defragmentation threads for different files, but
+# use shared donor file
+[parallel-e4defrag]
+buffered=0
+inplace=0
+rw=write
+numjobs=4
+
+########
+# Run two defragmentation threads, each thread use another's file
+# as donor file
+
+[e4defrag-1]
+stonewall
+inplace=0
+rw=write
+donorname=e4defrag-2
+
+[e4defrag-2]
+inplace=0
+rw=write
+donorname=e4defrag-1
+
+###########
+# Run random defragment activity 
+[e4defrag-fuzzer-4k]
+stonewall
+inplace=1
+bs=4k
+rw=randwrite
+filename=file
+donorname=file.def
+
+########
+# Run random e4defrag and various aio workers in parallel
+[e4defrag-fuzzer-4k-bis]
+stonewall
+continue_on_error=all
+inplace=1
+bs=4k
+donorname=file3.def
+filename=file3
+time_based
+rw=randwrite
+
+[buffered-aio-32k]
+continue_on_error=none
+verify=md5
+buffered=1
+ioengine=libaio
+iodepth=128
+bs=32k
+filename=file3
+rw=randrw
+runtime=30
+time_based
+numjobs=4
+
+[direct-aio-32k]
+continue_on_error=none
+verify=md5
+buffered=0
+direct=1
+ioengine=libaio
+iodepth=128
+bs=32k
+filename=file3
+rw=randrw
+runtime=30
+numjobs=4
+
+

@@ -1,0 +1,18 @@
+[global]
+ioengine=cpuio
+time_based
+runtime=15
+
+# The following example load 2 cores at 50% with the noop (default) mode
+[burn_2x50_noop]
+cpuload=50
+numjobs=2
+cpumode=noop
+
+# Once burn_2x50_noop is over,
+# fio load 2 cores at 50% with the qsort mode which drains much more power
+[burn_2x50%_qsort]
+stonewall
+cpuload=50
+numjobs=2
+cpumode=qsort

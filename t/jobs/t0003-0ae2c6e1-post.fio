@@ -1,0 +1,26 @@
+# Expected result: verify fails.
+# Buggy result: fio segfaults
+[global]
+ioengine=libaio
+direct=1
+filename=foo
+iodepth=128
+size=1M
+loops=1
+group_reporting=1
+readwrite=read
+do_verify=1
+verify=md5
+verify_fatal=1
+numjobs=1
+thread
+verify_dump=1
+bs=4k
+
+[large_reads]
+offset=0G
+blocksize=1M
+
+[small_reads]
+offset=1G
+blocksize=512

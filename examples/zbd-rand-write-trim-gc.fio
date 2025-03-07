@@ -1,0 +1,43 @@
+; Using the libaio ioengine, random write to a (zoned) block device. Write
+; target zones are chosen randomly among the first 128 zones starting from
+; device offset corresponding to the 524th zone of the device (524 x 256 MB).
+; For first 3 seconds, run only random write. After that, run random write job
+; and garbage collection simulation job in parallel. The garbage collection
+; simulation job runs trim workload to reset the 128 zones randomly. Use flow
+; option to make the zone resets happen every 128 blocks writes by the other
+; job. This example does not specify max_open_zones. The limit of maximum
+; open zones is obtained from the target block device.
+
+[global]
+group_reporting
+zonemode=zbd
+zonesize=256M
+direct=1
+time_based
+runtime=30
+
+filename=/dev/sdb
+offset=524z
+
+[warmup]
+rw=randwrite
+bs=2M
+size=128z
+ioengine=libaio
+runtime=3
+
+[wjob]
+wait_for=warmup
+rw=randwrite
+bs=2M
+size=128z
+ioengine=libaio
+flow=128
+
+[trimjob]
+wait_for=warmup
+rw=randtrim
+bs=256M
+size=128z
+ioengine=psync
+flow=1

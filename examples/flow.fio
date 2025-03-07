@@ -1,0 +1,24 @@
+# Example usage of flows. The below will have roughly a 1:8 difference
+# between job2 and job1.
+[global]
+norandommap
+thread
+time_based
+runtime=30
+direct=1
+ioengine=libaio
+iodepth=256
+size=100g
+bs=8k
+filename=/tmp/testfile
+flow_sleep=1000
+
+[job2]
+numjobs=1
+rw=write
+flow=1
+
+[job1]
+numjobs=1
+rw=randread
+flow=8

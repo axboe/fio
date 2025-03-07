@@ -1,0 +1,10 @@
+# run with --bandwidth-log
+# broken behavior: seg fault
+# successful behavior: test runs to completion with 0 as the exit code
+
+[test]
+ioengine=null
+filesize=1T
+rw=read
+time_based
+runtime=2s

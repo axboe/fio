@@ -1,0 +1,17 @@
+As specified by the COPYING file, fio is free software published under version
+2 of the GPL license. That covers the copying part of the license. When using
+fio, you are encouraged to uphold the following moral obligations:
+
+- If you publish results that are done using fio, it should be clearly stated
+  that fio was used. The specific version should also be listed.
+
+- If you develop features or bug fixes for fio, they should be sent upstream
+  for inclusion into the main repository. This isn't specific to fio, that
+  is a general rule for any open source project. It's just the Right Thing
+  to do. Plus it means that you don't have to maintain the feature or change
+  internally. In the long run, this is saving you a lot of time.
+
+I would consider the above to fall under "common courtesy", but since
+people tend to have differing opinions of that, it doesn't hurt to spell out
+my expectations clearly.
+

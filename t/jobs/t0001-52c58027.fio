@@ -1,0 +1,6 @@
+#Commit 52c580272d87d2b9b8a65d317bf7c2d432a30fec
+[foo]
+size=20000
+bsrange=1k-4k
+rw=randread
+ioengine=null

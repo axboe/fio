@@ -1,0 +1,42 @@
+# Example libcufile job, using cufile I/O
+#
+# Required environment variables:
+#     GPU_DEV_IDS : refer to option 'gpu_dev_ids'
+#     FIO_DIR     : 'directory'. This job uses cuda_io=cufile, so path(s) must
+#                   point to GPUDirect Storage filesystem(s)
+#
+
+[global]
+ioengine=libcufile
+directory=${FIO_DIR}
+gpu_dev_ids=${GPU_DEV_IDS}
+cuda_io=cufile
+# 'direct' must be 1 when using cuda_io=cufile
+direct=1
+# Performance is negatively affected if 'bs' is not a multiple of 4k.
+# Refer to GDS cuFile documentation.
+bs=1m
+size=1m
+numjobs=16
+# cudaMalloc fails if too many processes attach to the GPU, use threads.
+thread
+
+[read]
+rw=read
+
+[write]
+rw=write
+
+[randread]
+rw=randread
+
+[randwrite]
+rw=randwrite
+
+[verify]
+rw=write
+verify=md5
+
+[randverify]
+rw=randwrite
+verify=md5

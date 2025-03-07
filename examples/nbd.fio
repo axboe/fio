@@ -1,0 +1,39 @@
+# To use fio to test nbdkit + RAM disk:
+#
+#   nbdkit -U - memory size=256M --run 'export uri; fio examples/nbd.fio'
+#
+# To use fio to test nbdkit + local file:
+#
+#   rm -f /var/tmp/disk.img
+#   truncate -s 256M /var/tmp/disk.img
+#   nbdkit -U - file /var/tmp/disk.img --run 'export uri; fio examples/nbd.fio'
+#
+# To use fio to test qemu-nbd + local file:
+#
+#   rm -f /var/tmp/disk.img /var/tmp/socket
+#   truncate -s 256M /var/tmp/disk.img
+#   export uri='nbd+unix:///?socket=/var/tmp/socket'
+#   qemu-nbd -t -k /var/tmp/socket -f raw /var/tmp/disk.img &
+#   fio examples/nbd.fio
+#   killall qemu-nbd
+
+[global]
+ioengine=nbd
+uri=${uri}
+rw=randrw
+time_based
+runtime=60
+group_reporting
+iodepth=64
+
+[job0]
+offset=0
+
+[job1]
+offset=64m
+
+[job2]
+offset=128m
+
+[job3]
+offset=192m

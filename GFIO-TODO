@@ -1,0 +1,52 @@
+In no particular order:
+
+- Ability to save job files. Probably in an extended gfio format,
+  so we can include options/settings outside of a fio job file.
+
+- End view improvements:
+
+	- Cleanup the layout
+	- Add ability to save the results
+	- Add ability to load end-results as well
+	- Add ability to request graphs of whatever graphing options
+	  the fio job included.
+	- Add ability to graph completion latencies, percentiles, etc.
+
+- Add ability to edit job options:
+
+	- We need an options view after sending a job, that allows us to
+	  visually see what was parsed, make changes, resubmit.
+
+	- Job options are already converted across the network and
+	  are available in gfio_client->o for view/edit. We'll need
+	  a FIO_NET_CMD_UPDATE_OPTIONS command to send them back,
+	  and backend support for updating an existing set of options.
+
+- Add support for printing end results, graphs, etc.
+
+- Improve the auto-start backend functionality, it's quite buggy.
+
+- Ensure that it works on OSX and Windows. We'll need a bit of porting
+  work there.
+
+- Persistent store of prefences set. This will need a per-OS bit as well,
+  using gfonf on Linux, registry on Windows, ?? on OSX.
+
+- Ensure that local errors go to our log, instead of being displayed on
+  the console.
+
+- Ensure that the whole connect/send/start button logic is sane. Right
+  now it works when you perform the right sequence, but if you connect
+  and disconnect, things can get confused. We'll need to improve how
+  we store and send job files. Right now they are in ge->job_files[]
+  and are always emptied on send. Keep them around?
+
+- Commit rate display is not enabled.
+
+- Group status reporting is not enabled.
+
+- Split gfio.c a bit. Add gfio/ sub directory, and split it into
+  files based on functionality. It's already ~3000 lines long.
+
+- Attempt to ensure that we work with gtk 2.10 and newer. Right
+  now the required version is ~2.18 (not quite known).

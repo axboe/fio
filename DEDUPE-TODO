@@ -1,0 +1,16 @@
+- Shifted dedup-able data.
+  Allow for dedup buffer generation to shift contents by random number
+  of sectors (fill the gaps with uncompressible data). Some storage
+  subsystems modernized the deduplication detection algorithms to look
+  for shifted data as well. For example, some databases push a timestamp
+  on the prefix of written blocks, which makes the underlying data
+  dedup-able in different alignment. FIO should be able to simulate such
+  workload.
+
+- Generation of similar data (but not exact).
+  A rising trend in enterprise storage systems.
+  Generation of "similar" data means random uncompressible buffers
+  that differ by few(configurable number of) bits from each other.
+  The storage subsystem usually identifies the similar buffers using
+  locality-sensitive hashing or other methods.
+

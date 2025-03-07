@@ -1,0 +1,87 @@
+; Running xNVMe/fio on a Zoned Device
+;
+; Writes 1GB at QD1 using 4K BS and verifies it.
+;
+; README
+;
+; This job-file is intended to be used as:
+;
+; # Use the built-in io_uring engine to get baseline numbers
+; fio examples/xnvme-zoned.fio \
+;   --section=default \
+;   --ioengine=io_uring \
+;   --sqthread_poll=1 \
+;   --filename=/dev/nvme0n1
+;
+; # Use the xNVMe io-engine engine with Linux backend and io_uring async. impl.
+; fio examples/xnvme-zoned.fio \
+;   --section=default \
+;   --ioengine=xnvme \
+;   --sqthread_poll=1 \
+;   --xnvme_async=io_uring \
+;   --filename=/dev/nvme0n1
+;
+; # Use the xNVMe io-engine engine with Linux backend and libaio async. impl.
+; fio examples/xnvme-zoned.fio \
+;   --section=default \
+;   --ioengine=xnvme \
+;   --xnvme_async=libaio \
+;   --filename=/dev/nvme0n1
+;
+; # Use the xNVMe io-engine engine with SPDK backend, note that you have to set the Namespace-id
+; fio examples/xnvme-zoned.fio \
+;   --section=default \
+;   --ioengine=xnvme \
+;   --xnvme_dev_nsid=1 \
+;   --filename=0000\\:01\\:00.0
+;
+; NOTE: The URI encoded in the filename above, the ":" must be escaped.
+;
+; On the command-line using two "\\":
+;
+; --filename=0000\\:01\\:00.0
+;
+; Within a fio-script using a single "\":
+;
+; filename=0000\:01\:00.0
+;
+; NOTE: If you want to override the default bs, iodepth, and workload, then
+; invoke it as:
+;
+; FIO_BS="512" FIO_RW="verify" FIO_IODEPTH=16 fio examples/xnvme-zoned.fio \
+;   --section=override
+;
+; To reset all zones on the device to EMPTY state aka. wipe the entire device.
+;
+; # zoned mgmt-reset /dev/nvme0n2 --slba 0x0 --all
+;
+[global]
+zonemode=zbd
+rw=write
+size=1G
+iodepth=1
+bs=4K
+direct=1
+thread=1
+ramp_time=1
+norandommap=1
+verify=crc32c
+; Avoid accidentally creating device files; e.g. "/dev/nvme0n1", "/dev/nullb0"
+allow_file_create=0
+;
+; NOTE: If fio complains about zone-size, then run:
+;
+; # zoned info /dev/nvme0n1
+;
+; The command will provide the values you need, then in the fio-script define:
+;
+; zonesize=nsect * nbytes
+;
+;zonesize=
+
+[default]
+
+[override]
+rw=${FIO_RW}
+iodepth=${FIO_IODEPTH}
+bs=${FIO_BS}

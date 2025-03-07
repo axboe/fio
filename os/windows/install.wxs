@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+
+	<?if $(sys.BUILDARCH) = x86 ?>
+		<?define ProgramDirectory = ProgramFilesFolder ?>
+	<?else?>
+		<?define ProgramDirectory = ProgramFiles64Folder ?>
+	<?endif?>
+
+	<Product Id="*"
+	  Codepage="1252" Language="1033"
+	  Manufacturer="fio" Name="fio"
+	  UpgradeCode="2338A332-5511-43CF-B9BD-5C60496CCFCC" Version="$(var.FioVersionNumbers)">
+		<Package
+		  Description="Flexible I/O Tester"
+		  InstallerVersion="301" Keywords="Installer,MSI,Database"
+		  Languages="1033" Manufacturer="fio"
+		  InstallScope="perMachine" InstallPrivileges="elevated" Compressed="yes"/>
+
+		<Media Id="1" Cabinet="Product.cab" EmbedCab="yes" CompressionLevel="high"/>
+
+		<Directory Id="TARGETDIR" Name="SourceDir">
+			<Directory Id="$(var.ProgramDirectory)">
+				<Directory Id="INSTALLDIR">
+					<Directory Id="fio" Name="fio">
+						<Component>
+							<File Source="..\..\fio.exe"/>
+							<Environment Action="set" Part="last" Id="PATH" Name="PATH" Value="[INSTALLDIR]fio\" System="yes"/>
+						</Component>
+						<?if $(var.FioPDB) = true?>
+						<Component>
+							<File Id="fio.pdb" Name="fio.pdb" Source="..\..\fio.pdb"/>
+						</Component>
+						<?endif?>
+						<Component>
+							<File Id="README" Name="README.txt" Source="..\..\README.rst"/>
+						</Component>
+						<Component>
+							<File Id="REPORTING_BUGS" Name="REPORTING-BUGS.txt" Source="..\..\REPORTING-BUGS"/>
+						</Component>
+						<Component>
+							<File Id="HOWTO" Name="HOWTO.txt" Source="..\..\HOWTO.rst"/>
+						</Component>
+						<Component>
+							<File Id="COPYING" Name="COPYING.txt" Source="..\..\COPYING"/>
+						</Component>
+						<Component>
+							<File Id="MORAL_LICENSE" Name="MORAL-LICENSE.txt" Source="..\..\MORAL-LICENSE"/>
+						</Component>
+						<Directory Id="examples" Name="examples"/>
+						<Directory Id="tests" Name="tests">
+							<Component>
+								<File Source="../../t/fio-genzipf.exe"/>
+							</Component>
+							<Component>
+								<File Source="../../t/fio-dedupe.exe"/>
+							</Component>
+							<Component>
+								<File Source="../../t/stest.exe"/>
+							</Component>
+							<Component>
+								<File Source="../../t/ieee754.exe"/>
+							</Component>
+							<Component>
+								<File Source="../../t/axmap.exe"/>
+							</Component>
+							<Component>
+								<File Source="../../t/lfsr-test.exe"/>
+							</Component>
+							<Component>
+								<File Source="../../t/gen-rand.exe"/>
+							</Component>
+							<Component>
+								<File Source="../../t/fio-verify-state.exe"/>
+							</Component>
+						</Directory>
+					</Directory>
+				</Directory>
+			</Directory>
+	</Directory>
+
+	<Feature Id="AlwaysInstall" Absent="disallow" ConfigurableDirectory="INSTALLDIR" Display="hidden" Level="1" Title="Flexible I/O Tester">
+		<ComponentRef Id="fio.exe"/>
+		<?if $(var.FioPDB) = true?>
+		<ComponentRef Id="fio.pdb"/>
+		<?endif?>
+		<ComponentRef Id="HOWTO"/>
+		<ComponentRef Id="README"/>
+		<ComponentRef Id="REPORTING_BUGS"/>
+		<ComponentRef Id="COPYING"/>
+		<ComponentRef Id="MORAL_LICENSE"/>
+		<ComponentGroupRef Id="examples"/>
+		<ComponentRef Id="fio_genzipf.exe"/>
+		<ComponentRef Id="fio_dedupe.exe"/>
+		<ComponentRef Id="stest.exe"/>
+		<ComponentRef Id="ieee754.exe"/>
+		<ComponentRef Id="axmap.exe"/>
+		<ComponentRef Id="lfsr_test.exe"/>
+		<ComponentRef Id="gen_rand.exe"/>
+		<ComponentRef Id="fio_verify_state.exe"/>
+	</Feature>
+
+	<Property Id="ARPURLINFOABOUT" Value="http://git.kernel.dk/cgit/fio/" />
+	<Property Id='ARPCONTACT'>fio@vger.kernel.org</Property>
+	<Property Id='ARPHELPLINK'>http://www.spinics.net/lists/fio/</Property>
+	<Property Id='ARPURLUPDATEINFO'>https://bluestop.org/fio/</Property>
+
+	<WixVariable Id="WixUILicenseRtf" Value="eula.rtf" />
+
+	<UIRef Id="WixUI_Minimal_NoEULA"/>
+
+	<MajorUpgrade AllowDowngrades="no" DowngradeErrorMessage="A newer version of the application is already installed."
+                  AllowSameVersionUpgrades="yes"/>
+</Product>
+</Wix>

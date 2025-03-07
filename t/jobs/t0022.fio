@@ -1,0 +1,13 @@
+# make sure that when we enable norandommap we touch some offsets more than once
+#
+# Expected result: at least one offset is touched more than once
+# Buggy result: each offset is touched only once
+
+[test]
+ioengine=null
+filesize=1M
+rw=randread
+write_bw_log=test
+per_job_logs=0
+log_offset=1
+norandommap=1

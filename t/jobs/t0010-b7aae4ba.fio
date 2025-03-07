@@ -1,0 +1,8 @@
+# Expected result: fio runs and completes the job
+# Buggy result: fio segfaults
+#
+[test]
+ioengine=null
+size=10g
+io_submit_mode=offload
+iodepth=16

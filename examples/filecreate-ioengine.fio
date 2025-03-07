@@ -1,0 +1,35 @@
+# Example filecreate job
+#
+# create_on_open is needed so that the open happens during the run and not the
+# setup.
+#
+# openfiles needs to be set so that you do not exceed the maximum allowed open
+# files.
+#
+# filesize needs to be set to a non zero value so fio will actually run, but the
+# IO will not really be done and the write latency numbers will only reflect the
+# open times.
+[global]
+create_on_open=1
+nrfiles=31250
+ioengine=filecreate
+fallocate=none
+filesize=4k
+openfiles=1
+
+[t0]
+[t1]
+[t2]
+[t3]
+[t4]
+[t5]
+[t6]
+[t7]
+[t8]
+[t9]
+[t10]
+[t11]
+[t12]
+[t13]
+[t14]
+[t15]

@@ -1,0 +1,29 @@
+; Benchmark accessing a PCI virtio-blk device using libblkio.
+;
+; Replace "/sys/bus/pci/devices/0000:00:01.0" below with the path to your
+; device's sysfs directory, or override it by passing the '--libblkio_path=...'
+; flag to fio.
+;
+; In the example below, the two subjobs of "job-B" *and* the single subjob of
+; "job-C" will share a single libblkio instance, and "job-A" will use a separate
+; libblkio instance.
+;
+; For information on libblkio, see: https://gitlab.com/libblkio/libblkio
+
+[global]
+ioengine=libblkio
+libblkio_driver=virtio-blk-vfio-pci
+libblkio_path=/sys/bus/pci/devices/0000:00:01.0  ; REPLACE THIS WITH THE RIGHT PATH
+rw=randread
+blocksize=4k
+time_based=1
+runtime=10s
+
+[job-A]
+
+[job-B]
+numjobs=2  ; run two copies of this job simultaneously
+thread=1   ; have each copy run as a separate thread in the *same* process
+
+[job-C]
+thread=1  ; have the job run as a thread in the *same* process as "job-B"

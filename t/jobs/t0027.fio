@@ -1,0 +1,14 @@
+[global]
+filename=t0027file
+size=16k
+bs=16k
+
+[write_job]
+readwrite=write
+buffer_pattern='t0027.pattern'
+
+[read_job]
+stonewall=1
+readwrite=read
+verify=pattern
+verify_pattern='t0027.pattern'

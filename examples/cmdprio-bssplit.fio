@@ -1,0 +1,79 @@
+; Randomly read/write a block device file at queue depth 16.
+[global]
+filename=/dev/sda
+direct=1
+write_lat_log=prio-run.log
+log_prio=1
+rw=randrw
+ioengine=libaio
+iodepth=16
+
+; Simple cmdprio_bssplit format. All non-zero percentage entries will
+; use the same prio class and prio level defined by the cmdprio_class
+; and cmdprio options.
+[cmdprio]
+; 40% of read I/Os are 64kB and 60% are 1MB. 100% of writes are 1MB.
+; 100% of the 64kB reads are executed with prio class 1 and prio level 0.
+; All other I/Os are executed without a priority set.
+bssplit=64k/40:1024k/60,1024k/100
+cmdprio_bssplit=64k/100:1024k/0,1024k/0
+cmdprio_class=1
+cmdprio=0
+
+; Advanced cmdprio_bssplit format. Each non-zero percentage entry can
+; use a different prio class and prio level (appended to each entry).
+[cmdprio-adv]
+; 40% of read I/Os are 64kB and 60% are 1MB. 100% of writes are 1MB.
+; 25% of the 64kB reads are executed with prio class 1 and prio level 1,
+; 75% of the 64kB reads are executed with prio class 3 and prio level 2.
+; All other I/Os are executed without a priority set.
+stonewall
+bssplit=64k/40:1024k/60,1024k/100
+cmdprio_bssplit=64k/25/1/1:64k/75/3/2:1024k/0,1024k/0
+
+; Identical to the previous example, but with a default priority defined.
+[cmdprio-adv-def]
+; 40% of read I/Os are 64kB and 60% are 1MB. 100% of writes are 1MB.
+; 25% of the 64kB reads are executed with prio class 1 and prio level 1,
+; 75% of the 64kB reads are executed with prio class 3 and prio level 2.
+; All other I/Os are executed with prio class 2 and prio level 7.
+stonewall
+prioclass=2
+prio=7
+bssplit=64k/40:1024k/60,1024k/100
+cmdprio_bssplit=64k/25/1/1:64k/75/3/2:1024k/0,1024k/0
+
+; Example of how to use cmdprio_bssplit with Command Duration Limits (CDL)
+; using I/O priority hints. The drive has to support CDL, and CDL has to be
+; enabled in sysfs, otherwise the hints will not be sent down to the drive.
+[cmdprio-hints]
+; 40% of the I/Os are 1MB reads and 60% of the I/Os are 2MB reads.
+;
+; 10% of the 1MB reads are executed with prio class 2 (Best Effort),
+; prio level 0, and prio hint 1. Prio hint 1 means CDL descriptor 1.
+; Since 40% of read I/Os are 1MB, and 10% of the 1MB I/Os use CDL desc 1,
+; this means that 4% of all the issued I/O will use this configuration.
+;
+; 30% of the 1MB reads are executed with prio class 2 (Best Effort),
+; prio level 0, and prio hint 2. Prio hint 2 means CDL descriptor 2.
+; Since 40% of read I/Os are 1MB, and 30% of the 1MB I/Os use CDL desc 2,
+; this means that 12% of all the issued I/O will use this configuration.
+;
+; 60% of the 1MB reads are executed with prio class 2 (Best Effort),
+; prio level 0, and prio hint 0. Prio hint 0 means no hint.
+; Since 40% of read I/Os are 1MB, and 60% of the 1MB I/Os use no hint,
+; this means that 24% of all the issued I/O will use this configuration.
+;
+; 10% of the 2MB reads are executed with prio class 2 (Best Effort),
+; prio level 0, and prio hint 3. Prio hint 3 means CDL descriptor 3.
+; Since 60% of read I/Os are 2MB, and 10% of the 2MB I/Os use CDL desc 3,
+; this means that 6% of all the issued I/O will use this configuration.
+;
+; 90% of the 2MB reads are executed with prio class 2 (Best Effort),
+; prio level 0, and prio hint 0. Prio hint 0 means no hint.
+; Since 60% of read I/Os are 2MB, and 90% of the 2MB I/Os use no hint,
+; this means that 54% of all the issued I/O will use this configuration.
+stonewall
+rw=randread
+bssplit=1M/40:2M/60
+cmdprio_bssplit=1M/10/2/0/1:1M/30/2/0/2:1M/60/2/0/0:2M/10/2/0/3:2M/90/2/0/0

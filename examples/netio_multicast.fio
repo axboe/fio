@@ -1,0 +1,23 @@
+# netio UDP multicast example. Writers and readers can be run on separate hosts.
+[global]
+ioengine=net
+protocol=udp
+bs=64
+size=100m
+# Set interface IP to send/receive traffic through specific network interface
+#interface=10.8.16.22
+port=10000
+hostname=239.0.0.0
+ttl=1
+
+[pingpong_reader]
+pingpong=1
+rw=read
+
+[normal_reader]
+rw=read
+
+[pingpong_writer]
+startdelay=1
+pingpong=1
+rw=write

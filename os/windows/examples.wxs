@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    <Fragment>
+        <DirectoryRef Id="examples">
+                <Component>
+                  <File Source="..\..\examples\1mbs_clients.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\aio-read.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\backwards-read.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\basic-verify.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\butterfly.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\cpp_null.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\cpuio.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\dev-dax.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\disk-zone-profile.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\e4defrag.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\e4defrag2.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\enospc-pressure.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\falloc.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\filecreate-ioengine.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\fio-rand-read.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\fio-rand-RW.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\fio-rand-write.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\fio-seq-read.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\fio-seq-RW.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\fio-seq-write.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\fixed-rate-submission.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\flow.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\fsx.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\ftruncate.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\gfapi.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\gpudirect-rdmaio-client.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\gpudirect-rdmaio-server.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\http-s3.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\http-swift.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\http-webdav.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\ime.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\iometer-file-access-server.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\jesd219.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\latency-profile.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\libhdfs.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\libpmem.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\mtd.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\netio.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\netio_multicast.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\null.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\numa.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\poisson-rate-submission.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\rados.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\rand-zones.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\rbd.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\rdmaio-client.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\rdmaio-server.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\ssd-steadystate.fio" />
+                </Component>
+                <Component>
+                    <File Source="..\..\examples\ssd-test.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\steadystate.fio" />
+                </Component>
+                <Component>
+                    <File Source="..\..\examples\surface-scan.fio" />
+                </Component>
+                <Component>
+                    <File Source="..\..\examples\tiobench-example.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\waitfor.fio" />
+                </Component>
+                <Component>
+                  <File Source="..\..\examples\zipf.fio" />
+                </Component>
+        </DirectoryRef>
+    </Fragment>
+    <Fragment>
+        <ComponentGroup Id="examples">
+            <ComponentRef Id="_1mbs_clients.fio" />
+            <ComponentRef Id="aio_read.fio" />
+            <ComponentRef Id="backwards_read.fio" />
+            <ComponentRef Id="basic_verify.fio" />
+            <ComponentRef Id="butterfly.fio"/>
+            <ComponentRef Id="cpp_null.fio"/>
+            <ComponentRef Id="cpuio.fio" />
+            <ComponentRef Id="dev_dax.fio" />
+            <ComponentRef Id="disk_zone_profile.fio" />
+            <ComponentRef Id="e4defrag.fio" />
+            <ComponentRef Id="e4defrag2.fio" />
+            <ComponentRef Id="enospc_pressure.fio" />
+            <ComponentRef Id="falloc.fio" />
+            <ComponentRef Id="filecreate_ioengine.fio"/>
+            <ComponentRef Id="fio_rand_read.fio"/>
+            <ComponentRef Id="fio_rand_RW.fio"/>
+            <ComponentRef Id="fio_rand_write.fio"/>
+            <ComponentRef Id="fio_seq_read.fio"/>
+            <ComponentRef Id="fio_seq_RW.fio"/>
+            <ComponentRef Id="fio_seq_write.fio"/>
+            <ComponentRef Id="fixed_rate_submission.fio" />
+            <ComponentRef Id="flow.fio" />
+            <ComponentRef Id="fsx.fio" />
+            <ComponentRef Id="ftruncate.fio"/>
+            <ComponentRef Id="gfapi.fio" />
+            <ComponentRef Id="gpudirect_rdmaio_client.fio"/>
+            <ComponentRef Id="gpudirect_rdmaio_server.fio"/>
+            <ComponentRef Id="http_s3.fio"/>
+            <ComponentRef Id="http_swift.fio"/>
+            <ComponentRef Id="http_webdav.fio"/>
+            <ComponentRef Id="ime.fio"/>
+            <ComponentRef Id="iometer_file_access_server.fio" />
+            <ComponentRef Id="jesd219.fio" />
+            <ComponentRef Id="latency_profile.fio" />
+            <ComponentRef Id="libhdfs.fio" />
+            <ComponentRef Id="libpmem.fio"/>
+            <ComponentRef Id="mtd.fio" />
+            <ComponentRef Id="netio.fio" />
+            <ComponentRef Id="netio_multicast.fio" />
+            <ComponentRef Id="null.fio" />
+            <ComponentRef Id="numa.fio" />
+            <ComponentRef Id="poisson_rate_submission.fio" />
+            <ComponentRef Id="rados.fio"/>
+            <ComponentRef Id="rand_zones.fio" />
+            <ComponentRef Id="rbd.fio" />
+            <ComponentRef Id="rdmaio_client.fio" />
+            <ComponentRef Id="rdmaio_server.fio" />
+            <ComponentRef Id="ssd_steadystate.fio" />
+            <ComponentRef Id="ssd_test.fio" />
+            <ComponentRef Id="steadystate.fio" />
+            <ComponentRef Id="surface_scan.fio" />
+            <ComponentRef Id="tiobench_example.fio" />
+            <ComponentRef Id="waitfor.fio" />
+            <ComponentRef Id="zipf.fio" />
+        </ComponentGroup>
+    </Fragment>
+</Wix>

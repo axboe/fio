@@ -1,0 +1,31 @@
+# Protection information test with io_uring_cmd I/O engine for nvme-ns generic
+# character device.
+#
+# This requires nvme device to be formatted with extended LBA data size and
+# protection information enabled. This can be done with nvme-cli utility.
+# Replace bs below with the correct extended LBA size.
+#
+# First we sequentially write to the device, without protection information
+# action being set. FIO will generate and send necessary protection
+# information data as per the protection information check option. Later on we
+# sequentially read and verify the device returned protection information data.
+#
+[global]
+filename=/dev/ng0n1
+ioengine=io_uring_cmd
+cmd_type=nvme
+size=1G
+iodepth=32
+bs=4160
+pi_act=0
+pi_chk=GUARD,APPTAG,REFTAG
+apptag=0x0888
+apptag_mask=0xFFFF
+thread=1
+stonewall=1
+
+[write]
+rw=write
+
+[read]
+rw=read

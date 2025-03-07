@@ -1,0 +1,10 @@
+# Expected result: offsets are accessed sequentially and all offsets are read
+# Buggy result: offsets are not accessed sequentially and one or more offsets are missed
+# run with --debug=io or logging to see which offsets are accessed
+
+[test]
+ioengine=null
+filesize=1M
+write_bw_log=test
+per_job_logs=0
+log_offset=1

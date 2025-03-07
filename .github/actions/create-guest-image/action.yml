@@ -1,0 +1,45 @@
+name: 'Create guest image'
+description: 'Create VM guest image on Ubuntu runner'
+
+inputs:
+  distro:
+    description: 'Linux distribution to use for guest image'
+    required: false
+    default: 'debian-12'
+  extra_pkgs:
+    description: 'Extra packages to install for guest image'
+    required: false
+    default:
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install libguestfs
+      run: sudo apt update && sudo apt-get -qq install libguestfs-tools
+      shell: bash
+    - name: Setup steps for virt-builder
+      run: |
+        sudo chmod a+r /boot/vmlinuz*
+        sudo chmod 0666 /dev/kvm
+        ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa
+      shell: bash
+    - name: Create Debian image
+      run: |
+        virt-builder ${{ inputs.distro }} \
+          --quiet \
+          --hostname fio-tester \
+          --ssh-inject root \
+          --run-command "ssh-keygen -A" \
+          --run-command "sed -i 's/ens2/enp0s2/g' /etc/network/interfaces" \
+          --append-line '/etc/environment:PYTHONUNBUFFERED=1' \
+          --append-line '/etc/environment:GITHUB_SERVER_URL=${{ github.server_url }}' \
+          --append-line '/etc/environment:GITHUB_REPOSITORY=${{ github.repository }}' \
+          --append-line '/etc/environment:GITHUB_REF=${{ github.ref }}' \
+          --append-line '/etc/environment:GITHUB_SHA=${{ github.sha }}' \
+          --append-line '/etc/environment:GITHUB_JOB=${{ github.job }}' \
+          --append-line '/etc/environment:EXTRA_PKGS=${{ inputs.extra_pkgs }}' \
+          --append-line '/etc/environment:CI_TARGET_BUILD=${{ env.CI_TARGET_BUILD }}' \
+          --append-line '/etc/environment:CI_TARGET_OS=${{ env.CI_TARGET_OS }}'
+
+      shell: bash
+

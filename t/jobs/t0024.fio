@@ -1,0 +1,36 @@
+# trimwrite data direction tests
+[global]
+filesize=1M
+ioengine=null
+rw=trimwrite
+log_offset=1
+per_job_logs=0
+randrepeat=0
+write_bw_log
+
+# Expected result: 	trim issued to sequential offsets followed by write to same offset
+# 			all offsets touched
+# 			block sizes match
+# Buggy result: 	something else
+[basic]
+
+# Expected result: 	trim issued to sequential offsets followed by write to same offset
+# 			all offsets trimmed
+# 			block sizes 8k for both write and trim
+# Buggy result: 	something else
+[bs]
+bs=8k,8k,8k
+
+# Expected result: 	trim issued to sequential offsets followed by write to same offset
+# 			all offsets trimmed
+# 			block sizes match
+# Buggy result: 	something else
+[bsrange]
+bsrange=512-4k
+
+# Expected result: 	trim issued to sequential offsets followed by write to same offset
+# 			all offsets trimmed
+# 			block sizes match
+# Buggy result: 	something else
+[bssplit]
+bssplit=512/25:1k/:2k/:4k/

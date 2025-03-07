@@ -1,0 +1,10 @@
+[Unit]
+Description=Flexible I/O tester server
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/fio --server
+
+[Install]
+WantedBy=multi-user.target

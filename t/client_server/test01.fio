@@ -1,0 +1,14 @@
+[global]
+ioengine=null
+time_based
+runtime=3s
+filesize=1T
+
+[test1]
+description=test1
+
+[test2]
+description=test2
+
+[test3]
+description=test3

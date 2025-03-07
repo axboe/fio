@@ -1,0 +1,22 @@
+Known issues/TODO (for steady-state)
+
+- Replace the test script with a better one
+  - Add test cases for the new check_interval option
+  - Parse debug=steadystate output to check calculations
+
+- Instead of calculating `intervals` every time, calculate it once and stash it
+  somewhere
+
+- Add the time unit to the ss_dur and check_interval variable names to reduce
+  possible confusion
+
+- Better documentation for output
+
+- Report read, write, trim IOPS/BW separately
+
+- Semantics for the ring buffer ss->head are confusing. ss->head points
+  to the beginning of the buffer up through the point where the buffer
+  is filled for the first time. afterwards, when a new element is added,
+  ss->head is advanced to point to the second element in the buffer. if
+  steady state is attained upon adding a new element, ss->head is not
+  advanced so it actually does point to the head of the buffer.

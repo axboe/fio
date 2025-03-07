@@ -1,0 +1,19 @@
+; Using the libzbc ioengine, sequentially read 40 zones of a (zoned)
+; block device, reading only written data from the 524th zone
+; (524 * 256M = 140660178944)
+
+[global]
+name=libzbc-seq-read
+rw=read
+bs=1M
+direct=1
+numjobs=1
+zonemode=zbd
+zonesize=256M
+read_beyond_wp=0
+
+[dev1]
+filename=/dev/sdd
+offset=140660178944
+size=10G
+ioengine=libzbc

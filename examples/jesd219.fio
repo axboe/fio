@@ -1,0 +1,20 @@
+# Sample implementation of the JESD219 workload for SSD endurance
+# testing. It uses a specific distribution of block sizes and
+# read/write mix, as well as a specific distribution of where on
+# the device the IO accesses will land. Based on posting from
+# Jeff Furlong <jeff.furlong@hgst.com>
+[JESD219]
+ioengine=libaio
+direct=1
+rw=randrw
+norandommap
+randrepeat=0
+rwmixread=40
+rwmixwrite=60
+iodepth=256
+numjobs=4
+bssplit=512/4:1024/1:1536/1:2048/1:2560/1:3072/1:3584/1:4k/67:8k/10:16k/7:32k/3:64k/3
+blockalign=4k
+random_distribution=zoned:50/5:30/15:20/80
+filename=/dev/nvme0n1
+group_reporting

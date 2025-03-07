@@ -1,0 +1,8 @@
+[job]
+rw=write
+ioengine=libaio
+size=1mb
+time_based=1
+runtime=1
+filename=t0030file
+write_iolog=iolog

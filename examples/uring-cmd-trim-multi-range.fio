@@ -1,0 +1,21 @@
+# Multi-range trim command test with io_uring_cmd I/O engine for nvme-ns
+# generic character device.
+#
+[global]
+filename=/dev/ng0n1
+ioengine=io_uring_cmd
+cmd_type=nvme
+size=10M
+iodepth=32
+thread=1
+stonewall=1
+
+[write_bs]
+bs=4096
+rw=randtrim
+num_range=8
+
+[write_bssplit]
+bssplit=4k/10:64k/50:32k/40
+rw=trim
+num_range=8

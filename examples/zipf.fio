@@ -1,0 +1,10 @@
+# Example job file for using a zipf distribution instead
+# of a purely random workload where each block is read
+# or written once.
+[job]
+ioengine=null
+rw=randread
+norandommap
+size=1280m
+bs=4k
+random_distribution=zipf:0.5

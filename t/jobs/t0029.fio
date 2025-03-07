@@ -1,0 +1,14 @@
+[global]
+filename=t0029file
+size=4k
+verify=md5
+
+[write]
+rw=write
+do_verify=0
+
+[read]
+stonewall=1
+rw=read
+loops=2
+do_verify=1

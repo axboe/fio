@@ -1,0 +1,12 @@
+# Expected results: max offset is ~1280K
+# Buggy result: max offset is ~640K
+#
+
+[global]
+ioengine=null
+size=1280K
+io_size=2560k
+bs=128K
+
+[test1]
+rw=rw

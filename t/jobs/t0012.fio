@@ -1,0 +1,26 @@
+# Expected results: no parse warnings, runs and with roughly 1:5:10 iops
+#			between the three jobs.
+# Buggy result: parse warning on flow value overflow, no 1:5:10 division
+#			between jobs.
+#
+
+[global]
+bs=4k
+ioengine=null
+size=100g
+runtime=12
+flow_id=1
+flow_sleep=100
+thread
+log_avg_msec=1000
+write_iops_log=t0012.fio
+time_based
+
+[flow1]
+flow=1
+
+[flow2]
+flow=5
+
+[flow3]
+flow=10

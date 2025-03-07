@@ -1,0 +1,412 @@
+#!/bin/bash
+
+blkzone=$(type -p blkzone 2>/dev/null)
+sg_inq=$(type -p sg_inq 2>/dev/null)
+zbc_report_zones=$(type -p zbc_report_zones 2>/dev/null)
+zbc_reset_zone=$(type -p zbc_reset_zone 2>/dev/null)
+zbc_close_zone=$(type -p zbc_close_zone 2>/dev/null)
+zbc_info=$(type -p zbc_info 2>/dev/null)
+if [ -z "${blkzone}" ] &&
+       { [ -z "${zbc_report_zones}" ] || [ -z "${zbc_reset_zone}" ]; }; then
+    echo "Error: neither blkzone nor zbc_report_zones is available"
+    exit 1
+fi
+
+if [ -n "${use_libzbc}" ] &&
+       { [ -z "${zbc_report_zones}" ] || [ -z "${zbc_reset_zone}" ] ||
+         [ -z "${zbc_info}" ]; }; then
+    echo "Error: zbc_report_zones, or zbc_reset_zone or zbc_info is not available"
+    echo "Error: reinstall libzbc tools"
+    exit 1
+fi
+
+blkzone_reports_capacity() {
+	local dev="${1}"
+
+	[[ -n "${blkzone}" ]] &&
+		"${blkzone}" report -c 1 -o 0 "${dev}" | grep -q 'cap '
+}
+
+has_command() {
+	local cmd="${1}"
+
+	cmd_path=$(type -p "${cmd}" 2>/dev/null)
+	if [ -z "${cmd_path}" ]; then
+		echo "${cmd} is not available"
+		return 1
+	fi
+	return 0
+}
+
+# Whether or not $1 (/dev/...) is a NVME ZNS device.
+is_nvme_zns() {
+	local s
+
+	s=/sys/block/$(basename "${1}")/device/subsystem
+
+	if [[ ! -h "${s}" || $(realpath "${s}") != /sys/class/nvme ]]; then
+		return 1
+	fi
+
+	[[ $(</sys/block/$(basename "${1}")/queue/zoned) == host-managed ]]
+}
+
+# Whether or not $1 (/dev/...) is a null_blk device with zone capacity smaller
+# than zone size.
+is_nullb_with_zone_cap() {
+	local f
+
+	f=/sys/kernel/config/nullb/$(basename "${1}")
+	[[ -r "${f}/zone_capacity" &&
+		   $(<"${f}/zone_capacity") -lt $(<"${f}/zone_size") ]]
+}
+
+# Check if blkzone is available and suitable for the test target device. If not
+# available, print error message and return 1. Otherwise return 0.
+check_blkzone() {
+	local dev="${1}"
+
+	# If the device supports zone capacity, mandate zone capacity report by
+	# blkzone.
+	if (is_nvme_zns "${dev}" || is_nullb_with_zone_cap "${dev}") &&
+				! blkzone_reports_capacity "${dev}"; then
+		echo "Error: blkzone does not report zone capacity"
+		echo "Error: install latest util-linux with blkzone"
+		return 1
+	fi
+}
+
+# Check zone capacity of each zone and report block size aligned to the zone
+# capacities. If zone capacity is same as zone size for zones, report zone size.
+zone_cap_bs() {
+	local dev="${1}"
+	local zone_size="${2}"
+	local sed_str='s/.*len \([0-9A-Za-z]*\), cap \([0-9A-Za-z]*\).*/\1 \2/p'
+	local cap bs="$zone_size"
+
+	# When blkzone command is neither available nor relevant to the
+	# test device, or when blkzone command does not report capacity,
+	# assume that zone capacity is same as zone size for all zones.
+	if [ -z "${blkzone}" ] || [ -z "$is_zbd" ] || [ -c "$dev" ] ||
+		   ! blkzone_reports_capacity "${dev}"; then
+		echo "$zone_size"
+		return
+	fi
+
+	while read -r -a line; do
+		((line[0] == line[1])) && continue
+		cap=$((line[1] * 512))
+		while ((bs > 512 && cap % bs)); do
+			bs=$((bs / 2))
+		done
+	done < <(blkzone report "${dev}" | sed -n "${sed_str}")
+
+	echo "$bs"
+}
+
+# Reports the starting sector and length of the first sequential zone of device
+# $1.
+first_sequential_zone() {
+    local dev=$1
+
+    if [ -n "${blkzone}" ] && [ ! -n "${use_libzbc}" ]; then
+	${blkzone} report "$dev" |
+	    sed -n 's/^[[:blank:]]*start:[[:blank:]]\([0-9a-zA-Z]*\),[[:blank:]]len[[:blank:]]\([0-9a-zA-Z]*\),.*zcond:\(14\|[[:blank:]][0-4]\)(.*type:[[:blank:]]\([2]\)(.*/\1 \2/p' |
+	    {
+		read -r starting_sector length &&
+		    # Convert from hex to decimal
+		    echo $((starting_sector)) $((length))
+	    }
+    else
+	${zbc_report_zones} "$dev" |
+	    sed -n 's/^Zone [0-9]*: type 0x2 .*,[[:blank:]]cond[[:blank:]]0x[0-4e][[:blank:]].*, sector \([0-9]*\), \([0-9]*\) sectors.*$/\1 \2/p' |
+	    head -n1
+    fi
+}
+
+# Reports the summed zone capacity of $1 number of zones starting from offset $2
+# on device $3.
+total_zone_capacity() {
+	local nr_zones=$1
+	local sector=$(($2 / 512))
+	local dev=$3
+	local capacity=0 num
+	local grep_str
+
+	if [ -z "$is_zbd" ]; then
+		# For regular block devices, handle zone size as zone capacity.
+		echo $((zone_size * nr_zones))
+		return
+	fi
+
+	if [ -n "${blkzone}" ] && [ ! -n "${use_libzbc}" ]; then
+		if blkzone_reports_capacity "${dev}"; then
+			grep_str='cap \K[0-9a-zA-Z]*'
+		else
+			# If zone capacity is not reported, refer zone length.
+			grep_str='len \K[0-9a-zA-Z]*'
+		fi
+		while read num; do
+			capacity=$((capacity + num))
+		done < <(${blkzone} report -c "$nr_zones" -o "$sector" "$dev" |
+				grep -Po "${grep_str}")
+	else
+		# ZBC devices do not have zone capacity. Use zone size.
+		while read num; do
+			capacity=$((capacity + num))
+		done < <(${zbc_report_zones} -nz "$nr_zones" -start "$sector" \
+				"$dev" | grep -Po 'sector [0-9]*, \K[0-9]*')
+	fi
+
+	echo $((capacity * 512))
+}
+
+# Reports the starting sector and length of the first zone of device $1
+# that is not in offline (or similar) condition.
+first_online_zone() {
+    local dev=$1
+
+    if [ -z "$is_zbd" ]; then
+	echo 0
+	return
+    fi
+
+    if [ -n "${blkzone}" ] && [ ! -n "${use_libzbc}" ]; then
+	${blkzone} report "$dev" |
+	    sed -n 's/^[[:blank:]]*start:[[:blank:]]\([0-9a-zA-Z]*\),[[:blank:]]len[[:blank:]]\([0-9a-zA-Z]*\),.*zcond:\(14\|[[:blank:]][0-4]\)(.*type:[[:blank:]][12](.*/\1/p' |
+	    head -n1 |
+	    {
+		read -r starting_sector &&
+		    # Convert from hex to decimal
+		    echo $((starting_sector))
+	    }
+    else
+	${zbc_report_zones} "$dev" |
+	    sed -n 's/^Zone[[:blank:]][0-9]*:[[:blank:]]type[[:blank:]]0x[12][[:blank:]].*,[[:blank:]]cond[[:blank:]]0x[0-4e][[:blank:]].*,[[:blank:]]sector[[:blank:]]\([0-9]*\),.*$/\1/p' |
+	    head -n1
+    fi
+}
+
+# Reports the starting sector and length of the last zone of device $1
+# that is not in offline (or similar) condition.
+last_online_zone() {
+    local dev=$1
+
+    if [ -z "$is_zbd" ]; then
+	echo 0
+	return
+    fi
+
+    if [ -n "${blkzone}" ] && [ ! -n "${use_libzbc}" ]; then
+	${blkzone} report "$dev" |
+	    sed -n 's/^[[:blank:]]*start:[[:blank:]]\([0-9a-zA-Z]*\),[[:blank:]]len[[:blank:]]\([0-9a-zA-Z]*\),.*zcond:\(14\|[[:blank:]][0-4]\)(.*type:[[:blank:]][12](.*/\1/p' |
+	    tail -1 |
+	    {
+		read -r starting_sector &&
+		    # Convert from hex to decimal
+		    echo $((starting_sector))
+	    }
+    else
+	${zbc_report_zones} "$dev" |
+	    sed -n 's/^Zone[[:blank:]][0-9]*:[[:blank:]]type[[:blank:]]0x[12][[:blank:]].*,[[:blank:]]cond[[:blank:]]0x[0-4e][[:blank:]].*,[[:blank:]]sector[[:blank:]]\([0-9]*\),.*$/\1/p' |
+	    tail -1
+    fi
+}
+
+# Get max_open_zones of SMR drives using sg_inq or libzbc tools. Two test cases
+# 31 and 32 use this max_open_zones value. The test case 31 uses max_open_zones
+# to decide number of write target zones. The test case 32 passes max_open_zones
+# value to fio with --max_open_zones option. Of note is that fio itself has the
+# feature to get max_open_zones from the device through sysfs or ioengine
+# specific implementation. This max_open_zones fetch by test script is required
+# in case fio is running on an old Linux kernel version which lacks
+# max_open_zones in sysfs, or which lacks zoned block device support completely.
+max_open_zones() {
+    local dev=$1
+    local realdev syspath
+
+    realdev=$(readlink -f "$dev")
+    syspath=/sys/block/${realdev##*/}/queue/max_open_zones
+
+    if [ -b "${realdev}" ] && [ -r "${syspath}" ]; then
+	cat ${syspath}
+    elif [ -n "${sg_inq}" ] && [ ! -n "${use_libzbc}" ]; then
+	if ! ${sg_inq} -e --page=0xB6 --len=20 --hex "$dev" \
+		 > /dev/null 2>&1; then
+	    # When sg_inq can not get max open zones, specify 0 which indicates
+	    # fio to get max open zones limit from the device.
+	    echo 0
+	else
+	    ${sg_inq} -e --page=0xB6 --len=20 --hex "$dev" | tail -1 |
+		{
+		    read -r offset b0 b1 b2 b3 trailer || return $?
+		    # Convert from hex to decimal
+		    max_nr_open_zones=$((0x${b0}))
+		    max_nr_open_zones=$((max_nr_open_zones * 256 + 0x${b1}))
+		    max_nr_open_zones=$((max_nr_open_zones * 256 + 0x${b2}))
+		    max_nr_open_zones=$((max_nr_open_zones * 256 + 0x${b3}))
+		    echo ${max_nr_open_zones}
+		}
+	fi
+    elif [ -n "${use_libzbc}" ]; then
+	${zbc_report_zones} "$dev" |
+	    sed -n 's/^[[:blank:]]*Maximum number of open sequential write required zones:[[:blank:]]*//p'
+    else
+	echo 0
+    fi
+}
+
+# If sysfs provides, get max_active_zones limit of the zoned block device.
+max_active_zones() {
+	local dev=$1
+	local sys_queue="/sys/block/${dev##*/}/queue/"
+
+	if [[ -e "$sys_queue/max_active_zones" ]]; then
+		cat "$sys_queue/max_active_zones"
+		return
+	fi
+	echo 0
+}
+
+# Get minimum block size to write to seq zones. Refer the sysfs attribute
+# zone_write_granularity which shows the valid minimum size regardless of zoned
+# block device type. If the sysfs attribute is not available, refer physical
+# block size for rotational SMR drives. For non-rotational devices such as ZNS
+# devices, refer logical block size.
+min_seq_write_size() {
+	local sys_path="/sys/block/$1/queue"
+	local -i size=0
+
+	if [[ -r "$sys_path/zone_write_granularity" ]]; then
+		size=$(<"$sys_path/zone_write_granularity")
+	fi
+
+	if ((size)); then
+		echo "$size"
+	elif (($(<"$sys_path/rotational"))); then
+		cat "$sys_path/physical_block_size"
+	else
+		cat "$sys_path/logical_block_size"
+	fi
+}
+
+urswrz() {
+    local dev=$1
+
+    if [ -n "${sg_inq}" ] && [ ! -n "${use_libzbc}" ]; then
+	if ! ${sg_inq} -e --page=0xB6 --len=10 --hex "$dev" \
+		 > /dev/null 2>&1; then
+	    # Couldn't get URSWRZ bit. Assume the reads are unrestricted
+	    # because this configuration is more common.
+	    echo 1
+	else
+	    ${sg_inq} -e --page=0xB6 --len=10 --hex "$dev" | tail -1 |
+		{
+		    read -r offset b0 b1 b2 b3 b4 trailer && \
+			echo $(( $b4 & 0x01 )) || echo 0
+		}
+	fi
+    else
+	${zbc_info} "$dev" |
+	    sed -n 's/^[[:blank:]].*Read commands are \(un\)restricted*/\1/p' | grep -q ^ && echo 1 || echo 0
+    fi
+}
+
+is_zbc() {
+	local dev=$1
+
+	[[ -z "$(${zbc_info} "$dev" | grep "is not a zoned block device")" ]]
+}
+
+zbc_physical_block_size() {
+	local dev=$1
+
+	${zbc_info} "$dev" |
+		grep "physical blocks" |
+		sed -n 's/^[[:blank:]]*[0-9]* physical blocks of[[:blank:]]*//p' |
+		sed 's/ B//'
+}
+
+zbc_disk_sectors() {
+        local dev=$1
+
+	zbc_info "$dev" |
+		grep "512-bytes sectors" |
+		sed -e 's/[[:blank:]]*\([0-9]*\)512-bytes sectors.*/\1/'
+}
+
+# Reset the write pointer of one zone on device $1 at offset $2. The offset
+# must be specified in units of 512 byte sectors. Offset -1 means reset all
+# zones.
+reset_zone() {
+    local dev=$1 offset=$2 sectors
+
+    if [ -n "${blkzone}" ] && [ ! -n "${use_libzbc}" ]; then
+	if [ "$offset" -lt 0 ]; then
+	    ${blkzone} reset "$dev"
+	else
+	    ${blkzone} reset -o "${offset}" -c 1 "$dev"
+	fi
+    else
+	if [ "$offset" -lt 0 ]; then
+	    ${zbc_reset_zone} -all "$dev" >/dev/null
+	else
+	    ${zbc_reset_zone} -sector "$dev" "${offset}" >/dev/null
+	fi
+    fi
+}
+
+# Close the zone on device $1 at offset $2. The offset must be specified in
+# units of 512 byte sectors.
+close_zone() {
+	local dev=$1 offset=$2
+
+	if [ -n "${blkzone}" ] && [ -z "${use_libzbc}" ]; then
+		${blkzone} close -o "${offset}" -c 1 "$dev"
+	else
+		${zbc_close_zone} -sector "$dev" "${offset}" >/dev/null
+	fi
+}
+
+# Extract the number of bytes that have been transferred from a line like
+# READ: bw=6847KiB/s (7011kB/s), 6847KiB/s-6847KiB/s (7011kB/s-7011kB/s), io=257MiB (269MB), run=38406-38406msec
+fio_io() {
+    sed -n 's/^[[:blank:]]*'"$1"'.*, io=\([^[:blank:]]*\).*/\1/p' |
+	tail -n 1 |
+	(
+	    read -r io;
+	    # Parse <number>.<number><suffix> into n1, n2 and s. See also
+	    # num2str().
+	    shopt -s extglob
+	    n1=${io%${io##*([0-9])}}
+	    s=${io#${io%%*([a-zA-Z])}}
+	    n2=${io#${n1}}
+	    n2=${n2#.}
+	    n2=${n2%$s}000
+	    n2=${n2:0:3}
+	    case "$s" in
+		KiB) m=10;;
+		MiB) m=20;;
+		GiB) m=30;;
+		B)   m=0;;
+		*)   return 1;;
+	    esac
+	    [ -n "$n1" ] || return 1
+	    echo $(((n1 << m) + (n2 << m) / 1000))
+	)
+}
+
+fio_read() {
+    fio_io 'READ:'
+}
+
+fio_written() {
+    fio_io 'WRITE:'
+}
+
+fio_reset_count() {
+    local count
+
+    count=$(sed -n 's/^.*write:[^;]*; \([0-9]*\) zone resets$/\1/p')
+    echo "${count:-0}"
+}

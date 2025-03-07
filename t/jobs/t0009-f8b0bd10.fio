@@ -1,0 +1,40 @@
+# Expected result: fio verifies and runs for 1m
+# Buggy result: fio crashes with:
+# __get_io_u: Assertion `io_u->flags & IO_U_F_FREE' failed
+
+[global]
+direct=1
+ioengine=null
+size=20g
+norandommap
+randrepeat=0
+bs=4096
+iodepth=170
+#iodepth=96
+#numjobs=1
+numjobs=1
+#numjobs=24
+# number_ios=1
+# runtime=216000
+#runtime=3600
+time_based=1
+group_reporting=1
+thread
+gtod_reduce=1
+iodepth_batch=4
+iodepth_batch_complete=4
+cpus_allowed=0-3
+cpus_allowed_policy=split
+rw=randwrite
+verify=crc32c-intel
+verify_backlog=1m
+do_verify=1
+verify_async=6
+verify_async_cpus=0-3
+runtime=1m
+
+[4_KiB_RR_drive_r]
+
+[4_KiB_RR_drive_s]
+
+

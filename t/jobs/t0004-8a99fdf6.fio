@@ -1,0 +1,27 @@
+# Expected result: fio runs to completion
+# Buggy result: fio segfaults
+[global]
+ioengine=libaio
+direct=1
+filename=foo
+iodepth=128
+size=10M
+loops=1
+group_reporting=1
+readwrite=write
+do_verify=0
+verify=md5
+numjobs=1
+thread
+verify_dump=1
+
+[small_writes]
+offset=0G
+blocksize=512
+verify_interval=1M
+
+[large_writes]
+stonewall
+offset=1G
+blocksize=1M
+verify_interval=512

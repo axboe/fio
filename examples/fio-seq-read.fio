@@ -1,0 +1,14 @@
+[global]
+name=fio-seq-reads
+filename=fio-seq-reads
+rw=read
+bs=256K
+direct=1
+numjobs=1
+time_based
+runtime=900
+
+[file1]
+size=10G
+ioengine=libaio
+iodepth=16

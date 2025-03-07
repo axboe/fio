@@ -1,0 +1,17 @@
+; Read disk in zones of 256m/2g. Generating a plot of that afterwards
+; should give a nice picture of the zoning of this drive
+
+[global]
+bs=64k
+direct=1
+rw=read
+ioengine=libaio
+iodepth=2
+zonemode=strided
+zonesize=256m
+zoneskip=2g
+
+[disk-zone-profile]
+filename=/dev/sdb
+write_bw_log
+log_offset=1

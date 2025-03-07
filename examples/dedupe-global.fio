@@ -1,0 +1,57 @@
+# Writing to 2 files that share the duplicate blocks.
+# The dedupe working set is spread uniformly such that when
+# each of the jobs choose to perform a dedup operation they will
+# regenerate a buffer from the global space.
+# If you test the dedup ratio on either file by itself the result
+# is likely lower than if you test the ratio of the two files combined.
+#
+# Use `./t/fio-dedupe <file> -C 1 -c 1 -b 4096` to test the total
+# data reduction ratio.
+#
+#
+# Full example of test:
+# $ ./fio ./examples/dedupe-global.fio
+#
+# Checking ratio on a and b individually:
+# $ ./t/fio-dedupe a.0.0 -C 1 -c 1 -b 4096
+#
+# $ Extents=25600, Unique extents=16817 Duplicated extents=5735
+# $ De-dupe ratio: 1:0.52
+# $ De-dupe working set at least: 22.40%
+# $ Fio setting: dedupe_percentage=34
+# $ Unique capacity 33MB
+#
+# ./t/fio-dedupe b.0.0 -C 1 -c 1 -b 4096
+# $ Extents=25600, Unique extents=17009 Duplicated extents=5636
+# $ De-dupe ratio: 1:0.51
+# $ De-dupe working set at least: 22.02%
+# $ Fio setting: dedupe_percentage=34
+# $ Unique capacity 34MB
+#
+# Combining files:
+# $ cat a.0.0 > c.0.0
+# $ cat b.0.0 >> c.0.0
+#
+# Checking data reduction ratio on combined file:
+# $ ./t/fio-dedupe c.0.0 -C 1 -c 1 -b 4096
+# $ Extents=51200, Unique extents=25747 Duplicated extents=11028
+# $ De-dupe ratio: 1:0.99
+# $ De-dupe working set at least: 21.54%
+# $ Fio setting: dedupe_percentage=50
+# $ Unique capacity 51MB
+#
+[global]
+ioengine=libaio
+iodepth=256
+size=100m
+dedupe_mode=working_set
+dedupe_global=1
+dedupe_percentage=50
+blocksize=4k
+rw=write
+buffer_compress_percentage=50
+dedupe_working_set_percentage=50
+
+[a]
+
+[b]

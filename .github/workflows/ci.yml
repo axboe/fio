@@ -1,0 +1,170 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "35 5 * * *"  # 5:35 UTC which is 0:35 ET
+
+jobs:
+  build-containers:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        container:
+        - {os: 'debian', dh: 'debian', ver: 'bookworm', target_arch: 'x86_64'}
+        - {os: 'fedora', dh: 'fedora', ver: '40', target_arch: 'x86_64'}
+        - {os: 'alma', dh: 'almalinux', ver: '9', target_arch: 'x86_64'}
+        - {os: 'oracle', dh: 'oraclelinux', ver: '9', target_arch: 'x86_64'}
+        - {os: 'rocky', dh: 'rockylinux', ver: '9', target_arch: 'x86_64'}
+        - {os: 'ubuntu', dh: 'ubuntu', ver: 'noble', target_arch: 'i686'}
+        - {os: 'ubuntu', dh: 'ubuntu', ver: 'noble', target_arch: 'x86_64'}
+
+    container:
+      image: ${{ matrix.container.dh }}:${{ matrix.container.ver }}
+      env:
+        CI_TARGET_BUILD: Linux
+        CI_TARGET_ARCH: ${{ matrix.container.target_arch }}
+        CI_TARGET_OS: ${{ matrix.container.os }}
+        CI_TARGET_OS_VER: ${{ matrix.container.ver }}
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+    - name: Install dependencies
+      run:  ./ci/actions-install.sh
+    - name: Build
+      run:  ./ci/actions-build.sh
+    - name: Smoke test
+      run:  ./ci/actions-smoke-test.sh
+    - name: Full test
+      run:  ./ci/actions-full-test.sh
+
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        build:
+        - linux-gcc
+        - linux-clang
+        - macos
+        - linux-i686-gcc
+        - android
+        - windows-cygwin-64
+        - windows-cygwin-32
+        - windows-msys2-64
+        include:
+        - build: linux-gcc
+          os: ubuntu-22.04
+          cc: gcc
+        - build: linux-clang
+          os: ubuntu-22.04
+          cc: clang
+        - build: macos
+          os: macos-13
+        - build: linux-i686-gcc
+          os: ubuntu-22.04
+          arch: i686
+        - build: android
+          os: ubuntu-22.04
+          arch: aarch64-linux-android32
+        - build: android-recovery
+          os: ubuntu-22.04
+          arch: aarch64-linux-android32
+        - build: windows-cygwin-64
+          os: windows-latest
+          arch: x86_64
+          installer_arch: x64
+          shell: bash
+        - build: windows-cygwin-32
+          os: windows-latest
+          arch: i686
+          installer_arch: x86
+          shell: bash
+        - build: windows-msys2-64
+          os: windows-latest
+          cc: clang
+          arch: x86_64
+          installer_arch: x64
+          shell: msys2
+
+    env:
+      CI_TARGET_BUILD: ${{ matrix.build }}
+      CI_TARGET_ARCH: ${{ matrix.arch }}
+      CC: ${{ matrix.cc }}
+
+    steps:
+    - name: git config line endings (Windows)
+      if: ${{ contains( matrix.build, 'windows' ) }}
+      run: git config --global core.autocrlf input
+    - name: Checkout repo
+      uses: actions/checkout@v4
+    - name: Install Cygwin toolchain (Windows)
+      if: ${{ startsWith(matrix.build, 'windows-cygwin') }}
+      uses: cygwin/cygwin-install-action@master
+      with:
+        packages: >
+          mingw64-${{matrix.arch}}-binutils
+          mingw64-${{matrix.arch}}-CUnit
+          mingw64-${{matrix.arch}}-curl
+          mingw64-${{matrix.arch}}-dlfcn
+          mingw64-${{matrix.arch}}-gcc-core
+          mingw64-${{matrix.arch}}-headers
+          mingw64-${{matrix.arch}}-runtime
+          mingw64-${{matrix.arch}}-zlib
+
+    - name: Install msys2 toolchain (Windows)
+      if: ${{ startsWith(matrix.build, 'windows-msys2') }}
+      uses: msys2/setup-msys2@v2
+      with:
+        install: >
+          git
+          base-devel
+          mingw-w64-${{matrix.arch}}-clang
+          mingw-w64-${{matrix.arch}}-cunit
+          mingw-w64-${{matrix.arch}}-toolchain
+          mingw-w64-${{matrix.arch}}-lld
+          mingw-w64-${{matrix.arch}}-python-scipy
+          mingw-w64-${{matrix.arch}}-python-six
+          mingw-w64-${{matrix.arch}}-python-statsmodels
+          mingw-w64-${{matrix.arch}}-python-sphinx
+
+    - name: install bash 4 (macOS)
+      if: ${{ contains( matrix.build, 'macOS' ) }}
+      run:  HOMEBREW_NO_AUTO_UPDATE=1 brew install bash
+    - name: Install dependencies
+      run: ${{matrix.shell}} ./ci/actions-install.sh
+      if: ${{ !contains( matrix.build, 'msys2' ) }}
+    - name: Build
+      run:  ${{matrix.shell}} ./ci/actions-build.sh
+    - name: Build installer (Windows)
+      if: ${{ contains( matrix.build, 'windows' ) }}
+      shell: cmd
+      run: |
+        cd os\windows
+        dobuild.cmd ${{ matrix.installer_arch }}
+        cd ..\..
+
+    - name: Upload installer as artifact (Windows)
+      if: ${{ contains( matrix.build, 'windows' ) }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.build }}-installer
+        path: os\windows\*.msi
+    - name: Upload installer as release for tagged builds (Windows)
+      uses: softprops/action-gh-release@v1
+      if: ${{ startsWith(github.ref, 'refs/tags/') && startsWith(matrix.build, 'windows-cygwin') }}
+      with:
+        files: os/windows/*.msi
+    - name: Remove dependency files to resolve Makefile Cygwin sed issue (Windows)
+      if: ${{ startsWith(matrix.build, 'windows-cygwin') }}
+      run: rm *.d */*.d */*/*.d
+      shell: bash
+    - name: Smoke test
+      run:  ${{matrix.shell}} ./ci/actions-smoke-test.sh
+    - name: Full test
+      run:  ${{matrix.shell}} ./ci/actions-full-test.sh

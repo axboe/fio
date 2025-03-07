@@ -1,0 +1,20 @@
+; Read 4 files with aio at different depths
+[global]
+ioengine=libaio
+buffered=0
+rw=randread
+bs=128k
+size=512m
+directory=/data1
+
+[file1]
+iodepth=4
+
+[file2]
+iodepth=32
+
+[file3]
+iodepth=8
+
+[file4]
+iodepth=16

@@ -1,0 +1,36 @@
+[global]
+time_based
+runtime=30
+
+[monitoring_noop]
+ioengine=exec
+program=/usr/sbin/turbostat
+arguments=-c package -qS --interval 5 -s Busy%,Bzy_MHz,Avg_MHz,CorWatt,PkgWatt,RAMWatt,PkgTmp
+
+[cpuload_noop]
+ioengine=cpuio
+cpuload=100
+numjobs=12
+cpumode=noop
+
+[sleep]
+# Let the processor cooling down for a few seconds
+stonewall
+ioengine=exec
+runtime=10
+program=/bin/sleep
+arguments=%r
+grace_time=0
+std_redirect=0
+
+[monitoring_qsort]
+stonewall
+ioengine=exec
+program=/usr/sbin/turbostat
+arguments=-c package -qS --interval 5 -s Busy%,Bzy_MHz,Avg_MHz,CorWatt,PkgWatt,RAMWatt,PkgTmp
+
+[cpuload_qsort]
+ioengine=cpuio
+cpuload=100
+numjobs=12
+cpumode=qsort

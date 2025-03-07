@@ -1,0 +1,20 @@
+# Example network job, just defines two clients that send/recv data
+[global]
+ioengine=net
+#Use hostname=/tmp.fio.sock for local unix domain sockets
+port=8888
+#Use =udp for UDP, =unix for local unix domain socket
+protocol=tcp
+bs=4k
+size=100g
+#set the below option to enable end-to-end data integrity tests
+#verify=md5
+
+[receiver]
+listen
+rw=read
+
+[sender]
+hostname=localhost
+startdelay=1
+rw=write

@@ -1,0 +1,5 @@
+[test]
+size=16k
+readwrite=write
+buffer_pattern="abcd"-120xdeadface
+ioengine=null

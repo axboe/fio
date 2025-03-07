@@ -1,0 +1,25 @@
+# io_uring_cmd I/O engine for nvme-ns generic character device
+
+[global]
+filename=/dev/ng0n1
+ioengine=io_uring_cmd
+cmd_type=nvme
+size=1G
+iodepth=32
+bs=4K
+thread=1
+stonewall=1
+
+[rand-write]
+rw=randwrite
+sqthread_poll=1
+
+[rand-read]
+rw=randread
+
+[write-opts]
+rw=write
+sqthread_poll=1
+sqthread_poll_cpu=0
+nonvectored=1
+registerfiles=1

@@ -1,0 +1,54 @@
+name: 'Start QEMU VM'
+description: 'Start QEMU virtual machine'
+
+inputs:
+  qemu: # QEMU binary to use
+    required: false
+    default: "qemu-system-x86_64"
+  image: # VM image file
+    required: true
+  ssh_fwd_port: # forward this host port to the guest's SSH port
+    required: false
+    default: 2022
+  options: # Custom QEMU invocation options no \n at the end!
+    required: false
+  ram: # how much RAM to allocate to VM
+    required: false
+    default: "12G"
+  host_key: # If true add guest host key to known_hosts
+    required: false
+    default: "false"
+
+runs:
+  using: "composite"
+  steps:
+    - name: install wait-for-it
+      shell: bash
+      run: sudo apt update && sudo apt-get -qq install wait-for-it
+    - name: Start VM in background
+      shell: bash
+      run: |
+        ${{ inputs.qemu }} \
+          -cpu host \
+          -drive file=${{ inputs.image }},format=raw,if=virtio \
+          -enable-kvm \
+          -smp $(nproc) \
+          -nographic \
+          -m ${{ inputs.ram }} \
+          -display none \
+          -machine q35,accel=kvm \
+          -nic user,model=virtio-net-pci,hostfwd=tcp::${{ inputs.ssh_fwd_port }}-:22 \
+          ${{ inputs.options }} \
+          &
+    - name: Wait for VM to boot
+      shell: bash
+      run: |
+        wait-for-it localhost:${{ inputs.ssh_fwd_port }} -t 15
+        sleep 3
+    - name: Add guest host key to known_hosts
+      shell: bash
+      run: |
+        if echo ${{ inputs.host_key }} | grep -c "true"
+        then
+          ssh root@localhost -p ${{ inputs.ssh_fwd_port }} -o StrictHostKeyChecking=no echo
+        fi

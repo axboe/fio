@@ -1,0 +1,31 @@
+name: 'Build and Install QEMU on Ubuntu'
+desription: 'Build QEMU and Install on Ubuntu'
+
+inputs:
+  version: # What QEMU version to build/install
+    description: 'QEMU version to build and install'
+    required: false
+    default: '9.1.0'
+
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install QEMU build dependencies
+      run: sudo apt update && sudo apt-get -qq install libglib2.0-dev libfdt-dev libpixman-1-dev ninja-build flex bison libsdl2-dev libaio-dev python3-tomli libslirp-dev
+      shell: bash
+
+    - name: Build and install QEMU
+      run: |
+        wget -nv https://download.qemu.org/qemu-$INPUT_VER.tar.xz
+        tar xJf qemu-$INPUT_VER.tar.xz
+        rm qemu-$INPUT_VER.tar.xz
+        cd qemu-$INPUT_VER
+        ./configure --enable-kvm --target-list=x86_64-softmmu
+        make -j $(nproc)
+        sudo make install
+        cd ..
+        rm -rf qemu-$INPUT_VER
+      shell: bash
+      env:
+        INPUT_VER: ${{ inputs.version }}

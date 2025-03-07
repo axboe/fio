@@ -1,0 +1,11 @@
+; This job file works pretty works similarly to running fsx-linux
+; with -r 4096 -w 4096 -Z -N 500000
+[file]
+ioengine=libaio
+iodepth=1
+rw=randrw
+size=256k
+bs=4k
+norandommap
+direct=1
+loops=500000

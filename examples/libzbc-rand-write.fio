@@ -1,0 +1,20 @@
+; Using the libzbc ioengine, random write to a (zoned) block device,
+; writing at most 32 zones at a time. Target zones are chosen randomly
+; and writes directed at the write pointer of the chosen zones
+
+[global]
+name=libzbc-rand-write
+group_reporting
+rw=randwrite
+zonemode=zbd
+zonesize=256M
+max_open_zones=32
+bs=512K
+direct=1
+numjobs=16
+time_based
+runtime=300
+
+[dev1]
+filename=/dev/sdj
+ioengine=libzbc

@@ -1,0 +1,110 @@
+name: QEMU
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "50 3 * * *"  # daily at 4:50 UTC (00:50 EST)
+
+jobs:
+  qemu-guest:
+    runs-on: ubuntu-22.04
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - config: basic io_uring_cmd tests
+            device: >-
+              -device nvme,id=nvme0,serial=deadbeef
+              -drive id=nvm-0,file=nvme0.img,format=raw,if=none,discard=unmap,media=disk
+              -device nvme-ns,id=nvm-0,drive=nvm-0,bus=nvme0,nsid=1
+            test_cmd: "python3 t/run-fio-tests.py --nvmecdev /dev/ng0n1 --run-only 1014 1015"
+            extra_pkgs: "nvme-cli"
+          - config: 16-bit Guard PI tests (long)
+            device: >-
+              -device nvme,id=nvme0,serial=deadbeef
+              -drive id=nvm-0,file=nvme0.img,format=raw,if=none,discard=unmap,media=disk
+              -device nvme-ns,id=nvm-0,drive=nvm-0,bus=nvme0,nsid=1
+            test_cmd: "python3 t/nvmept_pi.py --fio ./fio --dut /dev/ng0n1"
+            extra_pkgs: "nvme-cli"
+          - config: 4K+16 w/64-bit Guard PI
+            device: >- # 4K+16 w/64-bit Guard PI
+              -device nvme,id=nvme1,serial=deadbeee
+              -drive id=nvm-1,file=nvme0.img,format=raw,if=none,discard=unmap,media=disk
+              -device nvme-ns,id=nvm-1,drive=nvm-1,bus=nvme1,nsid=1,pif=2,ms=16,mset=1,pi=1,pil=0,logical_block_size=4096,physical_block_size=4096
+            test_cmd: "python3 t/nvmept_pi.py --fio ./fio --dut /dev/ng0n1 --lbaf 6"
+            extra_pkgs: "nvme-cli"
+          - config: 4K+64 w/64-bit Guard PI
+            device: >-
+              -device nvme,id=nvme2,serial=deadeeef
+              -drive id=nvm-2,file=nvme0.img,format=raw,if=none,discard=unmap,media=disk
+              -device nvme-ns,id=nvm-2,drive=nvm-2,bus=nvme2,nsid=1,pif=2,ms=64,mset=1,pi=1,pil=0,logical_block_size=4096,physical_block_size=4096
+            test_cmd: "python3 t/nvmept_pi.py --fio ./fio --dut /dev/ng0n1 --lbaf 7"
+            extra_pkgs: "nvme-cli"
+          - config: FDP
+            device: >-
+              -device nvme-subsys,id=nvme-subsys0,fdp=on,fdp.runs=128K,fdp.nrg=8,fdp.nruh=64
+              -device nvme,id=nvme0,serial=deadbeef,subsys=nvme-subsys0
+              -drive id=nvm-1,file=nvme0.img,format=raw,if=none,discard=unmap,media=disk
+              -device nvme-ns,id=nvm-1,drive=nvm-1,bus=nvme0,nsid=1,logical_block_size=4096,physical_block_size=4096,fdp.ruhs=0-63
+            test_cmd: "nvme fdp status /dev/ng0n1 && python3 t/nvmept_fdp.py --fio ./fio --dut /dev/ng0n1"
+            extra_pkgs: "nvme-cli"
+          - config: ZBD
+            device:
+            test_cmd: "./t/zbd/run-tests-against-nullb"
+            extra_pkgs: sg3-utils
+
+    env:
+      DISTRO: debian-12
+      SSHCMD: ssh root@localhost -p 2022
+      SCPCMD: scp -P 2022
+      CI_TARGET_BUILD: linux
+      CI_TARGET_OS: debian
+
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v4
+
+    - name: Create tarball containing repository
+      run: |
+        git archive --format=tar.gz -o fio-src.tar.gz --prefix=fio/ HEAD
+        git log -1
+
+    - name: Create guest VM image
+      uses: ./.github/actions/create-guest-image
+      with:
+        distro: ${{ env.DISTRO }}
+        extra_pkgs: ${{ matrix.extra_pkgs }}
+
+    - name: Build and install QEMU
+      uses: ./.github/actions/build-qemu
+
+    - name: Create backing file for NVMe device
+      run: truncate -s 1G nvme0.img
+
+    - name: Start VM
+      uses: ./.github/actions/start-vm
+      with:
+        image: ${{ env.DISTRO }}.img
+        host_key: true
+        options: ${{ matrix.device }}
+
+    - name: Transfer fio source to guest
+      run: |
+          $SCPCMD fio-src.tar.gz root@localhost:/root/
+          $SSHCMD "tar xzf fio-src.tar.gz"
+
+    - name: Install dependencies on guest
+      run: $SSHCMD "cd fio && ./ci/actions-install.sh"
+
+    - name: Build fio on guest
+      run: $SSHCMD "cd fio && ./ci/actions-build.sh"
+
+    - name: Show nvme device configuration
+      if: ${{ contains( matrix.extra_pkgs, 'nvme-cli' ) }}
+      run: |
+        $SSHCMD "nvme id-ns /dev/ng0n1 -H"
+        $SSHCMD "nvme nvm-id-ns /dev/ng0n1 -v"
+
+    - name: Run test
+      run: $SSHCMD "cd fio && ${{ matrix.test_cmd }}"

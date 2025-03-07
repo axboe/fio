@@ -1,0 +1,48 @@
+#
+# **********************************
+# * !!THIS IS A DESTRUCTIVE TEST!! *
+# * IF NOT CHANGED THIS TEST WILL  *
+# * DESTROY DATA ON /dev/sdb       *
+# **********************************
+#
+# Test SCSI VERIFY commands issued via the sg ioengine
+# The jobs with fail in the name should produce errors
+#
+# job			description
+# precon		precondition the device by writing with a known
+#			pattern
+# verify01		verify each block one at a time by comparing to known
+#			pattern
+# verify01-fail		verifying one too many blocks should produce a failure
+# verify11-one_ios	verify all 20 blocks by sending only 512 bytes
+# verify11-fail		verifying beyond the preconditioned region should
+#			produce a failure
+
+[global]
+filename=/dev/sdb
+buffer_pattern=0x01
+ioengine=sg
+rw=write
+bs=512
+number_ios=20
+stonewall
+
+[precon]
+
+[verify01]
+sg_write_mode=verify_bytchk_01
+number_ios=20
+
+[verify01-fail]
+sg_write_mode=verify_bytchk_01
+number_ios=21
+
+[verify11-one_ios]
+sg_write_mode=verify_bytchk_11
+number_ios=1
+bs=10240
+
+[verify11-fail]
+sg_write_mode=verify_bytchk_11
+number_ios=1
+bs=10752

@@ -1,0 +1,38 @@
+# Example test for the HTTP engine's S3 support against Amazon AWS.
+# Obviously, you have to adjust the S3 credentials; for this example,
+# they're passed in via the environment.
+# And you can set the SSE Customer Key and Algorithm to test Server
+# Side Encryption.
+#
+
+[global]
+ioengine=http
+name=test
+direct=1
+filename=/larsmb-fio-test/object
+http_verbose=0
+https=on
+http_mode=s3
+http_s3_key=${S3_KEY}
+http_s3_keyid=${S3_ID}
+http_host=s3.eu-central-1.amazonaws.com
+http_s3_region=eu-central-1
+http_s3_sse_customer_key=${SSE_KEY}
+http_s3_sse_customer_algorithm=AES256
+group_reporting
+
+# With verify, this both writes and reads the object
+[create]
+rw=write
+bs=4k
+size=64k
+io_size=4k
+verify=sha256
+
+[trim]
+stonewall
+rw=trim
+bs=4k
+size=64k
+io_size=4k
+

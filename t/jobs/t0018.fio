@@ -1,0 +1,9 @@
+# Expected result: job completes without error
+# Buggy result: job fails
+
+[test]
+ioengine=io_uring
+filesize=256K
+time_based
+runtime=3s
+rw=randrw

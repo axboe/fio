@@ -1,0 +1,19 @@
+# Perform a butterfly/funnel seek pattern. This won't always alternate ends on
+# every I/O but it will get close.
+
+[global]
+filename=/tmp/testfile
+bs=4k
+direct=1
+
+[forward]
+rw=read
+flow=2
+# Uncomment the size= and offset= lines to prevent each direction going past
+# the middle of the file
+#size=50%
+
+[backward]
+rw=read:-8k
+flow=2
+#offset=50%

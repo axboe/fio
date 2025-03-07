@@ -1,0 +1,2 @@
+- Collate ETA output from multiple connections into 1
+- If group_reporting is set, collate final output from multiple connections

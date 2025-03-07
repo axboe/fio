@@ -1,0 +1,16 @@
+# Expected results: workload runs and switches between 'm' and 'V' state
+# Buggy result: workload stays in 'm' mode, never doing actual verifies
+[global]
+rw=randrw
+bs=4k
+direct=1
+ioengine=libaio
+iodepth=32
+verify=meta
+verify_backlog=1024
+verify_fatal=1
+
+[ver-test]
+filename=foo
+size=4g
+verify_pattern=0xaaa

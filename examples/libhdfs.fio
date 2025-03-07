@@ -1,0 +1,8 @@
+[global]
+runtime=300
+
+[hdfs]
+filename=dfs-perftest-base.dfs-perftest-base,9000
+ioengine=libhdfs
+rw=read
+bs=256k

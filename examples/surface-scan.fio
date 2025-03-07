@@ -1,0 +1,23 @@
+; writes 512 byte verification blocks until the disk is full,
+; then verifies written data
+[global]
+thread
+bs=64k
+direct=1
+ioengine=sync
+verify=meta
+verify_pattern=0xaa555aa5
+verify_interval=512
+
+[write-phase]
+filename=datafile.tmp	; or use a full disk, for example /dev/sda
+rw=write
+fill_device=1
+do_verify=0
+
+[verify-phase]
+stonewall
+create_serialize=0
+filename=datafile.tmp
+rw=read
+do_verify=1
