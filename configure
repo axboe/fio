@@ -2997,7 +2997,9 @@ fi
 print_config "timerfd_create" "$timerfd_create"
 
 #############################################################################
-
+if test "$targetos" = "Darwin"; then
+    output_sym "CONFIG_MAC_FADVISE_DISCARD"
+fi
 if test "$wordsize" = "64" ; then
   output_sym "CONFIG_64BIT"
 elif test "$wordsize" = "32" ; then
