@@ -1994,7 +1994,8 @@ static void *thread_main(void *data)
 			update_runtime(td, elapsed_us, DDIR_READ);
 		if (td_write(td) && td->io_bytes[DDIR_WRITE])
 			update_runtime(td, elapsed_us, DDIR_WRITE);
-		if (td_trim(td) && td->io_bytes[DDIR_TRIM])
+		if (td->io_bytes[DDIR_TRIM] && (td_trim(td) ||
+			((td->flags & TD_F_TRIM_BACKLOG) && td_write(td))))
 			update_runtime(td, elapsed_us, DDIR_TRIM);
 		fio_gettime(&td->start, NULL);
 		fio_sem_up(stat_sem);
