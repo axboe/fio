@@ -292,6 +292,7 @@ struct thread_data {
 
 	unsigned int verify_batch;
 	unsigned int trim_batch;
+	bool trim_verify;
 
 	struct thread_io_list *vstate;
 
@@ -618,7 +619,14 @@ extern bool eta_time_within_slack(unsigned int time);
 static inline void fio_ro_check(const struct thread_data *td, struct io_u *io_u)
 {
 	assert(!(io_u->ddir == DDIR_WRITE && !td_write(td)) &&
-	       !(io_u->ddir == DDIR_TRIM && !td_trim(td)));
+	       !(io_u->ddir == DDIR_TRIM && !(td_trim(td) || td->trim_verify)));
+
+	/*
+	 * The last line above allows trim operations during trim/verify
+	 * workloads. For these workloads we cannot simply set the trim bit for
+	 * the thread's ddir because then fio would assume that
+	 * ddir={trimewrite, randtrimwrite}.
+	 */
 }
 
 static inline bool multi_range_trim(struct thread_data *td, struct io_u *io_u)
