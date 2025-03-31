@@ -10,10 +10,12 @@ main() {
 
     echo "Running long running tests..."
     export PYTHONUNBUFFERED="TRUE"
+    # We can't load modules so skip 1018 which requires null_blk
     skip=(
         6
 	1007
 	1008
+	1018
     )
     args=(
         --debug

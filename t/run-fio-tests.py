@@ -1115,6 +1115,14 @@ TEST_LIST = [
         'success':          SUCCESS_LONG,
         'requirements':     [],
     },
+    {
+        'test_id':          1018,
+        'test_class':       FioExeTest,
+        'exe':              't/verify-trim.py',
+        'parameters':       ['-f', '{fio_path}'],
+        'success':          SUCCESS_DEFAULT,
+        'requirements':     [Requirements.linux],
+    },
 ]
 
 

@@ -49,6 +49,10 @@ jobs:
               -device nvme-ns,id=nvm-1,drive=nvm-1,bus=nvme0,nsid=1,logical_block_size=4096,physical_block_size=4096,fdp.ruhs=0-63
             test_cmd: "nvme fdp status /dev/ng0n1 && python3 t/nvmept_fdp.py --fio ./fio --dut /dev/ng0n1"
             extra_pkgs: "nvme-cli"
+          - config: verify-trim
+            device:
+            test_cmd: "python3 t/verify-trim.py"
+            extra_pkgs: sg3-utils
           - config: ZBD
             device:
             test_cmd: "./t/zbd/run-tests-against-nullb"
