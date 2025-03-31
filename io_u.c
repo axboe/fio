@@ -1761,12 +1761,14 @@ static bool check_get_trim(struct thread_data *td, struct io_u *io_u)
 		else
 			td->trim_batch = 0;
 	} else if (!(td->io_hist_len % td->o.trim_backlog) &&
-		     td->last_ddir_completed != DDIR_READ) {
-		td->trim_batch = td->o.trim_batch;
-		if (!td->trim_batch)
-			td->trim_batch = td->o.trim_backlog;
-		if (get_next_trim(td, io_u))
+		     td->last_ddir_completed != DDIR_TRIM) {
+		if (get_next_trim(td, io_u)) {
+			td->trim_batch = td->o.trim_batch;
+			if (!td->trim_batch)
+				td->trim_batch = td->o.trim_backlog;
+			td->trim_batch--;
 			return true;
+		}
 	}
 
 	return false;
