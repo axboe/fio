@@ -612,7 +612,14 @@ static int fixup_options(struct thread_data *td)
 	struct thread_options *o = &td->o;
 	int ret = 0;
 
-	if (read_only && (td_write(td) || td_trim(td))) {
+	/*
+	 * Denote whether we are verifying trims. Now we only have to check a
+	 * single variable instead of having to check all three options.
+	 */
+	td->trim_verify = o->verify && o->trim_backlog && o->trim_percentage;
+	dprint(FD_VERIFY, "td->trim_verify=%d\n", td->trim_verify);
+
+	if (read_only && (td_write(td) || td_trim(td) || td->trim_verify)) {
 		log_err("fio: trim and write operations are not allowed"
 			 " with the --readonly parameter.\n");
 		ret |= 1;
@@ -728,13 +735,6 @@ static int fixup_options(struct thread_data *td)
 						o->start_delay_orig,
 						o->start_delay_high);
 	}
-
-	/*
-	 * Denote whether we are verifying trims. Now we only have to check a
-	 * single variable instead of having to check all three options.
-	 */
-	td->trim_verify = o->verify && o->trim_backlog && o->trim_percentage;
-	dprint(FD_VERIFY, "td->trim_verify=%d\n", td->trim_verify);
 
 	if (o->norandommap && o->verify != VERIFY_NONE
 	    && !fixed_block_size(o))  {
