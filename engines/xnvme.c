@@ -302,6 +302,14 @@ static struct xnvme_opts xnvme_opts_from_fioe(struct thread_data *td)
 
 	opts.direct = td->o.odirect;
 
+	opts.rdonly = opts.wronly = opts.rdwr = 0;
+	if (td_rw(td))
+		opts.rdwr = 1;
+	else if (td_write(td))
+		opts.wronly = 1;
+	else
+		opts.rdonly = 1;
+
 	return opts;
 }
 
