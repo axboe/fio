@@ -369,7 +369,7 @@ files:
 
 Here we have no *global* section, as we only have one job defined anyway.  We
 want to use async I/O here, with a depth of 4 for each file. We also increased
-the buffer size used to 32KiB and define numjobs to 4 to fork 4 identical
+the block size used to 32KiB and define numjobs to 4 to fork 4 identical
 jobs. The result is 4 processes each randomly writing to their own 64MiB
 file. Instead of using the above job file, you could have given the parameters
 on the command line. For this case, you would specify::
