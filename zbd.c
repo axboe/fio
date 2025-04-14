@@ -1460,6 +1460,7 @@ static struct fio_zone_info *zbd_convert_to_write_zone(struct thread_data *td,
 	bool wait_zone_write;
 	bool in_flight;
 	bool should_retry = true;
+	bool need_zone_finish;
 
 	assert(is_valid_offset(f, io_u->offset));
 
@@ -1611,6 +1612,7 @@ retry:
 
 	/* Check whether the write fits in any of the write target zones. */
 	pthread_mutex_lock(&zbdi->mutex);
+	need_zone_finish = true;
 	for (i = 0; i < zbdi->num_write_zones; i++) {
 		zone_idx = zbdi->write_zones[i];
 		if (zone_idx < f->min_zone || zone_idx >= f->max_zone)
@@ -1621,8 +1623,10 @@ retry:
 		z = zbd_get_zone(f, zone_idx);
 
 		zone_lock(td, f, z);
-		if (zbd_zone_remainder(z) >= min_bs)
+		if (zbd_zone_remainder(z) >= min_bs) {
+			need_zone_finish = false;
 			goto out;
+		}
 		pthread_mutex_lock(&zbdi->mutex);
 	}
 
@@ -1644,6 +1648,26 @@ retry:
 		zone_lock(td, f, z);
 		goto retry;
 	}
+
+	if (td_random(td) && td->o.verify == VERIFY_NONE && need_zone_finish)
+		/*
+		 * If all open zones have remainder smaller than the block size
+		 * for random write jobs, choose one of the write target zones
+		 * and finish it. When verify is enabled, skip this zone finish
+		 * operation to avoid verify data corruption by overwrite to the
+		 * zone.
+		 */
+		if (zbd_pick_write_zone(f, io_u, &zone_idx)) {
+			pthread_mutex_unlock(&zbdi->mutex);
+			zone_unlock(z);
+			z = zbd_get_zone(f, zone_idx);
+			zone_lock(td, f, z);
+			io_u_quiesce(td);
+			dprint(FD_ZBD, "%s(%s): All write target zones have remainder smaller than block size. Choose zone %d and finish.\n",
+			       __func__, f->file_name, zone_idx);
+			zbd_finish_zone(td, f, z);
+			goto out;
+		}
 
 	pthread_mutex_unlock(&zbdi->mutex);
 
