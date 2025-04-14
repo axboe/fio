@@ -1386,6 +1386,43 @@ static uint32_t pick_random_zone_idx(const struct fio_file *f,
 		f->zbd_info->num_write_zones / f->io_size;
 }
 
+/*
+ * Randomly choose a zone in the array of write zones and in the range for the
+ * file f. If such a zone is found, return its index in f->zbd_info->zone_info[]
+ * using @zone_idx, and return true. Otherwise, return false.
+ *
+ * Caller must hold f->zbd_info->mutex.
+ */
+static bool zbd_pick_write_zone(const struct fio_file* f,
+				const struct io_u *io_u, uint32_t *zone_idx)
+{
+	struct zoned_block_device_info *zbdi = f->zbd_info;
+	uint32_t write_zone_idx;
+	uint32_t cur_zone_idx;
+	int i;
+
+	/*
+	 * An array of write target zones is per-device, shared across all jobs.
+	 * Start with quasi-random candidate zone. Ignore zones which do not
+	 * belong to offset/size range of the current job.
+	 */
+	write_zone_idx = pick_random_zone_idx(f, io_u);
+	assert(!write_zone_idx || write_zone_idx < zbdi->num_write_zones);
+
+	for (i = 0; i < zbdi->num_write_zones; i++) {
+		if (write_zone_idx >= zbdi->num_write_zones)
+			write_zone_idx = 0;
+		cur_zone_idx = zbdi->write_zones[write_zone_idx];
+		if (f->min_zone <= cur_zone_idx && cur_zone_idx < f->max_zone) {
+			*zone_idx = cur_zone_idx;
+			return true;
+		}
+		write_zone_idx++;
+	}
+
+	return false;
+}
+
 static bool any_io_in_flight(void)
 {
 	for_each_td(td) {
@@ -1418,7 +1455,6 @@ static struct fio_zone_info *zbd_convert_to_write_zone(struct thread_data *td,
 	struct fio_file *f = io_u->file;
 	struct zoned_block_device_info *zbdi = f->zbd_info;
 	struct fio_zone_info *z;
-	unsigned int write_zone_idx = -1;
 	uint32_t zone_idx, new_zone_idx;
 	int i;
 	bool wait_zone_write;
@@ -1480,8 +1516,6 @@ static struct fio_zone_info *zbd_convert_to_write_zone(struct thread_data *td,
 	 * has been obtained. Hence the loop.
 	 */
 	for (;;) {
-		uint32_t tmp_idx;
-
 		z = zbd_get_zone(f, zone_idx);
 		if (z->has_wp)
 			zone_lock(td, f, z);
@@ -1500,42 +1534,15 @@ static struct fio_zone_info *zbd_convert_to_write_zone(struct thread_data *td,
 			}
 		}
 
-		/*
-		 * Array of write target zones is per-device, shared across all
-		 * threads. Start with quasi-random candidate zone. Ignore
-		 * zones which don't belong to thread's offset/size area.
-		 */
-		write_zone_idx = pick_random_zone_idx(f, io_u);
-		assert(!write_zone_idx ||
-		       write_zone_idx < zbdi->num_write_zones);
-		tmp_idx = write_zone_idx;
-
-		for (i = 0; i < zbdi->num_write_zones; i++) {
-			uint32_t tmpz;
-
-			if (tmp_idx >= zbdi->num_write_zones)
-				tmp_idx = 0;
-			tmpz = zbdi->write_zones[tmp_idx];
-			if (f->min_zone <= tmpz && tmpz < f->max_zone) {
-				write_zone_idx = tmp_idx;
-				goto found_candidate_zone;
-			}
-
-			tmp_idx++;
+		if (!zbd_pick_write_zone(f, io_u, &new_zone_idx)) {
+			dprint(FD_ZBD, "%s(%s): no candidate zone\n",
+			       __func__, f->file_name);
+			pthread_mutex_unlock(&zbdi->mutex);
+			if (z->has_wp)
+				zone_unlock(z);
+			return NULL;
 		}
 
-		dprint(FD_ZBD, "%s(%s): no candidate zone\n",
-			__func__, f->file_name);
-
-		pthread_mutex_unlock(&zbdi->mutex);
-
-		if (z->has_wp)
-			zone_unlock(z);
-
-		return NULL;
-
-found_candidate_zone:
-		new_zone_idx = zbdi->write_zones[write_zone_idx];
 		if (new_zone_idx == zone_idx)
 			break;
 		zone_idx = new_zone_idx;
