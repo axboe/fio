@@ -346,6 +346,14 @@ require_max_active_zones() {
 	return 0
 }
 
+require_no_max_active_zones() {
+	if ((max_active_zones > 0)); then
+		SKIP_REASON="$dev has max_active_zones limit"
+		return 1
+	fi
+	return 0
+}
+
 # Check whether buffered writes are refused for block devices.
 test1() {
     require_block_dev || return $SKIP_TESTCASE
@@ -1635,6 +1643,46 @@ test70() {
 	run_fio_on_seq "$(ioengine "psync")" --rw=trim --io_size=1z \
 		       --bs="$zone_size" --max_open_zones=1 \
 		       >> "${logfile}.${test_number}" 2>&1
+}
+
+# Test random write does not end early when the zones as many as max_open_zones
+# have remainder smaller than block size.
+test71() {
+	local off size capacity zone_fill_size i
+
+	require_zbd || return "$SKIP_TESTCASE"
+	require_seq_zones 8 || return "$SKIP_TESTCASE"
+	require_no_max_active_zones || return "$SKIP_TESTCASE"
+
+	reset_zone "${dev}" -1
+
+	# Fill data to every other zone in the test target 8 zones. This leaves
+	# 4 zones in the implicit open condition. Leave 12kb remainder in the
+	# 4 zones.
+	off=$((first_sequential_zone_sector * 512))
+	size=$min_seq_write_size
+	capacity=$(total_zone_capacity 1 "$off" "$dev")
+	zone_fill_size=$((capacity - 3 * 4096))
+	run_one_fio_job "$(ioengine "psync")" --rw=write --offset="$off" \
+			--bs=4k --zonemode=strided \
+			--zonesize="$zone_fill_size" \
+			--zonerange=$((zone_size * 2)) \
+			--io_size=$((zone_fill_size * 4)) \
+			>> "${logfile}.${test_number}" 2>&1 || return $?
+	# Close the 4 zones to not fail the next fio command with the
+	# --max_open_zones=1 option
+	for ((i = 0; i < 4; i++)); do
+		close_zone "$dev" $(((off + zone_size * 2 * i) / 512)) || return $?
+	done
+
+	# Run random write with 8kb block size
+	run_one_fio_job "$(ioengine "psync")" --rw=randwrite --offset="$off" \
+			--bs=$((4096 * 2)) --zonemode=zbd \
+			--zonesize="$zone_size" --size=$((zone_size * 8)) \
+			--max_open_zones=1 --debug=zbd \
+		       >> "${logfile}.${test_number}" 2>&1 || return $?
+
+	check_written $((zone_size * 8)) || return $?
 }
 
 SECONDS=0
