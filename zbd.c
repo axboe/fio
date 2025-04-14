@@ -1396,16 +1396,23 @@ static bool any_io_in_flight(void)
 	return false;
 }
 
-/*
+/**
+ * zbd_convert_to_write_zone - Convert the target zone of an io_u to a writable zone
+ * @td: The fio thread data
+ * @io_u: The I/O unit that targets the zone to convert
+ * @zb: The zone selected at the beginning of the function call. The caller must
+ *      hold zb->mutex.
+ *
  * Modify the offset of an I/O unit that does not refer to a zone such that
- * in write target zones array. Add a zone to or remove a zone from the lsit if
+ * in write target zones array. Add a zone to or remove a zone from the array if
  * necessary. The write target zone is searched across sequential zones.
  * This algorithm can only work correctly if all write pointers are
- * a multiple of the fio block size. The caller must neither hold z->mutex
- * nor f->zbd_info->mutex. Returns with z->mutex held upon success.
+ * a multiple of the fio block size. The caller must not hold
+ * f->zbd_info->mutex. Returns with z->mutex held upon success.
  */
 static struct fio_zone_info *zbd_convert_to_write_zone(struct thread_data *td,
-						       struct io_u *io_u)
+						       struct io_u *io_u,
+						       struct fio_zone_info *zb)
 {
 	const uint64_t min_bs = td->o.min_bs[io_u->ddir];
 	struct fio_file *f = io_u->file;
@@ -1419,6 +1426,34 @@ static struct fio_zone_info *zbd_convert_to_write_zone(struct thread_data *td,
 	bool should_retry = true;
 
 	assert(is_valid_offset(f, io_u->offset));
+
+	if (zbd_zone_remainder(zb) > 0 && zbd_zone_remainder(zb) < min_bs) {
+		pthread_mutex_lock(&f->zbd_info->mutex);
+		zbd_write_zone_put(td, f, zb);
+		pthread_mutex_unlock(&f->zbd_info->mutex);
+		dprint(FD_ZBD, "%s: finish zone %d\n",
+		       f->file_name, zbd_zone_idx(f, zb));
+		io_u_quiesce(td);
+		zbd_finish_zone(td, f, zb);
+		zone_unlock(zb);
+
+		if (zbd_zone_idx(f, zb) + 1 >= f->max_zone && !td_random(td))
+			return NULL;
+
+		/* Find the next write pointer zone */
+		do {
+			zb++;
+			if (zbd_zone_idx(f, zb) >= f->max_zone)
+				zb = zbd_get_zone(f, f->min_zone);
+		} while (!zb->has_wp);
+
+		zone_lock(td, f, zb);
+	}
+
+	if (zbd_write_zone_get(td, f, zb))
+		return zb;
+
+	zone_unlock(zb);
 
 	if (zbdi->max_write_zones || td->o.job_max_open_zones) {
 		/*
@@ -2047,40 +2082,11 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 		}
 
 retry:
-		if (zbd_zone_remainder(zb) > 0 &&
-		    zbd_zone_remainder(zb) < min_bs) {
-			pthread_mutex_lock(&f->zbd_info->mutex);
-			zbd_write_zone_put(td, f, zb);
-			pthread_mutex_unlock(&f->zbd_info->mutex);
-			dprint(FD_ZBD,
-			       "%s: finish zone %d\n",
-			       f->file_name, zbd_zone_idx(f, zb));
-			io_u_quiesce(td);
-			zbd_finish_zone(td, f, zb);
-			if (zbd_zone_idx(f, zb) + 1 >= f->max_zone) {
-				if (!td_random(td))
-					goto eof;
-			}
-			zone_unlock(zb);
-
-			/* Find the next write pointer zone */
-			do {
-				zb++;
-				if (zbd_zone_idx(f, zb) >= f->max_zone)
-					zb = zbd_get_zone(f, f->min_zone);
-			} while (!zb->has_wp);
-
-			zone_lock(td, f, zb);
-		}
-
-		if (!zbd_write_zone_get(td, f, zb)) {
-			zone_unlock(zb);
-			zb = zbd_convert_to_write_zone(td, io_u);
-			if (!zb) {
-				dprint(FD_IO, "%s: can't convert to write target zone",
-				       f->file_name);
-				goto eof;
-			}
+		zb = zbd_convert_to_write_zone(td, io_u, zb);
+		if (!zb) {
+			dprint(FD_IO, "%s: can't convert to write target zone",
+			       f->file_name);
+			goto eof;
 		}
 
 		if (zbd_zone_remainder(zb) > 0 &&
