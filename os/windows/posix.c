@@ -899,10 +899,9 @@ int poll(struct pollfd fds[], nfds_t nfds, int timeout)
 	FD_ZERO(&exceptfds);
 
 	for (i = 0; i < nfds; i++) {
-		if (fds[i].fd == INVALID_SOCKET) {
-			fds[i].revents = 0;
+		fds[i].revents = 0;
+		if (fds[i].fd == INVALID_SOCKET) 
 			continue;
-		}
 
 		if (fds[i].events & POLLIN)
 			FD_SET(fds[i].fd, &readfds);
