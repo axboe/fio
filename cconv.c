@@ -265,6 +265,7 @@ int convert_thread_options_to_cpu(struct thread_options *o,
 	o->zone_mode = le32_to_cpu(top->zone_mode);
 	o->max_open_zones = __le32_to_cpu(top->max_open_zones);
 	o->ignore_zone_limits = le32_to_cpu(top->ignore_zone_limits);
+	o->recover_zbd_write_error = le32_to_cpu(top->recover_zbd_write_error);
 	o->lockmem = le64_to_cpu(top->lockmem);
 	o->offset_increment_percent = le32_to_cpu(top->offset_increment_percent);
 	o->offset_increment = le64_to_cpu(top->offset_increment);
@@ -637,6 +638,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->zone_mode = __cpu_to_le32(o->zone_mode);
 	top->max_open_zones = __cpu_to_le32(o->max_open_zones);
 	top->ignore_zone_limits = cpu_to_le32(o->ignore_zone_limits);
+	top->recover_zbd_write_error = cpu_to_le32(o->recover_zbd_write_error);
 	top->lockmem = __cpu_to_le64(o->lockmem);
 	top->ddir_seq_add = __cpu_to_le64(o->ddir_seq_add);
 	top->file_size_low = __cpu_to_le64(o->file_size_low);

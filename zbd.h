@@ -25,6 +25,9 @@ enum io_u_action {
  * @start: zone start location (bytes)
  * @wp: zone write pointer location (bytes)
  * @capacity: maximum size usable from the start of a zone (bytes)
+ * @writes_in_flight: number of writes in flight fo the zone
+ * @max_write_error_offset: maximum offset from zone start among the failed
+ *                          writes to the zone
  * @mutex: protects the modifiable members in this structure
  * @type: zone type (BLK_ZONE_TYPE_*)
  * @cond: zone state (BLK_ZONE_COND_*)
@@ -32,17 +35,21 @@ enum io_u_action {
  * @write: whether or not this zone is the write target at this moment. Only
  *              relevant if zbd->max_open_zones > 0.
  * @reset_zone: whether or not this zone should be reset before writing to it
+ * @fixing_zone_wp: whether or not the write pointer of this zone is under fix
  */
 struct fio_zone_info {
 	pthread_mutex_t		mutex;
 	uint64_t		start;
 	uint64_t		wp;
 	uint64_t		capacity;
+	uint32_t		writes_in_flight;
+	uint32_t		max_write_error_offset;
 	enum zbd_zone_type	type:2;
 	enum zbd_zone_cond	cond:4;
 	unsigned int		has_wp:1;
 	unsigned int		write:1;
 	unsigned int		reset_zone:1;
+	unsigned int		fixing_zone_wp:1;
 };
 
 /**
@@ -106,6 +113,7 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u);
 char *zbd_write_status(const struct thread_stat *ts);
 int zbd_do_io_u_trim(struct thread_data *td, struct io_u *io_u);
 void zbd_log_err(const struct thread_data *td, const struct io_u *io_u);
+void zbd_recover_write_error(struct thread_data *td, struct io_u *io_u);
 
 static inline void zbd_close_file(struct fio_file *f)
 {
@@ -114,10 +122,10 @@ static inline void zbd_close_file(struct fio_file *f)
 }
 
 static inline void zbd_queue_io_u(struct thread_data *td, struct io_u *io_u,
-				  enum fio_q_status status)
+				  enum fio_q_status *status)
 {
 	if (io_u->zbd_queue_io) {
-		io_u->zbd_queue_io(td, io_u, status, io_u->error == 0);
+		io_u->zbd_queue_io(td, io_u, (int *)status);
 		io_u->zbd_queue_io = NULL;
 	}
 }

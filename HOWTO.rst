@@ -1126,6 +1126,17 @@ Target file/device
 	requests. This and the previous parameter can be used to simulate
 	garbage collection activity.
 
+.. option:: recover_zbd_write_error=bool
+
+	If this option is specified together with the option
+	:option:`continue_on_error`, check the write pointer positions after the
+	failed writes to sequential write required zones. Then move the write
+	pointers so that the next writes do not fail due to partial writes and
+	unexpected write pointer positions. If :option:`continue_on_error` is
+	not specified, errors out. When the writes are asynchronous, the write
+	pointer move fills blocks with zero then breaks verify data. If an
+	asynchronous IO engine and :option:`verify` workload are specified,
+	errors out. Default: false.
 
 I/O type
 ~~~~~~~~

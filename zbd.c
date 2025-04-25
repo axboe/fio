@@ -1267,6 +1267,18 @@ int zbd_setup_files(struct thread_data *td)
 	if (!zbd_verify_bs())
 		return 1;
 
+	if (td->o.recover_zbd_write_error && td_write(td)) {
+		if (!td->o.continue_on_error) {
+			log_err("recover_zbd_write_error works only when continue_on_error is set\n");
+			return 1;
+		}
+		if (td->o.verify != VERIFY_NONE &&
+		    !td_ioengine_flagged(td, FIO_SYNCIO)) {
+			log_err("recover_zbd_write_error for async IO engines does not support verify\n");
+			return 1;
+		}
+	}
+
 	if (td->o.experimental_verify) {
 		log_err("zonemode=zbd does not support experimental verify\n");
 		return 1;
@@ -1810,11 +1822,11 @@ static void zbd_end_zone_io(struct thread_data *td, const struct io_u *io_u,
  * For write and trim operations, update the write pointer of the I/O unit
  * target zone.
  */
-static void zbd_queue_io(struct thread_data *td, struct io_u *io_u, int q,
-			 bool success)
+static void zbd_queue_io(struct thread_data *td, struct io_u *io_u, int *q)
 {
 	const struct fio_file *f = io_u->file;
 	struct zoned_block_device_info *zbd_info = f->zbd_info;
+	bool success = io_u->error == 0;
 	struct fio_zone_info *z;
 	uint64_t zone_end;
 
@@ -1822,6 +1834,14 @@ static void zbd_queue_io(struct thread_data *td, struct io_u *io_u, int q,
 
 	z = zbd_offset_to_zone(f, io_u->offset);
 	assert(z->has_wp);
+
+	if (!success && td->o.recover_zbd_write_error &&
+	    io_u->ddir == DDIR_WRITE && td_ioengine_flagged(td, FIO_SYNCIO) &&
+	    *q == FIO_Q_COMPLETED) {
+		zbd_recover_write_error(td, io_u);
+		if (!io_u->error)
+			success = true;
+	}
 
 	if (!success)
 		goto unlock;
@@ -1850,11 +1870,19 @@ static void zbd_queue_io(struct thread_data *td, struct io_u *io_u, int q,
 		break;
 	}
 
-	if (q == FIO_Q_COMPLETED && !io_u->error)
+	if (*q == FIO_Q_COMPLETED && !io_u->error)
 		zbd_end_zone_io(td, io_u, z);
 
 unlock:
-	if (!success || q != FIO_Q_QUEUED) {
+	if (!success || *q != FIO_Q_QUEUED) {
+		if (io_u->ddir == DDIR_WRITE) {
+			z->writes_in_flight--;
+			if (z->writes_in_flight == 0 && z->fixing_zone_wp) {
+				dprint(FD_ZBD, "%s: Fixed write pointer of the zone %u\n",
+				       f->file_name, zbd_zone_idx(f, z));
+				z->fixing_zone_wp = 0;
+			}
+		}
 		/* BUSY or COMPLETED: unlock the zone */
 		zone_unlock(z);
 		io_u->zbd_put_io = NULL;
@@ -1880,6 +1908,15 @@ static void zbd_put_io(struct thread_data *td, const struct io_u *io_u)
 	       f->file_name, io_u->offset, io_u->buflen, zbd_zone_idx(f, z));
 
 	zbd_end_zone_io(td, io_u, z);
+
+	if (io_u->ddir == DDIR_WRITE) {
+		z->writes_in_flight--;
+		if (z->writes_in_flight == 0 && z->fixing_zone_wp) {
+			z->fixing_zone_wp = 0;
+			dprint(FD_ZBD, "%s: Fixed write pointer of the zone %u\n",
+			       f->file_name, zbd_zone_idx(f, z));
+		}
+	}
 
 	zone_unlock(z);
 }
@@ -2071,7 +2108,14 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 	    io_u->ddir == DDIR_READ && td->o.read_beyond_wp)
 		return io_u_accept;
 
+retry_lock:
 	zone_lock(td, f, zb);
+
+	if (!td_ioengine_flagged(td, FIO_SYNCIO) && zb->fixing_zone_wp) {
+		zone_unlock(zb);
+		io_u_quiesce(td);
+		goto retry_lock;
+	}
 
 	switch (io_u->ddir) {
 	case DDIR_READ:
@@ -2279,6 +2323,8 @@ accept:
 
 	io_u->zbd_queue_io = zbd_queue_io;
 	io_u->zbd_put_io = zbd_put_io;
+	if (io_u->ddir == DDIR_WRITE)
+		zb->writes_in_flight++;
 
 	/*
 	 * Since we return with the zone lock still held,
@@ -2349,4 +2395,72 @@ void zbd_log_err(const struct thread_data *td, const struct io_u *io_u)
 	if (io_u->error == EOVERFLOW)
 		log_err("%s: Exceeded max_active_zones limit. Check conditions of zones out of I/O ranges.\n",
 			f->file_name);
+}
+
+void zbd_recover_write_error(struct thread_data *td, struct io_u *io_u)
+{
+	struct fio_file *f = io_u->file;
+	struct fio_zone_info *z;
+	struct zbd_zone zrep;
+	unsigned long long retry_offset;
+	unsigned long long retry_len;
+	char *retry_buf;
+	uint64_t write_end_offset;
+	int ret;
+
+	z = zbd_offset_to_zone(f, io_u->offset);
+	if (!z->has_wp)
+		return;
+	write_end_offset = io_u->offset + io_u->buflen - z->start;
+
+	assert(z->writes_in_flight);
+
+	if (!z->fixing_zone_wp) {
+		z->fixing_zone_wp = 1;
+		dprint(FD_ZBD, "%s: Start fixing %u write pointer\n",
+		       f->file_name, zbd_zone_idx(f, z));
+	}
+
+	if (z->max_write_error_offset < write_end_offset)
+		z->max_write_error_offset = write_end_offset;
+
+	if (z->writes_in_flight > 1)
+		return;
+
+	/*
+	 * This is the last write to the zone since the write error to recover.
+	 * Get the zone current write pointer and recover the write pointer
+	 * position so that next write can continue.
+	 */
+	ret = zbd_report_zones(td, f, z->start, &zrep, 1);
+	if (ret != 1) {
+		log_info("fio: Report zone for write recovery failed for %s\n",
+			 f->file_name);
+		return;
+	}
+
+	if (zrep.wp < z->start ||
+	    z->start + z->max_write_error_offset < zrep.wp ) {
+		log_info("fio: unexpected write pointer position on error for %s: wp=%"PRIu64"\n",
+			 f->file_name, zrep.wp);
+		return;
+	}
+
+	retry_offset = zrep.wp;
+	retry_len = z->start + z->max_write_error_offset - retry_offset;
+	retry_buf = NULL;
+	if (retry_offset >= io_u->offset)
+		retry_buf = (char *)io_u->buf + (retry_offset - io_u->offset);
+
+	ret = zbd_move_zone_wp(td, io_u->file, &zrep, retry_len, retry_buf);
+	if (ret) {
+		log_info("fio: Failed to recover write pointer for %s\n",
+			 f->file_name);
+		return;
+	}
+
+	z->wp = retry_offset + retry_len;
+
+	dprint(FD_ZBD, "%s: Write pointer move succeeded for error=%d\n",
+	       f->file_name, io_u->error);
 }

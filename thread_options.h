@@ -390,6 +390,7 @@ struct thread_options {
 	int max_open_zones;
 	unsigned int job_max_open_zones;
 	unsigned int ignore_zone_limits;
+	unsigned int recover_zbd_write_error;
 	fio_fp64_t zrt;
 	fio_fp64_t zrf;
 
@@ -710,6 +711,7 @@ struct thread_options_pack {
 	uint32_t zone_mode;
 	int32_t max_open_zones;
 	uint32_t ignore_zone_limits;
+	uint32_t recover_zbd_write_error;
 
 	uint32_t log_entries;
 	uint32_t log_prio;

@@ -3795,6 +3795,16 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_ZONE,
 	},
 	{
+		.name	= "recover_zbd_write_error",
+		.lname	= "Recover write errors when zonemode=zbd is set",
+		.type	= FIO_OPT_BOOL,
+		.off1	= offsetof(struct thread_options, recover_zbd_write_error),
+		.def	= 0,
+		.help	= "Continue writes for sequential write required zones after recovering write errors with care for partial write pointer move",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_ZONE,
+	},
+	{
 		.name   = "fdp",
 		.lname  = "Flexible data placement",
 		.type   = FIO_OPT_BOOL,
