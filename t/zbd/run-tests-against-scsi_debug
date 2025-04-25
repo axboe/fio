@@ -1,0 +1,33 @@
+#!/bin/bash
+#
+# Copyright (C) 2020 Western Digital Corporation or its affiliates.
+#
+# SPDX-License-Identifier: GPL-2.0
+#
+# A couple of test cases in t/zbd/test-zbd-support script depend on the error
+# injection feature of scsi_debug. Prepare a zoned scsi_debug device and run
+# only for the test cases.
+
+declare dev sg scriptdir
+
+scriptdir="$(cd "$(dirname "$0")" && pwd)"
+
+modprobe -qr scsi_debug
+modprobe scsi_debug add_host=1 zbc=host-managed zone_nr_conv=0
+
+dev=$(dmesg | tail -5 | grep "Attached SCSI disk" | grep -Po ".* \[\Ksd[a-z]*")
+
+if ! grep -qe scsi_debug /sys/block/"${dev}"/device/vpd_pg83; then
+	echo "Failed to create scsi_debug device"
+	exit 1
+fi
+
+sg=$(echo /sys/block/"${dev}"/device/scsi_generic/*)
+sg=${sg##*/}
+
+echo standard engine:
+"${scriptdir}"/test-zbd-support -t 72 -t 73 /dev/"${dev}"
+echo libzbc engine with block device:
+"${scriptdir}"/test-zbd-support -t 72 -t 73 -l /dev/"${dev}"
+echo libzbc engine with sg node:
+"${scriptdir}"/test-zbd-support -t 72 -t 73 -l /dev/"${sg}"
