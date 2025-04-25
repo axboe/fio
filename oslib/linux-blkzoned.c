@@ -370,3 +370,32 @@ int blkzoned_finish_zone(struct thread_data *td, struct fio_file *f,
 
 	return ret;
 }
+
+int blkzoned_move_zone_wp(struct thread_data *td, struct fio_file *f,
+			  struct zbd_zone *z, uint64_t length, const char *buf)
+{
+	int fd, ret = 0;
+
+	/* If the file is not yet open, open it for this function */
+	fd = f->fd;
+	if (fd < 0) {
+		fd = open(f->file_name, O_WRONLY | O_DIRECT);
+		if (fd < 0)
+			return -errno;
+	}
+
+	/* If write data is not provided, fill zero to move the write pointer */
+	if (!buf) {
+		ret = fallocate(fd, FALLOC_FL_ZERO_RANGE, z->wp, length);
+		goto out;
+	}
+
+	if (pwrite(fd, buf, length, z->wp) < 0)
+		ret = -errno;
+
+out:
+	if (f->fd < 0)
+		close(fd);
+
+	return ret;
+}

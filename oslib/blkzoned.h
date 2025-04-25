@@ -16,6 +16,9 @@ extern int blkzoned_report_zones(struct thread_data *td,
 				struct zbd_zone *zones, unsigned int nr_zones);
 extern int blkzoned_reset_wp(struct thread_data *td, struct fio_file *f,
 				uint64_t offset, uint64_t length);
+extern int blkzoned_move_zone_wp(struct thread_data *td, struct fio_file *f,
+				 struct zbd_zone *z, uint64_t length,
+				 const char *buf);
 extern int blkzoned_get_max_open_zones(struct thread_data *td, struct fio_file *f,
 				       unsigned int *max_open_zones);
 extern int blkzoned_get_max_active_zones(struct thread_data *td,
