@@ -91,6 +91,9 @@ configure_nullb()
 		fi
 	fi
 
+	[[ -w badblocks_once ]] && echo 1 > badblocks_once
+	[[ -w badblocks_partial_io ]] && echo 1 > badblocks_partial_io
+
 	echo 1 > power || return $?
 	return 0
 }
