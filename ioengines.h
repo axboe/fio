@@ -9,7 +9,7 @@
 #include "zbd_types.h"
 #include "dataplacement.h"
 
-#define FIO_IOOPS_VERSION	36
+#define FIO_IOOPS_VERSION	37
 
 #ifndef CONFIG_DYNAMIC_ENGINES
 #define FIO_STATIC	static
@@ -60,6 +60,8 @@ struct ioengine_ops {
 			    uint64_t, struct zbd_zone *, unsigned int);
 	int (*reset_wp)(struct thread_data *, struct fio_file *,
 			uint64_t, uint64_t);
+	int (*move_zone_wp)(struct thread_data *, struct fio_file *,
+			    struct zbd_zone *, uint64_t, const char *);
 	int (*get_max_open_zones)(struct thread_data *, struct fio_file *,
 				  unsigned int *);
 	int (*get_max_active_zones)(struct thread_data *, struct fio_file *,
