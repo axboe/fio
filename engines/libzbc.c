@@ -323,6 +323,33 @@ err:
 	return -ret;
 }
 
+static int libzbc_move_zone_wp(struct thread_data *td, struct fio_file *f,
+			       struct zbd_zone *z, uint64_t length,
+			       const char *buf)
+{
+	struct libzbc_data *ld = td->io_ops_data;
+	uint64_t sector = z->wp >> 9;
+	size_t count = length >> 9;
+	struct zbc_errno err;
+	int ret;
+
+	assert(ld);
+	assert(ld->zdev);
+	assert(buf);
+
+	ret = zbc_pwrite(ld->zdev, buf, count, sector);
+	if (ret == count)
+		return 0;
+
+	zbc_errno(ld->zdev, &err);
+	td_verror(td, errno, "zbc_write for write pointer move failed");
+	if (err.sk)
+		log_err("%s: wp move failed %s:%s\n",
+			f->file_name,
+			zbc_sk_str(err.sk), zbc_asc_ascq_str(err.asc_ascq));
+	return -ret;
+}
+
 static int libzbc_finish_zone(struct thread_data *td, struct fio_file *f,
 			      uint64_t offset, uint64_t length)
 {
@@ -457,6 +484,7 @@ FIO_STATIC struct ioengine_ops ioengine = {
 	.get_zoned_model	= libzbc_get_zoned_model,
 	.report_zones		= libzbc_report_zones,
 	.reset_wp		= libzbc_reset_wp,
+	.move_zone_wp		= libzbc_move_zone_wp,
 	.get_max_open_zones	= libzbc_get_max_open_zones,
 	.finish_zone		= libzbc_finish_zone,
 	.queue			= libzbc_queue,
