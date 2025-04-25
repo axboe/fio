@@ -443,6 +443,46 @@ static int zbd_reset_zones(struct thread_data *td, struct fio_file *f,
 }
 
 /**
+ * zbd_move_zone_wp - move the write pointer of a zone by writing the data in
+ *               the specified buffer
+ * @td: FIO thread data.
+ * @f: FIO file for which to move write pointer
+ * @z: Target zone to move the write pointer
+ * @length: Length of the move
+ * @buf: Buffer which holds the data to write
+ *
+ * Move the write pointer at the specified offset by writing the data
+ * in the specified buffer.
+ * Returns 0 upon success and a negative error code upon failure.
+ */
+static int zbd_move_zone_wp(struct thread_data *td, struct fio_file *f,
+			    struct zbd_zone *z, uint64_t length,
+			    const char *buf)
+{
+	int ret = 0;
+
+	switch (f->zbd_info->model) {
+	case ZBD_HOST_AWARE:
+	case ZBD_HOST_MANAGED:
+		if (td->io_ops && td->io_ops->move_zone_wp)
+			ret = td->io_ops->move_zone_wp(td, f, z, length, buf);
+		else
+			ret = blkzoned_move_zone_wp(td, f, z, length, buf);
+		break;
+	default:
+		break;
+	}
+
+	if (ret < 0) {
+		td_verror(td, errno, "move wp failed");
+		log_err("%s: moving wp for %"PRIu64" sectors at sector %"PRIu64" failed (%d).\n",
+			f->file_name, length >> 9, z->wp >> 9, errno);
+	}
+
+	return ret;
+}
+
+/**
  * zbd_get_max_open_zones - Get the maximum number of open zones
  * @td: FIO thread data
  * @f: FIO file for which to get max open zones
