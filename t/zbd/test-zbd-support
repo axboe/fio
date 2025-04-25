@@ -60,6 +60,17 @@ get_dev_path_by_id() {
 	return 1
 }
 
+get_scsi_device_path() {
+	local dev="${1}"
+	local syspath
+
+	syspath=/sys/block/"${dev##*/}"/device
+	if [[ -r /sys/class/scsi_generic/"${dev##*/}"/device ]]; then
+		syspath=/sys/class/scsi_generic/"${dev##*/}"/device
+	fi
+	realpath "$syspath"
+}
+
 dm_destination_dev_set_io_scheduler() {
 	local dev=$1 sched=$2
 	local dest_dev_id dest_dev path
@@ -349,6 +360,49 @@ require_max_active_zones() {
 require_no_max_active_zones() {
 	if ((max_active_zones > 0)); then
 		SKIP_REASON="$dev has max_active_zones limit"
+		return 1
+	fi
+	return 0
+}
+
+require_badblock() {
+	local syspath sdebug_path
+
+	syspath=/sys/kernel/config/nullb/"${dev##*/}"
+	if [[ -d "${syspath}" ]]; then
+		if [[ ! -w "${syspath}/badblocks" ]]; then
+			SKIP_REASON="$dev does not have badblocks attribute"
+			return 1
+		fi
+		if [[ ! -w "${syspath}/badblocks_once" ]]; then
+			SKIP_REASON="$dev does not have badblocks_once attribute"
+			return 1
+		fi
+		if ((! $(<"${syspath}/badblocks_once"))); then
+			SKIP_REASON="badblocks_once attribute is not set for $dev"
+			return 1
+		fi
+		return 0
+	fi
+
+	syspath=$(get_scsi_device_path "$dev")
+	if [[ -r ${syspath}/model &&
+		      $(<"${syspath}"/model) =~ scsi_debug ]]; then
+		sdebug_path=/sys/kernel/debug/scsi_debug/${syspath##*/}
+		if [[ ! -w "$sdebug_path"/error ]]; then
+			SKIP_REASON="$dev does not have write error injection"
+			return 1
+		fi
+		return 0
+	fi
+
+	SKIP_REASON="$dev does not support either badblocks or error injection"
+	return 1
+}
+
+require_nullb() {
+	if [[ ! -d /sys/kernel/config/nullb/"${dev##*/}" ]]; then
+		SKIP_REASON="$dev is not null_blk"
 		return 1
 	fi
 	return 0
@@ -1683,6 +1737,137 @@ test71() {
 		       >> "${logfile}.${test_number}" 2>&1 || return $?
 
 	check_written $((zone_size * 8)) || return $?
+}
+
+set_nullb_badblocks() {
+	local syspath
+
+	syspath=/sys/kernel/config/nullb/"${dev##*/}"
+	if [[ -w $syspath/badblocks ]]; then
+		echo "$1" > "$syspath"/badblocks
+	fi
+
+	return 0
+}
+
+# The helper function to set up badblocks or error command and echo back
+# number of expected failures. If the device is null_blk, set the errors
+# at the sectors based of 1st argument (offset) and 2nd argument (gap).
+# If the device is scsi_debug, set the first write commands to fail.
+set_badblocks() {
+	local off=$(($1 / 512))
+	local gap=$(($2 / 512))
+	local syspath block scsi_dev
+
+	# null_blk
+	syspath=/sys/kernel/config/nullb/"${dev##*/}"
+	if [[ -d ${syspath} ]]; then
+		block=$((off + 2))
+		set_nullb_badblocks "+${block}-${block}"
+		block=$((off + gap + 11))
+		set_nullb_badblocks "+${block}-${block}"
+		block=$((off + gap*2 + 8))
+		set_nullb_badblocks "+${block}-${block}"
+
+		echo 3
+		return
+	fi
+
+	# scsi_debug
+	scsi_dev=$(get_scsi_device_path "$dev")
+	syspath=/sys/kernel/debug/scsi_debug/"${scsi_dev##*/}"/
+	echo 2 -1 0x8a 0x00 0x00 0x02 0x03 0x11 0x02 > "$syspath"/error
+
+	echo 1
+}
+
+# Single job sequential sync write to sequential zones, with continue_on_error
+test72() {
+	local size off capacity bs expected_errors
+
+	require_zbd || return "$SKIP_TESTCASE"
+	require_badblock || return "$SKIP_TESTCASE"
+
+	prep_write
+	off=$((first_sequential_zone_sector * 512))
+	bs=$(min "$(max $((zone_size / 64)) "$min_seq_write_size")" "$zone_cap_bs")
+	expected_errors=$(set_badblocks "$off" "$zone_size")
+	size=$((4 * zone_size))
+	capacity=$((size - bs * expected_errors))
+	run_fio_on_seq "$(ioengine "psync")" --rw=write --offset="$off" \
+		       --size="$size" --bs="$bs" --do_verify=1 --verify=md5 \
+		       --continue_on_error=1 --recover_zbd_write_error=1 \
+		       --ignore_error=,EIO:61 --debug=zbd \
+		       >>"${logfile}.${test_number}" 2>&1 || return $?
+	check_written "$capacity" || return $?
+	grep -qe "Write pointer move succeeded" "${logfile}.${test_number}"
+}
+
+# Multi job sequential async write to sequential zones, with continue_on_error
+test73() {
+	local size off capacity bs
+
+	require_zbd || return "$SKIP_TESTCASE"
+	require_badblock || return "$SKIP_TESTCASE"
+
+	prep_write
+	off=$((first_sequential_zone_sector * 512))
+	bs=$(min "$(max $((zone_size / 64)) "$min_seq_write_size")" "$zone_cap_bs")
+	set_badblocks "$off" "$zone_size" > /dev/null
+	capacity=$(total_zone_capacity 4 "$off" "$dev")
+	size=$((zone_size * 4))
+	run_fio --name=w --filename="${dev}" --rw=write "$(ioengine "libaio")" \
+		--iodepth=32 --numjob=8 --group_reporting=1 --offset="$off" \
+		--size="$size" --bs="$bs" --zonemode=zbd --direct=1 \
+		--zonesize="$zone_size" --continue_on_error=1 \
+		--recover_zbd_write_error=1 --debug=zbd \
+		>>"${logfile}.${test_number}" 2>&1 || return $?
+	grep -qe "Write pointer move succeeded" \
+	     "${logfile}.${test_number}"
+}
+
+# Single job sequential sync write to sequential zones, with continue_on_error,
+# with failures in the recovery writes.
+test74() {
+	local size off bs
+
+	require_zbd || return "$SKIP_TESTCASE"
+	require_nullb || return "$SKIP_TESTCASE"
+	require_badblock || return "$SKIP_TESTCASE"
+
+	prep_write
+	off=$((first_sequential_zone_sector * 512))
+	bs=$(min "$(max $((zone_size / 64)) "$min_seq_write_size")" "$zone_cap_bs")
+	set_badblocks "$off" "$((bs / 2))" > /dev/null
+	size=$((4 * zone_size))
+	run_fio_on_seq "$(ioengine "psync")" --rw=write --offset="$off" \
+		       --size="$size" --bs="$bs" --continue_on_error=1 \
+		       --recover_zbd_write_error=1 --ignore_error=,EIO:61 \
+		       >>"${logfile}.${test_number}" 2>&1 || return $?
+	grep -qe "Failed to recover write pointer" "${logfile}.${test_number}"
+}
+
+# Multi job sequential async write to sequential zones, with continue_on_error
+# with failures in the recovery writes.
+test75() {
+	local size off bs
+
+	require_zbd || return "$SKIP_TESTCASE"
+	require_nullb || return "$SKIP_TESTCASE"
+	require_badblock || return "$SKIP_TESTCASE"
+
+	prep_write
+	off=$((first_sequential_zone_sector * 512))
+	bs=$(min "$(max $((zone_size / 64)) "$min_seq_write_size")" "$zone_cap_bs")
+	set_badblocks "$off" $((bs / 2)) > /dev/null
+	size=$((zone_size * 4))
+	run_fio --name=w --filename="${dev}" --rw=write "$(ioengine "libaio")" \
+		--iodepth=32 --numjob=8 --group_reporting=1 --offset="$off" \
+		--size="$size" --bs="$bs" --zonemode=zbd --direct=1 \
+		--zonesize="$zone_size" --continue_on_error=1 \
+		--recover_zbd_write_error=1 --debug=zbd \
+		>>"${logfile}.${test_number}" 2>&1 || return $?
+	grep -qe "Failed to recover write pointer" "${logfile}.${test_number}"
 }
 
 SECONDS=0
