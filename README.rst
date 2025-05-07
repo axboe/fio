@@ -165,6 +165,10 @@ Configure will attempt to determine the target platform automatically.
 It's possible to build fio for ESX as well, use the ``--esx`` switch to
 configure.
 
+The HTTP engine is enabled depending on if the curl and openssl shared libraries
+are detected on the system. For Ubuntu, these packages are libcurl4-openssl-dev
+and libssl-dev.
+
 
 Windows
 ~~~~~~~

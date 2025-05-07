@@ -9,6 +9,13 @@
 # For path-style, prefix the key with the bucket name in the filename
 # so that filename=/bucket-name/k/e.y:
 # https://s3.region-code.amazonaws.com/bucket-name/k/e.y
+#
+# IMPORTANT: filename needs to begin with a '/':
+# FIO formats the url as `"http://%s%s", o->host, object`, so if 
+# filename does not begin with a '/' DNS will fail. For example, if
+# http_host=amazonaws.com and filename=k/1, URL will be set to 
+# amazonaws.comk/1 and curl will attempt to resolve amazonaws.comk
+# which will fail.
 
 # Reference for Virtual-hosted-style vs. Path-style URLs:
 # https://docs.aws.amazon.com/AmazonS3/latest/userguide/VirtualHosting.html
