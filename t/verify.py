@@ -55,7 +55,9 @@ VERIFY_OPT_LIST = [
     'verify_async',
     'verify_async_cpus',
     'verify_pattern',
+    'verify_pattern_interval',
     'verify_only',
+    'verify_fatal',
 ]
 
 class VerifyTest(FioJobCmdTest):
@@ -281,6 +283,7 @@ TEST_LIST_CSUM = [
             "bs": 4096,
             "rw": "write",
             "output-format": "json",
+            "verify_fatal": 1,
             },
         "test_class": VerifyCSUMTest,
         "success": SUCCESS_NONZERO,
@@ -294,6 +297,7 @@ TEST_LIST_CSUM = [
             "bs": 4096,
             "rw": "randwrite",
             "output-format": "json",
+            "verify_fatal": 1,
             },
         "test_class": VerifyCSUMTest,
         "success": SUCCESS_NONZERO,
@@ -309,6 +313,7 @@ TEST_LIST_CSUM = [
             "bs": 4096,
             "rw": "write",
             "output-format": "json",
+            "verify_fatal": 1,
             },
         "test_class": VerifyCSUMTest,
         "success": SUCCESS_NONZERO,
@@ -324,6 +329,7 @@ TEST_LIST_CSUM = [
             "bs": 4096,
             "rw": "randwrite",
             "output-format": "json",
+            "verify_fatal": 1,
             },
         "test_class": VerifyCSUMTest,
         "success": SUCCESS_NONZERO,
@@ -508,10 +514,20 @@ def verify_test_header(test_env, args, csum, mode, sequence):
             test['force_skip'] = False
 
         test['fio_opts']['verify'] = csum
-        if csum == 'pattern':
+        if csum in ('pattern', 'pattern_hdr'):
             test['fio_opts']['verify_pattern'] = '"abcd"-120xdeadface'
+            test['fio_opts'].pop('verify_pattern_interval', None)
+        elif csum == 'pattern_interval':
+            test['fio_opts']['verify'] = "pattern_hdr"
+            test['fio_opts']['verify_pattern'] = '%o'
+            test['fio_opts']['verify_pattern_interval'] = 512
+        elif csum == 'pattern_interval_nohdr':
+            test['fio_opts']['verify'] = "pattern"
+            test['fio_opts']['verify_pattern'] = '%o'
+            test['fio_opts']['verify_pattern_interval'] = 512
         else:
             test['fio_opts'].pop('verify_pattern', None)
+            test['fio_opts'].pop('verify_pattern_interval', None)
 
         if 'norandommap' in sequence:
             test['fio_opts']['norandommap'] = 1
@@ -579,10 +595,20 @@ def verify_test_csum(test_env, args, mbs, csum):
         test['force_skip'] = False
         test['fio_opts']['verify'] = csum
 
-        if csum == 'pattern':
+        if csum in ('pattern', 'pattern_hdr'):
             test['fio_opts']['verify_pattern'] = '"abcd"-120xdeadface'
+            test['fio_opts'].pop('verify_pattern_interval', None)
+        elif csum == 'pattern_interval':
+            test['fio_opts']['verify'] = "pattern_hdr"
+            test['fio_opts']['verify_pattern'] = '%o'
+            test['fio_opts']['verify_pattern_interval'] = 512
+        elif csum == 'pattern_interval_nohdr':
+            test['fio_opts']['verify'] = "pattern"
+            test['fio_opts']['verify_pattern'] = '%o'
+            test['fio_opts']['verify_pattern_interval'] = 512
         else:
             test['fio_opts'].pop('verify_pattern', None)
+            test['fio_opts'].pop('verify_pattern_interval', None)
 
         if mbs == MANGLE_JOB_BS:
             test['fio_opts']['mangle_bs'] = test['fio_opts']['bs']
@@ -610,10 +636,20 @@ def verify_test(test_env, args, ddir, csum):
         test['fio_opts']['rw'] = ddir
         test['fio_opts']['verify'] = csum
 
-        if csum == 'pattern':
+        if csum in ('pattern', 'pattern_hdr'):
             test['fio_opts']['verify_pattern'] = '"abcd"-120xdeadface'
+            test['fio_opts'].pop('verify_pattern_interval', None)
+        elif csum == 'pattern_interval':
+            test['fio_opts']['verify'] = "pattern_hdr"
+            test['fio_opts']['verify_pattern'] = '%o'
+            test['fio_opts']['verify_pattern_interval'] = 512
+        elif csum == 'pattern_interval_nohdr':
+            test['fio_opts']['verify'] = "pattern"
+            test['fio_opts']['verify_pattern'] = '%o'
+            test['fio_opts']['verify_pattern_interval'] = 512
         else:
             test['fio_opts'].pop('verify_pattern', None)
+            test['fio_opts'].pop('verify_pattern_interval', None)
 
         # For 100% read data directions we need the write file that was written with
         # verify enabled. Use a previous test case for this by telling fio to
@@ -664,6 +700,9 @@ CSUM_LIST2 = [
         'sha3-384',
         'sha3-512',
         'pattern',
+        'pattern_hdr',
+        'pattern_interval',
+        'pattern_interval_nohdr',
         'null',
              ]
 
