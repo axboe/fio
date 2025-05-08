@@ -41,6 +41,8 @@ main() {
 	args+=(
 	    --run-only
 	    1017
+	    -p
+	    "1017:--complete"
 	)
     else
 	skip+=(
