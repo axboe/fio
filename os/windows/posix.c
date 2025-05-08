@@ -830,18 +830,24 @@ ssize_t pwrite(int fildes, const void *buf, size_t nbyte,
 		off_t offset)
 {
 	int64_t pos = _telli64(fildes);
-	ssize_t len = _write(fildes, buf, nbyte);
+	ssize_t len;
 
+	_lseeki64(fildes, offset, SEEK_SET);
+	len = _write(fildes, buf, nbyte);
 	_lseeki64(fildes, pos, SEEK_SET);
+
 	return len;
 }
 
 ssize_t pread(int fildes, void *buf, size_t nbyte, off_t offset)
 {
 	int64_t pos = _telli64(fildes);
-	ssize_t len = read(fildes, buf, nbyte);
+	ssize_t len;
 
+	_lseeki64(fildes, offset, SEEK_SET);
+	len = read(fildes, buf, nbyte);
 	_lseeki64(fildes, pos, SEEK_SET);
+
 	return len;
 }
 
