@@ -14,6 +14,11 @@
 #include <machine/endian.h>
 #include <libkern/OSByteOrder.h>
 
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <stdio.h>
+
+
 #include "../arch/arch.h"
 #include "../file.h"
 
@@ -117,3 +122,60 @@ static inline bool os_cpu_has(cpu_features feature)
 }
 
 #endif
+
+#if defined (__APPLE__)
+/*
+ * discard_pages should not be run within Rosetta. Native arm64 or x86 only. 
+ */
+
+#define MMAP_CHUNK_SIZE		(1024 * 1024 * 1024)
+
+static inline int discard_pages(int fd, off_t offset, off_t size)
+{
+	caddr_t *addr;
+	uint64_t chunk_size = MMAP_CHUNK_SIZE;
+
+	if (fsync(fd) < 0) {
+                int __err = errno; 
+		fprintf(stderr, "Cannot fsync file\n");
+                errno = __err;
+		return -1;
+	}	    
+    
+	/*
+	 * mmap the file in 1GB chunks and msync(MS_INVALIDATE).
+	 */
+	while (size > 0) {
+		uint64_t mmap_size = MIN(chunk_size, size);
+
+		addr = mmap((caddr_t)0, mmap_size, PROT_NONE, MAP_SHARED, fd, offset);
+		if (addr == MAP_FAILED) {
+                        int __map_errno = errno;
+			fprintf(stderr, "Failed to mmap (%s), offset = %llu, size = %llu\n",
+				strerror(errno), offset, mmap_size);
+                        errno = __map_errno;
+			return -1;
+		}
+
+		if (msync(addr, mmap_size, MS_INVALIDATE)) {
+                        int __msync_errno = errno;
+			fprintf(stderr, "msync failed to free cache pages.\n");
+                        errno = __msync_errno;
+			return -1;
+		}
+
+		/* Destroy the above mappings used to invalidate cache - cleaning up */
+		if (munmap(addr, mmap_size) < 0) {
+                        int __munmap_errno = errno;
+			fprintf(stderr, "munmap failed, error = %d.\n", errno);
+                        errno = __munmap_errno;
+			return -1;
+		}
+
+		size -= mmap_size;
+		offset += mmap_size;
+	}
+
+	return 0;
+}
+#endif /* defined (__APPLE__) */
