@@ -808,8 +808,11 @@ Target file/device
 	For HTTP and S3 access, specify a valid URL path or S3 key, respectively.
 	A filename for path-style S3 includes a bucket name (:file:`/bucket/k/e.y`)
 	while a virtual-hosted-style S3 filename :file:`/k/e.y` does not because 
-	its bucket name is specified in :option:`http_host`.
-
+	its bucket name is specified in :option:`http_host`. In both cases, the
+	filename should begin with a ``/``. The HTTP engine does not automatically
+	add a leading ``/`` when constructing URLs from :option:`http_host` and
+	:option:`filename`.
+ 	
 	The filename "`-`" is a reserved name, meaning *stdin* or *stdout*.  Which
 	of the two depends on the read/write direction set.
 
