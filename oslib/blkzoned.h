@@ -54,6 +54,12 @@ static inline int blkzoned_reset_wp(struct thread_data *td, struct fio_file *f,
 {
 	return -EIO;
 }
+static inline int blkzoned_move_zone_wp(struct thread_data *td,
+					struct fio_file *f, struct zbd_zone *z,
+					uint64_t length, const char *buf)
+{
+	return -EIO;
+}
 static inline int blkzoned_get_max_open_zones(struct thread_data *td, struct fio_file *f,
 					      unsigned int *max_open_zones)
 {
