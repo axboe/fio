@@ -3921,6 +3921,9 @@ Verification
 			basic information and checksumming, but if this option is set, only
 			the specific pattern set with :option:`verify_pattern` is verified.
 
+		**pattern_hdr**
+			Verify a pattern in conjunction with a header.
+
 		**null**
 			Only pretend to verify. Useful for testing internals with
 			:option:`ioengine`\=null, not for much else.

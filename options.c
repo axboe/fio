@@ -3217,6 +3217,10 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .oval = VERIFY_PATTERN_NO_HDR,
 			    .help = "Verify strict pattern",
 			  },
+			  { .ival = "pattern_hdr",
+			    .oval = VERIFY_PATTERN,
+			    .help = "Verify pattern with header",
+			  },
 			  {
 			    .ival = "null",
 			    .oval = VERIFY_NULL,
