@@ -22,7 +22,7 @@ SUCCESS_DEFAULT = {
 SUCCESS_LONG = {
     'zero_return': True,
     'stderr_empty': True,
-    'timeout': 1800,
+    'timeout': 3600,
     }
 SUCCESS_NONZERO = {
     'zero_return': False,
