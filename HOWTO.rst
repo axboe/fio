@@ -812,7 +812,7 @@ Target file/device
 	filename should begin with a ``/``. The HTTP engine does not automatically
 	add a leading ``/`` when constructing URLs from :option:`http_host` and
 	:option:`filename`.
- 	
+
 	The filename "`-`" is a reserved name, meaning *stdin* or *stdout*.  Which
 	of the two depends on the read/write direction set.
 
