@@ -65,9 +65,10 @@ void fill_verify_pattern(struct thread_data *td, void *p, unsigned int len,
 		return;
 	}
 
-	/* Skip if we were here and we do not need to patch pattern
-	 * with format */
-	if (!td->o.verify_fmt_sz && io_u->buf_filled_len >= len) {
+	/* Skip if we were here and we do not need to patch pattern with
+	 * format. However, we cannot skip if verify_offset is set because we
+	 * have swapped the header with pattern bytes */
+	if (!td->o.verify_fmt_sz && io_u->buf_filled_len >= len && !td->o.verify_offset) {
 		dprint(FD_VERIFY, "using already filled verify pattern b=%d len=%u\n",
 			o->verify_pattern_bytes, len);
 		return;
