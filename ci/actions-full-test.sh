@@ -35,8 +35,9 @@ main() {
 
     fi
 
-    # If we are running a nightly test just run the verify tests.
-    # Otherwise skip the verify test script because it takes so long.
+    # If we are running a nightly test just run the verify tests.  Skip the
+    # verify test script with pull requests and pushes because it takes so
+    # long. When this workflow is run manually everything will be run.
     if [ "${GITHUB_EVENT_NAME}" == "schedule" ]; then
 	args+=(
 	    --run-only
@@ -44,7 +45,7 @@ main() {
 	    -p
 	    "1017:--complete"
 	)
-    else
+    elif [ "${GITHUB_EVENT_NAME}" == "pull_request" ] || [ "${GITHUB_EVENT_NAME}" == "push" ]; then
 	skip+=(
 	    1017
 	)
