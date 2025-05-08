@@ -373,6 +373,20 @@ static inline void *io_u_verify_off(struct verify_header *hdr, struct vcont *vc)
 	return vc->io_u->buf + vc->hdr_num * hdr->len + hdr_size(vc->td, hdr);
 }
 
+/*
+ *  The current thread will need its own buffer if there are multiple threads
+ *  and the pattern contains the offset. Fio currently only has one pattern
+ *  format specifier so we only need to check that one, but this may need to be
+ *  changed if fio ever gains more pattern format specifiers.
+ */
+static inline bool pattern_need_buffer(struct thread_data *td)
+{
+	return td->o.verify_async &&
+		td->o.verify_fmt_sz &&
+		td->o.verify_fmt[0].desc->paste == paste_blockoff;
+}
+
+
 static int verify_io_u_pattern(struct verify_header *hdr, struct vcont *vc)
 {
 	struct thread_data *td = vc->td;
@@ -386,6 +400,16 @@ static int verify_io_u_pattern(struct verify_header *hdr, struct vcont *vc)
 	pattern_size = td->o.verify_pattern_bytes;
 	assert(pattern_size != 0);
 
+	/*
+	 * Make this thread safe when verify_async is set and the verify
+	 * pattern includes the offset.
+	 */
+	if (pattern_need_buffer(td)) {
+		pattern = malloc(pattern_size);
+		assert(pattern);
+		memcpy(pattern, td->o.verify_pattern, pattern_size);
+	}
+
 	(void)paste_format_inplace(pattern, pattern_size,
 				   td->o.verify_fmt, td->o.verify_fmt_sz, io_u);
 
@@ -395,7 +419,7 @@ static int verify_io_u_pattern(struct verify_header *hdr, struct vcont *vc)
 
 	rc = cmp_pattern(pattern, pattern_size, mod, buf, len);
 	if (!rc)
-		return 0;
+		goto done;
 
 	/* Slow path, compare each byte */
 	for (i = 0; i < len; i++) {
@@ -411,16 +435,18 @@ static int verify_io_u_pattern(struct verify_header *hdr, struct vcont *vc)
 				i + header_size);
 			vc->name = "pattern";
 			log_verify_failure(hdr, vc);
-			return EILSEQ;
+			rc = EILSEQ;
+			goto done;
 		}
 		mod++;
 		if (mod == td->o.verify_pattern_bytes)
 			mod = 0;
 	}
 
-	/* Unreachable line */
-	assert(0);
-	return EILSEQ;
+done:
+	if (pattern_need_buffer(td))
+		free(pattern);
+	return rc;
 }
 
 static int verify_io_u_xxhash(struct verify_header *hdr, struct vcont *vc)
