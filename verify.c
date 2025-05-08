@@ -1031,7 +1031,7 @@ int verify_io_u(struct thread_data *td, struct io_u **io_u_ptr)
 			ret = EINVAL;
 		}
 
-		if (ret && verify_type != hdr->verify_type)
+		if (ret && verify_type != hdr->verify_type && verify_type != VERIFY_PATTERN_NO_HDR)
 			log_err("fio: verify type mismatch (%u media, %u given)\n",
 					hdr->verify_type, verify_type);
 	}
