@@ -51,6 +51,8 @@ void fill_verify_pattern(struct thread_data *td, void *p, unsigned int len,
 			 struct io_u *io_u, uint64_t seed, int use_seed)
 {
 	struct thread_options *o = &td->o;
+	unsigned int interval = o->verify_pattern_interval;
+	unsigned long long offset = io_u->offset;
 
 	if (!o->verify_pattern_bytes) {
 		dprint(FD_VERIFY, "fill random bytes len=%u\n", len);
@@ -74,10 +76,24 @@ void fill_verify_pattern(struct thread_data *td, void *p, unsigned int len,
 		return;
 	}
 
-	(void)paste_format(td->o.verify_pattern, td->o.verify_pattern_bytes,
-			   td->o.verify_fmt, td->o.verify_fmt_sz,
-			   p, len, io_u);
+	if (!interval)
+		interval = len;
+
+	io_u->offset += (p - io_u->buf) - (p - io_u->buf) % interval;
+	for (unsigned int bytes_done = 0, bytes_todo = 0; bytes_done < len;
+			bytes_done += bytes_todo, p += bytes_todo, io_u->offset += interval) {
+		bytes_todo = (p - io_u->buf) % interval;
+		if (!bytes_todo)
+			bytes_todo = interval;
+		bytes_todo = min(bytes_todo, len - bytes_done);
+
+		(void)paste_format(td->o.verify_pattern, td->o.verify_pattern_bytes,
+				   td->o.verify_fmt, td->o.verify_fmt_sz,
+				   p, bytes_todo, io_u);
+	}
+
 	io_u->buf_filled_len = len;
+	io_u->offset = offset;
 }
 
 static unsigned int get_hdr_inc(struct thread_data *td, struct io_u *io_u)
@@ -373,49 +389,11 @@ static inline void *io_u_verify_off(struct verify_header *hdr, struct vcont *vc)
 	return vc->io_u->buf + vc->hdr_num * hdr->len + hdr_size(vc->td, hdr);
 }
 
-/*
- *  The current thread will need its own buffer if there are multiple threads
- *  and the pattern contains the offset. Fio currently only has one pattern
- *  format specifier so we only need to check that one, but this may need to be
- *  changed if fio ever gains more pattern format specifiers.
- */
-static inline bool pattern_need_buffer(struct thread_data *td)
+static int check_pattern(char *buf, unsigned int len, unsigned int mod,
+		unsigned int pattern_size, char *pattern, unsigned int header_size)
 {
-	return td->o.verify_async &&
-		td->o.verify_fmt_sz &&
-		td->o.verify_fmt[0].desc->paste == paste_blockoff;
-}
-
-
-static int verify_io_u_pattern(struct verify_header *hdr, struct vcont *vc)
-{
-	struct thread_data *td = vc->td;
-	struct io_u *io_u = vc->io_u;
-	char *buf, *pattern;
-	unsigned int header_size = __hdr_size(td->o.verify);
-	unsigned int len, mod, i, pattern_size;
+	unsigned int i;
 	int rc;
-
-	pattern = td->o.verify_pattern;
-	pattern_size = td->o.verify_pattern_bytes;
-	assert(pattern_size != 0);
-
-	/*
-	 * Make this thread safe when verify_async is set and the verify
-	 * pattern includes the offset.
-	 */
-	if (pattern_need_buffer(td)) {
-		pattern = malloc(pattern_size);
-		assert(pattern);
-		memcpy(pattern, td->o.verify_pattern, pattern_size);
-	}
-
-	(void)paste_format_inplace(pattern, pattern_size,
-				   td->o.verify_fmt, td->o.verify_fmt_sz, io_u);
-
-	buf = (char *) hdr + header_size;
-	len = get_hdr_inc(td, io_u) - header_size;
-	mod = (get_hdr_inc(td, io_u) * vc->hdr_num + header_size) % pattern_size;
 
 	rc = cmp_pattern(pattern, pattern_size, mod, buf, len);
 	if (!rc)
@@ -433,17 +411,106 @@ static int verify_io_u_pattern(struct verify_header *hdr, struct vcont *vc)
 				bits);
 			log_err("fio: bad pattern block offset %u\n",
 				i + header_size);
-			vc->name = "pattern";
-			log_verify_failure(hdr, vc);
 			rc = EILSEQ;
 			goto done;
 		}
 		mod++;
-		if (mod == td->o.verify_pattern_bytes)
+		if (mod == pattern_size)
 			mod = 0;
 	}
 
 done:
+	return rc;
+}
+
+/*
+ *  The current thread will need its own buffer if there are multiple threads
+ *  and the pattern contains the offset. Fio currently only has one pattern
+ *  format specifier so we only need to check that one, but this may need to be
+ *  changed if fio ever gains more pattern format specifiers.
+ */
+static inline bool pattern_need_buffer(struct thread_data *td)
+{
+	return td->o.verify_async &&
+		td->o.verify_fmt_sz &&
+		td->o.verify_fmt[0].desc->paste == paste_blockoff;
+}
+
+static int verify_io_u_pattern(struct verify_header *hdr, struct vcont *vc)
+{
+	struct thread_data *td = vc->td;
+	struct io_u *io_u = vc->io_u;
+	char *buf, *pattern;
+	unsigned int header_size = __hdr_size(td->o.verify);
+	unsigned int len, mod, pattern_size, pattern_interval_mod, bytes_done = 0, bytes_todo;
+	int rc;
+	unsigned long long offset = io_u->offset;
+
+	pattern = td->o.verify_pattern;
+	pattern_size = td->o.verify_pattern_bytes;
+	assert(pattern_size != 0);
+
+	/*
+	 * Make this thread safe when verify_async is set and the verify
+	 * pattern includes the offset.
+	 */
+	if (pattern_need_buffer(td)) {
+		pattern = malloc(pattern_size);
+		assert(pattern);
+		memcpy(pattern, td->o.verify_pattern, pattern_size);
+	}
+
+	if (!td->o.verify_pattern_interval) {
+		(void)paste_format_inplace(pattern, pattern_size,
+					   td->o.verify_fmt, td->o.verify_fmt_sz, io_u);
+	}
+
+	/*
+	 * We have 3 cases here:
+	 * 1. Compare the entire buffer if (1) verify_interval is not set and
+	 * (2) verify_pattern_interval is not set
+	 * 2. Compare the entire *verify_interval* if (1) verify_interval *is*
+	 * set and (2) verify_pattern_interval is not set
+	 * 3. Compare *verify_pattern_interval* segments or subsets thereof if
+	 * (2) verify_pattern_interval is set
+	 */
+
+	buf = (char *) hdr + header_size;
+	len = get_hdr_inc(td, io_u) - header_size;
+	if (td->o.verify_pattern_interval) {
+		unsigned int extent = get_hdr_inc(td, io_u) * vc->hdr_num + header_size;
+		pattern_interval_mod = extent % td->o.verify_pattern_interval;
+		mod = pattern_interval_mod % pattern_size;
+		bytes_todo = min(len, td->o.verify_pattern_interval - pattern_interval_mod);
+		io_u->offset += extent / td->o.verify_pattern_interval * td->o.verify_pattern_interval;
+	} else {
+		mod = (get_hdr_inc(td, io_u) * vc->hdr_num + header_size) % pattern_size;
+		bytes_todo = len;
+		pattern_interval_mod = 0;
+	}
+
+	while (bytes_done < len) {
+		if (td->o.verify_pattern_interval) {
+			(void)paste_format_inplace(pattern, pattern_size,
+					td->o.verify_fmt, td->o.verify_fmt_sz,
+					io_u);
+		}
+
+		rc = check_pattern(buf, bytes_todo, mod, pattern_size, pattern, header_size);
+		if (rc) {
+			vc->name = "pattern";
+			log_verify_failure(hdr, vc);
+			break;
+		}
+
+		mod = 0;
+		bytes_done += bytes_todo;
+		buf += bytes_todo;
+		io_u->offset += td->o.verify_pattern_interval;
+		bytes_todo = min(len - bytes_done, td->o.verify_pattern_interval);
+	}
+
+	io_u->offset = offset;
 	if (pattern_need_buffer(td))
 		free(pattern);
 	return rc;

@@ -3702,6 +3702,13 @@ verify_pattern=0xff%o"abcd"\-12
 .RE
 .RE
 .TP
+.BI verify_pattern_interval \fR=\fPbool
+Recreate an instance of the \fBverify_pattern\fR every
+\fBverify_pattern_interval\fR bytes. This is only useful when
+\fBverify_pattern\fR contains the %o format specifier and can be used to speed
+up the process of writing each block on a device with its offset. Default:
+0 (disabled).
+.TP
 .BI verify_fatal \fR=\fPbool
 Normally fio will keep checking the entire contents before quitting on a
 block verification failure. If this option is set, fio will exit the job on

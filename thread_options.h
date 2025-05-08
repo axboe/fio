@@ -146,6 +146,7 @@ struct thread_options {
 	unsigned int verify_offset;
 	char *verify_pattern;
 	unsigned int verify_pattern_bytes;
+	unsigned int verify_pattern_interval;
 	struct pattern_fmt verify_fmt[8];
 	unsigned int verify_fmt_sz;
 	unsigned int verify_fatal;
@@ -478,6 +479,7 @@ struct thread_options_pack {
 	uint32_t verify_interval;
 	uint32_t verify_offset;
 	uint32_t verify_pattern_bytes;
+	uint32_t verify_pattern_interval;
 	uint32_t verify_fatal;
 	uint32_t verify_dump;
 	uint32_t verify_async;
@@ -517,6 +519,7 @@ struct thread_options_pack {
 
 	struct zone_split zone_split[DDIR_RWDIR_CNT][ZONESPLIT_MAX];
 	uint32_t zone_split_nr[DDIR_RWDIR_CNT];
+	uint32_t pad2;
 
 	fio_fp64_t zipf_theta;
 	fio_fp64_t pareto_h;
