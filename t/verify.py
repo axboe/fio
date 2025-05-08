@@ -210,6 +210,41 @@ class VerifyCSUMTest(FioJobCmdTest):
 
 
 #
+# These tests exercise fio's verify_pattern_interval option.
+#
+TEST_LIST_VPI = [
+    {
+        # Basic test verify=pattern
+        "test_id": 3000,
+        "fio_opts": {
+            "ioengine": "psync",
+            "rw": "write",
+            "verify": "pattern",
+            "filesize": "1M",
+            "bs": 4096,
+            "output-format": "json",
+            },
+        "test_class": VerifyTest,
+        "success": SUCCESS_DEFAULT,
+    },
+    {
+        # Basic test verify=pattern_hdr
+        "test_id": 3001,
+        "fio_opts": {
+            "ioengine": "psync",
+            "rw": "write",
+            "verify": "pattern_hdr",
+            "filesize": "1M",
+            "bs": 4096,
+            "output-format": "json",
+            },
+        "test_class": VerifyTest,
+        "success": SUCCESS_DEFAULT,
+    },
+]
+
+
+#
 # These tests exercise fio's decisions about verifying the sequence number and
 # random seed in the verify header.
 #
@@ -625,6 +660,25 @@ def verify_test_csum(test_env, args, mbs, csum):
     return run_fio_tests(TEST_LIST_CSUM, test_env, args)
 
 
+def verify_test_vpi(test_env, args, pattern, vpi, vi):
+    """
+    Adjust test arguments based on values of ddir and csum.  Then run
+    the tests.
+    """
+    for test in TEST_LIST_VPI:
+        test['force_skip'] = False
+
+        test['fio_opts']['verify_pattern'] = pattern
+        test['fio_opts']['verify_interval'] = vi
+        test['fio_opts']['verify_pattern_interval'] = vpi
+
+        for key in ['verify_interval', 'verify_pattern_interval']:
+            if not test['fio_opts'][key]:
+                test['fio_opts'].pop(key, None)
+
+    return run_fio_tests(TEST_LIST_VPI, test_env, args)
+
+
 def verify_test(test_env, args, ddir, csum):
     """
     Adjust test arguments based on values of ddir and csum.  Then run
@@ -769,6 +823,11 @@ def main():
             test['fio_opts']['ioengine'] = aio
         if 'sync' in test['fio_opts']['ioengine']:
             test['fio_opts']['ioengine'] = sync
+    for test in TEST_LIST_VPI:
+        if 'aio' in test['fio_opts']['ioengine']:
+            test['fio_opts']['ioengine'] = aio
+        if 'sync' in test['fio_opts']['ioengine']:
+            test['fio_opts']['ioengine'] = sync
 
     total = { 'passed':  0, 'failed': 0, 'skipped': 0 }
 
@@ -825,6 +884,23 @@ def main():
             os.mkdir(test_env['artifact_root'])
 
             passed, failed, skipped = verify_test_header(test_env, args, 'md5', mode, sequence)
+
+            total['passed'] += passed
+            total['failed'] += failed
+            total['skipped'] += skipped
+
+        # The loop below is for verify_pattern_interval tests
+        pattern_list = ['%o', '"abcde"', '1%o',]
+        vpi_list = [10, 129, 512, 4089, None]
+        verify_interval_list = [512, 1024, 2222, 3791, None]
+        for pattern, vpi, vi in itertools.product(pattern_list, vpi_list, verify_interval_list):
+            print(f"\npattern: {pattern}, verify_pattern_interval: {vpi}, verify_interval: {vi}")
+
+            test_env['artifact_root'] = os.path.join(artifact_root,
+                f"pattern_{pattern}_vpi_{vpi}_vi_{vi}").replace('"', '').replace("%", 'pct')
+            os.mkdir(test_env['artifact_root'])
+
+            passed, failed, skipped = verify_test_vpi(test_env, args, pattern, vpi, vi)
 
             total['passed'] += passed
             total['failed'] += failed
