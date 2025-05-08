@@ -74,7 +74,7 @@ class VerifyTest(FioJobCmdTest):
             f"--ioengine={self.fio_opts['ioengine']}",
             f"--rw={self.fio_opts['rw']}",
             f"--verify={self.fio_opts['verify']}",
-            f"--output={self.filenames['output']}",
+            f"--output={os.path.basename(self.filenames['output'])}",
         ]
         for opt in VERIFY_OPT_LIST:
             if opt in self.fio_opts:
