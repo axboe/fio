@@ -55,6 +55,27 @@ uint64_t usec_sleep(struct thread_data *td, unsigned long usec)
 	struct timespec tv;
 	uint64_t t = 0;
 
+	if (td->o.io_submit_mode == IO_MODE_INLINE) {
+		struct timespec ts;
+		int err = 0;
+
+		fio_gettime(&tv, NULL);
+		if (td->io_u_queued || td->cur_depth)
+			td_io_commit(td);
+
+		while ((t = utime_since_now(&tv)) < usec &&
+			   td->io_u_in_flight && err == 0) {
+			ts.tv_sec = (usec - t) / 1000000;
+			ts.tv_nsec = (usec - t) % 1000000 * 1000;
+			err = io_u_queued_complete(td, 1, &ts);
+		}
+
+		if (td->flags & TD_F_REGROW_LOGS)
+			regrow_logs(td);
+
+		usec = t < usec ? usec - t : 0;
+	}
+
 	do {
 		unsigned long ts = usec;
 
