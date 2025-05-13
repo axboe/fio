@@ -21,8 +21,10 @@ enum {
 
 extern int __fio_sem_init(struct fio_sem *, int);
 extern struct fio_sem *fio_sem_init(int);
+extern struct fio_sem *fio_shared_sem_init(int);
 extern void __fio_sem_remove(struct fio_sem *);
 extern void fio_sem_remove(struct fio_sem *);
+extern void fio_shared_sem_remove(struct fio_sem *);
 extern void fio_sem_up(struct fio_sem *);
 extern void fio_sem_down(struct fio_sem *);
 extern bool fio_sem_down_trylock(struct fio_sem *);

@@ -38,7 +38,7 @@ static void disk_util_free(struct disk_util *du)
 		slave->users--;
 	}
 
-	fio_sem_remove(du->lock);
+	fio_shared_sem_remove(du->lock);
 	free(du->sysfs_root);
 	sfree(du);
 }
@@ -327,7 +327,7 @@ static struct disk_util *disk_util_add(struct thread_data *td, int majdev,
 	du->minor = mindev;
 	INIT_FLIST_HEAD(&du->slavelist);
 	INIT_FLIST_HEAD(&du->slaves);
-	du->lock = fio_sem_init(FIO_SEM_UNLOCKED);
+	du->lock = fio_shared_sem_init(FIO_SEM_UNLOCKED);
 	du->users = 0;
 
 	fio_sem_down(disk_util_sem);
