@@ -32,6 +32,7 @@ DPKGCFG
         libcunit1-dev
         libcurl4-openssl-dev
         libfl-dev
+	libgnutls28-dev
         libnuma-dev
 	libnfs-dev
         valgrind
@@ -106,6 +107,7 @@ install_fedora() {
         bison-devel
         git
         flex-devel
+	gnutls-devel
         gperftools
         isa-l-devel
         kernel-devel
