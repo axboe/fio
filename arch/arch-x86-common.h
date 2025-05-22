@@ -68,7 +68,8 @@ static inline void arch_init(char *envp[])
 			 (unsigned int *) &str[4]);
 
 	str[12] = '\0';
-	if (!strcmp(str, "GenuineIntel"))
+	if (!strcmp(str, "GenuineIntel") || !strcmp(str, "  Shanghai  ") ||
+	    !strcmp(str, "CentaurHauls"))
 		arch_init_intel();
 	else if (!strcmp(str, "AuthenticAMD") || !strcmp(str, "HygonGenuine"))
 		arch_init_amd();
