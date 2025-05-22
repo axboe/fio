@@ -627,7 +627,13 @@ def verify_test_csum(test_env, args, mbs, csum):
     methods can reliably detect data integrity issues.
     """
     for test in TEST_LIST_CSUM:
-        test['force_skip'] = False
+        # The crc7 checksum will produce too many false positives since when we
+        # modify the data there is a 1/128 chance that the checksum will not
+        # change. So skip this set of tests.
+        if csum == 'crc7':
+            test['force_skip'] = True
+        else:
+            test['force_skip'] = False
         test['fio_opts']['verify'] = csum
 
         if csum in ('pattern', 'pattern_hdr'):
