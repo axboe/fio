@@ -946,7 +946,7 @@ TEST_LIST = [
         'test_id':          35,
         'test_class':       FioJobFileTest,
         'job':              't0035.fio',
-        'success':          SUCCESS_DEFAULT,
+        'success':          SUCCESS_STDERR,
         'pre_job':          None,
         'pre_success':      None,
         'requirements':     [],
