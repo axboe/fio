@@ -390,10 +390,12 @@ enum fio_q_status td_io_queue(struct thread_data *td, struct io_u *io_u)
 
 	unlock_file(td, io_u->file);
 
-	if (ret == FIO_Q_BUSY && ddir_rw(ddir)) {
-		td->io_issues[ddir]--;
-		td->io_issue_bytes[ddir] -= buflen;
-		td->rate_io_issue_bytes[ddir] -= buflen;
+	if (ret == FIO_Q_BUSY) {
+	       if (ddir_rw(ddir)) {
+			td->io_issues[ddir]--;
+			td->io_issue_bytes[ddir] -= buflen;
+			td->rate_io_issue_bytes[ddir] -= buflen;
+		}
 		io_u_clear(td, io_u, IO_U_F_FLIGHT);
 	}
 
