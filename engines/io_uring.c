@@ -775,7 +775,7 @@ static enum fio_q_status fio_ioring_queue(struct thread_data *td,
 	struct ioring_data *ld = td->io_ops_data;
 	struct ioring_options *o = td->eo;
 	struct io_sq_ring *ring = &ld->sq_ring;
-	unsigned tail, next_tail;
+	unsigned tail;
 
 	fio_ro_check(td, io_u);
 
@@ -795,11 +795,6 @@ static enum fio_q_status fio_ioring_queue(struct thread_data *td,
 		return FIO_Q_COMPLETED;
 	}
 
-	tail = *ring->tail;
-	next_tail = tail + 1;
-	if (next_tail == atomic_load_relaxed(ring->head))
-		return FIO_Q_BUSY;
-
 	if (ld->cmdprio.mode != CMDPRIO_MODE_NONE)
 		fio_ioring_cmdprio_prep(td, io_u);
 
@@ -807,8 +802,9 @@ static enum fio_q_status fio_ioring_queue(struct thread_data *td,
 		o->cmd_type == FIO_URING_CMD_NVME)
 		fio_ioring_cmd_nvme_pi(td, io_u);
 
+	tail = *ring->tail;
 	ring->array[tail & ld->sq_ring_mask] = io_u->index;
-	atomic_store_release(ring->tail, next_tail);
+	atomic_store_release(ring->tail, tail + 1);
 
 	ld->queued++;
 	return FIO_Q_QUEUED;
