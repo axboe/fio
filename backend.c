@@ -1284,6 +1284,10 @@ static void cleanup_io_u(struct thread_data *td)
 		fio_memfree(io_u, sizeof(*io_u), td_offload_overlap(td));
 	}
 
+	while ((io_u = io_u_rpop(&td->io_u_requeues)) != NULL) {
+		put_io_u(td, io_u);
+	}
+
 	free_io_mem(td);
 
 	io_u_rexit(&td->io_u_requeues);
