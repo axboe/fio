@@ -742,19 +742,8 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 	return ddir;
 }
 
-/*
- * Return the data direction for the next io_u. If the job is a
- * mixed read/write workload, check the rwmix cycle and switch if
- * necessary.
- */
-static enum fio_ddir get_rw_ddir(struct thread_data *td)
+static inline enum fio_ddir get_sync_ddir(const struct thread_data *td)
 {
-	enum fio_ddir ddir;
-
-	/*
-	 * See if it's time to fsync/fdatasync/sync_file_range first,
-	 * and if not then move on to check regular I/Os.
-	 */
 	if (should_fsync(td) && td->last_ddir_issued == DDIR_WRITE) {
 		if (td->o.fsync_blocks && td->io_issues[DDIR_WRITE] &&
 		    !(td->io_issues[DDIR_WRITE] % td->o.fsync_blocks))
@@ -768,6 +757,30 @@ static enum fio_ddir get_rw_ddir(struct thread_data *td)
 		    !(td->io_issues[DDIR_WRITE] % td->sync_file_range_nr))
 			return DDIR_SYNC_FILE_RANGE;
 	}
+	return DDIR_INVAL;
+}
+
+bool time_to_ddir_sync(const struct thread_data *td)
+{
+	return get_sync_ddir(td) != DDIR_INVAL;
+}
+
+/*
+ * Return the data direction for the next io_u. If the job is a
+ * mixed read/write workload, check the rwmix cycle and switch if
+ * necessary.
+ */
+static enum fio_ddir get_rw_ddir(struct thread_data *td)
+{
+	enum fio_ddir ddir;
+
+	/*
+	 * See if it's time to fsync/fdatasync/sync_file_range first,
+	 * and if not then move on to check regular I/Os.
+	 */
+	ddir = get_sync_ddir(td);
+	if (ddir != DDIR_INVAL)
+		return ddir;
 
 	if (td_rw(td)) {
 		/*
