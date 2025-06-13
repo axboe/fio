@@ -283,7 +283,9 @@ static int init(struct thread_data *td)
 	struct fc_data *data;
 
 	data = calloc(1, sizeof(*data));
-
+	if (data == NULL)
+		return -ENOMEM;
+	
 	if (td_read(td))
 		data->stat_ddir = DDIR_READ;
 	else if (td_write(td))
