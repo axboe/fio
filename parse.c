@@ -480,14 +480,17 @@ static size_t opt_len(const char *str)
 	char delimiter[] = {',', ':'};
 	char *postfix;
 	unsigned int i;
+	size_t candidate_len;
 
+	size_t prefix_len = strlen(str);
 	for (i = 0; i < FIO_ARRAY_SIZE(delimiter); i++) {
 		postfix = strchr(str, delimiter[i]);
-		if (postfix)
-			return (int)(postfix - str);
+		candidate_len = (size_t)(postfix - str);
+		if (postfix && candidate_len < prefix_len)
+			prefix_len = candidate_len;
 	}
 
-	return strlen(str);
+	return prefix_len;
 }
 
 static int str_match_len(const struct value_pair *vp, const char *str)
