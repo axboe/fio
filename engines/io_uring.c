@@ -1610,7 +1610,10 @@ static int fio_ioring_cmd_get_file_size(struct thread_data *td,
 			return ret;
 		}
 
-		f->real_file_size = data->lba_size * nlba;
+		if (data->lba_ext)
+			f->real_file_size = data->lba_ext * nlba;
+		else
+			f->real_file_size = data->lba_size * nlba;
 		fio_file_set_size_known(f);
 
 		FILE_SET_ENG_DATA(f, data);
