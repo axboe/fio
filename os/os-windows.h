@@ -106,7 +106,6 @@ int fdatasync(int fildes);
 int lstat(const char * path, struct stat * buf);
 uid_t geteuid(void);
 char* ctime_r(const time_t *t, char *buf);
-int nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
 ssize_t pread(int fildes, void *buf, size_t nbyte, off_t offset);
 ssize_t pwrite(int fildes, const void *buf, size_t nbyte,
 		off_t offset);

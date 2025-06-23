@@ -549,50 +549,6 @@ return 0;
 #define CLOCK_MONOTONIC_RAW 4
 #endif
 
-/*
- * Get the value of a local clock source.
- * This implementation supports 3 clocks: CLOCK_MONOTONIC/CLOCK_MONOTONIC_RAW
- * provide high-accuracy relative time, while CLOCK_REALTIME provides a
- * low-accuracy wall time.
- */
-int clock_gettime(clockid_t clock_id, struct timespec *tp)
-{
-	int rc = 0;
-
-	if (clock_id == CLOCK_MONOTONIC || clock_id == CLOCK_MONOTONIC_RAW) {
-		static LARGE_INTEGER freq = {{0,0}};
-		LARGE_INTEGER counts;
-		uint64_t t;
-
-		QueryPerformanceCounter(&counts);
-		if (freq.QuadPart == 0)
-			QueryPerformanceFrequency(&freq);
-
-		tp->tv_sec = counts.QuadPart / freq.QuadPart;
-		/* Get the difference between the number of ns stored
-		 * in 'tv_sec' and that stored in 'counts' */
-		t = tp->tv_sec * freq.QuadPart;
-		t = counts.QuadPart - t;
-		/* 't' now contains the number of cycles since the last second.
-		 * We want the number of nanoseconds, so multiply out by 1,000,000,000
-		 * and then divide by the frequency. */
-		t *= 1000000000;
-		tp->tv_nsec = t / freq.QuadPart;
-	} else if (clock_id == CLOCK_REALTIME) {
-		/* clock_gettime(CLOCK_REALTIME,...) is just an alias for gettimeofday with a
-		 * higher-precision field. */
-		struct timeval tv;
-		gettimeofday(&tv, NULL);
-		tp->tv_sec = tv.tv_sec;
-		tp->tv_nsec = tv.tv_usec * 1000;
-	} else {
-		errno = EINVAL;
-		rc = -1;
-	}
-
-	return rc;
-}
-
 int mlock(const void * addr, size_t len)
 {
 	SIZE_T min, max;
@@ -935,34 +891,6 @@ int poll(struct pollfd fds[], nfds_t nfds, int timeout)
 		}
 	}
 	return rc;
-}
-
-int nanosleep(const struct timespec *rqtp, struct timespec *rmtp)
-{
-	struct timespec tv;
-	DWORD ms_remaining;
-	DWORD ms_total = (rqtp->tv_sec * 1000) + (rqtp->tv_nsec / 1000000.0);
-
-	if (ms_total == 0)
-		ms_total = 1;
-
-	ms_remaining = ms_total;
-
-	/* Since Sleep() can sleep for less than the requested time, add a loop to
-	   ensure we only return after the requested length of time has elapsed */
-	do {
-		fio_gettime(&tv, NULL);
-		Sleep(ms_remaining);
-		ms_remaining = ms_total - mtime_since_now(&tv);
-	} while (ms_remaining > 0 && ms_remaining < ms_total);
-
-	/* this implementation will never sleep for less than the requested time */
-	if (rmtp != NULL) {
-		rmtp->tv_sec = 0;
-		rmtp->tv_nsec = 0;
-	}
-
-	return 0;
 }
 
 DIR *opendir(const char *dirname)

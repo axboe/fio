@@ -462,8 +462,6 @@ CYGWIN*)
   build_static="yes"
   rusage_thread="yes"
   fdatasync="yes"
-  clock_gettime="yes" # clock_monotonic probe has dependency on this
-  clock_monotonic="yes"
   sched_idle="yes"
   pthread_condattr_setclock="no"
   pthread_affinity="no"
