@@ -431,7 +431,7 @@ static int get_next_block(struct thread_data *td, struct io_u *io_u,
 	if (td_randtrimwrite(td) && ddir == DDIR_WRITE) {
 		/* don't mark randommap for these writes */
 		io_u_set(td, io_u, IO_U_F_BUSY_OK);
-		offset = f->last_start[DDIR_TRIM];
+		offset = f->last_start[DDIR_TRIM] - f->file_offset;
 		*is_random = true;
 		ret = 0;
 	} else if (rw_seq) {
