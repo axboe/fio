@@ -1,0 +1,33 @@
+; (SPRandom) SanDisk Random preconditioning example
+; Requirements
+;  1. Single file
+;  2. Single job (numjobs=1)
+;  3. Assumes norandommap=1
+;  4. Assumes random_generator=lfrs
+;
+; Basic execution example, run with io_uring
+; fio --filename=/dev/nvme0n1 --ioengine=io_uring examples/sprandom.fio
+;
+; Enable debug output for the 'sprandom' module
+; fio --debug=sprandom --filename=/dev/nvme0n1 examples/sprandom.fio
+;
+; Set over-provisioning according to vendor recommendation (21%)
+; fio --spr_op=0.21 --filename=/dev/nvme0n1 examples/sprandom.fio
+;
+; For large devices it is better to use more regions, to increase precision
+; and reduce memory allocation. The allocation is proportional to the region size
+; fio --spr_num_regions=400 --filename=/dev/nvme0n1 examples/sprandom.fio
+;
+[global]
+ioengine=libaio
+rw=randwrite
+bs=${FIO_BS}
+blockalign=${FIO_BS}
+direct=1
+norandommap=1
+iodepth=64
+[preconditioning]
+sprandom=1
+spr_op=0.15
+spr_num_regions=100
+
