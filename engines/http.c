@@ -643,7 +643,7 @@ static enum fio_q_status fio_http_queue(struct thread_data *td,
 
 	fio_ro_check(td, io_u);
 	memset(&_curl_stream, 0, sizeof(_curl_stream));
-	snprintf(object, sizeof(object), "%s_%llu_%llu", td->files[0]->file_name,
+	snprintf(object, sizeof(object), "%s_%llu_%llu", io_u->file->file_name,
 		io_u->offset, io_u->xfer_buflen);
 	if (o->https == FIO_HTTPS_OFF)
 		snprintf(url, sizeof(url), "http://%s%s", o->host, object);
