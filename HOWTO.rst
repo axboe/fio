@@ -3038,6 +3038,24 @@ with the caveat that when used on the command line, they must come after the
 	turns on verbose logging from libcurl, 2 additionally enables
 	HTTP IO tracing. Default is **0**
 
+.. option:: http_object_mode=str : [http]
+
+        How to structure objects for HTTP IO: *block* or *range*.
+        Default is **block**.
+
+        In *block* mode, one object is created for every block. The HTTP engine
+        treats :option:`blocksize` as the size of the object to read or write,
+        and appends the block start/end offsets to the :option:`filename` to
+        create the target object path. Reads and writes operate on whole
+        objects at a time.
+
+        In *range* mode, one object is created for every file. The object path
+        is the filename directly for both read and write I/O. For read
+        requests, the :option:`blocksize` and :option:`offset` will be used to
+        set the "Range" header on read requests to issue partial reads of the
+        object. For write requests, blocksize is used to set the size of the
+        object, the same as in *block* mode.
+
 .. option:: uri=str : [nbd]
 
 	Specify the NBD URI of the server to test.  The string

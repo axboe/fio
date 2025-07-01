@@ -2623,6 +2623,26 @@ Enable verbose requests from libcurl. Useful for debugging. 1 turns on
 verbose logging from libcurl, 2 additionally enables HTTP IO tracing.
 Default is \fB0\fR
 .TP
+.BI (http)http_object_mode \fR=\fPstr
+How to structure objects for HTTP IO: block or range. Default is \fBblock\fR.
+.RS
+.RS
+.TP
+.B block
+One object is created for every block. The HTTP engine treats \fBblocksize\fR
+as the size of the object to read or write, and appends the block start/end
+offsets to the \fBfilename\fR to create the target object path. Reads and
+writes operate on whole objects at a time.
+.TP
+.B range
+One object is created for every file. The object path is the filename directly
+for both read and write I/O. For read requests, the \fBblocksize\fR and
+\fBoffset\fR will be used to set the "Range" header on read requests to issue
+partial reads of the object. For write requests, blocksize is used to set the
+size of the object, the same as in \fBblock\fR mode.
+.RE
+.RE
+.TP
 .BI (mtd)skip_bad \fR=\fPbool
 Skip operations against known bad blocks.
 .TP
