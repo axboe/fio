@@ -63,6 +63,7 @@ struct http_options {
 	char *swift_auth_token;
 	int verbose;
 	unsigned int mode;
+	unsigned int range_header;
 };
 
 struct http_curl_stream {
@@ -224,6 +225,16 @@ static struct fio_option options[] = {
 		.type     = FIO_OPT_INT,
 		.help     = "increase http engine verbosity",
 		.off1     = offsetof(struct http_options, verbose),
+		.def	  = "0",
+		.category = FIO_OPT_C_ENGINE,
+		.group    = FIO_OPT_G_HTTP,
+	},
+	{
+		.name     = "http_range_header",
+		.lname    = "HTTP range header",
+		.type     = FIO_OPT_BOOL,
+		.help     = "Use blocksize for range reads instead of the object size for read I/O",
+		.off1     = offsetof(struct http_options, range_header),
 		.def	  = "0",
 		.category = FIO_OPT_C_ENGINE,
 		.group    = FIO_OPT_G_HTTP,
@@ -580,6 +591,26 @@ static void _add_swift_header(CURL *curl, struct curl_slist *slist, struct http_
 	free(dsha);
 }
 
+static struct curl_slist* _append_range_header(struct curl_slist *slist, unsigned long long offset, unsigned long long length, unsigned long long file_size)
+{
+	char s[256];
+	unsigned long long end_byte;
+
+	/* Don't request beyond end of file */
+	if (offset >= file_size) {
+		return slist;
+	}
+
+	/* Calculate end byte, but cap it at file size - 1 because end range is inclusive */
+	end_byte = offset + length - 1;
+	if (end_byte >= file_size) {
+		end_byte = file_size - 1;
+	}
+
+	snprintf(s, sizeof(s), "Range: bytes=%llu-%llu", offset, end_byte);
+	return curl_slist_append(slist, s);
+}
+
 static void fio_http_cleanup(struct thread_data *td)
 {
 	struct http_data *http = td->io_ops_data;
@@ -636,30 +667,39 @@ static enum fio_q_status fio_http_queue(struct thread_data *td,
 	struct http_options *o = td->eo;
 	struct http_curl_stream _curl_stream;
 	struct curl_slist *slist = NULL;
-	char object[512];
+	char object_path_buf[512];
+	char *object_path;
 	char url[1024];
 	long status;
 	CURLcode res;
 
 	fio_ro_check(td, io_u);
 	memset(&_curl_stream, 0, sizeof(_curl_stream));
-	snprintf(object, sizeof(object), "%s_%llu_%llu", io_u->file->file_name,
-		io_u->offset, io_u->xfer_buflen);
+	if (o->range_header)
+		object_path = io_u->file->file_name;
+	else {
+		snprintf(object_path_buf, sizeof(object_path_buf), "%s_%llu_%llu", io_u->file->file_name,
+			io_u->offset, io_u->xfer_buflen);
+		object_path = object_path_buf;
+	}
 	if (o->https == FIO_HTTPS_OFF)
-		snprintf(url, sizeof(url), "http://%s%s", o->host, object);
+		snprintf(url, sizeof(url), "http://%s%s", o->host, object_path);
 	else
-		snprintf(url, sizeof(url), "https://%s%s", o->host, object);
+		snprintf(url, sizeof(url), "https://%s%s", o->host, object_path);
 	curl_easy_setopt(http->curl, CURLOPT_URL, url);
 	_curl_stream.buf = io_u->xfer_buf;
 	_curl_stream.max = io_u->xfer_buflen;
 	curl_easy_setopt(http->curl, CURLOPT_SEEKDATA, &_curl_stream);
 	curl_easy_setopt(http->curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)io_u->xfer_buflen);
 
+	if (io_u->ddir == DDIR_READ && o->range_header)
+		slist = _append_range_header(slist, io_u->offset, io_u->xfer_buflen, io_u->file->real_file_size);
+
 	if (o->mode == FIO_HTTP_S3)
-		_add_aws_auth_header(http->curl, slist, o, io_u->ddir, object,
+		_add_aws_auth_header(http->curl, slist, o, io_u->ddir, object_path,
 			io_u->xfer_buf, io_u->xfer_buflen);
 	else if (o->mode == FIO_HTTP_SWIFT)
-		_add_swift_header(http->curl, slist, o, io_u->ddir, object,
+		_add_swift_header(http->curl, slist, o, io_u->ddir, object_path,
 			io_u->xfer_buf, io_u->xfer_buflen);
 
 	if (io_u->ddir == DDIR_WRITE) {
@@ -681,7 +721,9 @@ static enum fio_q_status fio_http_queue(struct thread_data *td,
 		res = curl_easy_perform(http->curl);
 		if (res == CURLE_OK) {
 			curl_easy_getinfo(http->curl, CURLINFO_RESPONSE_CODE, &status);
-			if (status == 200)
+			/* 206 "Partial Content" means success when using the
+			 * Range header */
+			if (status == 200 || (o->range_header && status == 206))
 				goto out;
 			else if (status == 404) {
 				/* Object doesn't exist. Pretend we read

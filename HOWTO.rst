@@ -3038,6 +3038,20 @@ with the caveat that when used on the command line, they must come after the
 	turns on verbose logging from libcurl, 2 additionally enables
 	HTTP IO tracing. Default is **0**
 
+.. option:: http_range_header=bool : [http]
+
+	Use :option:`blocksize` for range reads instead of the object size for read
+	I/O.
+
+	By default, the HTTP engine treats :option:`blocksize` as the size of
+	the object to read or write, and appends the block start/end offsets to the
+	:option:`filename` to create the target object path. With this parameter
+	enabled, two changes take place: the object path will instead be the
+        filename directly for both read and write I/O, and blocksize and
+        :option:`offset` will be used to set the "Range" header on read
+        requests to issue partial reads of the object.  The blocksize is still
+        used to set the size of the object for writes.
+
 .. option:: uri=str : [nbd]
 
 	Specify the NBD URI of the server to test.  The string
