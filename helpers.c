@@ -26,9 +26,19 @@ int sync_file_range(int fd, uint64_t offset, uint64_t nbytes,
 }
 #endif
 
+#if defined (__APPLE__)
+int posix_fadvise(int fd, off_t offset, off_t len, int advice)
+{
+	if (advice == POSIX_FADV_DONTNEED)
+		return discard_pages(fd, offset, len);
+        errno = EINVAL; 
+	return -1;
+}
+#else
 #ifndef CONFIG_POSIX_FADVISE
 int posix_fadvise(int fd, off_t offset, off_t len, int advice)
 {
 	return 0;
 }
 #endif
+#endif /* defined (__APPLE__) */
