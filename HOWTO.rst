@@ -3013,6 +3013,10 @@ with the caveat that when used on the command line, they must come after the
 
 	The S3 key/access id.
 
+.. option:: http_s3_security_token=str : [http]
+
+	The S3 security token.
+
 .. option:: http_s3_sse_customer_key=str : [http]
 
         The encryption customer key in SSE server side.
