@@ -56,6 +56,7 @@ struct http_options {
 	char *pass;
 	char *s3_key;
 	char *s3_keyid;
+	char *s3_security_token;
 	char *s3_region;
 	char *s3_sse_customer_key;
 	char *s3_sse_customer_algorithm;
@@ -140,6 +141,16 @@ static struct fio_option options[] = {
 		.type     = FIO_OPT_STR_STORE,
 		.help     = "S3 key id",
 		.off1     = offsetof(struct http_options, s3_keyid),
+		.def	  = "",
+		.category = FIO_OPT_C_ENGINE,
+		.group    = FIO_OPT_G_HTTP,
+	},
+	{
+		.name     = "http_s3_security_token",
+		.lname    = "S3 security token",
+		.type     = FIO_OPT_STR_STORE,
+		.help     = "S3 security token",
+		.off1     = offsetof(struct http_options, s3_security_token),
 		.def	  = "",
 		.category = FIO_OPT_C_ENGINE,
 		.group    = FIO_OPT_G_HTTP,
@@ -419,7 +430,7 @@ static void _add_aws_auth_header(CURL *curl, struct curl_slist *slist, struct ht
 	char dkey[128];
 	char creq[4096];
 	char sts[512];
-	char s[512];
+	char s[2048];
 	char *uri_encoded = NULL;
 	char *dsha = NULL;
 	char *csha = NULL;
@@ -430,6 +441,8 @@ static void _add_aws_auth_header(CURL *curl, struct curl_slist *slist, struct ht
 	unsigned char sse_key[33] = {0};
 	char *sse_key_base64 = NULL;
 	char *sse_key_md5_base64 = NULL;
+	char security_token_header[2048] = {0};
+	char security_token_list_item[24] = {0};
 
 	time_t t = time(NULL);
 	struct tm *gtm = gmtime(&t);
@@ -437,6 +450,12 @@ static void _add_aws_auth_header(CURL *curl, struct curl_slist *slist, struct ht
 	strftime (date_short, sizeof(date_short), "%Y%m%d", gtm);
 	strftime (date_iso, sizeof(date_iso), "%Y%m%dT%H%M%SZ", gtm);
 	uri_encoded = _aws_uriencode(uri);
+
+	if (o->s3_security_token != NULL) {
+		snprintf(security_token_header, sizeof(security_token_header),
+				"x-amz-security-token:%s\n", o->s3_security_token);
+		sprintf(security_token_list_item, "x-amz-security-token;");
+	}
 
 	if (o->s3_sse_customer_key != NULL)
 		strncpy((char*)sse_key, o->s3_sse_customer_key, sizeof(sse_key) - 1);
@@ -467,18 +486,21 @@ static void _add_aws_auth_header(CURL *curl, struct curl_slist *slist, struct ht
 			"x-amz-server-side-encryption-customer-algorithm:%s\n"
 			"x-amz-server-side-encryption-customer-key:%s\n"
 			"x-amz-server-side-encryption-customer-key-md5:%s\n"
+			"%s" /* security token if provided */
 			"x-amz-storage-class:%s\n"
 			"\n"
 			"host;x-amz-content-sha256;x-amz-date;"
 			"x-amz-server-side-encryption-customer-algorithm;"
 			"x-amz-server-side-encryption-customer-key;"
 			"x-amz-server-side-encryption-customer-key-md5;"
+			"%s"
 			"x-amz-storage-class\n"
 			"%s"
 			, method
 			, uri_encoded, o->host, dsha, date_iso
 			, o->s3_sse_customer_algorithm, sse_key_base64
-			, sse_key_md5_base64, o->s3_storage_class, dsha);
+			, sse_key_md5_base64, security_token_header
+			, o->s3_storage_class, security_token_list_item, dsha);
 	} else {
 		snprintf(creq, sizeof(creq),
 			"%s\n"
@@ -487,12 +509,15 @@ static void _add_aws_auth_header(CURL *curl, struct curl_slist *slist, struct ht
 			"host:%s\n"
 			"x-amz-content-sha256:%s\n"
 			"x-amz-date:%s\n"
+			"%s" /* security token if provided */
 			"x-amz-storage-class:%s\n"
 			"\n"
-			"host;x-amz-content-sha256;x-amz-date;x-amz-storage-class\n"
+			"host;x-amz-content-sha256;x-amz-date;%sx-amz-storage-class\n"
 			"%s"
 			, method
-			, uri_encoded, o->host, dsha, date_iso, o->s3_storage_class, dsha);
+			, uri_encoded, o->host, dsha, date_iso
+			, security_token_header, o->s3_storage_class
+			, security_token_list_item, dsha);
 	}
 
 	csha = _gen_hex_sha256(creq, strlen(creq));
@@ -526,6 +551,11 @@ static void _add_aws_auth_header(CURL *curl, struct curl_slist *slist, struct ht
 		slist = curl_slist_append(slist, s);
 	}
 
+	if (o->s3_security_token != NULL) {
+		snprintf(s, sizeof(s), "x-amz-security-token: %s", o->s3_security_token);
+		slist = curl_slist_append(slist, s);
+	}
+
 	snprintf(s, sizeof(s), "x-amz-storage-class: %s", o->s3_storage_class);
 	slist = curl_slist_append(slist, s);
 
@@ -535,13 +565,14 @@ static void _add_aws_auth_header(CURL *curl, struct curl_slist *slist, struct ht
 			"x-amz-date;x-amz-server-side-encryption-customer-algorithm;"
 			"x-amz-server-side-encryption-customer-key;"
 			"x-amz-server-side-encryption-customer-key-md5;"
+			"%s"
 			"x-amz-storage-class,"
 			"Signature=%s",
-		o->s3_keyid, date_short, o->s3_region, signature);
+		o->s3_keyid, date_short, o->s3_region, security_token_list_item, signature);
 	} else {
 		snprintf(s, sizeof(s), "Authorization: AWS4-HMAC-SHA256 Credential=%s/%s/%s/s3/aws4_request,"
-			"SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-storage-class,Signature=%s",
-			o->s3_keyid, date_short, o->s3_region, signature);
+			"SignedHeaders=host;x-amz-content-sha256;x-amz-date;%sx-amz-storage-class,Signature=%s",
+			o->s3_keyid, date_short, o->s3_region, security_token_list_item, signature);
 	}
 	slist = curl_slist_append(slist, s);
 
