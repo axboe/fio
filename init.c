@@ -691,6 +691,36 @@ static int fixup_options(struct thread_data *td)
 		o->zone_range = o->zone_size;
 
 	/*
+	 * SPRandom Requires: random write, random_generator=lfsr, norandommap=1
+	 */
+	if (o->sprandom) {
+		if (td_write(td) && td_random(td)) {
+			if (fio_option_is_set(o, random_generator)) {
+				if (o->random_generator != FIO_RAND_GEN_LFSR) {
+					log_err("fio: sprandom requires random_generator=lfsr\n");
+					ret |= warnings_fatal;
+				}
+			} else {
+				log_info("fio: sprandom sets random_generator=lfsr\n");
+				o->random_generator = FIO_RAND_GEN_LFSR;
+			}
+			if (fio_option_is_set(o, norandommap)) {
+				if (o->norandommap == 0) {
+					log_err("fio: sprandom requires norandommap=1\n");
+					ret |= warnings_fatal;
+				}
+				/* if == 1, OK */
+			} else {
+				log_info("fio: sprandom sets norandommap=1\n");
+				o->norandommap = 1;
+			}
+		} else {
+			log_err("fio: sprandom requires random write, random_generator=lfsr, norandommap=1");
+			ret |= warnings_fatal;
+		}
+	}
+
+	/*
 	 * Reads can do overwrites, we always need to pre-create the file
 	 */
 	if (td_read(td))
