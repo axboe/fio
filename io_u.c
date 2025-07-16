@@ -1701,7 +1701,7 @@ struct io_u *__get_io_u(struct thread_data *td)
 		__td_io_u_lock(td);
 
 again:
-	if (!io_u_rempty(&td->io_u_requeues)) {
+	if (td->runstate != TD_FSYNCING && !io_u_rempty(&td->io_u_requeues)) {
 		io_u = io_u_rpop(&td->io_u_requeues);
 		io_u->resid = 0;
 	} else if (!queue_full(td)) {
