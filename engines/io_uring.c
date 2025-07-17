@@ -685,7 +685,14 @@ static unsigned fio_ioring_cqring_reap(struct thread_data *td, unsigned int max)
 		return 0;
 
 	available = min(available, max);
-	atomic_store_release(ring->head, head + available);
+	/*
+	 * The CQ consumer index is advanced before the CQEs are actually read.
+	 * This is generally unsafe, as it lets the kernel reuse the CQE slots.
+	 * However, the CQ is sized large enough for the maximum iodepth and a
+	 * new SQE won't be submitted until the CQE is processed, so the CQE
+	 * slot won't actually be reused until it has been processed.
+	 */
+	atomic_store_relaxed(ring->head, head + available);
 	return available;
 }
 
