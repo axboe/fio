@@ -674,8 +674,7 @@ static char *fio_ioring_cmd_errdetails(struct thread_data *td,
 	return msg;
 }
 
-static int fio_ioring_cqring_reap(struct thread_data *td, unsigned int events,
-				   unsigned int max)
+static int fio_ioring_cqring_reap(struct thread_data *td, unsigned int max)
 {
 	struct ioring_data *ld = td->io_ops_data;
 	struct io_cq_ring *ring = &ld->cq_ring;
@@ -687,7 +686,7 @@ static int fio_ioring_cqring_reap(struct thread_data *td, unsigned int events,
 			break;
 		reaped++;
 		head++;
-	} while (reaped + events < max);
+	} while (reaped < max);
 
 	if (reaped)
 		atomic_store_release(ring->head, head);
@@ -707,7 +706,7 @@ static int fio_ioring_getevents(struct thread_data *td, unsigned int min,
 
 	ld->cq_ring_off = *ring->head;
 	do {
-		r = fio_ioring_cqring_reap(td, events, max);
+		r = fio_ioring_cqring_reap(td, max - events);
 		if (r) {
 			events += r;
 			if (actual_min != 0)
@@ -883,7 +882,7 @@ static int fio_ioring_commit(struct thread_data *td)
 			continue;
 		} else {
 			if (errno == EAGAIN || errno == EINTR) {
-				ret = fio_ioring_cqring_reap(td, 0, ld->queued);
+				ret = fio_ioring_cqring_reap(td, ld->queued);
 				if (ret)
 					continue;
 				/* Shouldn't happen */
