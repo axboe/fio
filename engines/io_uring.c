@@ -674,7 +674,7 @@ static char *fio_ioring_cmd_errdetails(struct thread_data *td,
 	return msg;
 }
 
-static int fio_ioring_cqring_reap(struct thread_data *td, unsigned int max)
+static unsigned fio_ioring_cqring_reap(struct thread_data *td, unsigned int max)
 {
 	struct ioring_data *ld = td->io_ops_data;
 	struct io_cq_ring *ring = &ld->cq_ring;
