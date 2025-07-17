@@ -700,13 +700,15 @@ static int fio_ioring_getevents(struct thread_data *td, unsigned int min,
 	int r;
 
 	ld->cq_ring_off = *ring->head;
-	do {
+	for (;;) {
 		r = fio_ioring_cqring_reap(td, max - events);
 		if (r) {
 			events += r;
+			if (events >= min)
+				return events;
+
 			if (actual_min != 0)
 				actual_min -= r;
-			continue;
 		}
 
 		if (!o->sqpoll_thread) {
@@ -717,12 +719,10 @@ static int fio_ioring_getevents(struct thread_data *td, unsigned int min,
 					continue;
 				r = -errno;
 				td_verror(td, errno, "io_uring_enter");
-				break;
+				return r;
 			}
 		}
-	} while (events < min);
-
-	return r < 0 ? r : events;
+	}
 }
 
 static inline void fio_ioring_cmd_nvme_pi(struct thread_data *td,
