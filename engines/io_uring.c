@@ -678,20 +678,15 @@ static int fio_ioring_cqring_reap(struct thread_data *td, unsigned int max)
 {
 	struct ioring_data *ld = td->io_ops_data;
 	struct io_cq_ring *ring = &ld->cq_ring;
-	unsigned head, reaped = 0;
+	unsigned head = *ring->head;
+	unsigned available = atomic_load_acquire(ring->tail) - head;
 
-	head = *ring->head;
-	do {
-		if (head == atomic_load_acquire(ring->tail))
-			break;
-		reaped++;
-		head++;
-	} while (reaped < max);
+	if (!available)
+		return 0;
 
-	if (reaped)
-		atomic_store_release(ring->head, head);
-
-	return reaped;
+	available = min(available, max);
+	atomic_store_release(ring->head, head + available);
+	return available;
 }
 
 static int fio_ioring_getevents(struct thread_data *td, unsigned int min,
