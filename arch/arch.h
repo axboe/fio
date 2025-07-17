@@ -53,6 +53,8 @@ extern unsigned long arch_flags;
 #define atomic_load_acquire(p)					\
 	std::atomic_load_explicit(p,				\
 			     std::memory_order_acquire)
+#define atomic_store_relaxed(p, v)				\
+	std::atomic_store_explicit((p), (v), std::memory_order_relaxed)
 #define atomic_store_release(p, v)				\
 	std::atomic_store_explicit(p, (v),			\
 			     std::memory_order_release)
@@ -67,6 +69,9 @@ extern unsigned long arch_flags;
 #define atomic_load_acquire(p)					\
 	atomic_load_explicit((_Atomic typeof(*(p)) *)(p),	\
 			     memory_order_acquire)
+#define atomic_store_relaxed(p, v)				\
+	atomic_store_explicit((_Atomic typeof(*(p)) *)(p), (v),	\
+			      memory_order_relaxed)
 #define atomic_store_release(p, v)				\
 	atomic_store_explicit((_Atomic typeof(*(p)) *)(p), (v),	\
 			      memory_order_release)
