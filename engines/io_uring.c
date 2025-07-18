@@ -674,25 +674,26 @@ static char *fio_ioring_cmd_errdetails(struct thread_data *td,
 	return msg;
 }
 
-static int fio_ioring_cqring_reap(struct thread_data *td, unsigned int events,
-				   unsigned int max)
+static unsigned fio_ioring_cqring_reap(struct thread_data *td, unsigned int max)
 {
 	struct ioring_data *ld = td->io_ops_data;
 	struct io_cq_ring *ring = &ld->cq_ring;
-	unsigned head, reaped = 0;
+	unsigned head = *ring->head;
+	unsigned available = atomic_load_acquire(ring->tail) - head;
 
-	head = *ring->head;
-	do {
-		if (head == atomic_load_acquire(ring->tail))
-			break;
-		reaped++;
-		head++;
-	} while (reaped + events < max);
+	if (!available)
+		return 0;
 
-	if (reaped)
-		atomic_store_release(ring->head, head);
-
-	return reaped;
+	available = min(available, max);
+	/*
+	 * The CQ consumer index is advanced before the CQEs are actually read.
+	 * This is generally unsafe, as it lets the kernel reuse the CQE slots.
+	 * However, the CQ is sized large enough for the maximum iodepth and a
+	 * new SQE won't be submitted until the CQE is processed, so the CQE
+	 * slot won't actually be reused until it has been processed.
+	 */
+	atomic_store_relaxed(ring->head, head + available);
+	return available;
 }
 
 static int fio_ioring_getevents(struct thread_data *td, unsigned int min,
@@ -706,14 +707,15 @@ static int fio_ioring_getevents(struct thread_data *td, unsigned int min,
 	int r;
 
 	ld->cq_ring_off = *ring->head;
-	do {
-		r = fio_ioring_cqring_reap(td, events, max);
+	for (;;) {
+		r = fio_ioring_cqring_reap(td, max - events);
 		if (r) {
 			events += r;
-			max -= r;
+			if (events >= min)
+				return events;
+
 			if (actual_min != 0)
 				actual_min -= r;
-			continue;
 		}
 
 		if (!o->sqpoll_thread) {
@@ -724,12 +726,10 @@ static int fio_ioring_getevents(struct thread_data *td, unsigned int min,
 					continue;
 				r = -errno;
 				td_verror(td, errno, "io_uring_enter");
-				break;
+				return r;
 			}
 		}
-	} while (events < min);
-
-	return r < 0 ? r : events;
+	}
 }
 
 static inline void fio_ioring_cmd_nvme_pi(struct thread_data *td,
@@ -884,7 +884,7 @@ static int fio_ioring_commit(struct thread_data *td)
 			continue;
 		} else {
 			if (errno == EAGAIN || errno == EINTR) {
-				ret = fio_ioring_cqring_reap(td, 0, ld->queued);
+				ret = fio_ioring_cqring_reap(td, ld->queued);
 				if (ret)
 					continue;
 				/* Shouldn't happen */
