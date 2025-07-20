@@ -1259,7 +1259,7 @@ static int init_file_completion_logging(struct thread_data *td,
 
 	for_each_file(td, f, i) {
 		f->last_write_comp = scalloc(td->last_write_comp_depth,
-					     sizeof(uint64_t));
+					     sizeof(struct fio_write_comp));
 		if (!f->last_write_comp)
 			goto cleanup;
 	}

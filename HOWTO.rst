@@ -4005,6 +4005,33 @@ Verification
         used to speed up the process of writing each block on a device with its
         offset. Default: 0 (disabled).
 
+.. option:: verify_type=str
+
+        Controls which write operations are included during the verification
+        phase.  This option only affects offline verification when using
+        :option:`verify_state_save` to save completion state and later verify
+        with a separate job. The allowed values are:
+
+		**flush**
+                        Only verify writes that completed at or before the last
+                        fsync operation.  This mode filters out writes that
+                        completed after the last fsync, which may not be
+                        persistent on storage. Writes with the Force Unit
+                        Access (FUA) flag are always included regardless of
+                        fsync timing, as they bypass the cache and are
+                        immediately persistent. This is useful for testing data
+                        persistence guarantees across power failures or system
+                        crashes. fio tracks fsync completion times and write
+                        completion times during the write phase. During
+                        verification, only writes that meet the fsync timing
+                        criteria are verified. This allows testing scenarios
+                        where only data that was properly synced before a
+                        simulated failure should be verified.
+                        This option requires :option:`verify_state_save` to be
+                        enabled and is only effective during offline
+                        verification (separate verify job). Default: none
+                        (verify all completed writes).
+
 .. option:: verify_fatal=bool
 
 	Normally fio will keep checking the entire contents before quitting on a

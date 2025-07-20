@@ -26,14 +26,16 @@ static void show_s(struct thread_io_list *s, unsigned int no_s)
 	printf("Max completions per file:\t\t%lu\n", (unsigned long) s->max_no_comps_per_file);
 	printf("Number IOs:\t%llu\n", (unsigned long long) s->numberio);
 	printf("Index:\t\t%llu\n", (unsigned long long) s->index);
+	printf("Last flush count:\t%u\n", s->last_flush_count);
 
 	printf("Completions:\n");
 	if (!s->no_comps)
 		return;
 	for (i = s->no_comps - 1; i >= 0; i--) {
-		printf("\t(file=%2llu) %llu\n",
+		printf("\t(file=%2llu) %llu (flush_count=%u)\n",
 				(unsigned long long) s->comps[i].fileno,
-				(unsigned long long) s->comps[i].offset);
+				(unsigned long long) s->comps[i].offset,
+				s->comps[i].flush_count);
 	}
 }
 
@@ -51,10 +53,12 @@ static void show(struct thread_io_list *s, size_t size)
 		s->nofiles = le32_to_cpu(s->nofiles);
 		s->numberio = le64_to_cpu(s->numberio);
 		s->index = le64_to_cpu(s->index);
+		s->last_flush_count = le32_to_cpu(s->last_flush_count);
 
 		for (i = 0; i < s->no_comps; i++) {
 			s->comps[i].fileno = le64_to_cpu(s->comps[i].fileno);
 			s->comps[i].offset = le64_to_cpu(s->comps[i].offset);
+			s->comps[i].flush_count = le32_to_cpu(s->comps[i].flush_count);
 		}
 
 		show_s(s, no_s);
@@ -92,7 +96,7 @@ static void show_verify_state(void *buf, size_t size)
 		return;
 	}
 
-	if (hdr->version == 0x04)
+	if (hdr->version == 0x05)
 		show(s, size);
 	else
 		log_err("Unsupported version %d\n", (int) hdr->version);
