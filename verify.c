@@ -1407,6 +1407,7 @@ int get_next_verify(struct thread_data *td, struct io_u *io_u)
 	if (io_u->file)
 		return 0;
 
+retry:
 	if (!RB_EMPTY_ROOT(&td->io_hist_tree)) {
 		struct fio_rb_node *n = rb_first(&td->io_hist_tree);
 
@@ -1466,6 +1467,11 @@ int get_next_verify(struct thread_data *td, struct io_u *io_u)
 
 		remove_trim_entry(td, ipo);
 		free(ipo);
+
+		/* Check if this offset was filtered out by FLUSH timing */
+		if (verify_state_should_stop(td, io_u))
+			goto retry;
+
 		dprint(FD_VERIFY, "get_next_verify: ret io_u %p\n", io_u);
 
 		if (!td->o.verify_pattern_bytes) {
@@ -1649,7 +1655,9 @@ static int __fill_file_completions(struct thread_data *td,
 		if (j == -1)
 			j = td->last_write_comp_depth - 1;
 		s->comps[*index].fileno = __cpu_to_le64(f->fileno);
-		s->comps[*index].offset = cpu_to_le64(f->last_write_comp[j]);
+		s->comps[*index].offset = cpu_to_le64(f->last_write_comp[j].offset);
+		s->comps[*index].flush_count = cpu_to_le32(f->last_write_comp[j].flush_count);
+		s->comps[*index].flags = cpu_to_le32(f->last_write_comp[j].flags);
 		(*index)++;
 		j--;
 	}
@@ -1661,12 +1669,17 @@ static int fill_file_completions(struct thread_data *td,
 				 struct thread_io_list *s, unsigned int *index)
 {
 	struct fio_file *f;
-	unsigned int i;
+	unsigned int i = 0;
 	int comps = 0;
+	uint32_t max_flush_count = 0;
 
-	for_each_file(td, f, i)
+	for_each_file(td, f, i) {
 		comps += __fill_file_completions(td, s, f, index);
+		if (f->flush_count > max_flush_count)
+			max_flush_count = f->flush_count;
+	}
 
+	s->last_flush_count = cpu_to_le32(max_flush_count);
 	return comps;
 }
 
@@ -1887,6 +1900,46 @@ int verify_state_hdr(struct verify_state_hdr *hdr, struct thread_io_list *s)
 	return 0;
 }
 
+/*
+ * Filter completion records based on FLUSH completion count rules:
+ * - Include writes that completed at or before the last FLUSH count
+ * - Include FUA writes regardless of FLUSH count
+ * - Exclude non-FUA writes that completed after the last FLUSH count
+ */
+static void filter_verify_state_by_flush_timing(struct thread_io_list *s)
+{
+	uint32_t last_flush_count;
+	int original_count;
+	int i, j;
+
+	if (!s || s->no_comps == 0)
+		return;
+
+	original_count = le64_to_cpu(s->no_comps);
+	last_flush_count = le32_to_cpu(s->last_flush_count);
+
+	if (last_flush_count == 0)
+		return;
+
+	/* Filter completion records in-place */
+	for (i = 0, j = 0; i < original_count; i++) {
+		uint32_t write_flush_count = le32_to_cpu(s->comps[i].flush_count);
+		uint32_t write_flags = le32_to_cpu(s->comps[i].flags);
+
+		/* Apply FLUSH completion count rules */
+		if ((write_flags & FIO_COMP_FLAG_FUA) ||
+		    (write_flush_count < last_flush_count)) {
+			/* FUA writes or writes completed before FLUSH are included */
+			if (i != j)
+				s->comps[j] = s->comps[i];
+			j++;
+		}
+	}
+
+	/* Update the completion count */
+	s->no_comps = cpu_to_le64((uint64_t) j);
+}
+
 int verify_load_state(struct thread_data *td, const char *prefix)
 {
 	struct verify_state_hdr hdr;
@@ -1937,6 +1990,10 @@ int verify_load_state(struct thread_data *td, const char *prefix)
 
 	close(fd);
 
+	/* Filter completion records based on FLUSH timing before assigning state */
+	if (td->o.verify_type == VERIFY_TYPE_FLUSH)
+		filter_verify_state_by_flush_timing(s);
+
 	verify_assign_state(td, s);
 	return 0;
 err:
@@ -1971,6 +2028,9 @@ int verify_state_should_stop(struct thread_data *td, struct io_u *io_u)
 	 * We're in the window of having to check if this io was
 	 * completed or not. If the IO was seen as completed, then
 	 * lets verify it.
+	 *
+	 * Note: FLUSH completion timing filtering is now done at state load time,
+	 * so any offset in the completion list is valid for verification.
 	 */
 	for (i = 0; i < s->no_comps; i++) {
 		if (s->comps[i].fileno != f->fileno)

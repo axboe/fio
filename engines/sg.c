@@ -668,6 +668,10 @@ static int fio_sgio_prep(struct thread_data *td, struct io_u *io_u)
 			fio_sgio_rw_lba(hdr, lba, nr_blocks,
 				o->write_mode == FIO_SG_WRITE_SAME_NDOB);
 
+		/* Mark FUA writes for verification state tracking */
+		if (o->writefua)
+			io_u_set(td, io_u, IO_U_F_FUA);
+
 	} else if (io_u->ddir == DDIR_TRIM) {
 		struct sgio_trim *st;
 
