@@ -2359,8 +2359,13 @@ print_config "DAOS File System (dfs) Engine" "$dfs"
 if test "$libnfs" != "no" ; then
   if $(pkg-config libnfs > /dev/null 2>&1); then
     libnfs="yes"
-    libnfs_cflags=$(pkg-config --cflags libnfs gnutls)
-    libnfs_libs=$(pkg-config --libs libnfs gnutls)
+    if test "$targetos" = "Linux" ; then
+      libnfs_cflags=$(pkg-config --cflags libnfs gnutls)
+      libnfs_libs=$(pkg-config --libs libnfs gnutls)
+    else
+      libnfs_cflags=$(pkg-config --cflags libnfs)
+      libnfs_libs=$(pkg-config --libs libnfs)
+    fi
   else
     if test "$libnfs" = "yes" ; then
       feature_not_found "libnfs" "libnfs"
