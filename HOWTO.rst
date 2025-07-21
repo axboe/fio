@@ -854,6 +854,22 @@ Target file/device
 	generated filenames (with a directory specified) with the source of the
 	client connecting. To disable this behavior, set this option to 0.
 
+.. option:: filetype=str
+
+	Assume that all files defined in a job are of this type. By default fio
+	will do :manpage:`stat(2)` for each file to know its file type. For huge
+	filesets it might be a bottleneck, so the option can be used to skip the
+	huge number of syscalls. The file types are:
+
+		**none**
+			Unset. The default.
+		**file**
+			Regular file.
+		**block**
+			Block device file.
+		**char**
+			Char device file.
+
 .. option:: opendir=str
 
         Recursively open any files below directory `str`. This accepts only a

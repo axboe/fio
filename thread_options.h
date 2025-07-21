@@ -127,6 +127,7 @@ struct thread_options {
 
 	unsigned int nr_files;
 	unsigned int open_files;
+	unsigned int filetype;
 	enum file_lock_mode file_lock_mode;
 
 	unsigned int odirect;
@@ -461,6 +462,7 @@ struct thread_options_pack {
 
 	uint32_t nr_files;
 	uint32_t open_files;
+	uint32_t filetype;
 	uint32_t file_lock_mode;
 
 	uint32_t odirect;
@@ -519,7 +521,6 @@ struct thread_options_pack {
 
 	struct zone_split zone_split[DDIR_RWDIR_CNT][ZONESPLIT_MAX];
 	uint32_t zone_split_nr[DDIR_RWDIR_CNT];
-	uint32_t pad2;
 
 	fio_fp64_t zipf_theta;
 	fio_fp64_t pareto_h;

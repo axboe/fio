@@ -172,6 +172,7 @@ int convert_thread_options_to_cpu(struct thread_options *o,
 	o->create_fsync = le32_to_cpu(top->create_fsync);
 	o->create_on_open = le32_to_cpu(top->create_on_open);
 	o->create_only = le32_to_cpu(top->create_only);
+	o->filetype = le32_to_cpu(top->filetype);
 	o->end_fsync = le32_to_cpu(top->end_fsync);
 	o->pre_read = le32_to_cpu(top->pre_read);
 	o->sync_io = le32_to_cpu(top->sync_io);
@@ -436,6 +437,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->create_fsync = cpu_to_le32(o->create_fsync);
 	top->create_on_open = cpu_to_le32(o->create_on_open);
 	top->create_only = cpu_to_le32(o->create_only);
+	top->filetype = cpu_to_le32(o->filetype);
 	top->end_fsync = cpu_to_le32(o->end_fsync);
 	top->pre_read = cpu_to_le32(o->pre_read);
 	top->sync_io = cpu_to_le32(o->sync_io);

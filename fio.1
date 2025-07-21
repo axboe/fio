@@ -635,6 +635,28 @@ To avoid collisions between networked clients, fio defaults to prefixing any
 generated filenames (with a directory specified) with the source of the
 client connecting. To disable this behavior, set this option to 0.
 .TP
+.BI filetype \fR=\fPstr
+Assume that all files defined in a job are of this type. By default fio will do
+\fBstat\fR\|(2) for each file to know its file type. For huge filesets it might
+be a bottleneck, so the option can be used to skip the huge number of syscalls.
+The file types are:
+.RS
+.RS
+.TP
+.B none
+Unset. The default.
+.TP
+.B file
+Regular file.
+.TP
+.B block
+Block device file.
+.TP
+.B char
+Char device file.
+.RE
+.RE
+.TP
 .BI opendir \fR=\fPstr
 Recursively open any files below directory \fIstr\fR. This accepts only a
 single directory and unlike related options, colons appearing in the path must
