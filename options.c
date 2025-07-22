@@ -1955,6 +1955,22 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_FILENAME,
 	},
 	{
+		.name   = "filetype",
+		.lname  = "file_type",
+		.type   = FIO_OPT_STR,
+		.off1   = offsetof(struct thread_options, filetype),
+		.help   = "Assume all files defined in a job are of this type",
+		.def    = "none",
+		.group  = FIO_OPT_G_IO_BASIC,
+		.category = FIO_OPT_C_FILE,
+		.posval = {
+			  { .ival = "none",  .oval = 0 },
+			  { .ival = "file",  .oval = FIO_TYPE_FILE },
+			  { .ival = "block", .oval = FIO_TYPE_BLOCK },
+			  { .ival = "char",  .oval = FIO_TYPE_CHAR },
+		},
+	},
+	{
 		.name	= "directory",
 		.lname	= "Directory",
 		.type	= FIO_OPT_STR_STORE,

@@ -1833,7 +1833,10 @@ int add_file(struct thread_data *td, const char *fname, int numjob, int inc)
 	/* can't handle smalloc failure from here */
 	assert(f->file_name);
 
-	get_file_type(f);
+	if (td->o.filetype)
+		f->filetype = td->o.filetype;
+	else
+		get_file_type(f);
 
 	switch (td->o.file_lock_mode) {
 	case FILE_LOCK_NONE:
