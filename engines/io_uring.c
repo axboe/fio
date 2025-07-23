@@ -136,6 +136,8 @@ static const int fixed_ddir_to_op[2] = {
 	IORING_OP_WRITE_FIXED
 };
 
+static struct ioengine_ops ioengine_uring_cmd;
+
 static int fio_ioring_sqpoll_cb(void *data, unsigned long long *val)
 {
 	struct ioring_options *o = data;
@@ -798,8 +800,8 @@ static enum fio_q_status fio_ioring_queue(struct thread_data *td,
 	if (ld->cmdprio.mode != CMDPRIO_MODE_NONE)
 		fio_ioring_cmdprio_prep(td, io_u);
 
-	if (!strcmp(td->io_ops->name, "io_uring_cmd") &&
-		o->cmd_type == FIO_URING_CMD_NVME)
+	if (td->io_ops == &ioengine_uring_cmd &&
+	    o->cmd_type == FIO_URING_CMD_NVME)
 		fio_ioring_cmd_nvme_pi(td, io_u);
 
 	tail = *ring->tail;
@@ -1351,8 +1353,8 @@ static int fio_ioring_init(struct thread_data *td)
 	 * metadata buffer for nvme command.
 	 * We are only supporting iomem=malloc / mem=malloc as of now.
 	 */
-	if (!strcmp(td->io_ops->name, "io_uring_cmd") &&
-	    (o->cmd_type == FIO_URING_CMD_NVME) && o->md_per_io_size) {
+	if (td->io_ops == &ioengine_uring_cmd &&
+	    o->cmd_type == FIO_URING_CMD_NVME && o->md_per_io_size) {
 		md_size = (unsigned long long) o->md_per_io_size
 				* (unsigned long long) td->o.iodepth;
 		md_size += page_mask + td->o.mem_align;
@@ -1380,7 +1382,7 @@ static int fio_ioring_init(struct thread_data *td)
 	 * For io_uring_cmd, trims are async operations unless we are operating
 	 * in zbd mode where trim means zone reset.
 	 */
-	if (!strcmp(td->io_ops->name, "io_uring_cmd") && td_trim(td) &&
+	if (td->io_ops == &ioengine_uring_cmd && td_trim(td) &&
 	    td->o.zone_mode == ZONE_MODE_ZBD) {
 		td->io_ops->flags |= FIO_ASYNCIO_SYNC_TRIM;
 	} else {
@@ -1395,7 +1397,7 @@ static int fio_ioring_init(struct thread_data *td)
 		}
 	}
 
-	if (!strcmp(td->io_ops->name, "io_uring_cmd")) {
+	if (td->io_ops == &ioengine_uring_cmd) {
 		if (td_write(td)) {
 			switch (o->write_mode) {
 			case FIO_URING_CMD_WMODE_UNCOR:
@@ -1433,7 +1435,7 @@ static int fio_ioring_io_u_init(struct thread_data *td, struct io_u *io_u)
 
 	ld->io_u_index[io_u->index] = io_u;
 
-	if (!strcmp(td->io_ops->name, "io_uring_cmd")) {
+	if (td->io_ops == &ioengine_uring_cmd) {
 		p = PTR_ALIGN(ld->md_buf, page_mask) + td->o.mem_align;
 		p += o->md_per_io_size * io_u->index;
 		io_u->mmap_data = p;
@@ -1455,8 +1457,8 @@ static void fio_ioring_io_u_free(struct thread_data *td, struct io_u *io_u)
 	struct ioring_options *o = td->eo;
 	struct nvme_pi *pi;
 
-	if (!strcmp(td->io_ops->name, "io_uring_cmd") &&
-	    (o->cmd_type == FIO_URING_CMD_NVME)) {
+	if (td->io_ops == &ioengine_uring_cmd &&
+	    o->cmd_type == FIO_URING_CMD_NVME) {
 		pi = io_u->engine_data;
 		free(pi);
 		io_u->engine_data = NULL;
