@@ -1420,8 +1420,8 @@ static int fio_ioring_init(struct thread_data *td)
 	    is_uring_cmd_eng(td)) {
 		td->io_ops->flags |= FIO_ASYNCIO_SYNC_TRIM;
 	} else {
-		dsm_size = sizeof(*ld->dsm) +
-			td->o.num_range * sizeof(struct nvme_dsm_range);
+		dsm_size = sizeof(*ld->dsm);
+		dsm_size += td->o.num_range * sizeof(struct nvme_dsm_range);
 		ld->dsm = calloc(td->o.iodepth, dsm_size);
 		ptr = ld->dsm;
 		for (i = 0; i < td->o.iodepth; i++) {
