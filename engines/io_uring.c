@@ -1492,82 +1492,102 @@ static int fio_ioring_open_file(struct thread_data *td, struct fio_file *f)
 	return 0;
 }
 
+static int verify_params(struct thread_data *td, struct nvme_data *data,
+			 struct fio_file *f, enum fio_ddir ddir)
+{
+	struct ioring_options *o = td->eo;
+	unsigned int lba_size;
+
+	lba_size = data->lba_ext ? data->lba_ext : data->lba_size;
+	if (td->o.min_bs[ddir] % lba_size || td->o.max_bs[ddir] % lba_size) {
+		if (data->lba_ext) {
+			log_err("%s: block size must be a multiple of %u "
+				"(LBA data size + Metadata size)\n", f->file_name, lba_size);
+			if (td->o.min_bs[ddir] == td->o.max_bs[ddir] &&
+			    !(td->o.min_bs[ddir] % data->lba_size)) {
+				/* fixed block size is actually a multiple of LBA data size */
+				unsigned long long suggestion = lba_size *
+					(td->o.min_bs[ddir] / data->lba_size);
+				log_err("Did you mean to use a block size of %llu?\n", suggestion);
+			}
+		} else {
+			log_err("%s: block size must be a multiple of LBA data size\n",
+				f->file_name);
+		}
+		td_verror(td, EINVAL, "fio_ioring_cmd_open_file");
+		return 1;
+	}
+	if (data->ms && !data->lba_ext && ddir != DDIR_TRIM &&
+	    (o->md_per_io_size < ((td->o.max_bs[ddir] / data->lba_size) * data->ms))) {
+		log_err("%s: md_per_io_size should be at least %llu bytes\n",
+			f->file_name,
+			((td->o.max_bs[ddir] / data->lba_size) * data->ms));
+		td_verror(td, EINVAL, "fio_ioring_cmd_open_file");
+		return 1;
+	}
+
+	return 0;
+}
+
+static int fio_ioring_open_nvme(struct thread_data *td, struct fio_file *f)
+{
+	struct ioring_options *o = td->eo;
+	struct nvme_data *data = NULL;
+	__u64 nlba = 0;
+	int ret;
+
+	/* Store the namespace-id and lba size. */
+	data = FILE_ENG_DATA(f);
+	if (data == NULL) {
+		data = calloc(1, sizeof(struct nvme_data));
+		ret = fio_nvme_get_info(f, &nlba, o->pi_act, data);
+		if (ret) {
+			free(data);
+			return ret;
+		}
+
+		FILE_SET_ENG_DATA(f, data);
+	}
+
+	for_each_rw_ddir(ddir) {
+		ret = verify_params(td, data, f, ddir);
+		if (ret)
+			return ret;
+	}
+
+	/*
+	 * For extended logical block sizes we cannot use verify when
+	 * end to end data protection checks are enabled, as the PI
+	 * section of data buffer conflicts with verify.
+	 */
+	if (data->ms && data->pi_type && data->lba_ext &&
+	    td->o.verify != VERIFY_NONE) {
+		log_err("%s: for extended LBA, verify cannot be used when E2E "
+			"data protection is enabled\n", f->file_name);
+		td_verror(td, EINVAL, "fio_ioring_cmd_open_file");
+		return 1;
+	}
+
+	if (o->write_mode != FIO_URING_CMD_WMODE_WRITE && !td_write(td)) {
+		log_err("%s: 'readwrite=|rw=' has no write\n", f->file_name);
+		td_verror(td, EINVAL, "fio_ioring_cmd_open_file");
+		return 1;
+	}
+
+	return 0;
+}
+
 static int fio_ioring_cmd_open_file(struct thread_data *td, struct fio_file *f)
 {
 	struct ioring_data *ld = td->io_ops_data;
 	struct ioring_options *o = td->eo;
 
 	if (o->cmd_type == FIO_URING_CMD_NVME) {
-		struct nvme_data *data = NULL;
-		unsigned int lba_size = 0;
-		__u64 nlba = 0;
 		int ret;
 
-		/* Store the namespace-id and lba size. */
-		data = FILE_ENG_DATA(f);
-		if (data == NULL) {
-			data = calloc(1, sizeof(struct nvme_data));
-			ret = fio_nvme_get_info(f, &nlba, o->pi_act, data);
-			if (ret) {
-				free(data);
-				return ret;
-			}
-
-			FILE_SET_ENG_DATA(f, data);
-		}
-
-		lba_size = data->lba_ext ? data->lba_ext : data->lba_size;
-
-		for_each_rw_ddir(ddir) {
-			if (td->o.min_bs[ddir] % lba_size || td->o.max_bs[ddir] % lba_size) {
-				if (data->lba_ext) {
-					log_err("%s: block size must be a multiple of %u "
-						"(LBA data size + Metadata size)\n", f->file_name, lba_size);
-					if (td->o.min_bs[ddir] == td->o.max_bs[ddir] &&
-					    !(td->o.min_bs[ddir] % data->lba_size)) {
-						/* fixed block size is actually a multiple of LBA data size */
-						unsigned long long suggestion = lba_size *
-							(td->o.min_bs[ddir] / data->lba_size);
-						log_err("Did you mean to use a block size of %llu?\n", suggestion);
-					}
-				} else {
-					log_err("%s: block size must be a multiple of LBA data size\n",
-						f->file_name);
-				}
-				td_verror(td, EINVAL, "fio_ioring_cmd_open_file");
-				return 1;
-			}
-			if (data->ms && !data->lba_ext && ddir != DDIR_TRIM &&
-			    (o->md_per_io_size < ((td->o.max_bs[ddir] / data->lba_size) *
-						  data->ms))) {
-				log_err("%s: md_per_io_size should be at least %llu bytes\n",
-					f->file_name,
-					((td->o.max_bs[ddir] / data->lba_size) * data->ms));
-				td_verror(td, EINVAL, "fio_ioring_cmd_open_file");
-				return 1;
-			}
-                }
-
-		/*
-		 * For extended logical block sizes we cannot use verify when
-		 * end to end data protection checks are enabled, as the PI
-		 * section of data buffer conflicts with verify.
-		 */
-		if (data->ms && data->pi_type && data->lba_ext &&
-		    td->o.verify != VERIFY_NONE) {
-			log_err("%s: for extended LBA, verify cannot be used when E2E data protection is enabled\n",
-				f->file_name);
-			td_verror(td, EINVAL, "fio_ioring_cmd_open_file");
-			return 1;
-		}
-
-		if (o->write_mode != FIO_URING_CMD_WMODE_WRITE &&
-		    !td_write(td)) {
-			log_err("%s: 'readwrite=|rw=' has no write\n",
-					f->file_name);
-			td_verror(td, EINVAL, "fio_ioring_cmd_open_file");
-			return 1;
-		}
+		ret = fio_ioring_open_nvme(td, f);
+		if (ret)
+			return ret;
 	}
 	if (!ld || !o->registerfiles)
 		return generic_open_file(td, f);
