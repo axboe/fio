@@ -136,7 +136,11 @@ static const int fixed_ddir_to_op[2] = {
 	IORING_OP_WRITE_FIXED
 };
 
-static struct ioengine_ops ioengine_uring_cmd;
+static int fio_ioring_cmd_prep(struct thread_data *td, struct io_u *io_u);
+static inline bool is_uring_cmd_eng(struct thread_data *td)
+{
+	return td->io_ops->prep == fio_ioring_cmd_prep;
+}
 
 static int fio_ioring_sqpoll_cb(void *data, unsigned long long *val)
 {
@@ -800,8 +804,7 @@ static enum fio_q_status fio_ioring_queue(struct thread_data *td,
 	if (ld->cmdprio.mode != CMDPRIO_MODE_NONE)
 		fio_ioring_cmdprio_prep(td, io_u);
 
-	if (td->io_ops == &ioengine_uring_cmd &&
-	    o->cmd_type == FIO_URING_CMD_NVME)
+	if (o->cmd_type == FIO_URING_CMD_NVME && is_uring_cmd_eng(td))
 		fio_ioring_cmd_nvme_pi(td, io_u);
 
 	tail = *ring->tail;
@@ -1316,6 +1319,37 @@ static void parse_prchk_flags(struct ioring_options *o)
 		o->prchk |= NVME_IO_PRINFO_PRCHK_APP;
 }
 
+static int fio_ioring_cmd_init(struct thread_data *td, struct ioring_data *ld)
+{
+	struct ioring_options *o = td->eo;
+
+	if (td_write(td)) {
+		switch (o->write_mode) {
+		case FIO_URING_CMD_WMODE_UNCOR:
+			ld->write_opcode = nvme_cmd_write_uncor;
+			break;
+		case FIO_URING_CMD_WMODE_ZEROES:
+			ld->write_opcode = nvme_cmd_write_zeroes;
+			if (o->deac)
+				ld->cdw12_flags[DDIR_WRITE] = 1 << 25;
+			break;
+		case FIO_URING_CMD_WMODE_VERIFY:
+			ld->write_opcode = nvme_cmd_verify;
+			break;
+		default:
+			ld->write_opcode = nvme_cmd_write;
+			break;
+		}
+	}
+
+	if (o->readfua)
+		ld->cdw12_flags[DDIR_READ] = 1 << 30;
+	if (o->writefua)
+		ld->cdw12_flags[DDIR_WRITE] = 1 << 30;
+
+	return 0;
+}
+
 static int fio_ioring_init(struct thread_data *td)
 {
 	struct ioring_options *o = td->eo;
@@ -1353,8 +1387,8 @@ static int fio_ioring_init(struct thread_data *td)
 	 * metadata buffer for nvme command.
 	 * We are only supporting iomem=malloc / mem=malloc as of now.
 	 */
-	if (td->io_ops == &ioengine_uring_cmd &&
-	    o->cmd_type == FIO_URING_CMD_NVME && o->md_per_io_size) {
+	if (o->cmd_type == FIO_URING_CMD_NVME && o->md_per_io_size &&
+	    is_uring_cmd_eng(td)) {
 		md_size = (unsigned long long) o->md_per_io_size
 				* (unsigned long long) td->o.iodepth;
 		md_size += page_mask + td->o.mem_align;
@@ -1382,8 +1416,8 @@ static int fio_ioring_init(struct thread_data *td)
 	 * For io_uring_cmd, trims are async operations unless we are operating
 	 * in zbd mode where trim means zone reset.
 	 */
-	if (td->io_ops == &ioengine_uring_cmd && td_trim(td) &&
-	    td->o.zone_mode == ZONE_MODE_ZBD) {
+	if (td_trim(td) && td->o.zone_mode == ZONE_MODE_ZBD &&
+	    is_uring_cmd_eng(td)) {
 		td->io_ops->flags |= FIO_ASYNCIO_SYNC_TRIM;
 	} else {
 		dsm_size = sizeof(*ld->dsm) +
@@ -1397,56 +1431,38 @@ static int fio_ioring_init(struct thread_data *td)
 		}
 	}
 
-	if (td->io_ops == &ioengine_uring_cmd) {
-		if (td_write(td)) {
-			switch (o->write_mode) {
-			case FIO_URING_CMD_WMODE_UNCOR:
-				ld->write_opcode = nvme_cmd_write_uncor;
-				break;
-			case FIO_URING_CMD_WMODE_ZEROES:
-				ld->write_opcode = nvme_cmd_write_zeroes;
-				if (o->deac)
-					ld->cdw12_flags[DDIR_WRITE] = 1 << 25;
-				break;
-			case FIO_URING_CMD_WMODE_VERIFY:
-				ld->write_opcode = nvme_cmd_verify;
-				break;
-			default:
-				ld->write_opcode = nvme_cmd_write;
-				break;
-			}
-		}
-
-		if (o->readfua)
-			ld->cdw12_flags[DDIR_READ] = 1 << 30;
-		if (o->writefua)
-			ld->cdw12_flags[DDIR_WRITE] = 1 << 30;
-	}
-
+	if (is_uring_cmd_eng(td))
+		return fio_ioring_cmd_init(td, ld);
 	return 0;
 }
 
 static int fio_ioring_io_u_init(struct thread_data *td, struct io_u *io_u)
 {
 	struct ioring_data *ld = td->io_ops_data;
+
+	ld->io_u_index[io_u->index] = io_u;
+	return 0;
+}
+
+static int fio_ioring_io_u_cmd_init(struct thread_data *td, struct io_u *io_u)
+{
+	struct ioring_data *ld = td->io_ops_data;
 	struct ioring_options *o = td->eo;
 	struct nvme_pi_data *pi_data;
 	char *p;
 
-	ld->io_u_index[io_u->index] = io_u;
+	fio_ioring_io_u_init(td, io_u);
 
-	if (td->io_ops == &ioengine_uring_cmd) {
-		p = PTR_ALIGN(ld->md_buf, page_mask) + td->o.mem_align;
-		p += o->md_per_io_size * io_u->index;
-		io_u->mmap_data = p;
+	p = PTR_ALIGN(ld->md_buf, page_mask) + td->o.mem_align;
+	p += o->md_per_io_size * io_u->index;
+	io_u->mmap_data = p;
 
-		if (!o->pi_act) {
-			pi_data = calloc(1, sizeof(*pi_data));
-			pi_data->io_flags |= o->prchk;
-			pi_data->apptag_mask = o->apptag_mask;
-			pi_data->apptag = o->apptag;
-			io_u->engine_data = pi_data;
-		}
+	if (!o->pi_act) {
+		pi_data = calloc(1, sizeof(*pi_data));
+		pi_data->io_flags |= o->prchk;
+		pi_data->apptag_mask = o->apptag_mask;
+		pi_data->apptag = o->apptag;
+		io_u->engine_data = pi_data;
 	}
 
 	return 0;
@@ -1455,11 +1471,10 @@ static int fio_ioring_io_u_init(struct thread_data *td, struct io_u *io_u)
 static void fio_ioring_io_u_free(struct thread_data *td, struct io_u *io_u)
 {
 	struct ioring_options *o = td->eo;
-	struct nvme_pi *pi;
 
-	if (td->io_ops == &ioengine_uring_cmd &&
-	    o->cmd_type == FIO_URING_CMD_NVME) {
-		pi = io_u->engine_data;
+	if (o->cmd_type == FIO_URING_CMD_NVME) {
+		struct nvme_pi *pi = io_u->engine_data;
+
 		free(pi);
 		io_u->engine_data = NULL;
 	}
@@ -1706,7 +1721,7 @@ static struct ioengine_ops ioengine_uring_cmd = {
 					FIO_MULTI_RANGE_TRIM,
 	.init			= fio_ioring_init,
 	.post_init		= fio_ioring_cmd_post_init,
-	.io_u_init		= fio_ioring_io_u_init,
+	.io_u_init		= fio_ioring_io_u_cmd_init,
 	.io_u_free		= fio_ioring_io_u_free,
 	.prep			= fio_ioring_cmd_prep,
 	.queue			= fio_ioring_queue,
