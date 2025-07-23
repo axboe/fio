@@ -90,6 +90,8 @@ struct io_u {
 	unsigned long long resid;
 	unsigned int error;
 
+	int inflight_idx;
+
 	/*
 	 * io engine private data
 	 */
