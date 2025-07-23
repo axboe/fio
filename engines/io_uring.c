@@ -1579,7 +1579,6 @@ static int fio_ioring_open_nvme(struct thread_data *td, struct fio_file *f)
 
 static int fio_ioring_cmd_open_file(struct thread_data *td, struct fio_file *f)
 {
-	struct ioring_data *ld = td->io_ops_data;
 	struct ioring_options *o = td->eo;
 
 	if (o->cmd_type == FIO_URING_CMD_NVME) {
@@ -1589,11 +1588,8 @@ static int fio_ioring_cmd_open_file(struct thread_data *td, struct fio_file *f)
 		if (ret)
 			return ret;
 	}
-	if (!ld || !o->registerfiles)
-		return generic_open_file(td, f);
 
-	f->fd = ld->fds[f->engine_pos];
-	return 0;
+	return fio_ioring_open_file(td, f);
 }
 
 static int fio_ioring_close_file(struct thread_data *td, struct fio_file *f)
@@ -1611,7 +1607,6 @@ static int fio_ioring_close_file(struct thread_data *td, struct fio_file *f)
 static int fio_ioring_cmd_close_file(struct thread_data *td,
 				     struct fio_file *f)
 {
-	struct ioring_data *ld = td->io_ops_data;
 	struct ioring_options *o = td->eo;
 
 	if (o->cmd_type == FIO_URING_CMD_NVME) {
@@ -1620,11 +1615,8 @@ static int fio_ioring_cmd_close_file(struct thread_data *td,
 		FILE_SET_ENG_DATA(f, NULL);
 		free(data);
 	}
-	if (!ld || !o->registerfiles)
-		return generic_close_file(td, f);
 
-	f->fd = -1;
-	return 0;
+	return fio_ioring_close_file(td, f);
 }
 
 static int fio_ioring_cmd_get_file_size(struct thread_data *td,
