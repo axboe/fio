@@ -2065,8 +2065,6 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 static void file_log_write_comp(const struct thread_data *td, struct fio_file *f,
 				uint64_t offset, unsigned int bytes)
 {
-	int idx;
-
 	if (!f)
 		return;
 
@@ -2074,14 +2072,6 @@ static void file_log_write_comp(const struct thread_data *td, struct fio_file *f
 		f->first_write = offset;
 	if (f->last_write == -1ULL || ((offset + bytes) > f->last_write))
 		f->last_write = offset + bytes;
-
-	if (!f->last_write_comp)
-		return;
-
-	idx = f->last_write_idx++;
-	f->last_write_comp[idx] = offset;
-	if (f->last_write_idx == td->last_write_comp_depth)
-		f->last_write_idx = 0;
 }
 
 static bool should_account(struct thread_data *td)
@@ -2101,6 +2091,7 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 
 	assert(io_u->flags & IO_U_F_FLIGHT);
 	io_u_clear(td, io_u, IO_U_F_FLIGHT | IO_U_F_BUSY_OK | IO_U_F_PATTERN_DONE);
+	invalidate_inflight(td, io_u);
 
 	if (td->o.zone_mode == ZONE_MODE_ZBD && td->o.recover_zbd_write_error &&
 	    io_u->error && io_u->ddir == DDIR_WRITE &&

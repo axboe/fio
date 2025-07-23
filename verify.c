@@ -1629,47 +1629,6 @@ int paste_blockoff(char *buf, unsigned int len, void *priv)
 	return 0;
 }
 
-static int __fill_file_completions(struct thread_data *td,
-				   struct thread_io_list *s,
-				   struct fio_file *f, unsigned int *index)
-{
-	unsigned int comps;
-	int i, j;
-
-	if (!f->last_write_comp)
-		return 0;
-
-	if (td->io_blocks[DDIR_WRITE] < td->last_write_comp_depth)
-		comps = td->io_blocks[DDIR_WRITE];
-	else
-		comps = td->last_write_comp_depth;
-
-	j = f->last_write_idx - 1;
-	for (i = 0; i < comps; i++) {
-		if (j == -1)
-			j = td->last_write_comp_depth - 1;
-		s->comps[*index].fileno = __cpu_to_le64(f->fileno);
-		s->comps[*index].offset = cpu_to_le64(f->last_write_comp[j]);
-		(*index)++;
-		j--;
-	}
-
-	return comps;
-}
-
-static int fill_file_completions(struct thread_data *td,
-				 struct thread_io_list *s, unsigned int *index)
-{
-	struct fio_file *f;
-	unsigned int i;
-	int comps = 0;
-
-	for_each_file(td, f, i)
-		comps += __fill_file_completions(td, s, f, index);
-
-	return comps;
-}
-
 struct all_io_list *get_all_io_list(int save_mask, size_t *sz)
 {
 	struct all_io_list *rep;
@@ -1690,7 +1649,7 @@ struct all_io_list *get_all_io_list(int save_mask, size_t *sz)
 			continue;
 		td->stop_io = 1;
 		td->flags |= TD_F_VSTATE_SAVED;
-		depth += (td->last_write_comp_depth * td->o.nr_files);
+		depth += (td->o.iodepth * td->o.nr_files);
 		nr++;
 	} end_for_each();
 
@@ -1707,16 +1666,13 @@ struct all_io_list *get_all_io_list(int save_mask, size_t *sz)
 	next = &rep->state[0];
 	for_each_td(td) {
 		struct thread_io_list *s = next;
-		unsigned int comps, index = 0;
 
 		if (save_mask != IO_LIST_ALL && (__td_index + 1) != save_mask)
 			continue;
 
-		comps = fill_file_completions(td, s, &index);
+		/* copy inflight info to thread_io_list */
 
-		s->no_comps = cpu_to_le64((uint64_t) comps);
 		s->depth = cpu_to_le32((uint32_t) td->o.iodepth);
-		s->max_no_comps_per_file = cpu_to_le32((uint32_t) td->last_write_comp_depth);
 		s->nofiles = cpu_to_le32((uint32_t) td->o.nr_files);
 		s->numberio = cpu_to_le64((uint64_t) td->io_issues[DDIR_WRITE]);
 		s->index = cpu_to_le64((uint64_t) __td_index);

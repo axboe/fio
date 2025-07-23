@@ -949,6 +949,81 @@ static void handle_thinktime(struct thread_data *td, enum fio_ddir ddir,
 }
 
 /*
+ * Add numberio from io_u to the inflight log.
+ */
+void log_inflight(struct thread_data *td, struct io_u *io_u)
+{
+	int idx, i;
+
+	if (!td->inflight_numberio || io_u->ddir != DDIR_WRITE)
+		return;
+
+	if (io_u->inflight_idx != -1) {
+		log_err("inflight_idx already set: inflight_idx=%d\n",
+			io_u->inflight_idx);
+		abort();
+	}
+
+	if (td->inflight_issued != io_u->numberio) {
+		log_err("inflight_issued does not match: numberio=%"PRIu64", inflight_issued=%"PRIu64"\n",
+			io_u->numberio, td->inflight_issued);
+		abort();
+	}
+
+	/* Walk the inflight list until we find a free slot. */
+	idx = td->next_inflight_numberio_idx;
+	for (i = 0; i < td->o.iodepth; i++) {
+		if (td->inflight_numberio[idx] == INVALID_NUMBERIO) {
+			/*
+			 * The order here is important - we must "protect" this write in the
+			 * inflight list before making it visible in inflight_issued.
+			 */
+			atomic_store_release(&td->inflight_numberio[idx], io_u->numberio);
+			td->next_inflight_numberio_idx = (idx + 1) % td->o.iodepth;
+			io_u->inflight_idx = idx;
+
+			atomic_store_release(&td->inflight_issued, io_u->numberio + 1);
+			dprint(FD_VERIFY, "log_inflight: numberio=%"PRIu64", inflight_idx=%d\n",
+				io_u->numberio, idx);
+			return;
+		}
+		idx = (idx + 1) % td->o.iodepth;
+	}
+
+	log_err("failed to allocate inflight slot: next_inflight_numberio_idx=%u\n",
+		td->next_inflight_numberio_idx);
+	abort();
+}
+
+/*
+ * Invalidate inflight log entry.
+ */
+void invalidate_inflight(struct thread_data *td, struct io_u *io_u)
+{
+	if (!td->inflight_numberio ||
+		io_u->ddir != DDIR_WRITE ||
+		io_u->inflight_idx == -1) {
+		return;
+	}
+
+	dprint(FD_VERIFY, "invalidate_inflight: numberio=%"PRIu64", inflight_idx=%d\n",
+		io_u->numberio, io_u->inflight_idx);
+
+	if (td->inflight_numberio[io_u->inflight_idx] == INVALID_NUMBERIO) {
+		log_err("inflight entry already invalid: numberio=%"PRIu64", inflight_idx=%d\n",
+			io_u->numberio, io_u->inflight_idx);
+		abort();
+	} else if (td->inflight_numberio[io_u->inflight_idx] != io_u->numberio) {
+		log_err("inflight entry numberio does not match: expected numberio=%"PRIu64", observed numberio=%"PRIu64", inflight_idx=%d\n",
+			io_u->numberio, td->inflight_numberio[io_u->inflight_idx], io_u->inflight_idx);
+		abort();
+	}
+
+	atomic_store_release(&td->inflight_numberio[io_u->inflight_idx], INVALID_NUMBERIO);
+	io_u->inflight_idx = -1;
+}
+
+/*
  * Main IO worker function. It retrieves io_u's to process and queues
  * and reaps them, checking for rate and errors along the way.
  *
@@ -1059,6 +1134,7 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 				io_u_set(td, io_u, IO_U_F_PATTERN_DONE);
 				io_u->numberio = td->io_issues[io_u->ddir];
 				populate_verify_io_u(td, io_u);
+				log_inflight(td, io_u);
 			}
 		}
 
@@ -1227,49 +1303,29 @@ reap:
 		bytes_done[i] = td->bytes_done[i] - bytes_done[i];
 }
 
-static void free_file_completion_logging(struct thread_data *td)
+static int init_inflight_logging(struct thread_data *td)
 {
-	struct fio_file *f;
-	unsigned int i;
-
-	for_each_file(td, f, i) {
-		if (!f->last_write_comp)
-			break;
-		sfree(f->last_write_comp);
-	}
-}
-
-static int init_file_completion_logging(struct thread_data *td,
-					unsigned int depth)
-{
-	struct fio_file *f;
 	unsigned int i;
 
 	if (td->o.verify == VERIFY_NONE || !td->o.verify_state_save)
 		return 0;
 
-	/*
-	 * Async IO completion order may be different from issue order. Double
-	 * the number of write completions to cover the case the writes issued
-	 * earlier complete slowly and fall in the last write log entries.
-	 */
-	td->last_write_comp_depth = depth;
-	if (!td_ioengine_flagged(td, FIO_SYNCIO))
-		td->last_write_comp_depth += depth;
-
-	for_each_file(td, f, i) {
-		f->last_write_comp = scalloc(td->last_write_comp_depth,
-					     sizeof(uint64_t));
-		if (!f->last_write_comp)
-			goto cleanup;
+	td->inflight_numberio = scalloc(td->o.iodepth, sizeof(uint64_t));
+	if (!td->inflight_numberio) {
+		log_err("fio: failed to alloc inflight write data\n");
+		return 1;
 	}
 
-	return 0;
+	for (i = 0; i < td->o.iodepth; i++)
+		td->inflight_numberio[i] = INVALID_NUMBERIO;
 
-cleanup:
-	free_file_completion_logging(td);
-	log_err("fio: failed to alloc write comp data\n");
-	return 1;
+	return 0;
+}
+
+static void free_inflight_logging(struct thread_data *td)
+{
+	if (td->inflight_numberio)
+		sfree(td->inflight_numberio);
 }
 
 static void cleanup_io_u(struct thread_data *td)
@@ -1294,16 +1350,15 @@ static void cleanup_io_u(struct thread_data *td)
 	io_u_qexit(&td->io_u_freelist, false);
 	io_u_qexit(&td->io_u_all, td_offload_overlap(td));
 
-	free_file_completion_logging(td);
+	free_inflight_logging(td);
 }
 
 static int init_io_u(struct thread_data *td)
 {
 	struct io_u *io_u;
-	int cl_align, i, max_units;
+	int cl_align, i;
 	int err;
 
-	max_units = td->o.iodepth;
 
 	err = 0;
 	err += !io_u_rinit(&td->io_u_requeues, td->o.iodepth);
@@ -1317,7 +1372,7 @@ static int init_io_u(struct thread_data *td)
 
 	cl_align = os_cache_line_size();
 
-	for (i = 0; i < max_units; i++) {
+	for (i = 0; i < td->o.iodepth; i++) {
 		void *ptr;
 
 		if (td->terminate)
@@ -1334,6 +1389,7 @@ static int init_io_u(struct thread_data *td)
 		INIT_FLIST_HEAD(&io_u->verify_list);
 		dprint(FD_MEM, "io_u alloc %p, index %u\n", io_u, i);
 
+		io_u->inflight_idx = -1;
 		io_u->index = i;
 		io_u->flags = IO_U_F_FREE;
 		io_u_qpush(&td->io_u_freelist, io_u);
@@ -1357,7 +1413,7 @@ static int init_io_u(struct thread_data *td)
 	if (init_io_u_buffers(td))
 		return 1;
 
-	if (init_file_completion_logging(td, max_units))
+	if (init_inflight_logging(td))
 		return 1;
 
 	return 0;
