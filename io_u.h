@@ -46,7 +46,7 @@ struct io_u {
 	/*
 	 * Write generation
 	 */
-	unsigned short numberio;
+	uint64_t numberio;
 
 	/*
 	 * IO priority.
