@@ -1658,7 +1658,7 @@ struct all_io_list *get_all_io_list(int save_mask, size_t *sz)
 
 	*sz = sizeof(*rep);
 	*sz += nr * sizeof(struct thread_io_list);
-	*sz += depth * sizeof(struct file_comp);
+	*sz += depth * sizeof(struct inflight_write);
 	rep = calloc(1, *sz);
 
 	rep->threads = cpu_to_le64((uint64_t) nr);
@@ -1670,11 +1670,11 @@ struct all_io_list *get_all_io_list(int save_mask, size_t *sz)
 		if (save_mask != IO_LIST_ALL && (__td_index + 1) != save_mask)
 			continue;
 
-		/* copy inflight info to thread_io_list */
+		for (int i = 0; i < td->o.iodepth; i++)
+			s->inflight[i].numberio = cpu_to_le64(atomic_load_acquire(&td->inflight_numberio[i]));
 
 		s->depth = cpu_to_le32((uint32_t) td->o.iodepth);
-		s->nofiles = cpu_to_le32((uint32_t) td->o.nr_files);
-		s->numberio = cpu_to_le64((uint64_t) td->io_issues[DDIR_WRITE]);
+		s->numberio = cpu_to_le64((uint64_t) atomic_load_acquire(&td->inflight_issued));
 		s->index = cpu_to_le64((uint64_t) __td_index);
 		if (td->random_state.use64) {
 			s->rand.state64.s[0] = cpu_to_le64(td->random_state.state64.s1);
@@ -1802,10 +1802,7 @@ void verify_assign_state(struct thread_data *td, void *p)
 	struct thread_io_list *s = p;
 	int i;
 
-	s->no_comps = le64_to_cpu(s->no_comps);
 	s->depth = le32_to_cpu(s->depth);
-	s->max_no_comps_per_file = le32_to_cpu(s->max_no_comps_per_file);
-	s->nofiles = le32_to_cpu(s->nofiles);
 	s->numberio = le64_to_cpu(s->numberio);
 	s->rand.use64 = le64_to_cpu(s->rand.use64);
 
@@ -1817,9 +1814,9 @@ void verify_assign_state(struct thread_data *td, void *p)
 			s->rand.state32.s[i] = le32_to_cpu(s->rand.state32.s[i]);
 	}
 
-	for (i = 0; i < s->no_comps; i++) {
-		s->comps[i].fileno = le64_to_cpu(s->comps[i].fileno);
-		s->comps[i].offset = le64_to_cpu(s->comps[i].offset);
+	for (i = 0; i < s->depth; i++) {
+		s->inflight[i].numberio = le64_to_cpu(s->inflight[i].numberio);
+		dprint(FD_VERIFY, "verify_assign_state numberio=%"PRIu64", inflight[%d]=%"PRIu64"\n", s->numberio, i, s->inflight[i].numberio);
 	}
 
 	td->vstate = p;
@@ -1905,40 +1902,31 @@ err:
 /*
  * Use the loaded verify state to know when to stop doing verification
  */
-int verify_state_should_stop(struct thread_data *td, struct io_u *io_u)
+int verify_state_should_stop(struct thread_data *td, uint64_t numberio)
 {
 	struct thread_io_list *s = td->vstate;
-	struct fio_file *f = io_u->file;
 	int i;
 
-	if (!s || !f)
+	dprint(FD_VERIFY, "verify_state_should_stop numberio=%"PRIu64"\n", numberio);
+	if (!s)
 		return 0;
 
-	/*
-	 * If we're not into the window of issues - depth yet, continue. If
-	 * issue is shorter than depth, do check.
+	/* If the current seq is lower than the max issued seq, check to make sure
+	 * the write was not inflight.
 	 */
-	if ((td->io_blocks[DDIR_READ] < s->depth ||
-	    s->numberio - td->io_blocks[DDIR_READ] > s->depth) &&
-	    s->numberio > s->depth)
-		return 0;
-
-	/*
-	 * We're in the window of having to check if this io was
-	 * completed or not. If the IO was seen as completed, then
-	 * lets verify it.
-	 */
-	for (i = 0; i < s->no_comps; i++) {
-		if (s->comps[i].fileno != f->fileno)
-			continue;
-		if (io_u->verify_offset == s->comps[i].offset)
-			return 0;
+	if (numberio < s->numberio) {
+		for (i = 0; i < s->depth; i++) {
+			if (s->inflight[i].numberio == numberio) {
+				log_info("Stop verify because seq %"PRIu64" was an inflight write\n",
+					numberio);
+				return 1;
+			}
+		}
+	} else {
+		log_info("Stop verify because seq %"PRIu64" >= %"PRIu64"\n",
+			numberio, s->numberio);
+		return 1;
 	}
 
-	/*
-	 * Not found, we have to stop
-	 */
-	log_info("Stop verify because offset %llu in %s is not recorded in verify state\n",
-		 io_u->verify_offset, f->file_name);
-	return 1;
+	return 0;
 }

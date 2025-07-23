@@ -714,7 +714,7 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 				break;
 		}
 
-		if (verify_state_should_stop(td, io_u)) {
+		if (verify_state_should_stop(td, io_u->numberio)) {
 			put_io_u(td, io_u);
 			break;
 		}
@@ -1159,7 +1159,7 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 					io_u->rand_seed *= __rand(&td->verify_state);
 			}
 
-			if (verify_state_should_stop(td, io_u)) {
+			if (verify_state_should_stop(td, td->io_issues[io_u->ddir])) {
 				put_io_u(td, io_u);
 				break;
 			}
