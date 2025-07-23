@@ -265,7 +265,9 @@ struct thread_options {
 	unsigned int compress_percentage;
 	unsigned int compress_chunk;
 	unsigned int dedupe_percentage;
+	unsigned int dedupe_unaligned_percentage;
 	unsigned int dedupe_mode;
+	unsigned int dedupe_working_set_ua_percentage;
 	unsigned int dedupe_working_set_percentage;
 	unsigned int dedupe_global;
 	unsigned int time_based;
@@ -593,9 +595,11 @@ struct thread_options_pack {
 	uint32_t compress_percentage;
 	uint32_t compress_chunk;
 	uint32_t dedupe_percentage;
+	uint32_t dedupe_unaligned_percentage;
 	uint32_t dedupe_mode;
 	uint32_t dedupe_working_set_percentage;
 	uint32_t dedupe_global;
+	uint32_t dedupe_working_set_ua_percentage;
 	uint32_t time_based;
 	uint32_t disable_lat;
 	uint32_t disable_clat;
