@@ -30,6 +30,9 @@ enum {
 	VERIFY_PATTERN,			/* verify specific patterns */
 	VERIFY_PATTERN_NO_HDR,		/* verify specific patterns, no hdr */
 	VERIFY_NULL,			/* pretend to verify */
+	VERIFY_FLUSH,			/* verify with flush timing consideration */
+
+	VERIFY_TYPE_FLUSH,		/* verify offsets based on flush completion time */
 };
 
 /*
