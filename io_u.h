@@ -46,7 +46,7 @@ struct io_u {
 	/*
 	 * Write generation
 	 */
-	unsigned short numberio;
+	uint64_t numberio;
 
 	/*
 	 * IO priority.
@@ -89,6 +89,8 @@ struct io_u {
 
 	unsigned long long resid;
 	unsigned int error;
+
+	int inflight_idx;
 
 	/*
 	 * io engine private data
