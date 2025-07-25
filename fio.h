@@ -795,6 +795,7 @@ extern void lat_target_reset(struct thread_data *);
  */
 extern void log_inflight(struct thread_data *, struct io_u *);
 extern void invalidate_inflight(struct thread_data *, struct io_u *);
+extern void clear_inflight(struct thread_data *);
 
 /*
  * Iterates all threads/processes within all the defined jobs
