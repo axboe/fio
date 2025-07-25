@@ -99,6 +99,8 @@ struct ioring_data {
 	uint8_t write_opcode;
 
 	bool is_uring_cmd_eng;
+
+	struct nvme_cmd_ext_io_opts ext_opts;
 };
 
 struct ioring_options {
@@ -738,11 +740,8 @@ static inline void fio_ioring_cmd_nvme_pi(struct thread_data *td,
 					  struct io_u *io_u)
 {
 	struct ioring_data *ld = td->io_ops_data;
-	struct ioring_options *o = td->eo;
 	struct nvme_uring_cmd *cmd;
 	struct io_uring_sqe *sqe;
-	struct nvme_cmd_ext_io_opts ext_opts = {0};
-	struct nvme_data *data = FILE_ENG_DATA(io_u->file);
 
 	if (io_u->ddir == DDIR_TRIM)
 		return;
@@ -750,15 +749,7 @@ static inline void fio_ioring_cmd_nvme_pi(struct thread_data *td,
 	sqe = &ld->sqes[(io_u->index) << 1];
 	cmd = (struct nvme_uring_cmd *)sqe->cmd;
 
-	if (data->pi_type) {
-		if (o->pi_act)
-			ext_opts.io_flags |= NVME_IO_PRINFO_PRACT;
-		ext_opts.io_flags |= o->prchk;
-		ext_opts.apptag = o->apptag;
-		ext_opts.apptag_mask = o->apptag_mask;
-	}
-
-	fio_nvme_pi_fill(cmd, io_u, &ext_opts);
+	fio_nvme_pi_fill(cmd, io_u, &ld->ext_opts);
 }
 
 static inline void fio_ioring_cmdprio_prep(struct thread_data *td,
@@ -1355,6 +1346,7 @@ static int fio_ioring_init(struct thread_data *td)
 	unsigned int dsm_size;
 	unsigned long long md_size;
 	int ret, i;
+	struct nvme_cmd_ext_io_opts *ext_opts;
 
 	/* sqthread submission requires registered files */
 	if (o->sqpoll_thread)
@@ -1399,6 +1391,12 @@ static int fio_ioring_init(struct thread_data *td)
 		}
 	}
 	parse_prchk_flags(o);
+	ext_opts = &ld->ext_opts;
+	if (o->pi_act)
+		ext_opts->io_flags |= NVME_IO_PRINFO_PRACT;
+	ext_opts->io_flags |= o->prchk;
+	ext_opts->apptag = o->apptag;
+	ext_opts->apptag_mask = o->apptag_mask;
 
 	ld->iovecs = calloc(ld->iodepth, sizeof(struct iovec));
 
