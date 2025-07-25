@@ -1024,6 +1024,27 @@ void invalidate_inflight(struct thread_data *td, struct io_u *io_u)
 }
 
 /*
+ * Clear inflight log.
+ */
+void clear_inflight(struct thread_data *td)
+{
+	int i;
+
+	if (!td->inflight_numberio)
+		return;
+
+	for (i = 0; i < td->o.iodepth; i++)
+		td->inflight_numberio[i] = INVALID_NUMBERIO;
+
+	td->next_inflight_numberio_idx = 0;
+	/*
+	 * Experimental verify can increment io_issues for writes, so catch
+	 * inflight_issued up in between loops.
+	 */
+	td->inflight_issued = td->io_issues[DDIR_WRITE];
+}
+
+/*
  * Main IO worker function. It retrieves io_u's to process and queues
  * and reaps them, checking for rate and errors along the way.
  *
