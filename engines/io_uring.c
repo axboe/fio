@@ -97,6 +97,8 @@ struct ioring_data {
 	struct nvme_dsm *dsm;
 	uint32_t cdw12_flags[DDIR_RWDIR_CNT];
 	uint8_t write_opcode;
+
+	bool is_uring_cmd_eng;
 };
 
 struct ioring_options {
@@ -135,12 +137,6 @@ static const int fixed_ddir_to_op[2] = {
 	IORING_OP_READ_FIXED,
 	IORING_OP_WRITE_FIXED
 };
-
-static int fio_ioring_cmd_prep(struct thread_data *td, struct io_u *io_u);
-static inline bool is_uring_cmd_eng(struct thread_data *td)
-{
-	return td->io_ops->prep == fio_ioring_cmd_prep;
-}
 
 static int fio_ioring_sqpoll_cb(void *data, unsigned long long *val)
 {
@@ -804,7 +800,7 @@ static enum fio_q_status fio_ioring_queue(struct thread_data *td,
 	if (ld->cmdprio.mode != CMDPRIO_MODE_NONE)
 		fio_ioring_cmdprio_prep(td, io_u);
 
-	if (o->cmd_type == FIO_URING_CMD_NVME && is_uring_cmd_eng(td))
+	if (o->cmd_type == FIO_URING_CMD_NVME && ld->is_uring_cmd_eng)
 		fio_ioring_cmd_nvme_pi(td, io_u);
 
 	tail = *ring->tail;
@@ -1372,6 +1368,8 @@ static int fio_ioring_init(struct thread_data *td)
 
 	ld = calloc(1, sizeof(*ld));
 
+	ld->is_uring_cmd_eng = (td->io_ops->prep == fio_ioring_cmd_prep);
+
 	/*
 	 * The internal io_uring queue depth must be a power-of-2, as that's
 	 * how the ring interface works. So round that up, in case the user
@@ -1388,7 +1386,7 @@ static int fio_ioring_init(struct thread_data *td)
 	 * We are only supporting iomem=malloc / mem=malloc as of now.
 	 */
 	if (o->cmd_type == FIO_URING_CMD_NVME && o->md_per_io_size &&
-	    is_uring_cmd_eng(td)) {
+	    ld->is_uring_cmd_eng) {
 		md_size = (unsigned long long) o->md_per_io_size
 				* (unsigned long long) td->o.iodepth;
 		md_size += page_mask + td->o.mem_align;
@@ -1417,7 +1415,7 @@ static int fio_ioring_init(struct thread_data *td)
 	 * in zbd mode where trim means zone reset.
 	 */
 	if (td_trim(td) && td->o.zone_mode == ZONE_MODE_ZBD &&
-	    is_uring_cmd_eng(td)) {
+	    ld->is_uring_cmd_eng) {
 		td->io_ops->flags |= FIO_ASYNCIO_SYNC_TRIM;
 	} else {
 		dsm_size = sizeof(*ld->dsm);
@@ -1431,7 +1429,7 @@ static int fio_ioring_init(struct thread_data *td)
 		}
 	}
 
-	if (is_uring_cmd_eng(td))
+	if (ld->is_uring_cmd_eng)
 		return fio_ioring_cmd_init(td, ld);
 	return 0;
 }
