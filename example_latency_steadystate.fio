@@ -1,0 +1,47 @@
+# Example FIO job file demonstrating latency steady state detection
+# This example shows how to use FIO's latency steady state detection
+# to automatically terminate workloads when latency stabilizes
+#
+# Based on SNIA SSD Performance Test Specification requirements:
+# - Steady state is achieved when latency measurements don't change more than
+#   20% for 5 measurement windows and remain within 5% of a line with 10% slope
+# - This example uses more conservative 5% deviation threshold for demonstration
+
+[global]
+# Basic I/O parameters
+ioengine=libaio
+iodepth=32
+bs=4k
+direct=1
+rw=randread
+numjobs=1
+time_based=1
+runtime=3600  # Max runtime: 1 hour (will terminate early if steady state reached)
+
+# Steady state detection parameters
+steadystate=lat:5%           # Stop when latency mean deviation < 5% of average
+steadystate_duration=300     # Use 5-minute rolling window for measurements
+steadystate_ramp_time=60     # Wait 1 minute before starting measurements
+steadystate_check_interval=10 # Take measurements every 10 seconds
+
+# Output options
+write_lat_log=lat_steadystate
+log_avg_msec=10000           # Log average latency every 10 seconds
+
+[latency_steady_test]
+filename=/dev/nvme3n1
+size=10G
+
+# Alternative steady state configurations (uncomment to try):
+
+# Use slope-based detection instead of deviation:
+# steadystate=lat_slope:0.1%
+
+# More aggressive detection (faster convergence):
+# steadystate=lat:2%
+# steadystate_duration=120    # 2-minute window
+# steadystate_check_interval=5 # Check every 5 seconds
+
+# More conservative detection (slower convergence):
+# steadystate=lat:10%
+# steadystate_duration=600    # 10-minute window
