@@ -1468,14 +1468,10 @@ static int fio_ioring_io_u_cmd_init(struct thread_data *td, struct io_u *io_u)
 
 static void fio_ioring_io_u_free(struct thread_data *td, struct io_u *io_u)
 {
-	struct ioring_options *o = td->eo;
+	struct nvme_pi *pi = io_u->engine_data;
 
-	if (o->cmd_type == FIO_URING_CMD_NVME) {
-		struct nvme_pi *pi = io_u->engine_data;
-
-		free(pi);
-		io_u->engine_data = NULL;
-	}
+	free(pi);
+	io_u->engine_data = NULL;
 }
 
 static int fio_ioring_open_file(struct thread_data *td, struct fio_file *f)
