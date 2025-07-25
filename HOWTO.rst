@@ -4216,6 +4216,18 @@ Steady state
 			Collect bandwidth data and calculate the least squares regression
 			slope. Stop the job if the slope falls below the specified limit.
 
+		**lat**
+			Collect completion latency data and calculate the maximum mean
+			deviation. Stop the job if the deviation falls below the specified
+			limit. The latency values are weighted by the number of I/O samples
+			in each measurement interval.
+
+		**lat_slope**
+			Collect completion latency data and calculate the least squares
+			regression slope. Stop the job if the slope falls below the
+			specified limit. The latency values are weighted by the number
+			of I/O samples in each measurement interval.
+
 .. option:: steadystate_duration=time, ss_dur=time
 
         A rolling window of this duration will be used to judge whether steady
