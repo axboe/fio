@@ -8,22 +8,6 @@
 #include "../crc/crc-t10dif.h"
 #include "../crc/crc64.h"
 
-static inline __u64 get_slba(struct nvme_data *data, __u64 offset)
-{
-	if (data->lba_ext)
-		return offset / data->lba_ext;
-
-	return offset >> data->lba_shift;
-}
-
-static inline __u32 get_nlb(struct nvme_data *data, __u64 len)
-{
-	if (data->lba_ext)
-		return len / data->lba_ext - 1;
-
-	return (len >> data->lba_shift) - 1;
-}
-
 static void fio_nvme_generate_pi_16b_guard(struct nvme_data *data,
 					   struct io_u *io_u,
 					   struct nvme_cmd_ext_io_opts *opts)

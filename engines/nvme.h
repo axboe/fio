@@ -476,4 +476,20 @@ static inline bool fio_nvme_pi_ref_escape(__u8 *reftag)
 	return memcmp(reftag, ref_esc, sizeof(ref_esc)) == 0;
 }
 
+static inline __u64 get_slba(struct nvme_data *data, __u64 offset)
+{
+	if (data->lba_ext)
+		return offset / data->lba_ext;
+
+	return offset >> data->lba_shift;
+}
+
+static inline __u32 get_nlb(struct nvme_data *data, __u64 len)
+{
+	if (data->lba_ext)
+		return len / data->lba_ext - 1;
+
+	return (len >> data->lba_shift) - 1;
+}
+
 #endif
