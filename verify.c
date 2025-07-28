@@ -922,6 +922,11 @@ static int verify_header(struct io_u *io_u, struct thread_data *td,
 			hdr->magic, FIO_HDR_MAGIC);
 		goto err;
 	}
+	if (hdr->version != VERIFY_HEADER_VERSION) {
+		log_err("verify: unsupported header version %x, wanted %x. Are you trying to verify across versions of fio?",
+			hdr->version, VERIFY_HEADER_VERSION);
+		goto err;
+	}
 	if (hdr->len != hdr_len) {
 		log_err("verify: bad header length %u, wanted %u",
 			hdr->len, hdr_len);
@@ -1260,6 +1265,7 @@ static void __fill_hdr(struct thread_data *td, struct io_u *io_u,
 	void *p = hdr;
 
 	hdr->magic = FIO_HDR_MAGIC;
+	hdr->version = VERIFY_HEADER_VERSION;
 	hdr->verify_type = td->o.verify;
 	hdr->len = header_len;
 	hdr->rand_seed = rand_seed;
