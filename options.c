@@ -1361,6 +1361,12 @@ static int str_random_distribution_cb(void *data, const char *str)
 	return 0;
 }
 
+static bool is_valid_steadystate(unsigned int state)
+{
+	return (state == FIO_SS_IOPS || state == FIO_SS_IOPS_SLOPE ||
+		state == FIO_SS_BW || state == FIO_SS_BW_SLOPE);
+}
+
 static int str_steadystate_cb(void *data, const char *str)
 {
 	struct thread_data *td = cb_data_to_td(data);
@@ -1369,8 +1375,7 @@ static int str_steadystate_cb(void *data, const char *str)
 	char *pct;
 	long long ll;
 
-	if (td->o.ss_state != FIO_SS_IOPS && td->o.ss_state != FIO_SS_IOPS_SLOPE &&
-	    td->o.ss_state != FIO_SS_BW && td->o.ss_state != FIO_SS_BW_SLOPE) {
+	if (!is_valid_steadystate(td->o.ss_state)) {
 		/* should be impossible to get here */
 		log_err("fio: unknown steady state criterion\n");
 		return 1;
