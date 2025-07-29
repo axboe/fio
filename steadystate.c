@@ -353,32 +353,27 @@ int td_steadystate_init(struct thread_data *td)
 	return 0;
 }
 
-uint64_t steadystate_bw_mean(const struct thread_stat *ts)
+static uint64_t steadystate_data_mean(uint64_t *data, int ss_dur)
 {
 	int i;
 	uint64_t sum;
-	int intervals = ts->ss_dur / (ss_check_interval / 1000L);
-	
-	if (!ts->ss_dur)
+	int intervals = ss_dur / (ss_check_interval / 1000L);
+
+	if (!ss_dur)
 		return 0;
 
 	for (i = 0, sum = 0; i < intervals; i++)
-		sum += ts->ss_bw_data[i];
+		sum += data[i];
 
 	return sum / intervals;
 }
 
+uint64_t steadystate_bw_mean(const struct thread_stat *ts)
+{
+	return steadystate_data_mean(ts->ss_bw_data, ts->ss_dur);
+}
+
 uint64_t steadystate_iops_mean(const struct thread_stat *ts)
 {
-	int i;
-	uint64_t sum;
-	int intervals = ts->ss_dur / (ss_check_interval / 1000L);
-
-	if (!ts->ss_dur)
-		return 0;
-
-	for (i = 0, sum = 0; i < intervals; i++)
-		sum += ts->ss_iops_data[i];
-
-	return sum / intervals;
+	return steadystate_data_mean(ts->ss_iops_data, ts->ss_dur);
 }
