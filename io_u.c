@@ -11,6 +11,7 @@
 #include "lib/pow2.h"
 #include "minmax.h"
 #include "zbd.h"
+#include "sprandom.h"
 
 struct io_completion_data {
 	int nr;				/* input */
@@ -82,6 +83,22 @@ static uint64_t last_block(struct thread_data *td, struct fio_file *f,
 		return 0;
 
 	return max_blocks;
+}
+
+
+static int __get_next_rand_offset_sprandom(struct thread_data *td, struct fio_file *f,
+					   enum fio_ddir ddir, uint64_t *b,
+					   uint64_t lastb)
+{
+	assert(ddir == DDIR_WRITE);
+
+	/* SP RANDOM writes all addresses once */
+	if (sprandom_get_next_offset(f->spr_info, f, b)) {
+		dprint(FD_SPRANDOM, "sprandom is done\n");
+		td->done = 1;
+		return 1;
+	}
+	return 0;
 }
 
 static int __get_next_rand_offset(struct thread_data *td, struct fio_file *f,
@@ -277,7 +294,9 @@ bail:
 static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 				enum fio_ddir ddir, uint64_t *b)
 {
-	if (td->o.random_distribution == FIO_RAND_DIST_RANDOM) {
+	if (td->o.sprandom && ddir == DDIR_WRITE) {
+		return __get_next_rand_offset_sprandom(td, f, ddir, b, 0);
+	} else if (td->o.random_distribution == FIO_RAND_DIST_RANDOM) {
 		uint64_t lastb;
 
 		lastb = last_block(td, f, ddir);
