@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <math.h>
+#include "lib/pow2.h"
 #include "fio.h"
 #include "file.h"
 #include "sprandom.h"
@@ -94,6 +95,8 @@
  * size f(i). This resampling gives the expected validity for each
  * equal-sized region of the drive, completing the model.
  */
+
+#define PCT_PRECISION 10000
 
 static inline double *d_alloc(size_t n)
 {
@@ -533,17 +536,54 @@ static uint64_t sprandom_physical_size(double over_provisioning, uint64_t logica
 	return (size + (align_bs - 1)) & ~(align_bs - 1);
 }
 
-int sprandom_setup(struct sprandom_info *spr_info, uint64_t logical_size,
-		   uint64_t align_bs)
+/**
+ * estimate_inv_capacity - Estimates the invalid capacity of a region.
+ * @region_cnt: number of offsets in the region.
+ * @validity: invalidation ration in the regions (between 0 and 1).
+ *
+ * Calculates the expected number of invalidion in regions, adding a margin
+ * of 6 standard deviations to account for statistical variation.
+ *
+ * Returns: Estimated invalid capacity
+ */
+static uint64_t estimate_inv_capacity(uint64_t region_cnt, double validity)
+{
+	double sigma = sqrt((double)region_cnt * validity * (1.0 - validity));
+	return (uint64_t)ceil(region_cnt * (1.0 - validity) + 6.0 * sigma);
+}
+
+/**
+ * sprandom_setup - Initialize and configure sprandom_info structure.
+ * @spr_info: Pointer to sprandom_info structure to be initialized.
+ * @logical_size: Logical size of the storage region.
+ * @align_bs: Alignment block size.
+ *
+ * Calculates physical size and region parameters based on logical size,
+ * alignment, and over-provisioning. Allocates and initializes validity
+ * distribution and invalid percentage arrays for regions. Precomputes
+ * invalid buffer capacity and allocates buffer. Sets up region size,
+ * write counts, and resets region/phase counters.
+ *
+ * Returns 0 on success, enagative value on failure.
+ */
+static int sprandom_setup(struct sprandom_info *spr_info, uint64_t logical_size,
+			  uint64_t align_bs)
 {
 	double over_provisioning = spr_info->over_provisioning;
-	uint64_t physical_size = sprandom_physical_size(over_provisioning,
-							logical_size, align_bs);
+	uint64_t physical_size;
 	uint64_t region_sz;
+	uint64_t region_write_count;
+	double *validity_dist;
+	size_t invalid_capacity;
 	size_t total_alloc = 0;
+	char bytes2str_buf[40];
+	int i;
 
-	double *validity_dist = compute_validity_dist(spr_info->num_regions,
-						      spr_info->over_provisioning);
+	physical_size = sprandom_physical_size(over_provisioning,
+					       logical_size, align_bs);
+
+	validity_dist = compute_validity_dist(spr_info->num_regions,
+					      spr_info->over_provisioning);
 	if (!validity_dist)
 		return -ENOMEM;
 
@@ -554,9 +594,242 @@ int sprandom_setup(struct sprandom_info *spr_info, uint64_t logical_size,
 	total_alloc += spr_info->num_regions * sizeof(spr_info->validity_dist[0]);
 
 	/* Precompute invalidity percentage array */
+	spr_info->invalid_pct = calloc(spr_info->num_regions,
+				       sizeof(spr_info->invalid_pct[0]));
+	if (!spr_info->invalid_pct)
+		goto err;
+
+	total_alloc += spr_info->num_regions * sizeof(spr_info->invalid_pct[0]);
+
+	for (i = 0; i < spr_info->num_regions; i++) {
+		double inv = (1.0 - validity_dist[i]) * (double)PCT_PRECISION;
+		spr_info->invalid_pct[i] = (int)round(inv);
+	}
+
 	region_sz = physical_size / spr_info->num_regions;
+	region_write_count = region_sz / align_bs;
+
+	invalid_capacity = estimate_inv_capacity(region_write_count,
+						 validity_dist[0]);
+	spr_info->invalid_capacity = invalid_capacity;
+
+	spr_info->invalid_buf = pcb_alloc(invalid_capacity);
+
+	total_alloc += invalid_capacity * sizeof(uint64_t);
 
 	spr_info->region_sz = region_sz;
+	spr_info->invalid_count[0] = 0;
+	spr_info->invalid_count[1] = 0;
+	spr_info->curr_phase = 0;
+	spr_info->current_region = 0;
+	spr_info->region_write_count = region_write_count;
+	spr_info->writes_remaining = region_write_count;
+
+	/* Display overall allocation */
+	dprint(FD_SPRANDOM, "Summary:\n");
+	dprint(FD_SPRANDOM, "  logical_size:      %"PRIu64": %s\n",
+		logical_size,
+		bytes2str_simple(bytes2str_buf, sizeof(bytes2str_buf), logical_size));
+	dprint(FD_SPRANDOM, "  physical_size:     %"PRIu64": %s\n",
+		physical_size,
+		bytes2str_simple(bytes2str_buf, sizeof(bytes2str_buf), physical_size));
+	dprint(FD_SPRANDOM, "  op: %02f\n", spr_info->over_provisioning);
+	dprint(FD_SPRANDOM, "  region_size:        %"PRIu64"\n", region_sz);
+	dprint(FD_SPRANDOM, "  num_regions:        %u\n", spr_info->num_regions);
+	dprint(FD_SPRANDOM, "  region_write_count: %"PRIu64"\n", region_write_count);
+	dprint(FD_SPRANDOM, "  invalid_capacity:   %zu\n", invalid_capacity);
+	dprint(FD_SPRANDOM, "  dynamic memory:     %zu: %s\n",
+		total_alloc,
+		bytes2str_simple(bytes2str_buf, sizeof(bytes2str_buf), total_alloc));
 
 	return 0;
+err:
+	free(spr_info->validity_dist);
+	free(spr_info->invalid_pct);
+	return -ENOMEM;
+}
+
+/**
+ * sprandom_add_with_probability - Adds an offset to the invalid buffer with
+ * a probability.
+ *
+ * @info: sprandom_info structure containing random state and buffers.
+ * @offset: The offset value to potentially add to the invalid buffer.
+ * @phase: The current phase index for invalid count tracking.
+ *
+ * Generates a random value and, based on the current region's invalid percentage,
+ * decides whether to add the offset to the invalid buffer.
+ * If the buffer is full, ogs an error and asserts failure.
+ */
+static void sprandom_add_with_probability(struct sprandom_info *info,
+					  uint64_t offset, unsigned int phase)
+{
+
+	int v = rand_between(info->rand_state, 0, PCT_PRECISION);
+
+	if (v <= info->invalid_pct[info->current_region]) {
+		if (pcb_space_available(info->invalid_buf)) {
+			pcb_push_staged(info->invalid_buf, offset);
+			info->invalid_count[phase]++;
+		} else {
+			dprint(FD_SPRANDOM, "pcb buffer would be overriten\n");
+			assert(false);
+		}
+	}
+}
+
+static void dprint_invalidation(const struct sprandom_info *info)
+{
+	uint32_t phase = info->curr_phase;
+	double inv = 0;
+	double inv_act; /* actually invalidation percentage */
+
+	inv_act = (double)info->invalid_count[phase] / (double)info->region_write_count;
+	if (info->current_region > 0)
+		inv = (double)info->invalid_pct[info->current_region - 1] / PCT_PRECISION;
+
+	dprint(FD_SPRANDOM, "Invalidation[%d] %"PRIu64" %zu %.04f %.04f\n",
+		info->current_region,
+		info->region_write_count,
+		info->invalid_count[phase],
+		inv, inv_act);
+}
+
+/**
+ * sprandom_get_next_offset - Generate the next write offset for a region,
+ * managing invalidation, and region transitions.
+ *
+ * @info: sprandom_info structure containing state and configuration.
+ * @f: fio file associated with the ssd device.
+ * @b: block offset to store the next write offset.
+ *
+ * Generates offsets to write a region and saves a fraction of the offsets
+ * in a two phase circular buffer.
+ * When transitioning to the next region (phase is flipped),it first writes
+ * all saved offsets to achieve the desired fraction of invalid blocks in the
+ * previous region. The remainder of the current region is then filled with
+ * new offsets.
+ *
+ * Returns:
+ *   0 if a valid offset is found and stored in @b,
+ *   1 if no more offsets are available (end of regions or LFSR exhausted).
+ */
+int sprandom_get_next_offset(struct sprandom_info *info, struct fio_file *f, uint64_t *b)
+{
+	uint64_t offset = 0;
+	uint32_t phase = info->curr_phase;
+
+	/* replay invalidation */
+	if (pcb_pop(info->invalid_buf, &offset)) {
+		sprandom_add_with_probability(info, offset,  phase ^ 1);
+		dprint(FD_SPRANDOM, "Write %"PRIu64" over %d\n", *b, info->current_region);
+		goto out;
+	}
+
+	/* Move to next region */
+	if (info->writes_remaining == 0) {
+		if (info->current_region >= info->num_regions) {
+			dprint(FD_SPRANDOM, "End: Last Region %d cur%d\n",
+			       info->current_region, info->num_regions);
+			return 1;
+		}
+
+		dprint_invalidation(info);
+
+		info->invalid_count[phase] = 0;
+
+		info->current_region++;
+		phase ^= 1;
+		info->writes_remaining = info->region_write_count -
+						info->invalid_count[phase];
+		info->curr_phase = phase;
+		pcb_commit(info->invalid_buf);
+	}
+
+	/* Fetch new offset */
+	if (lfsr_next(&f->lfsr, &offset)) {
+		dprint(FD_SPRANDOM, "End: LFSR exhausted %d [%zu] [%zu]\n",
+			info->current_region,
+			info->invalid_count[phase],
+			info->invalid_count[phase ^ 1]);
+
+		dprint_invalidation(info);
+
+		return 1;
+	}
+
+	if (info->writes_remaining > 0)
+		info->writes_remaining--;
+
+	sprandom_add_with_probability(info, offset,  phase ^ 1);
+	dprint(FD_SPRANDOM, "Write %"PRIu64" lfsr %d\n", offset, info->current_region);
+out:
+	*b = offset;
+	return 0;
+}
+
+/**
+ * sprandom_init - initialize sprandom info
+ * @td: fio thread data
+ * @f: fio file associated with the ssd device.
+ *
+ * Sets up the sprandom_info structure for the given file according:
+ * region count, over-provisioning, and file/device size.
+ *
+ * Return: 0 on success, negative error code on failure.
+ */
+int sprandom_init(struct thread_data *td, struct fio_file *f)
+{
+	struct sprandom_info *info = NULL;
+	double over_provisioning;
+	uint64_t logical_size;
+	uint64_t align_bs = td->o.bs[DDIR_WRITE];
+	int ret;
+
+	if (!td->o.sprandom)
+		return 0;
+
+	if (!is_power_of_2(align_bs)) {
+		log_err("fio: sprandom: bs [%"PRIu64"] should be power of 2",
+			align_bs);
+		return -EINVAL;
+	}
+
+	info = calloc(1, sizeof(*info));
+	if (!info)
+		return -ENOMEM;
+
+	logical_size = min(f->real_file_size, f->io_size);
+	over_provisioning = td->o.spr_over_provisioning.u.f;
+	info->num_regions = td->o.spr_num_regions;
+	info->over_provisioning = over_provisioning;
+	td->o.io_size = sprandom_physical_size(over_provisioning,
+					       logical_size, align_bs);
+	info->rand_state = &td->sprandom_state;
+	ret = sprandom_setup(info, logical_size, align_bs);
+	if (ret)
+		goto err;
+
+	f->spr_info = info;
+	return 0;
+err:
+	free(info);
+	return ret;
+}
+
+/**
+ * sprandom_free - Frees resources associated with a sprandom_info structure.
+ * @info: Pointer to the sprandom_info structure to be freed.
+ *
+ * Releases memory allocated for validity_dist, invalid_buf, and the spr_info
+ * structure itself. Does nothing if @spr_info is NULL.
+ */
+void sprandom_free(struct sprandom_info *info)
+{
+	if (!info)
+		return;
+
+	free(info->validity_dist);
+	free(info->invalid_buf);
+	free(info);
 }
