@@ -10,6 +10,8 @@
 #include "file.h"
 #include "sprandom.h"
 
+#define PCT_PRECISION 10000
+
 static inline double *d_alloc(size_t n)
 {
 	return calloc(n, sizeof(double));
@@ -355,13 +357,17 @@ static uint64_t sprandom_pysical_size(double over_provisioning, uint64_t logical
 	return logical_sz + ceil((double)logical_sz * over_provisioning);
 }
 
-int sprandom_setup(struct sprandom_info *spr_info, uint64_t logical_size, uint64_t align_bs)
+static int sprandom_setup(struct sprandom_info *spr_info, uint64_t logical_size, uint64_t align_bs)
 {
 	double over_provisioning = spr_info->over_provisioning;
 	uint64_t physical_size = sprandom_pysical_size(over_provisioning,
 						       logical_size);
+	size_t invalid_capacity;
 	uint64_t region_sz;
+	uint64_t region_write_count;
 	size_t total_alloc = 0;
+	int i;
+	char bytes2str_buf[40];
 
 	double *validity_dist = compute_validity_dist(spr_info->num_regions,
 						      spr_info->over_provisioning);
@@ -375,9 +381,197 @@ int sprandom_setup(struct sprandom_info *spr_info, uint64_t logical_size, uint64
 	total_alloc += spr_info->num_regions * sizeof(spr_info->validity_dist[0]);
 
 	/* Precompute invalidity percentage array */
+	spr_info->invalid_pct = calloc(spr_info->num_regions,
+				       sizeof(spr_info->invalid_pct[0]));
+	if (!spr_info->invalid_pct)
+		goto err;
+
+	total_alloc += spr_info->num_regions * sizeof(spr_info->invalid_pct[0]);
+
+	for (i = 0; i < spr_info->num_regions; i++) {
+		double inv = (1.0 - validity_dist[i]) * (double)PCT_PRECISION;
+		spr_info->invalid_pct[i] = (int)round(inv);
+	}
+
 	region_sz = physical_size / spr_info->num_regions;
+	region_write_count = region_sz / align_bs;
+
+	invalid_capacity = 2 * ceil((double)region_write_count * (1.0 - validity_dist[0]));
+
+	spr_info->invalid_buf = pcb_alloc(invalid_capacity);
+
+	total_alloc += invalid_capacity * sizeof(uint64_t);
 
 	spr_info->region_sz = region_sz;
+	spr_info->invalid_count[0] = 0;
+	spr_info->invalid_count[1] = 0;
+	spr_info->curr_phase = 0;
+	spr_info->current_region = 0;
+	spr_info->writes_remaining = region_write_count;
+	spr_info->region_write_count = region_write_count;
+
+
+	/* Display overall allocation */
+	dprint(FD_SPRANDOM, "Overall allocation:\n");
+	dprint(FD_SPRANDOM, "  logical_size:      %lu: %s\n",
+		logical_size,
+		bytes2str_simple(bytes2str_buf, sizeof(bytes2str_buf), logical_size));
+	dprint(FD_SPRANDOM, "  physical_size:     %lu: %s\n",
+		physical_size,
+		bytes2str_simple(bytes2str_buf, sizeof(bytes2str_buf), physical_size));
+	dprint(FD_SPRANDOM, "  region_size:       %lu\n", region_sz);
+	dprint(FD_SPRANDOM, "  num_regions:       %u\n", spr_info->num_regions);
+	dprint(FD_SPRANDOM, "  region_write_count:%lu\n", region_write_count);
+	dprint(FD_SPRANDOM, "  invalid_capacity:  %lu\n", invalid_capacity);
+	dprint(FD_SPRANDOM, "  dynamic memory:    %zu: %s\n",
+		total_alloc,
+		bytes2str_simple(bytes2str_buf, sizeof(bytes2str_buf), total_alloc));
 
 	return 0;
+err:
+	free(spr_info->validity_dist);
+	free(spr_info->invalid_pct);
+	return -ENOMEM;
+}
+
+static void sprandom_add_with_probability(struct sprandom_info *info,
+					  uint64_t offset, unsigned int phase)
+{
+	int v = rand_between(&info->rand_state, 0, PCT_PRECISION);
+
+	if (v <= info->invalid_pct[info->current_region]) {
+		if (pcb_space_available(info->invalid_buf)) {
+			pcb_push_staged(info->invalid_buf, offset);
+			info->invalid_count[phase]++;
+		} else {
+			dprint(FD_SPRANDOM, "pcb buffer full!!!\n");
+			assert(false);
+		}
+	}
+}
+
+static void dprint_invalidation(const struct sprandom_info *info)
+{
+	uint32_t phase = info->curr_phase;
+
+	dprint(FD_SPRANDOM, "Invalidation[%d] %ld %ld %.04f %d\n",
+		info->current_region,
+		info->region_write_count,
+		info->invalid_count[phase],
+		(double)info->invalid_count[phase] / (double)info->region_write_count,
+		info->invalid_pct[info->current_region]);
+
+}
+
+int sprandom_get_next_offset(struct sprandom_info *info, struct fio_file *f, uint64_t *b)
+{
+	uint64_t offset = 0;
+	uint32_t phase = info->curr_phase;
+
+	/* replay invalidation */
+	if (pcb_pop(info->invalid_buf, &offset)) {
+		*b = offset;
+		sprandom_add_with_probability(info, *b,  phase ^ 1);
+		dprint(FD_SPRANDOM, "Write %ld over %d\n", *b, info->current_region);
+		return 0;
+	}
+
+	/* Move to next region */
+	if (info->writes_remaining == 0) {
+		if (info->current_region >= info->num_regions) {
+			dprint(FD_SPRANDOM, "End: Last Region %d cur%d\n",
+			       info->current_region, info->num_regions);
+			return 1;
+		}
+
+		dprint_invalidation(info);
+
+		info->writes_remaining = info->region_write_count - info->invalid_count[phase];
+		info->invalid_count[phase] = 0;
+
+		info->current_region++;
+		info->curr_phase  = phase ^ 1;
+		pcb_commit(info->invalid_buf);
+	}
+
+	/* Fetch new offset */
+	if (lfsr_next(&f->lfsr, &offset)) {
+		dprint(FD_SPRANDOM, "End: LFSR exhausted %d [%ld] [%ld]\n",
+			info->current_region,
+			info->invalid_count[phase],
+			info->invalid_count[phase ^ 1]);
+
+		dprint_invalidation(info);
+
+		return 1;
+	}
+
+	if (info->writes_remaining > 0)
+		info->writes_remaining--;
+
+	sprandom_add_with_probability(info, offset,  phase ^ 1);
+	dprint(FD_SPRANDOM, "Write %ld lfsr %d\n", offset, info->current_region);
+	*b = offset;
+	return 0;
+}
+
+static int sprandom_init_rand_state(struct sprandom_info *info, struct thread_data *td)
+{
+	uint64_t seed = 0;
+
+	if (!td->o.rand_repeatable && !fio_option_is_set(&td->o, rand_seed)) {
+		int ret = init_random_seeds(&seed, sizeof(seed));
+		dprint(FD_SPRANDOM, "using system RNG for random seed\n");
+		if (ret)
+			return ret;
+	} else {
+		int i;
+		seed = td->o.rand_seed;
+		for (i = 0; i < 4; i++)
+			seed *= 0x9e370001UL;
+	}
+	init_rand_seed(&info->rand_state, seed, 0);
+	return 0;
+}
+
+int sprandom_init(struct thread_data *td, struct fio_file *f)
+{
+	struct sprandom_info *info = NULL;
+	double over_provisioning;
+	uint64_t logical_size;
+	int ret;
+
+	if (!td->o.sprandom)
+		return 0;
+
+	info = calloc(1, sizeof(*info));
+	if (!info)
+		return -ENOMEM;
+
+	logical_size = min(f->real_file_size, f->io_size);
+	over_provisioning = td->o.over_provisioning.u.f;
+	info->num_regions = td->o.num_regions;
+	info->over_provisioning = over_provisioning;
+	ret = sprandom_init_rand_state(info, td);
+	if (ret)
+		goto err;
+	ret = sprandom_setup(info, logical_size, td->o.bs[DDIR_WRITE]);
+	if (ret)
+		goto err;
+
+	f->spr_info = info;
+	return 0;
+err:
+	free(info);
+	return ret;
+}
+
+void sprandom_free(struct sprandom_info *spr_info)
+{
+	if (!spr_info)
+		return;
+
+	free(spr_info->validity_dist);
+	free(spr_info->invalid_buf);
+	free(spr_info);
 }
