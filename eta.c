@@ -381,7 +381,7 @@ bool eta_time_within_slack(unsigned int time)
  * These are the conditions under which we might be able to skip the eta
  * calculation.
  */
-static bool skip_eta()
+static bool skip_eta(void)
 {
 	if (!(output_format & FIO_OUTPUT_NORMAL) && f_out == stdout)
 		return true;
