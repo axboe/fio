@@ -1002,7 +1002,8 @@ uint64_t get_start_offset(struct thread_data *td, struct fio_file *f)
 /*
  * Find longest path component that exists and return its length
  */
-int longest_existing_path(char *path) {
+static int longest_existing_path(const char *path)
+{
 	char buf[PATH_MAX];
 	bool done;
 	char *buf_pos;
