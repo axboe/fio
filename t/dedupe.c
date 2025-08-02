@@ -489,7 +489,8 @@ static int run_dedupe_threads(struct fio_file *f, uint64_t dev_size,
 	*nextents = nitems;
 	*nchunks = nitems - *nchunks;
 
-	fio_sem_remove(size_lock);
+	if (size_lock != NULL)
+		fio_sem_remove(size_lock);
 	free(threads);
 	return err;
 }
