@@ -28,6 +28,8 @@ struct thread_rand_state {
 struct file_comp {
 	uint64_t fileno;
 	uint64_t offset;
+	uint32_t flush_count;  /* FLUSH count at completion time for ordering */
+	uint32_t flags;        /* I/O flags including FUA */
 };
 
 struct thread_io_list {
@@ -37,6 +39,8 @@ struct thread_io_list {
 	uint32_t nofiles;
 	uint64_t numberio;
 	uint64_t index;
+	uint32_t last_flush_count; /* Last FLUSH count for ordering */
+	uint32_t padding;          /* Padding for alignment */
 	struct thread_rand_state rand;
 	uint8_t name[64];
 	struct file_comp comps[0];
@@ -47,7 +51,7 @@ struct all_io_list {
 	struct thread_io_list state[0];
 };
 
-#define VSTATE_HDR_VERSION	0x04
+#define VSTATE_HDR_VERSION	0x05  /* Incremented for FLUSH count support */
 
 struct verify_state_hdr {
 	uint64_t version;
@@ -56,6 +60,9 @@ struct verify_state_hdr {
 };
 
 #define IO_LIST_ALL		0xffffffff
+
+/* Flags for file_comp.flags */
+#define FIO_COMP_FLAG_FUA	0x1	/* Write had Force Unit Access flag */
 
 struct io_u;
 extern struct all_io_list *get_all_io_list(int, size_t *);

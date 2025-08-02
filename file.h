@@ -37,6 +37,9 @@ enum fio_file_flags {
 	FIO_FILE_smalloc	= 1 << 9,	/* smalloc file/file_name */
 };
 
+/* Flags for fio_write_comp.flags */
+#define FIO_WRITE_COMP_FUA	0x1	/* Write had Force Unit Access flag */
+
 enum file_lock_mode {
 	FILE_LOCK_NONE,
 	FILE_LOCK_EXCLUSIVE,
@@ -126,8 +129,15 @@ struct fio_file {
 	 * Tracks the last iodepth number of completed writes, if data
 	 * verification is enabled
 	 */
-	uint64_t *last_write_comp;
+	struct fio_write_comp {
+		uint64_t offset;
+		uint64_t completion_time_nsec;
+		uint32_t flags;  /* I/O flags including FUA */
+		uint32_t flush_count; /* FLUSH count at completion time */
+	} *last_write_comp;
 	unsigned int last_write_idx;
+	uint64_t last_flush_time_nsec;  /* Last FLUSH completion timestamp */
+	unsigned int flush_count;       /* Count of completed FLUSH operations */
 
 	/*
 	 * For use by the io engine to store offset
