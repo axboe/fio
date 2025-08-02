@@ -922,6 +922,11 @@ static int verify_header(struct io_u *io_u, struct thread_data *td,
 			hdr->magic, FIO_HDR_MAGIC);
 		goto err;
 	}
+	if (hdr->version != VERIFY_HEADER_VERSION) {
+		log_err("verify: unsupported header version %x, wanted %x. Are you trying to verify across versions of fio?",
+			hdr->version, VERIFY_HEADER_VERSION);
+		goto err;
+	}
 	if (hdr->len != hdr_len) {
 		log_err("verify: bad header length %u, wanted %u",
 			hdr->len, hdr_len);
@@ -951,8 +956,8 @@ static int verify_header(struct io_u *io_u, struct thread_data *td,
 	    !td->o.time_based)
 		if (td->o.verify_write_sequence)
 			if (hdr->numberio != io_u->numberio) {
-				log_err("verify: bad header numberio %"PRIu16
-					", wanted %"PRIu16,
+				log_err("verify: bad header numberio %"PRIu64
+					", wanted %"PRIu64,
 					hdr->numberio, io_u->numberio);
 				goto err;
 			}
@@ -1260,6 +1265,7 @@ static void __fill_hdr(struct thread_data *td, struct io_u *io_u,
 	void *p = hdr;
 
 	hdr->magic = FIO_HDR_MAGIC;
+	hdr->version = VERIFY_HEADER_VERSION;
 	hdr->verify_type = td->o.verify;
 	hdr->len = header_len;
 	hdr->rand_seed = rand_seed;
@@ -1629,47 +1635,6 @@ int paste_blockoff(char *buf, unsigned int len, void *priv)
 	return 0;
 }
 
-static int __fill_file_completions(struct thread_data *td,
-				   struct thread_io_list *s,
-				   struct fio_file *f, unsigned int *index)
-{
-	unsigned int comps;
-	int i, j;
-
-	if (!f->last_write_comp)
-		return 0;
-
-	if (td->io_blocks[DDIR_WRITE] < td->last_write_comp_depth)
-		comps = td->io_blocks[DDIR_WRITE];
-	else
-		comps = td->last_write_comp_depth;
-
-	j = f->last_write_idx - 1;
-	for (i = 0; i < comps; i++) {
-		if (j == -1)
-			j = td->last_write_comp_depth - 1;
-		s->comps[*index].fileno = __cpu_to_le64(f->fileno);
-		s->comps[*index].offset = cpu_to_le64(f->last_write_comp[j]);
-		(*index)++;
-		j--;
-	}
-
-	return comps;
-}
-
-static int fill_file_completions(struct thread_data *td,
-				 struct thread_io_list *s, unsigned int *index)
-{
-	struct fio_file *f;
-	unsigned int i;
-	int comps = 0;
-
-	for_each_file(td, f, i)
-		comps += __fill_file_completions(td, s, f, index);
-
-	return comps;
-}
-
 struct all_io_list *get_all_io_list(int save_mask, size_t *sz)
 {
 	struct all_io_list *rep;
@@ -1690,7 +1655,7 @@ struct all_io_list *get_all_io_list(int save_mask, size_t *sz)
 			continue;
 		td->stop_io = 1;
 		td->flags |= TD_F_VSTATE_SAVED;
-		depth += (td->last_write_comp_depth * td->o.nr_files);
+		depth += (td->o.iodepth * td->o.nr_files);
 		nr++;
 	} end_for_each();
 
@@ -1699,7 +1664,7 @@ struct all_io_list *get_all_io_list(int save_mask, size_t *sz)
 
 	*sz = sizeof(*rep);
 	*sz += nr * sizeof(struct thread_io_list);
-	*sz += depth * sizeof(struct file_comp);
+	*sz += depth * sizeof(struct inflight_write);
 	rep = calloc(1, *sz);
 
 	rep->threads = cpu_to_le64((uint64_t) nr);
@@ -1707,18 +1672,15 @@ struct all_io_list *get_all_io_list(int save_mask, size_t *sz)
 	next = &rep->state[0];
 	for_each_td(td) {
 		struct thread_io_list *s = next;
-		unsigned int comps, index = 0;
 
 		if (save_mask != IO_LIST_ALL && (__td_index + 1) != save_mask)
 			continue;
 
-		comps = fill_file_completions(td, s, &index);
+		for (int i = 0; i < td->o.iodepth; i++)
+			s->inflight[i].numberio = cpu_to_le64(atomic_load_acquire(&td->inflight_numberio[i]));
 
-		s->no_comps = cpu_to_le64((uint64_t) comps);
 		s->depth = cpu_to_le32((uint32_t) td->o.iodepth);
-		s->max_no_comps_per_file = cpu_to_le32((uint32_t) td->last_write_comp_depth);
-		s->nofiles = cpu_to_le32((uint32_t) td->o.nr_files);
-		s->numberio = cpu_to_le64((uint64_t) td->io_issues[DDIR_WRITE]);
+		s->numberio = cpu_to_le64((uint64_t) atomic_load_acquire(&td->inflight_issued));
 		s->index = cpu_to_le64((uint64_t) __td_index);
 		if (td->random_state.use64) {
 			s->rand.state64.s[0] = cpu_to_le64(td->random_state.state64.s1);
@@ -1846,10 +1808,7 @@ void verify_assign_state(struct thread_data *td, void *p)
 	struct thread_io_list *s = p;
 	int i;
 
-	s->no_comps = le64_to_cpu(s->no_comps);
 	s->depth = le32_to_cpu(s->depth);
-	s->max_no_comps_per_file = le32_to_cpu(s->max_no_comps_per_file);
-	s->nofiles = le32_to_cpu(s->nofiles);
 	s->numberio = le64_to_cpu(s->numberio);
 	s->rand.use64 = le64_to_cpu(s->rand.use64);
 
@@ -1861,9 +1820,9 @@ void verify_assign_state(struct thread_data *td, void *p)
 			s->rand.state32.s[i] = le32_to_cpu(s->rand.state32.s[i]);
 	}
 
-	for (i = 0; i < s->no_comps; i++) {
-		s->comps[i].fileno = le64_to_cpu(s->comps[i].fileno);
-		s->comps[i].offset = le64_to_cpu(s->comps[i].offset);
+	for (i = 0; i < s->depth; i++) {
+		s->inflight[i].numberio = le64_to_cpu(s->inflight[i].numberio);
+		dprint(FD_VERIFY, "verify_assign_state numberio=%"PRIu64", inflight[%d]=%"PRIu64"\n", s->numberio, i, s->inflight[i].numberio);
 	}
 
 	td->vstate = p;
@@ -1949,40 +1908,31 @@ err:
 /*
  * Use the loaded verify state to know when to stop doing verification
  */
-int verify_state_should_stop(struct thread_data *td, struct io_u *io_u)
+int verify_state_should_stop(struct thread_data *td, uint64_t numberio)
 {
 	struct thread_io_list *s = td->vstate;
-	struct fio_file *f = io_u->file;
 	int i;
 
-	if (!s || !f)
+	dprint(FD_VERIFY, "verify_state_should_stop numberio=%"PRIu64"\n", numberio);
+	if (!s)
 		return 0;
 
-	/*
-	 * If we're not into the window of issues - depth yet, continue. If
-	 * issue is shorter than depth, do check.
+	/* If the current seq is lower than the max issued seq, check to make sure
+	 * the write was not inflight.
 	 */
-	if ((td->io_blocks[DDIR_READ] < s->depth ||
-	    s->numberio - td->io_blocks[DDIR_READ] > s->depth) &&
-	    s->numberio > s->depth)
-		return 0;
-
-	/*
-	 * We're in the window of having to check if this io was
-	 * completed or not. If the IO was seen as completed, then
-	 * lets verify it.
-	 */
-	for (i = 0; i < s->no_comps; i++) {
-		if (s->comps[i].fileno != f->fileno)
-			continue;
-		if (io_u->verify_offset == s->comps[i].offset)
-			return 0;
+	if (numberio < s->numberio) {
+		for (i = 0; i < s->depth; i++) {
+			if (s->inflight[i].numberio == numberio) {
+				log_info("Stop verify because seq %"PRIu64" was an inflight write\n",
+					numberio);
+				return 1;
+			}
+		}
+	} else {
+		log_info("Stop verify because seq %"PRIu64" >= %"PRIu64"\n",
+			numberio, s->numberio);
+		return 1;
 	}
 
-	/*
-	 * Not found, we have to stop
-	 */
-	log_info("Stop verify because offset %llu in %s is not recorded in verify state\n",
-		 io_u->verify_offset, f->file_name);
-	return 1;
+	return 0;
 }

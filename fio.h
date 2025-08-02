@@ -73,6 +73,8 @@ struct fio_sem;
 
 #define MAX_TRIM_RANGE	256
 
+#define INVALID_NUMBERIO UINT64_MAX
+
 /*
  * Range for trim command
  */
@@ -377,6 +379,13 @@ struct thread_data {
 	uint64_t loops;
 
 	/*
+	 * Keep track of inflight write sequence numbers (numberio) which are used to save verify state.
+	 */
+	uint64_t *inflight_numberio;
+	unsigned int next_inflight_numberio_idx;
+	uint64_t inflight_issued;
+
+	/*
 	 * Completions
 	 */
 	uint64_t io_blocks[DDIR_RWDIR_CNT];
@@ -388,7 +397,6 @@ struct thread_data {
 	struct fio_sem *sem;
 	uint64_t bytes_done[DDIR_RWDIR_CNT];
 	uint64_t bytes_verified;
-	uint32_t last_write_comp_depth;
 
 	uint64_t *thinktime_blocks_counter;
 	struct timespec last_thinktime;
@@ -781,6 +789,13 @@ extern int io_queue_event(struct thread_data *td, struct io_u *io_u, int *ret,
 extern void lat_target_check(struct thread_data *);
 extern void lat_target_init(struct thread_data *);
 extern void lat_target_reset(struct thread_data *);
+
+/*
+ * Inflight log
+ */
+extern void log_inflight(struct thread_data *, struct io_u *);
+extern void invalidate_inflight(struct thread_data *, struct io_u *);
+extern void clear_inflight(struct thread_data *);
 
 /*
  * Iterates all threads/processes within all the defined jobs

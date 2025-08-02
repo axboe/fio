@@ -21,19 +21,16 @@ static void show_s(struct thread_io_list *s, unsigned int no_s)
 
 	printf("Thread:\t\t%u\n", no_s);
 	printf("Name:\t\t%s\n", s->name);
-	printf("Completions:\t%llu\n", (unsigned long long) s->no_comps);
 	printf("Depth:\t\t%llu\n", (unsigned long long) s->depth);
-	printf("Max completions per file:\t\t%lu\n", (unsigned long) s->max_no_comps_per_file);
 	printf("Number IOs:\t%llu\n", (unsigned long long) s->numberio);
 	printf("Index:\t\t%llu\n", (unsigned long long) s->index);
 
-	printf("Completions:\n");
-	if (!s->no_comps)
+	printf("Inflight writes:\n");
+	if (!s->depth)
 		return;
-	for (i = s->no_comps - 1; i >= 0; i--) {
-		printf("\t(file=%2llu) %llu\n",
-				(unsigned long long) s->comps[i].fileno,
-				(unsigned long long) s->comps[i].offset);
+	for (i = s->depth - 1; i >= 0; i--) {
+		printf("\t%llu\n",
+				(unsigned long long) s->inflight[i].numberio);
 	}
 }
 
@@ -45,23 +42,18 @@ static void show(struct thread_io_list *s, size_t size)
 	do {
 		int i;
 
-		s->no_comps = le64_to_cpu(s->no_comps);
 		s->depth = le32_to_cpu(s->depth);
-		s->max_no_comps_per_file = le32_to_cpu(s->max_no_comps_per_file);
-		s->nofiles = le32_to_cpu(s->nofiles);
 		s->numberio = le64_to_cpu(s->numberio);
 		s->index = le64_to_cpu(s->index);
 
-		for (i = 0; i < s->no_comps; i++) {
-			s->comps[i].fileno = le64_to_cpu(s->comps[i].fileno);
-			s->comps[i].offset = le64_to_cpu(s->comps[i].offset);
-		}
+		for (i = 0; i < s->depth; i++)
+			s->inflight[i].numberio = le64_to_cpu(s->inflight[i].numberio);
 
 		show_s(s, no_s);
 		no_s++;
-		size -= __thread_io_list_sz(s->max_no_comps_per_file, s->nofiles);
+		size -= __thread_io_list_sz(s->depth);
 		s = (struct thread_io_list *)((char *) s +
-			__thread_io_list_sz(s->max_no_comps_per_file, s->nofiles));
+			__thread_io_list_sz(s->depth));
 	} while (size != 0);
 }
 
