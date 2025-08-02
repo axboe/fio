@@ -113,6 +113,9 @@ struct fio_file {
 	uint32_t min_zone;	/* inclusive */
 	uint32_t max_zone;	/* exclusive */
 
+	/* SP Random Info */
+	struct sprandom_info *spr_info;
+
 	/*
 	 * Track last end and last start of IO for a given data direction
 	 */
