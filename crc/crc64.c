@@ -114,6 +114,17 @@ unsigned long long fio_crc64(const unsigned char *buffer, unsigned long length)
 	return crc;
 }
 
+#ifdef CONFIG_LIBISAL64
+#include <isa-l/crc64.h>
+
+unsigned long long fio_crc64_nvme(unsigned long long crc, const void *p,
+				  unsigned int len)
+{
+	return crc64_rocksoft_refl(crc, p, len);
+}
+
+#else
+
 /**
  * fio_crc64_nvme - Calculate bitwise NVMe CRC64
  * @crc: seed value for computation. 0 for a new CRC calculation, or the
@@ -134,3 +145,5 @@ unsigned long long fio_crc64_nvme(unsigned long long crc, const void *p,
 
 	return ~crc;
 }
+
+#endif

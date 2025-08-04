@@ -190,6 +190,7 @@ libnbd="no"
 libnfs=""
 xnvme=""
 isal=""
+isal64=""
 libblkio=""
 libzbc=""
 dfs=""
@@ -265,6 +266,8 @@ for opt do
   ;;
   --disable-isal) isal="no"
   ;;
+  --disable-isal64) isal64="no"
+  ;;
   --disable-libblkio) libblkio="no"
   ;;
   --disable-tcmalloc) disable_tcmalloc="yes"
@@ -326,6 +329,7 @@ if test "$show_help" = "yes" ; then
   echo "--enable-libnbd         Enable libnbd (NBD engine) support"
   echo "--disable-xnvme         Disable xnvme support even if found"
   echo "--disable-isal          Disable isal support even if found"
+  echo "--disable-isal64        Disable isal CRC64 support even if found"
   echo "--disable-libblkio      Disable libblkio support even if found"
   echo "--disable-libzbc        Disable libzbc even if found"
   echo "--disable-tcmalloc      Disable tcmalloc support"
@@ -2694,6 +2698,26 @@ print_config "isal" "$isal"
 fi
 
 ##########################################
+# Check ISA-L CRC64 Rocksoft support
+cat > $TMPC << EOF
+#include <isa-l/crc64.h>
+#include <stddef.h>
+int main(void)
+{
+  return crc64_rocksoft_refl(0, NULL, 4096);
+}
+EOF
+if test "$isal64" != "no" ; then
+  if compile_prog "" "-lisal" "ISAL"; then
+    isal64="yes"
+    LIBS="-lisal $LIBS"
+  else
+    isal64="no"
+  fi
+fi
+print_config "isal CRC64" "$isal64"
+
+##########################################
 # Check if we have libblkio
 if test "$libblkio" != "no" ; then
   if check_min_lib_version blkio 1.0.0; then
@@ -3337,6 +3361,9 @@ if test "$xnvme" = "yes" ; then
 fi
 if test "$isal" = "yes" ; then
   output_sym "CONFIG_LIBISAL"
+fi
+if test "$isal64" = "yes" ; then
+  output_sym "CONFIG_LIBISAL64"
 fi
 if test "$libblkio" = "yes" ; then
   output_sym "CONFIG_LIBBLKIO"
