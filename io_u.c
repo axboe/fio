@@ -2063,7 +2063,7 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 }
 
 static void file_log_write_comp(const struct thread_data *td, struct fio_file *f,
-				uint64_t offset, unsigned int bytes)
+				uint64_t offset, unsigned int bytes, struct io_u *io_u)
 {
 	int idx;
 
@@ -2079,9 +2079,29 @@ static void file_log_write_comp(const struct thread_data *td, struct fio_file *f
 		return;
 
 	idx = f->last_write_idx++;
-	f->last_write_comp[idx] = offset;
+	f->last_write_comp[idx].offset = offset;
+	f->last_write_comp[idx].completion_time_nsec = ntime_since_now(&io_u->start_time);
+	f->last_write_comp[idx].flags = 0;
+	f->last_write_comp[idx].flush_count = f->flush_count;
+
+	/* Check if this is a FUA write */
+	if (io_u && (io_u->flags & IO_U_F_FUA))
+		f->last_write_comp[idx].flags |= FIO_WRITE_COMP_FUA;
+
 	if (f->last_write_idx == td->last_write_comp_depth)
 		f->last_write_idx = 0;
+}
+
+static void file_log_flush_comp(struct fio_file *f, struct io_u *io_u)
+{
+	if (!f)
+		return;
+
+	/* Track the last FLUSH completion timestamp */
+	f->last_flush_time_nsec = ntime_since_now(&io_u->start_time);
+
+	/* Increment FLUSH counter */
+	f->flush_count++;
 }
 
 static bool should_account(struct thread_data *td)
@@ -2125,7 +2145,10 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 	if (ddir_sync(ddir)) {
 		if (io_u->error)
 			goto error;
+
+		/* Log flush completion */
 		if (f) {
+			file_log_flush_comp(f, io_u);
 			f->first_write = -1ULL;
 			f->last_write = -1ULL;
 		}
@@ -2164,7 +2187,7 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 		}
 
 		if (ddir == DDIR_WRITE)
-			file_log_write_comp(td, f, io_u->offset, bytes);
+			file_log_write_comp(td, f, io_u->offset, bytes, io_u);
 
 		if (should_account(td))
 			account_io_completion(td, io_u, icd, ddir, bytes);
@@ -2464,6 +2487,10 @@ int do_io_u_sync(const struct thread_data *td, struct io_u *io_u)
 
 	if (ret < 0)
 		io_u->error = errno;
+	else {
+		/* Record FLUSH completion timing for verification state */
+		file_log_flush_comp(io_u->file, io_u);
+	}
 
 	return ret;
 }
