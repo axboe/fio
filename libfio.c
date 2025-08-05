@@ -128,6 +128,8 @@ void clear_io_state(struct thread_data *td, int all)
 	 */
 	if (td->o.rand_repeatable)
 		td_fill_rand_seeds(td);
+
+	clear_inflight(td);
 }
 
 void reset_all_stats(struct thread_data *td)

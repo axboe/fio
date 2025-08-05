@@ -123,13 +123,6 @@ struct fio_file {
 	uint64_t last_write;
 
 	/*
-	 * Tracks the last iodepth number of completed writes, if data
-	 * verification is enabled
-	 */
-	uint64_t *last_write_comp;
-	unsigned int last_write_idx;
-
-	/*
 	 * For use by the io engine to store offset
 	 */
 	uint64_t engine_pos;

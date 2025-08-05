@@ -33,20 +33,27 @@ enum {
 };
 
 /*
+ * Set the high bit to distinguish versioned headers from older
+ * non-versioned headers.
+ */
+#define VERIFY_HEADER_VERSION 0x81
+
+/*
  * A header structure associated with each checksummed data block. It is
  * followed by a checksum specific header that contains the verification
  * data.
  */
 struct verify_header {
 	uint16_t magic;
-	uint16_t verify_type;
+	uint8_t version;
+	uint8_t verify_type;
 	uint32_t len;
 	uint64_t rand_seed;
 	uint64_t offset;
 	uint32_t time_sec;
 	uint32_t time_nsec;
+	uint64_t numberio;
 	uint16_t thread;
-	uint16_t numberio;
 	uint32_t crc32;
 };
 
