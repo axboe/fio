@@ -2692,6 +2692,7 @@ if test "$isal" != "no" ; then
     LIBS="-lisal $LIBS"
   else
     isal="no"
+    isal64="no"
   fi
 fi
 print_config "isal" "$isal"
