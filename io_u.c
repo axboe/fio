@@ -2334,7 +2334,7 @@ static struct frand_state *get_buf_state(struct thread_data *td)
 
 	v = rand_between(&td->dedupe_state, 1, 100);
 
-	if (v <= td->o.dedupe_percentage)
+	if (v <= td->o.dedupe_percentage) {
 		switch (td->o.dedupe_mode) {
 		case DEDUPE_MODE_REPEAT:
 			/*
@@ -2353,7 +2353,7 @@ static struct frand_state *get_buf_state(struct thread_data *td)
 			log_err("unexpected dedupe mode %u\n", td->o.dedupe_mode);
 			assert(0);
 		}
-
+	}
 	return &td->buf_state;
 }
 
@@ -2365,6 +2365,45 @@ static void save_buf_state(struct thread_data *td, struct frand_state *rs)
 		frand_copy(&td->buf_state_prev, rs);
 }
 
+/**
+ * shifts the buffer
+ */
+static unsigned long long shift_buf_unaligned_dedup(struct thread_data *td, 
+			void **buf, unsigned long long min_write, unsigned long long left)
+{
+	unsigned long long skip;
+	unsigned int v;
+	unsigned long long this_write;
+	unsigned long long i;
+
+	v = rand_between(&td->dedupe_unaligned_state, 1, 100);
+	if (v <= td->o.dedupe_unaligned_percentage) {
+		
+		i = rand_between(&td->dedupe_working_set_index_state, 0, td->num_unique_pages_ua - 1);
+		frand_copy(&td->buf_state_ret, &td->dedupe_working_set_states_ua[i]);
+		
+		skip = rand_between(&td->dedupe_unaligned_state, 1 , 4095);
+		do {
+			min_write = min(min_write, left);
+			min_write = min(min_write, skip);
+
+			this_write = min_not_zero(min_write,
+						(unsigned long long) td->o.compress_chunk);
+
+			fill_random_buf_percentage(&td->dedupe_unaligned_state, *buf, td->o.compress_percentage,
+				this_write, this_write,
+				td->o.buffer_pattern,
+				td->o.buffer_pattern_bytes);
+
+			*buf += this_write;
+			left -= this_write;
+			skip -= this_write;
+		} while (left && skip);
+	}
+
+	return left;
+}
+
 void fill_io_buffer(struct thread_data *td, void *buf, unsigned long long min_write,
 		    unsigned long long max_bs)
 {
@@ -2373,12 +2412,24 @@ void fill_io_buffer(struct thread_data *td, void *buf, unsigned long long min_wr
 	if (o->mem_type == MEM_CUDA_MALLOC)
 		return;
 
-	if (o->compress_percentage || o->dedupe_percentage) {
+	if (o->compress_percentage || o->dedupe_percentage || o->dedupe_unaligned_percentage) {
 		unsigned int perc = td->o.compress_percentage;
 		struct frand_state *rs = NULL;
 		unsigned long long left = max_bs;
 		unsigned long long this_write;
 
+		rs = get_buf_state(td);
+		
+		// if aligned didnt work try ua
+		if (o->dedupe_unaligned_percentage && rs != &td->buf_state_ret) {
+			unsigned long long shift = left - shift_buf_unaligned_dedup(td, &buf, min_write, left);
+			left -= shift;
+
+			// if we did ua ddp lets use the seed it generated from the ua working set
+			if (shift){
+				rs = &td->buf_state_ret;
+			}
+		}
 		do {
 			/*
 			 * Buffers are either entirely dedupe-able or not.
@@ -2387,9 +2438,6 @@ void fill_io_buffer(struct thread_data *td, void *buf, unsigned long long min_wr
 			 * means we should retrack the steps we took for compression
 			 * as well.
 			 */
-			if (!rs)
-				rs = get_buf_state(td);
-
 			min_write = min(min_write, left);
 
 			this_write = min_not_zero(min_write,

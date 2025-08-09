@@ -155,6 +155,7 @@ enum {
 	FIO_RAND_POISSON2_OFF,
 	FIO_RAND_POISSON3_OFF,
 	FIO_RAND_PRIO_CMDS,
+	FIO_RAND_DEDUPE_UNALIGNED,
 	FIO_RAND_DEDUPE_WORKING_SET_IX,
 	FIO_RAND_FDP_OFF,
 	FIO_RAND_NR_OFFS,
@@ -284,10 +285,13 @@ struct thread_data {
 	struct frand_state dedupe_state;
 	struct frand_state zone_state;
 	struct frand_state prio_state;
+	struct frand_state dedupe_unaligned_state;
 	struct frand_state dedupe_working_set_index_state;
 	struct frand_state *dedupe_working_set_states;
+	struct frand_state *dedupe_working_set_states_ua;
 
 	unsigned long long num_unique_pages;
+	unsigned long long num_unique_pages_ua;
 
 	struct zone_split_index **zone_state_index;
 	unsigned int num_write_zones;
