@@ -869,9 +869,16 @@ void put_io_u(struct thread_data *td, struct io_u *io_u)
 		__td_io_u_unlock(td);
 }
 
+static inline void io_u_clear_inflight_flags(struct thread_data *td,
+					      struct io_u *io_u)
+{
+	io_u_clear(td, io_u, IO_U_F_FLIGHT | IO_U_F_BUSY_OK |
+		   IO_U_F_PATTERN_DONE);
+}
+
 void clear_io_u(struct thread_data *td, struct io_u *io_u)
 {
-	io_u_clear(td, io_u, IO_U_F_FLIGHT);
+	io_u_clear_inflight_flags(td, io_u);
 	put_io_u(td, io_u);
 }
 
@@ -2090,7 +2097,7 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 	dprint_io_u(io_u, "complete");
 
 	assert(io_u->flags & IO_U_F_FLIGHT);
-	io_u_clear(td, io_u, IO_U_F_FLIGHT | IO_U_F_BUSY_OK | IO_U_F_PATTERN_DONE);
+	io_u_clear_inflight_flags(td, io_u);
 	invalidate_inflight(td, io_u);
 
 	if (td->o.zone_mode == ZONE_MODE_ZBD && td->o.recover_zbd_write_error &&
