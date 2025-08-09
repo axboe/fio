@@ -41,7 +41,7 @@ struct all_io_list {
 	struct thread_io_list state[0];
 };
 
-#define VSTATE_HDR_VERSION	0x04
+#define VSTATE_HDR_VERSION	0x05
 
 struct verify_state_hdr {
 	uint64_t version;
