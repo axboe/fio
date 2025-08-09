@@ -1440,6 +1440,25 @@ multiple times. The default value is \fBtausworthe\fR, unless the required
 space exceeds 2^32 blocks. If it does, then \fBtausworthe64\fR is
 selected automatically.
 .RE
+.TP
+.B sprandom=bool
+Enable SanDisk Pseudo Random (SPRandom) preconditioning.
+SPRandom is a method designed to rapidly precondition large SSDs for random write workloads.
+It divides the storage into equally sized regions and calculates the required invalidation rate per region.
+SPRandom performs random writes using an LFSR (Linear Feedback Shift Register) distribution.
+.TP
+.B num_regions=int
+See
+.BR sprandom .
+Specifies the number of regions used for SPRandom.
+
+.TP
+.B over_provisioning=float
+See
+.BR sprandom .
+Over-provisioning ratio in the range (0, 1), as specified by the SSD manufacturer.
+The default is 0.15.
+.RE
 .SS "Block size"
 .TP
 .BI blocksize \fR=\fPint[,int][,int] "\fR,\fB bs" \fR=\fPint[,int][,int]
