@@ -2648,6 +2648,17 @@ Enable verbose requests from libcurl. Useful for debugging. 1 turns on
 verbose logging from libcurl, 2 additionally enables HTTP IO tracing.
 Default is \fB0\fR
 .TP
+.BI (http)http_range_header \fR=\fPbool
+Use \fBblocksize\fR for range reads instead of the object size for read
+I/O. By default, the HTTP engine treats \fBblocksize\fR as the size of
+the object to read or write, and appends the block start/end offsets to the
+\fBfilename\fR to create the target object path. With this parameter
+enabled, two changes take place: the object path will instead be the
+filename directly for both read and write I/O, and blocksize and
+\fBoffset\fR will be used to set the "Range" header on read
+requests to issue partial reads of the object.  The blocksize is still
+used to set the size of the object for writes.
+.TP
 .BI (mtd)skip_bad \fR=\fPbool
 Skip operations against known bad blocks.
 .TP
