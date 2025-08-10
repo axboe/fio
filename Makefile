@@ -449,6 +449,7 @@ UT_OBJS = unittests/unittest.o
 UT_OBJS += unittests/lib/memalign.o
 UT_OBJS += unittests/lib/num2str.o
 UT_OBJS += unittests/lib/strntol.o
+UT_OBJS += unittests/lib/pcbuf.o
 UT_OBJS += unittests/oslib/strlcat.o
 UT_OBJS += unittests/oslib/strndup.o
 UT_OBJS += unittests/oslib/strcasestr.o
