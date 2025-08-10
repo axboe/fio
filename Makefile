@@ -484,14 +484,8 @@ endif
 prefix = $(INSTALL_PREFIX)
 bindir = $(prefix)/bin
 libdir = $(prefix)/lib/fio
-
-ifeq ($(CONFIG_TARGET_OS), Darwin)
-mandir = /usr/share/man
-sharedir = /usr/share/fio
-else
-mandir = $(prefix)/man
+mandir = $(prefix)/share/man
 sharedir = $(prefix)/share/fio
-endif
 
 all: $(PROGS) $(T_TEST_PROGS) $(UT_PROGS) $(SCRIPTS) $(ENGS_OBJS) FORCE
 
