@@ -663,7 +663,7 @@ static void fio_ioring_validate_md(struct thread_data *td, struct io_u *io_u)
 	if (data->pi_type && (io_u->ddir == DDIR_READ) && !o->pi_act) {
 		ret = fio_nvme_pi_verify(data, io_u);
 		if (ret)
-			io_u->error = ret;
+			io_u->error = -ret;
 	}
 
 	return;
