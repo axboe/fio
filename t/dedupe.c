@@ -457,6 +457,8 @@ static int run_dedupe_threads(struct fio_file *f, uint64_t dev_size,
 	total_items = dev_size / blocksize;
 	cur_offset = 0;
 	size_lock = fio_sem_init(FIO_SEM_UNLOCKED);
+	if (size_lock == NULL)
+		return 1;
 
 	threads = malloc(num_threads * sizeof(struct worker_thread));
 	for (i = 0; i < num_threads; i++) {
