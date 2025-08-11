@@ -1499,6 +1499,7 @@ static int fio_ioring_init(struct thread_data *td)
 	if (!ld->is_uring_cmd_eng && o->md_per_io_size) {
 		if (o->apptag_mask != 0xffff) {
 			log_err("fio: io_uring with metadata requires an apptag_mask of 0xffff\n");
+			free(ld->io_u_index);
 			free(ld);
 			return 1;
 		}
@@ -1517,6 +1518,7 @@ static int fio_ioring_init(struct thread_data *td)
 			md_size += td->o.mem_align - page_size;
 		ld->md_buf = malloc(md_size);
 		if (!ld->md_buf) {
+			free(ld->io_u_index);
 			free(ld);
 			return 1;
 		}
@@ -1524,6 +1526,7 @@ static int fio_ioring_init(struct thread_data *td)
 		if (!ld->is_uring_cmd_eng) {
 			ld->pi_attr = calloc(ld->iodepth, sizeof(struct io_uring_attr_pi));
 			if (!ld->pi_attr) {
+				free(ld->io_u_index);
 				free(ld->md_buf);
 				free(ld);
 				return 1;
