@@ -301,6 +301,11 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.val		= 'A' | FIO_CLIENT_FLAG,
 	},
 	{
+		.name		= (char *) "print_defaults",
+		.has_arg	= no_argument,
+		.val		= 'Z' | FIO_CLIENT_FLAG,
+	},
+	{
 		.name		= NULL,
 	},
 };
@@ -2284,6 +2289,37 @@ int parse_jobs_ini(char *file, int is_buf, int stonewall_flag, int type)
 			0, NULL, NULL, NULL, NULL);
 }
 
+/*
+ * Function to print fio default parameters
+ */
+static void print_defaults(struct thread_data *td)
+{
+    struct thread_options *o = &td->o;
+	printf("FIO defaults: ioengine=%s,direct=%u,iodepth=%u,bs=%llu,size=%llu,rw=%s,numjobs=%u,runtime=%llu,invalidate=%u,refill_buffers=%u,fsync_on_close=%u,buffered=%u,group_reporting=%u,time_based=%u,norandommap=%u,randrepeat=%u,verify=%u,rwmixread=%u,thread=%u,kb_base=%u,ioscheduler=%s,fsync=%u\n",
+           o->ioengine ? o->ioengine : "NULL",
+           o->odirect,
+           o->iodepth,
+           (unsigned long long)o->bs[DDIR_READ],
+           (unsigned long long)o->size,
+           ddir_str(o->td_ddir),
+           o->numjobs,
+           (unsigned long long)o->timeout,
+           o->invalidate_cache,
+           o->refill_buffers,
+           o->fsync_on_close,
+           o->odirect ? 0 : 1,  // buffered = !direct
+           o->group_reporting,
+           o->time_based,
+           o->norandommap,
+           o->rand_repeatable,
+           o->verify,
+           o->rwmix[DDIR_READ],
+           o->use_thread,
+           o->kb_base,
+           o->ioscheduler ? o->ioscheduler : "NULL",
+           o->fsync_blocks);
+}
+
 static int fill_def_thread(void)
 {
 	memset(&def_thread, 0, sizeof(def_thread));
@@ -2389,6 +2425,7 @@ static void usage(const char *name)
 	printf("  --trigger=cmd\t\tSet this command as local trigger\n");
 	printf("  --trigger-remote=cmd\tSet this command as remote trigger\n");
 	printf("  --aux-path=path\tUse this path for fio state generated files\n");
+	printf("  --print_defaults\t\tPrint default option values and exit\n");
 	printf("\nFio was written by Jens Axboe <axboe@kernel.dk>\n");
 }
 
@@ -3069,7 +3106,18 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			}
 			trigger_timeout /= 1000000;
 			break;
-
+		case 'Z':  // --print_defaults
+			did_arg = true;
+			if (!cur_client) {
+				memset(&def_thread, 0, sizeof(def_thread));
+				INIT_FLIST_HEAD(&def_thread.opt_list);
+				fio_getaffinity(getpid(), &def_thread.o.cpumask);
+				def_thread.o.error_dump = 1;
+				fio_fill_default_options(&def_thread);
+				print_defaults(&def_thread);
+				do_exit++;
+			}
+			break;
 		case 'A':
 			did_arg = true;
 			merge_blktrace_only = true;
