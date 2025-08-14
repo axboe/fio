@@ -228,6 +228,9 @@ int convert_thread_options_to_cpu(struct thread_options *o,
 	o->job_start_clock_id = le32_to_cpu(top->job_start_clock_id);
 	o->norandommap = le32_to_cpu(top->norandommap);
 	o->softrandommap = le32_to_cpu(top->softrandommap);
+	o->sprandom = le32_to_cpu(top->sprandom);
+	o->spr_num_regions = le32_to_cpu(top->spr_num_regions);
+	o->spr_over_provisioning.u.f = fio_uint64_to_double(le64_to_cpu(top->spr_over_provisioning.u.i));
 	o->bs_unaligned = le32_to_cpu(top->bs_unaligned);
 	o->fsync_on_close = le32_to_cpu(top->fsync_on_close);
 	o->bs_is_seq_rand = le32_to_cpu(top->bs_is_seq_rand);
@@ -476,6 +479,9 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->job_start_clock_id = cpu_to_le32(o->job_start_clock_id);
 	top->norandommap = cpu_to_le32(o->norandommap);
 	top->softrandommap = cpu_to_le32(o->softrandommap);
+	top->sprandom = cpu_to_le32(o->sprandom);
+	top->spr_num_regions = cpu_to_le32(o->spr_num_regions);
+	top->spr_over_provisioning.u.i = __cpu_to_le64(fio_double_to_uint64(o->spr_over_provisioning.u.f));
 	top->bs_unaligned = cpu_to_le32(o->bs_unaligned);
 	top->fsync_on_close = cpu_to_le32(o->fsync_on_close);
 	top->bs_is_seq_rand = cpu_to_le32(o->bs_is_seq_rand);

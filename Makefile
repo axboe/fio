@@ -62,7 +62,8 @@ SOURCE :=	$(sort $(patsubst $(SRCDIR)/%,%,$(wildcard $(SRCDIR)/crc/*.c)) \
 		gettime-thread.c helpers.c json.c idletime.c td_error.c \
 		profiles/tiobench.c profiles/act.c io_u_queue.c filelock.c \
 		workqueue.c rate-submit.c optgroup.c helper_thread.c \
-		steadystate.c zone-dist.c zbd.c dedupe.c dataplacement.c
+		steadystate.c zone-dist.c zbd.c dedupe.c dataplacement.c \
+		sprandom.c
 
 ifdef CONFIG_LIBHDFS
   HDFSFLAGS= -I $(JAVA_HOME)/include -I $(JAVA_HOME)/include/linux -I $(FIO_LIBHDFS_INCLUDE)
@@ -448,6 +449,7 @@ UT_OBJS = unittests/unittest.o
 UT_OBJS += unittests/lib/memalign.o
 UT_OBJS += unittests/lib/num2str.o
 UT_OBJS += unittests/lib/strntol.o
+UT_OBJS += unittests/lib/pcbuf.o
 UT_OBJS += unittests/oslib/strlcat.o
 UT_OBJS += unittests/oslib/strndup.o
 UT_OBJS += unittests/oslib/strcasestr.o
