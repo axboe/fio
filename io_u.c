@@ -664,7 +664,7 @@ int io_u_quiesce(struct thread_data *td)
 		td_io_commit(td);
 
 	while (td->io_u_in_flight) {
-		ret = io_u_queued_complete(td, 1);
+		ret = io_u_queued_complete(td, 1, NULL);
 		if (ret > 0)
 			completed += ret;
 		else if (ret < 0)
@@ -720,24 +720,17 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 	} else
 		usec = td->rate_next_io_time[ddir] - now;
 
-	if (td->o.io_submit_mode == IO_MODE_INLINE)
-		io_u_quiesce(td);
-
 	if (td->o.timeout && ((usec + now) > td->o.timeout)) {
 		/*
 		 * check if the usec is capable of taking negative values
 		 */
-		if (now > td->o.timeout) {
-			ddir = DDIR_TIMEOUT;
-			return ddir;
+		if (now < td->o.timeout) {
+			usec_sleep(td, td->o.timeout - now);
 		}
-		usec = td->o.timeout - now;
-	}
-	usec_sleep(td, usec);
-
-	now = utime_since_now(&td->epoch);
-	if ((td->o.timeout && (now > td->o.timeout)) || td->terminate)
 		ddir = DDIR_TIMEOUT;
+	} else {
+		usec_sleep(td, usec);
+	}
 
 	return ddir;
 }
@@ -2270,10 +2263,9 @@ int io_u_sync_complete(struct thread_data *td, struct io_u *io_u)
 /*
  * Called to complete min_events number of io for the async engines.
  */
-int io_u_queued_complete(struct thread_data *td, int min_evts)
+int io_u_queued_complete(struct thread_data *td, int min_evts, struct timespec *tvp)
 {
 	struct io_completion_data icd;
-	struct timespec *tvp = NULL;
 	int ret;
 	struct timespec ts = { .tv_sec = 0, .tv_nsec = 0, };
 
