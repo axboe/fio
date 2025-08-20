@@ -1136,7 +1136,7 @@ static int fio_sgio_open(struct thread_data *td, struct fio_file *f)
 	return 0;
 }
 
-int fio_sgio_close(struct thread_data *td, struct fio_file *f)
+static int fio_sgio_close(struct thread_data *td, struct fio_file *f)
 {
 	struct sg_options *o = td->eo;
 	int ret;

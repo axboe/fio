@@ -62,7 +62,7 @@ static struct fio_option options[] = {
 	},
 };
 
-char *str_replace(char *orig, const char *rep, const char *with)
+static char *str_replace(char *orig, const char *rep, const char *with)
 {
 	/*
 	 * Replace a substring by another.
@@ -106,7 +106,7 @@ char *str_replace(char *orig, const char *rep, const char *with)
 	return result;
 }
 
-char *expand_variables(struct thread_options *o, char *arguments)
+static char *expand_variables(const struct thread_options *o, char *arguments)
 {
 	char str[16];
 	char *expanded_runtime, *expanded_name;
@@ -122,7 +122,7 @@ char *expand_variables(struct thread_options *o, char *arguments)
 	return expanded_name;
 }
 
-static int exec_background(struct thread_options *o, struct exec_options *eo)
+static int exec_background(const struct thread_options *o, struct exec_options *eo)
 {
 	char *outfilename = NULL, *errfilename = NULL;
 	int outfd = 0, errfd = 0;

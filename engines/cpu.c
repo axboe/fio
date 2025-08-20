@@ -9,7 +9,7 @@
 #include "../optgroup.h"
 
 // number of 32 bit integers to sort
-size_t qsort_size = (256 * (1ULL << 10)); // 256KB
+static size_t qsort_size = (256 * (1ULL << 10)); // 256KB
 
 struct mwc {
 	uint32_t w;
@@ -93,7 +93,7 @@ static struct fio_option options[] = {
  *      fast pseudo random number generator, see
  *      http://www.cse.yorku.ca/~oz/marsaglia-rng.html
  */
-uint32_t mwc32(struct mwc *mwc)
+static uint32_t mwc32(struct mwc *mwc)
 {
         mwc->z = 36969 * (mwc->z & 65535) + (mwc->z >> 16);
         mwc->w = 18000 * (mwc->w & 65535) + (mwc->w >> 16);
