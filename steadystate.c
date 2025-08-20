@@ -353,7 +353,7 @@ int td_steadystate_init(struct thread_data *td)
 	return 0;
 }
 
-uint64_t steadystate_bw_mean(struct thread_stat *ts)
+uint64_t steadystate_bw_mean(const struct thread_stat *ts)
 {
 	int i;
 	uint64_t sum;
@@ -368,7 +368,7 @@ uint64_t steadystate_bw_mean(struct thread_stat *ts)
 	return sum / intervals;
 }
 
-uint64_t steadystate_iops_mean(struct thread_stat *ts)
+uint64_t steadystate_iops_mean(const struct thread_stat *ts)
 {
 	int i;
 	uint64_t sum;

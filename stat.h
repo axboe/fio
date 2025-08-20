@@ -344,24 +344,24 @@ extern void stat_init(void);
 extern void stat_exit(void);
 
 extern struct json_object * show_thread_status(struct thread_stat *ts, struct group_run_stats *rs, struct flist_head *, struct buf_output *);
-extern void show_group_stats(struct group_run_stats *rs, struct buf_output *);
+extern void show_group_stats(const struct group_run_stats *rs, struct buf_output *);
 extern void display_thread_status(struct jobs_eta *je);
 extern void __show_run_stats(void);
 extern int __show_running_run_stats(void);
 extern void show_running_run_stats(void);
 extern void check_for_running_stats(void);
-extern void sum_thread_stats(struct thread_stat *dst, struct thread_stat *src);
-extern void sum_group_stats(struct group_run_stats *dst, struct group_run_stats *src);
+extern void sum_thread_stats(struct thread_stat *dst, const struct thread_stat *src);
+extern void sum_group_stats(struct group_run_stats *dst, const struct group_run_stats *src);
 extern void init_thread_stat_min_vals(struct thread_stat *ts);
 extern void init_thread_stat(struct thread_stat *ts);
 extern void init_group_run_stat(struct group_run_stats *gs);
 extern void eta_to_str(char *str, unsigned long eta_sec);
-extern bool calc_lat(struct io_stat *is, unsigned long long *min, unsigned long long *max, double *mean, double *dev);
-extern unsigned int calc_clat_percentiles(uint64_t *io_u_plat, unsigned long long nr, fio_fp64_t *plist, unsigned long long **output, unsigned long long *maxv, unsigned long long *minv);
-extern void stat_calc_lat_n(struct thread_stat *ts, double *io_u_lat);
-extern void stat_calc_lat_m(struct thread_stat *ts, double *io_u_lat);
-extern void stat_calc_lat_u(struct thread_stat *ts, double *io_u_lat);
-extern void stat_calc_dist(uint64_t *map, unsigned long total, double *io_u_dist);
+extern bool calc_lat(const struct io_stat *is, unsigned long long *min, unsigned long long *max, double *mean, double *dev);
+extern unsigned int calc_clat_percentiles(const uint64_t *io_u_plat, unsigned long long nr, fio_fp64_t *plist, unsigned long long **output, unsigned long long *maxv, unsigned long long *minv);
+extern void stat_calc_lat_n(const struct thread_stat *ts, double *io_u_lat);
+extern void stat_calc_lat_m(const struct thread_stat *ts, double *io_u_lat);
+extern void stat_calc_lat_u(const struct thread_stat *ts, double *io_u_lat);
+extern void stat_calc_dist(const uint64_t *map, unsigned long total, double *io_u_dist);
 extern void reset_io_stats(struct thread_data *);
 extern void update_rusage_stat(struct thread_data *);
 extern void clear_rusage_stat(struct thread_data *);
@@ -384,9 +384,9 @@ extern int calc_log_samples(void);
 extern void free_clat_prio_stats(struct thread_stat *);
 extern int alloc_clat_prio_stat_ddir(struct thread_stat *, enum fio_ddir, int);
 
-extern void print_disk_util(struct disk_util_stat *, struct disk_util_agg *, int terse, struct buf_output *);
-extern void json_array_add_disk_util(struct disk_util_stat *dus,
-				struct disk_util_agg *agg, struct json_array *parent);
+extern void print_disk_util(const struct disk_util_stat *, const struct disk_util_agg *, int terse, struct buf_output *);
+extern void json_array_add_disk_util(const struct disk_util_stat *dus,
+				     const struct disk_util_agg *agg, struct json_array *parent);
 
 extern struct io_log *agg_io_log[DDIR_RWDIR_CNT];
 extern bool write_bw_log;
