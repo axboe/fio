@@ -810,7 +810,7 @@ static struct io_u *fio_http_event(struct thread_data *td, int event)
 	return NULL;
 }
 
-int fio_http_getevents(struct thread_data *td, unsigned int min,
+static int fio_http_getevents(struct thread_data *td, unsigned int min,
 	unsigned int max, const struct timespec *t)
 {
 	/* sync IO engine - never any outstanding events */
