@@ -389,13 +389,6 @@ static int fio_libaio_commit(struct thread_data *td)
 	return ret;
 }
 
-static int fio_libaio_cancel(struct thread_data *td, struct io_u *io_u)
-{
-	struct libaio_data *ld = td->io_ops_data;
-
-	return io_cancel(ld->aio_ctx, &io_u->iocb, ld->aio_events);
-}
-
 static void fio_libaio_cleanup(struct thread_data *td)
 {
 	struct libaio_data *ld = td->io_ops_data;
@@ -470,7 +463,6 @@ FIO_STATIC struct ioengine_ops ioengine = {
 	.prep			= fio_libaio_prep,
 	.queue			= fio_libaio_queue,
 	.commit			= fio_libaio_commit,
-	.cancel			= fio_libaio_cancel,
 	.getevents		= fio_libaio_getevents,
 	.event			= fio_libaio_event,
 	.cleanup		= fio_libaio_cleanup,

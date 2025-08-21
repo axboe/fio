@@ -223,39 +223,6 @@ static bool check_min_rate(struct thread_data *td, struct timespec *now)
 }
 
 /*
- * When job exits, we can cancel the in-flight IO if we are using async
- * io. Attempt to do so.
- */
-static void cleanup_pending_aio(struct thread_data *td)
-{
-	int r;
-
-	/*
-	 * get immediately available events, if any
-	 */
-	r = io_u_queued_complete(td, 0);
-
-	/*
-	 * now cancel remaining active events
-	 */
-	if (td->io_ops->cancel) {
-		struct io_u *io_u;
-		int i;
-
-		io_u_qiter(&td->io_u_all, io_u, i) {
-			if (io_u->flags & IO_U_F_FLIGHT) {
-				r = td->io_ops->cancel(td, io_u);
-				if (!r)
-					put_io_u(td, io_u);
-			}
-		}
-	}
-
-	if (td->cur_depth)
-		r = io_u_queued_complete(td, td->cur_depth);
-}
-
-/*
  * Helper to handle the final sync of a file. Works just like the normal
  * io path, just does everything sync.
  */
@@ -614,8 +581,8 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 {
 	struct fio_file *f;
 	struct io_u *io_u;
-	int ret, min_events;
 	unsigned int i;
+	int ret;
 
 	dprint(FD_VERIFY, "starting loop\n");
 
@@ -751,13 +718,8 @@ reap:
 
 	check_update_rusage(td);
 
-	if (!td->error) {
-		min_events = td->cur_depth;
-
-		if (min_events)
-			ret = io_u_queued_complete(td, min_events);
-	} else
-		cleanup_pending_aio(td);
+	if (td->cur_depth)
+		ret = io_u_queued_complete(td, td->cur_depth);
 
 	td_set_runstate(td, TD_RUNNING);
 
@@ -1313,7 +1275,7 @@ reap:
 	} else {
 		if (td->o.io_submit_mode == IO_MODE_OFFLOAD)
 			workqueue_flush(&td->io_wq);
-		cleanup_pending_aio(td);
+		ret = io_u_queued_complete(td, td->cur_depth);
 	}
 
 	/*

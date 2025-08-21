@@ -27,18 +27,6 @@ static unsigned long long ts_utime_since_now(const struct timespec *start)
 	return utime_since(start, &now);
 }
 
-static int fio_posixaio_cancel(struct thread_data fio_unused *td,
-			       struct io_u *io_u)
-{
-	struct fio_file *f = io_u->file;
-	int r = aio_cancel(f->fd, &io_u->aiocb);
-
-	if (r == AIO_ALLDONE || r == AIO_CANCELED)
-		return 0;
-
-	return 1;
-}
-
 static int fio_posixaio_prep(struct thread_data fio_unused *td,
 			     struct io_u *io_u)
 {
@@ -212,7 +200,6 @@ static struct ioengine_ops ioengine = {
 	.init		= fio_posixaio_init,
 	.prep		= fio_posixaio_prep,
 	.queue		= fio_posixaio_queue,
-	.cancel		= fio_posixaio_cancel,
 	.getevents	= fio_posixaio_getevents,
 	.event		= fio_posixaio_event,
 	.cleanup	= fio_posixaio_cleanup,

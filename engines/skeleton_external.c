@@ -72,15 +72,6 @@ static int fio_skeleton_getevents(struct thread_data *td, unsigned int min,
 }
 
 /*
- * The ->cancel() hook attempts to cancel the io_u. Only relevant for
- * async io engines, and need not be supported.
- */
-static int fio_skeleton_cancel(struct thread_data *td, struct io_u *io_u)
-{
-	return 0;
-}
-
-/*
  * The ->queue() hook is responsible for initiating io on the io_u
  * being passed in. If the io engine is a synchronous one, io may complete
  * before ->queue() returns. Required.
@@ -214,7 +205,6 @@ struct ioengine_ops ioengine = {
 	.init		= fio_skeleton_init,
 	.prep		= fio_skeleton_prep,
 	.queue		= fio_skeleton_queue,
-	.cancel		= fio_skeleton_cancel,
 	.getevents	= fio_skeleton_getevents,
 	.event		= fio_skeleton_event,
 	.cleanup	= fio_skeleton_cleanup,

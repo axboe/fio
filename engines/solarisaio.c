@@ -19,12 +19,6 @@ struct solarisaio_data {
 	unsigned int max_depth;
 };
 
-static int fio_solarisaio_cancel(struct thread_data fio_unused *td,
-			       struct io_u *io_u)
-{
-	return aiocancel(&io_u->resultp);
-}
-
 static int fio_solarisaio_prep(struct thread_data fio_unused *td,
 			    struct io_u *io_u)
 {
@@ -213,7 +207,6 @@ static struct ioengine_ops ioengine = {
 	.init		= fio_solarisaio_init,
 	.prep		= fio_solarisaio_prep,
 	.queue		= fio_solarisaio_queue,
-	.cancel		= fio_solarisaio_cancel,
 	.getevents	= fio_solarisaio_getevents,
 	.event		= fio_solarisaio_event,
 	.cleanup	= fio_solarisaio_cleanup,
