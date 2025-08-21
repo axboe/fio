@@ -274,20 +274,6 @@ static enum fio_q_status fio_libaio_queue(struct thread_data *td,
 	if (ld->queued == td->o.iodepth)
 		return FIO_Q_BUSY;
 
-	/*
-	 * fsync is tricky, since it can fail and we need to do it
-	 * serialized with other io. the reason is that linux doesn't
-	 * support aio fsync yet. So return busy for the case where we
-	 * have pending io, to let fio complete those first.
-	 */
-	if (ddir_sync(io_u->ddir)) {
-		if (ld->queued)
-			return FIO_Q_BUSY;
-
-		do_io_u_sync(td, io_u);
-		return FIO_Q_COMPLETED;
-	}
-
 	if (io_u->ddir == DDIR_TRIM) {
 		if (ld->queued)
 			return FIO_Q_BUSY;
