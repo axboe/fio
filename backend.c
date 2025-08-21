@@ -1953,9 +1953,6 @@ static void *thread_main(void *data)
 	if (init_io_u(td))
 		goto err;
 
-	if (td->io_ops->post_init && td->io_ops->post_init(td))
-		goto err;
-
 	if (o->verify_async && verify_async_init(td))
 		goto err;
 
@@ -1972,6 +1969,9 @@ static void *thread_main(void *data)
 		goto err;
 
 	if (!o->create_serialize && setup_files(td))
+		goto err;
+
+	if (td->io_ops->post_init && td->io_ops->post_init(td))
 		goto err;
 
 	if (!init_random_map(td))
