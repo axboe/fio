@@ -431,7 +431,7 @@ done:
  */
 static inline bool pattern_need_buffer(struct thread_data *td)
 {
-	return td->o.verify_async &&
+	return (td->o.verify_async || td->o.use_thread) &&
 		td->o.verify_fmt_sz &&
 		td->o.verify_fmt[0].desc->paste == paste_blockoff;
 }
