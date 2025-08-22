@@ -7,6 +7,37 @@
 #include "../oslib/asprintf.h"
 #include "num2str.h"
 
+
+static const char *iecstr[] = { "", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei" };
+
+/**
+ * bytes2str_simple - Converts a byte value to a human-readable string.
+ * @buf:      buffer to store the resulting string
+ * @bufsize:  size of the buffer
+ * @bytes:    number of bytes to convert
+ * @returns : pointer to the buf containing the formatted string.
+ * Converts the given byte value into a human-readable string using IEC units
+ * (e.g., KiB, MiB, GiB), and stores the result in the provided buffer.
+ * The output is formatted with two decimal places of precision.
+ */
+const char *bytes2str_simple(char *buf, size_t bufsize, uint64_t bytes)
+{
+	int unit = 0;
+	double size = (double)bytes;
+
+	buf[0] = '\0';
+
+	while (size >= 1024.0 && unit < FIO_ARRAY_SIZE(iecstr) - 1) {
+		size /= 1024.0;
+		unit++;
+	}
+
+	snprintf(buf, bufsize, "%.2f %sB", size, iecstr[unit]);
+
+	return buf;
+}
+
+
 /**
  * num2str() - Cheesy number->string conversion, complete with carry rounding error.
  * @num: quantity (e.g., number of blocks, bytes or bits)
@@ -19,7 +50,6 @@
 char *num2str(uint64_t num, int maxlen, int base, int pow2, enum n2s_unit units)
 {
 	const char *sistr[] = { "", "k", "M", "G", "T", "P", "E" };
-	const char *iecstr[] = { "", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei" };
 	const char **unitprefix;
 	static const char *const unitstr[] = {
 		[N2S_NONE]	= "",

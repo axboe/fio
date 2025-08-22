@@ -1632,6 +1632,37 @@ I/O type
 	space exceeds 2^32 blocks. If it does, then **tausworthe64** is
 	selected automatically.
 
+.. option:: sprandom=bool
+
+
+        SPRandom is a method designed to rapidly precondition SSDs for
+        steady-state random write workloads. It divides the device into
+        equally sized regions and writes the device's entire physical capacity
+        once, selecting offsets so that the regions have a distribution of
+        invalid blocks matching the distribution that occurs at steady state.
+
+        Default: false.
+
+        It uses **random_generator=lfsr**, which fio will set by default.
+        Selecting any other random generator will result in an error.
+
+
+.. option:: spr_num_regions=int
+
+	See :option:`sprandom`. Specifies the number of regions used for SPRandom.
+        For large devices it is better to use more regions, to increase precision
+        and reduce memory allocation. The allocation is proportional to the region size.
+
+        Default=100
+
+
+.. option:: spr_op=float
+
+	See :option:`sprandom`. Over-provisioning ratio in the range (0, 1),
+        as specified by the SSD manufacturer.
+
+        Default=0.15
+
 
 Block size
 ~~~~~~~~~~
