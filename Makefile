@@ -7,12 +7,12 @@ VPATH := $(SRCDIR)
 all: fio
 
 config-host.mak: configure
-	@if [ ! -e "$@" ]; then					\
-	  echo "Running configure ...";				\
-	  ./configure;						\
-	else							\
-	  echo "$@ is out-of-date, running configure";		\
-	  sed -n "/.*Configured with/s/[^:]*: //p" "$@" | sh;	\
+	@if [ ! -e "$@" ]; then							\
+	  echo "Running configure ...";						\
+	  ./configure;								\
+	else									\
+	  echo "$@ is out-of-date, running configure";				\
+	  sed -n "/.*Configured with/s/[^:]*: //p" "$@" | sh;			\
 	fi
 
 ifneq ($(MAKECMDGOALS),clean)
@@ -302,7 +302,7 @@ FIO-VERSION-FILE: FORCE
 	@$(SHELL) $(SRCDIR)/FIO-VERSION-GEN
 -include FIO-VERSION-FILE
 
-override CFLAGS := -DFIO_VERSION='"$(FIO_VERSION)"' $(FIO_CFLAGS) $(CFLAGS)
+override CFLAGS := -DFIO_VERSION=\'"$(FIO_VERSION)"\' $(FIO_CFLAGS) $(CFLAGS)
 
 $(foreach eng,$(ENGINES),$(eval $(call engine_template,$(eng))))
 
@@ -318,7 +318,7 @@ FIO_OBJS += lex.yy.o y.tab.o
 GFIO_OBJS += lex.yy.o y.tab.o
 endif
 
--include $(OBJS:.o=.d)
+-include $(OBJS:.o=.d) $(T_OBJS:.o=.d) $(UT_OBJS:.o=.d)
 
 T_SMALLOC_OBJS = t/stest.o
 T_SMALLOC_OBJS += gettime.o fio_sem.o pshared.o smalloc.o t/log.o t/debug.o \
@@ -498,15 +498,18 @@ all: $(PROGS) $(T_TEST_PROGS) $(UT_PROGS) $(SCRIPTS) $(ENGS_OBJS) FORCE
 	@$(CC) -MM $(CFLAGS) $(CPPFLAGS) $(SRCDIR)/$*.c > $*.d
 	@mv -f $*.d $*.d.tmp
 	@sed -e 's|.*:|$*.o:|' < $*.d.tmp > $*.d
-	@if type -p fmt >/dev/null 2>&1; then				\
-		sed -e 's/.*://' -e 's/\\$$//' < $*.d.tmp | fmt -w 1 |	\
-		sed -e 's/^ *//' -e 's/$$/:/' >> $*.d;			\
-	else								\
-		sed -e 's/.*://' -e 's/\\$$//' < $*.d.tmp |		\
-		tr -cs "[:graph:]" "\n" |				\
-		sed -e 's/^ *//' -e '/^$$/ d' -e 's/$$/:/' >> $*.d;	\
+	@if type -p fmt >/dev/null 2>&1; then							\
+		sed -e 's/.*://' -e 's/\\$$//' < $*.d.tmp | fmt -w 1 |			\
+		sed -e 's/^ *//' -e 's/$$/:/' >> $*.d;					\
+	else											\
+		sed -e 's/.*://' -e 's/\\$$//' < $*.d.tmp |					\
+		tr -cs "[:graph:]" "\n" |							\
+		sed -e 's/^ *//' -e '/^$$/ d' -e 's/$$/:/' >> $*.d;				\
 	fi
 	@rm -f $*.d.tmp
+
+y.tab.o: config-host.h
+lex.yy.o: config-host.h
 
 ifdef CONFIG_ARITHMETIC
 lex.yy.c: exp/expression-parser.l
@@ -660,19 +663,19 @@ test: fio
 	./fio --minimal --thread --exitall_on_error --runtime=1s --name=nulltest --ioengine=null --rw=randrw --iodepth=2 --norandommap --random_generator=tausworthe64 --size=16T --name=verifyfstest --filename=fiotestfile.tmp --unlink=1 --rw=write --verify=crc32c --verify_state_save=0 --size=16K
 
 fulltest:
-	sudo modprobe null_blk &&				 	\
-	if [ ! -e /usr/include/libzbc/zbc.h ]; then			\
+	sudo modprobe null_blk &&							 \
+	if [ ! -e /usr/include/libzbc/zbc.h ]; then				 \
 	  git clone https://github.com/westerndigitalcorporation/libzbc && \
-	  (cd libzbc &&						 	\
-	   ./autogen.sh &&					 	\
-	   ./configure --prefix=/usr &&				 	\
-	   make -j &&						 	\
-	   sudo make install)						\
-	fi &&					 			\
-	sudo t/zbd/run-tests-against-nullb -s 1 &&		 	\
-	if [ -e /sys/module/null_blk/parameters/zoned ]; then		\
-		sudo t/zbd/run-tests-against-nullb -s 2;	 	\
-		sudo t/zbd/run-tests-against-nullb -s 4;	 	\
+	  (cd libzbc &&									 \
+	   ./autogen.sh &&								 \
+	   ./configure --prefix=/usr &&						 \
+	   make -j &&									 \
+	   sudo make install)								 \
+	fi &&										 \
+	sudo t/zbd/run-tests-against-nullb -s 1 &&				 \
+	if [ -e /sys/module/null_blk/parameters/zoned ]; then		 \
+		sudo t/zbd/run-tests-against-nullb -s 2;		 \
+		sudo t/zbd/run-tests-against-nullb -s 4;		 \
 	fi
 
 install: $(PROGS) $(SCRIPTS) $(ENGS_OBJS) tools/plot/fio2gnuplot.1 FORCE
