@@ -1016,7 +1016,6 @@ that would not result in any difference. \fBidentical\fR behaves in a similar
 fashion, except it sends the same offset 8 number of times before generating a
 new offset.
 .P
-.P
 Example #1:
 .RS
 .P
@@ -1032,7 +1031,6 @@ bs=4k
 The generated sequence of offsets will look like this:
 4k, 8k, 12k, 16k, 20k, 24k, 28k, 32k, 92k, 96k, 100k, 104k, 108k, 112k, 116k,
 120k, 48k, 52k ...
-.P
 .P
 Example #2:
 .RS
@@ -1934,8 +1932,7 @@ as the cpuload only loads a single CPU at the desired rate.
 .P
 \fBcpumode\fR=qsort replace the default noop instructions loop
 by a qsort algorithm to consume more energy.
-
-.P
+.PD
 .RE
 .TP
 .B rdma
@@ -2132,7 +2129,6 @@ This engine is to measure directory delete.
 For file and directory operation engines, there is no I/O throughput, then the statistics \
 data in report have different meanings. The meaningful output indexes are: \fBiops\fP and \fBclat\fP. \
 \fBbw\fP is meaningless. Refer to section: "Interpreting the output" for more details.
-.P
 .RE
 .SS "I/O engine specific parameters"
 In addition, there are some parameters which are only valid when a specific
@@ -4882,17 +4878,17 @@ Following this can be lines in two different formats, which are described below.
 The file management format:
 .RS
 timestamp filename action
-.P
 .RE
+.P
 .B
 The file I/O action format:
 .RS
 timestamp filename action offset length
+.RE
 .P
 The `timestamp` is relative to the beginning of the run (ie starts at 0). The
 `filename`, `action`, `offset` and `length`  are identical to version 2, except
 that version 3 does not allow the `wait` action.
-.RE
 .RE
 .SH I/O REPLAY \- MERGING TRACES
 Colocation is a common practice used to get the most out of a machine.
