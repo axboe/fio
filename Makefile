@@ -319,7 +319,7 @@ FIO_OBJS += lex.yy.o y.tab.o
 GFIO_OBJS += lex.yy.o y.tab.o
 endif
 
--include $(OBJS:.o=.d)
+-include $(OBJS:.o=.d) $(T_OBJS:.o=.d) $(UT_OBJS:.o=.d)
 
 T_SMALLOC_OBJS = t/stest.o
 T_SMALLOC_OBJS += gettime.o fio_sem.o pshared.o smalloc.o t/log.o t/debug.o \
