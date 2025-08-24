@@ -157,6 +157,7 @@ enum {
 	FIO_RAND_PRIO_CMDS,
 	FIO_RAND_DEDUPE_WORKING_SET_IX,
 	FIO_RAND_FDP_OFF,
+	FIO_RAND_SPRANDOM_OFF,
 	FIO_RAND_NR_OFFS,
 };
 
@@ -286,6 +287,7 @@ struct thread_data {
 	struct frand_state prio_state;
 	struct frand_state dedupe_working_set_index_state;
 	struct frand_state *dedupe_working_set_states;
+	struct frand_state sprandom_state;
 
 	unsigned long long num_unique_pages;
 

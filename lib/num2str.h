@@ -14,4 +14,6 @@ enum n2s_unit {
 
 extern char *num2str(uint64_t, int, int, int, enum n2s_unit);
 
+extern const char *bytes2str_simple(char *buf, size_t bufsize, uint64_t bytes);
+
 #endif
