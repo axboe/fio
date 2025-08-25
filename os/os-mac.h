@@ -17,6 +17,8 @@
 #include "../arch/arch.h"
 #include "../file.h"
 
+#include "mac/posix.h"
+
 #define FIO_USE_GENERIC_INIT_RANDOM_STATE
 #define FIO_HAVE_GETTID
 #define FIO_HAVE_CHARDEV_SIZE
@@ -117,3 +119,5 @@ static inline bool os_cpu_has(cpu_features feature)
 }
 
 #endif
+
+#define CONFIG_POSIX_FADVISE
