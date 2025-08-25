@@ -1,4 +1,6 @@
 #include <errno.h>
+#include <fcntl.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
 #include <sys/mman.h>
@@ -61,15 +63,30 @@ static int discard_pages(int fd, off_t offset, off_t len)
 	return 0;
 }
 
+static inline int set_readhead(int fd, bool enabled) {
+	int ret;
+
+	ret = fcntl(fd, F_RDAHEAD, enabled ? 1 : 0);
+	if (ret == -1) {
+		ret = errno;
+	}
+
+	return ret;
+}
+
 int posix_fadvise(int fd, off_t offset, off_t len, int advice)
 {
 	int ret;
 
 	switch(advice) {
 	case POSIX_FADV_NORMAL:
-	case POSIX_FADV_RANDOM:
-	case POSIX_FADV_SEQUENTIAL:
 		ret = 0;
+		break;
+	case POSIX_FADV_RANDOM:
+		ret = set_readhead(fd, false);
+		break;
+	case POSIX_FADV_SEQUENTIAL:
+		ret = set_readhead(fd, true);
 		break;
 	case POSIX_FADV_DONTNEED:
 		ret = discard_pages(fd, offset, len);
