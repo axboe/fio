@@ -1,4 +1,4 @@
-.TH fio 1 "August 2017" "User Manual"
+.TH fio 1 "May 2025" "User Manual"
 .SH NAME
 fio \- flexible I/O tester
 .SH SYNOPSIS
@@ -1016,7 +1016,6 @@ that would not result in any difference. \fBidentical\fR behaves in a similar
 fashion, except it sends the same offset 8 number of times before generating a
 new offset.
 .P
-.P
 Example #1:
 .RS
 .P
@@ -1032,7 +1031,6 @@ bs=4k
 The generated sequence of offsets will look like this:
 4k, 8k, 12k, 16k, 20k, 24k, 28k, 32k, 92k, 96k, 100k, 104k, 108k, 112k, 116k,
 120k, 48k, 52k ...
-.P
 .P
 Example #2:
 .RS
@@ -1683,7 +1681,6 @@ Note that by using \fBworking_set\fR the dedupe percentage will converge
 to the desired over time while \fBrepeat\fR maintains the desired percentage
 throughout the job.
 .RE
-.RE
 .TP
 .BI dedupe_working_set_percentage \fR=\fPint
 If \fBdedupe_mode\fR is set to \fBworking_set\fR, then this controls
@@ -1956,15 +1953,14 @@ A job never finishes unless there is at least one non-cpuio job.
 .RS
 .P
 .PD 0
-\fBcpuload\fR\=85 will cause that job to do nothing but burn 85% of the CPU.
+\fBcpuload\fR=85 will cause that job to do nothing but burn 85% of the CPU.
 In case of SMP machines, use \fBnumjobs=<nr_of_cpu>\fR\ to get desired CPU usage,
 as the cpuload only loads a single CPU at the desired rate.
 
 .P
-\fBcpumode\fR\=qsort replace the default noop instructions loop
+\fBcpumode\fR=qsort replace the default noop instructions loop
 by a qsort algorithm to consume more energy.
-
-.P
+.PD
 .RE
 .TP
 .B rdma
@@ -2117,7 +2113,6 @@ instance is used per process, so all jobs setting option \fBthread\fR will share
 a single instance (with one queue per thread) and must specify compatible
 options. Note that some drivers don't allow several instances to access the same
 device or file simultaneously, but allow it for threads.
-.TP
 .RE
 .P
 File/directory operation engines define how the job operates file or directory.
@@ -2158,14 +2153,11 @@ Example job file: dirstat-ioengine.fio.
 Simply delete the directories by rmdir() and do no I/O to them. You need to set \fBfilesize\fP
 and \fBnrfiles\fP, so that the directories will be created.
 This engine is to measure directory delete.
-.TP
-.RE
 .P
 For file and directory operation engines, there is no I/O throughput, then the statistics \
 data in report have different meanings. The meaningful output indexes are: \fBiops\fP and \fBclat\fP. \
 \fBbw\fP is meaningless. Refer to section: "Interpreting the output" for more details.
 .RE
-.P
 .SS "I/O engine specific parameters"
 In addition, there are some parameters which are only valid when a specific
 \fBioengine\fR is in use. These are used identically to normal parameters,
@@ -2359,7 +2351,6 @@ to specifying \fBfdp\fR=1.
 .TP
 .B streams
 Use Streams directives for write commands.
-.TP
 .RE
 .RE
 .TP
@@ -2627,7 +2618,7 @@ Enabled by default.
 .TP
 .BI (http)http_host \fR=\fPstr
 Hostname to connect to.  HTTP port 80 is used automatically when the value 
-of the \fBhttps\fP parameter is \fRoff\fP, and HTTPS port 443 if it is \Ron\fP.  
+of the \fBhttps\fP parameter is \fBoff\fP, and HTTPS port 443 if it is \fBon\fP.
 A virtual-hosted-style S3 hostname starts with a bucket name, while a 
 path-style S3 hostname does not.  Default is \fBlocalhost\fR.
 .TP
@@ -2638,8 +2629,8 @@ Username for HTTP authentication.
 Password for HTTP authentication.
 .TP
 .BI (http)https \fR=\fPstr
-Whether to use HTTPS instead of plain HTTP. \fRon\fP enables HTTPS;
-\fRinsecure\fP will enable HTTPS, but disable SSL peer verification (use
+Whether to use HTTPS instead of plain HTTP. \fBon\fP enables HTTPS;
+\fBinsecure\fP will enable HTTPS, but disable SSL peer verification (use
 with caution!).  Default is \fBoff\fR.
 .TP
 .BI (http)http_mode \fR=\fPstr
@@ -2758,7 +2749,6 @@ Use Write Zeroes commands for write operations
 .TP
 .B verify
 Use Verify commands for write operations
-.TP
 .RE
 .RE
 .TP
@@ -2774,7 +2764,6 @@ Use Read commands for data verification
 Use Compare commands for data verification.  This option is only valid with
 specific pattern(s), which means it *must* be given with `verify=pattern` and
 `verify_pattern=<pattern>`.
-.TP
 .RE
 .RE
 .TP
@@ -4508,7 +4497,6 @@ to complete one file or directory operation.
 \fBdirstat engine\fP:\tthe time cost to look up an existing directory
 .TP
 \fBdirdelete engine\fP:\tthe time cost to delete a directory
-.TP
 .RE
 .TP
 .B lat
@@ -4549,7 +4537,6 @@ It means how many files or directories can be operated per second.
 \fBdirstat engine\fP:\tnumber of directories can be looked up per second
 .TP
 \fBdirdelete engine\fP:\tnumber of directories can be deleted per second
-.TP
 .RE
 .TP
 .B lat (nsec/usec/msec)
@@ -4939,17 +4926,17 @@ Following this can be lines in two different formats, which are described below.
 The file management format:
 .RS
 timestamp filename action
-.P
 .RE
+.P
 .B
 The file I/O action format:
 .RS
 timestamp filename action offset length
+.RE
 .P
 The `timestamp` is relative to the beginning of the run (ie starts at 0). The
 `filename`, `action`, `offset` and `length`  are identical to version 2, except
 that version 3 does not allow the `wait` action.
-.RE
 .RE
 .SH I/O REPLAY \- MERGING TRACES
 Colocation is a common practice used to get the most out of a machine.
@@ -5040,7 +5027,6 @@ running as a server backend, it will send the job states back to the client for
 safe storage, then execute the remote trigger, if specified. If a local trigger
 is specified, the server will still send back the write state, but the client
 will then execute the trigger.
-.RE
 .P
 .B Verification trigger example
 .RS
