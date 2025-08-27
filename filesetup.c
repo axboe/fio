@@ -1390,6 +1390,16 @@ int setup_files(struct thread_data *td)
 	if (err)
 		goto err_out;
 
+	if (td->o.sprandom) {
+		if (td->o.nr_files != 1) {
+			 log_err("fio: SPRandom supports only one file");
+			 goto err_out;
+		}
+		err = sprandom_init(td, td->files[0]);
+		if (err)
+			goto err_out;
+	}
+
 	if (o->io_size)
 		td->total_io_size = o->io_size * o->loops;
 	else
@@ -1398,16 +1408,6 @@ int setup_files(struct thread_data *td)
 done:
 	if (td->o.zone_mode == ZONE_MODE_ZBD) {
 		err = zbd_setup_files(td);
-		if (err)
-			goto err_out;
-	}
-
-	if (td->o.sprandom) {
-		if (td->o.nr_files != 1) {
-			 log_err("fio: SPRandom supports only one file");
-			 goto err_out;
-		}
-		err = sprandom_init(td, td->files[0]);
 		if (err)
 			goto err_out;
 	}
