@@ -8,6 +8,10 @@
 
 #define FIO_ARCH	(arch_ppc)
 
+#ifndef __SANE_USERSPACE_TYPES__
+#define __SANE_USERSPACE_TYPES__
+#endif
+
 #define nop	do { } while (0)
 
 #ifdef __powerpc64__
