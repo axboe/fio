@@ -722,7 +722,8 @@ int sprandom_get_next_offset(struct sprandom_info *info, struct fio_file *f, uin
 	/* replay invalidation */
 	if (pcb_pop(info->invalid_buf, &offset)) {
 		sprandom_add_with_probability(info, offset,  phase ^ 1);
-		dprint(FD_SPRANDOM, "Write %"PRIu64" over %d\n", *b, info->current_region);
+		dprint(FD_SPRANDOM, "Write %"PRIu64" over %d\n",
+		       offset, info->current_region);
 		goto out;
 	}
 
