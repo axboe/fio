@@ -33,12 +33,11 @@ struct sprandom_info {
 	uint64_t  region_sz;
 	uint32_t  num_regions;
 
-	double    *validity_dist;
 	uint32_t  *invalid_pct;
 
 	/* Invalidation list*/
 	struct pc_buf *invalid_buf;
-	uint64_t  invalid_capacity;
+	uint64_t invalid_capacity;
 	size_t   invalid_count[2];
 	uint32_t current_region;
 	uint32_t curr_phase;

@@ -590,9 +590,6 @@ static int sprandom_setup(struct sprandom_info *spr_info, uint64_t logical_size,
 	/* Initialize validity_distribution */
 	print_d_array("validity resampled:", validity_dist, spr_info->num_regions);
 
-	spr_info->validity_dist = validity_dist;
-	total_alloc += spr_info->num_regions * sizeof(spr_info->validity_dist[0]);
-
 	/* Precompute invalidity percentage array */
 	spr_info->invalid_pct = calloc(spr_info->num_regions,
 				       sizeof(spr_info->invalid_pct[0]));
@@ -605,6 +602,8 @@ static int sprandom_setup(struct sprandom_info *spr_info, uint64_t logical_size,
 		double inv = (1.0 - validity_dist[i]) * (double)PCT_PRECISION;
 		spr_info->invalid_pct[i] = (int)round(inv);
 	}
+	free(validity_dist);
+	validity_dist = NULL;
 
 	region_sz = physical_size / spr_info->num_regions;
 	region_write_count = region_sz / align_bs;
@@ -644,7 +643,7 @@ static int sprandom_setup(struct sprandom_info *spr_info, uint64_t logical_size,
 
 	return 0;
 err:
-	free(spr_info->validity_dist);
+	free(validity_dist);
 	free(spr_info->invalid_pct);
 	return -ENOMEM;
 }
@@ -830,7 +829,6 @@ void sprandom_free(struct sprandom_info *info)
 	if (!info)
 		return;
 
-	free(info->validity_dist);
 	free(info->invalid_pct);
 	free(info->invalid_buf);
 	free(info);
