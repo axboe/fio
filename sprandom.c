@@ -831,6 +831,7 @@ void sprandom_free(struct sprandom_info *info)
 		return;
 
 	free(info->validity_dist);
+	free(info->invalid_pct);
 	free(info->invalid_buf);
 	free(info);
 }
