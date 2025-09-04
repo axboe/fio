@@ -602,8 +602,6 @@ static int sprandom_setup(struct sprandom_info *spr_info, uint64_t logical_size,
 		double inv = (1.0 - validity_dist[i]) * (double)PCT_PRECISION;
 		spr_info->invalid_pct[i] = (int)round(inv);
 	}
-	free(validity_dist);
-	validity_dist = NULL;
 
 	region_sz = physical_size / spr_info->num_regions;
 	region_write_count = region_sz / align_bs;
@@ -641,6 +639,7 @@ static int sprandom_setup(struct sprandom_info *spr_info, uint64_t logical_size,
 		total_alloc,
 		bytes2str_simple(bytes2str_buf, sizeof(bytes2str_buf), total_alloc));
 
+	free(validity_dist);
 	return 0;
 err:
 	free(validity_dist);
