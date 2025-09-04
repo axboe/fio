@@ -101,4 +101,6 @@ static inline void verify_state_gen_name(char *out, size_t size,
 	out[size - 1] = '\0';
 }
 
+#define INVALID_NUMBERIO UINT64_MAX
+
 #endif
