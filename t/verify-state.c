@@ -84,7 +84,7 @@ static void show_verify_state(void *buf, size_t size)
 		return;
 	}
 
-	if (hdr->version == 0x04)
+	if (hdr->version == VSTATE_HDR_VERSION)
 		show(s, size);
 	else
 		log_err("Unsupported version %d\n", (int) hdr->version);
