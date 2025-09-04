@@ -73,8 +73,6 @@ struct fio_sem;
 
 #define MAX_TRIM_RANGE	256
 
-#define INVALID_NUMBERIO UINT64_MAX
-
 /*
  * Range for trim command
  */

@@ -29,8 +29,13 @@ static void show_s(struct thread_io_list *s, unsigned int no_s)
 	if (!s->depth)
 		return;
 	for (i = s->depth - 1; i >= 0; i--) {
-		printf("\t%llu\n",
-				(unsigned long long) s->inflight[i].numberio);
+		uint64_t numberio;
+		numberio = s->inflight[i].numberio;
+		if (numberio == INVALID_NUMBERIO)
+			printf("\tNot inflight\n");
+		else
+			printf("\t%llu\n",
+			       (unsigned long long) s->inflight[i].numberio);
 	}
 }
 
@@ -84,7 +89,7 @@ static void show_verify_state(void *buf, size_t size)
 		return;
 	}
 
-	if (hdr->version == 0x04)
+	if (hdr->version == VSTATE_HDR_VERSION)
 		show(s, size);
 	else
 		log_err("Unsupported version %d\n", (int) hdr->version);
