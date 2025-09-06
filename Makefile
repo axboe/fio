@@ -270,6 +270,7 @@ ifeq ($(CONFIG_TARGET_OS), HP-UX)
 endif
 ifeq ($(CONFIG_TARGET_OS), Darwin)
   LIBS	 += -lpthread -ldl
+  SOURCE += os/mac/posix.c
 endif
 ifneq (,$(findstring CYGWIN,$(CONFIG_TARGET_OS)))
   SOURCE += os/windows/cpu-affinity.c os/windows/posix.c os/windows/dlls.c
