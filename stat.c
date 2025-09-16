@@ -3688,7 +3688,7 @@ int calc_log_samples(void)
 
 void stat_init(void)
 {
-	stat_sem = fio_sem_init(FIO_SEM_UNLOCKED);
+	stat_sem = fio_shared_sem_init(FIO_SEM_UNLOCKED);
 }
 
 void stat_exit(void)
@@ -3698,7 +3698,7 @@ void stat_exit(void)
 	 * have ended.
 	 */
 	fio_sem_down(stat_sem);
-	fio_sem_remove(stat_sem);
+	fio_shared_sem_remove(stat_sem);
 }
 
 /*
