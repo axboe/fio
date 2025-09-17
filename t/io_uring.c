@@ -146,13 +146,12 @@ static int random_io = 1;	/* random or sequential IO */
 static int register_ring = 1;	/* register ring */
 static int use_sync = 0;	/* use preadv2 */
 static int numa_placement = 0;	/* set to node of device */
+static int vectored = 0;	/* use vectored IO */
 static int pt = 0;		/* passthrough I/O or not */
 
 static unsigned long tsc_rate;
 
 #define TSC_RATE_FILE	"tsc-rate"
-
-static int vectored = 1;
 
 static float plist[] = { 1.0, 5.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0,
 			80.0, 90.0, 95.0, 99.0, 99.5, 99.9, 99.95, 99.99 };
@@ -461,28 +460,6 @@ retry:
 	return ret;
 }
 
-static void io_uring_probe(int fd)
-{
-	struct io_uring_probe *p;
-	int ret;
-
-	p = calloc(1, sizeof(*p) + 256 * sizeof(struct io_uring_probe_op));
-	if (!p)
-		return;
-
-	ret = syscall(__NR_io_uring_register, fd, IORING_REGISTER_PROBE, p, 256);
-	if (ret < 0)
-		goto out;
-
-	if (IORING_OP_READ > p->ops_len)
-		goto out;
-
-	if ((p->ops[IORING_OP_READ].flags & IO_URING_OP_SUPPORTED))
-		vectored = 0;
-out:
-	free(p);
-}
-
 static int io_uring_enter(struct submitter *s, unsigned int to_submit,
 			  unsigned int min_complete, unsigned int flags)
 {
@@ -628,6 +605,12 @@ static void init_io_pt(struct submitter *s, unsigned index)
 	cmd->data_len = bs;
 	if (fixedbufs) {
 		sqe->uring_cmd_flags = IORING_URING_CMD_FIXED;
+		sqe->buf_index = 0;
+	}
+	if (vectored) {
+		sqe->cmd_op = NVME_URING_CMD_IO_VEC;
+		cmd->addr = (unsigned long) &s->iovecs[index];
+		cmd->data_len = 1;
 		sqe->buf_index = 0;
 	}
 	cmd->nsid = f->nsid;
@@ -926,8 +909,6 @@ static int setup_ring(struct submitter *s)
 		return 1;
 	}
 	s->ring_fd = s->enter_ring_fd = fd;
-
-	io_uring_probe(fd);
 
 	if (fixedbufs) {
 		struct rlimit rlim;
@@ -1521,11 +1502,12 @@ static void usage(char *argv, int status)
 		" -S <bool> : Use sync IO (preadv2), default %d\n"
 		" -X <bool> : Use registered ring %d\n"
 		" -P <bool> : Automatically place on device home node %d\n"
+		" -V <bool> : Vectored IO, default %d\n"
 		" -u <bool> : Use nvme-passthrough I/O, default %d\n",
 		argv, DEPTH, BATCH_SUBMIT, BATCH_COMPLETE, BS, polled,
 		fixedbufs, register_files, nthreads, !buffered, do_nop,
 		stats, runtime == 0 ? "unlimited" : runtime_str, random_io, aio,
-		use_sync, register_ring, numa_placement, pt);
+		use_sync, register_ring, numa_placement, vectored, pt);
 	exit(status);
 }
 
@@ -1584,7 +1566,7 @@ int main(int argc, char *argv[])
 	if (!do_nop && argc < 2)
 		usage(argv[0], 1);
 
-	while ((opt = getopt(argc, argv, "d:s:c:b:p:B:F:n:N:O:t:T:a:r:D:R:X:S:P:u:h?")) != -1) {
+	while ((opt = getopt(argc, argv, "d:s:c:b:p:B:F:n:N:O:t:T:a:r:D:R:X:S:P:V:u:h?")) != -1) {
 		switch (opt) {
 		case 'a':
 			aio = !!atoi(optarg);
@@ -1661,6 +1643,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'P':
 			numa_placement = !!atoi(optarg);
+			break;
+		case 'V':
+			vectored = !!atoi(optarg);
 			break;
 		case 'u':
 			pt = !!atoi(optarg);
