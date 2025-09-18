@@ -120,11 +120,11 @@ static void print_d_array(const char *hdr, double *darray, size_t len)
 
 	buf_output_init(&out);
 
-	log_buf(&out, "[");
+	__log_buf(&out, "[");
 	for (i = 0; i < len - 1; i++)
-		log_buf(&out, "%.2f, ", darray[i]);
+		__log_buf(&out, "%.2f, ", darray[i]);
 
-	log_buf(&out, "%.2f]\n", darray[len - 1]);
+	__log_buf(&out, "%.2f]\n", darray[len - 1]);
 	if (hdr)
 		dprint(FD_SPRANDOM, "%s: ", hdr);
 
@@ -139,11 +139,11 @@ static void print_d_points(struct point *parray, size_t len)
 
 	buf_output_init(&out);
 
-	log_buf(&out, "[");
+	__log_buf(&out, "[");
 	for (i = 0; i < len - 1; i++)
-		log_buf(&out, "(%.2f %.2f), ", parray[i].x, parray[i].y);
+		__log_buf(&out, "(%.2f %.2f), ", parray[i].x, parray[i].y);
 
-	log_buf(&out, "(%.2f %.2f)]\n", parray[len - 1].x, parray[len - 1].y);
+	__log_buf(&out, "(%.2f %.2f)]\n", parray[len - 1].x, parray[len - 1].y);
 	dprint(FD_SPRANDOM, "%s", out.buf);
 	buf_output_free(&out);
 }
