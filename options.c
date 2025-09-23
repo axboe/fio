@@ -1616,6 +1616,9 @@ static int str_buffer_pattern_cb(void *data, const char *input)
 	struct thread_data *td = cb_data_to_td(data);
 	int ret;
 
+	if (!input)
+		return 1;
+
 	/* FIXME: for now buffer pattern does not support formats */
 	ret = parse_and_fill_pattern_alloc(input, strlen(input),
 				&td->o.buffer_pattern, NULL, NULL, NULL);
