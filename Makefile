@@ -276,7 +276,7 @@ ifneq (,$(findstring CYGWIN,$(CONFIG_TARGET_OS)))
   SOURCE += os/windows/cpu-affinity.c os/windows/posix.c os/windows/dlls.c
   WINDOWS_OBJS = os/windows/cpu-affinity.o os/windows/posix.o os/windows/dlls.o lib/hweight.o
   LIBS	 += -lpthread -lpsapi -lws2_32 -lssp
-  FIO_CFLAGS += -DPSAPI_VERSION=1 -Ios/windows/posix/include -Wno-format
+  FIO_CFLAGS += -DPSAPI_VERSION=1 -I$(SRCDIR)/os/windows/posix/include -Wno-format
 endif
 
 ifdef cmdprio_SRCS
