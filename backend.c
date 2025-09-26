@@ -236,7 +236,8 @@ static bool fio_io_sync(struct thread_data *td, struct fio_file *f)
 
 	io_u->ddir = DDIR_SYNC;
 	io_u->file = f;
-	io_u_set(td, io_u, IO_U_F_NO_FILE_PUT);
+	if (td->runstate != TD_FSYNCING)
+		io_u_set(td, io_u, IO_U_F_NO_FILE_PUT);
 
 	if (td_io_prep(td, io_u)) {
 		put_io_u(td, io_u);
