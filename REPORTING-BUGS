@@ -1,6 +1,13 @@
 Reporting a bug
 ---------------
 
+If you're contemplating reporting issues with deliberately constructed job
+files that cause the parser to crash, then only do so if you also intend
+to fix the issue. Legitimate job files that cause parsing issues should of
+course be reported, however please don't waste our time with maliciously
+constructed job files that cause double frees, fio crashes, or other effects
+of that nature.
+
 ...via the mailing list
 =======================
 
