@@ -2320,6 +2320,18 @@ cached data. Currently the RWF_NOWAIT flag does not supported for cached write.
 For direct I/O, requests will only succeed if cache invalidation isn't required,
 file blocks are fully allocated and the disk request could be issued immediately.
 .TP
+.BI (pvsync2,io_uring)uncached \fR=\fPint
+This option will perform buffered IO without retaining data in the
+page cache after the operation completes.
+
+Reads work like a normal buffered read but pages are evicted immediately
+after data is copied to userspace. Writes work like buffered writes but
+a writeback is initiated before the syscall returns. Pages are evicted
+once the writeback completes.
+
+This option sets the RWF_UNCACHED flag (supported from the 6.14 Linux kernel) on
+a per-IO basis.
+.TP
 .BI (pvsync2,libaio,io_uring)atomic \fR=\fPbool
 This option means that writes are issued with torn-write protection, meaning
 that for a power fail or kernel crash, all or none of the data from the write

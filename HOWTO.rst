@@ -2565,6 +2565,19 @@ with the caveat that when used on the command line, they must come after the
 	For direct I/O, requests will only succeed if cache invalidation isn't required,
 	file blocks are fully allocated and the disk request could be issued immediately.
 
+.. option:: uncached=int : [pvsync2] [io_uring]
+
+	This option will perform buffered IO without retaining data in the
+	page cache after the operation completes.
+
+	Reads work like a normal buffered read but pages are evicted immediately
+	after data is copied to userspace. Writes work like buffered writes but
+	a writeback is initiated before the syscall returns. Pages are evicted
+	once the writeback completes.
+
+	This option sets the RWF_UNCACHED flag (supported from the 6.14 Linux kernel) on
+	a per-IO basis.
+
 .. option:: atomic=bool : [pvsync2] [libaio] [io_uring]
 
 	This option means that writes are issued with torn-write protection, meaning
