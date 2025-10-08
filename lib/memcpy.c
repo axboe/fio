@@ -5,9 +5,9 @@
 
 #include "memcpy.h"
 #include "rand.h"
+#include "../os/os.h"
 #include "../fio_time.h"
 #include "../gettime.h"
-#include "../os/os.h"
 
 #define BUF_SIZE	32 * 1024 * 1024ULL
 
