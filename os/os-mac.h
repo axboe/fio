@@ -37,10 +37,6 @@
 	pthread_getaffinity_np(pthread_self(), sizeof(mask), &(mask))
 #endif
 
-#ifndef CONFIG_CLOCKID_T
-typedef unsigned int clockid_t;
-#endif
-
 #define FIO_OS_DIRECTIO
 static inline int fio_set_odirect(struct fio_file *f)
 {
