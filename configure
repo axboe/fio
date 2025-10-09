@@ -180,6 +180,7 @@ libhdfs="no"
 devdax="no"
 pmem="no"
 cuda="no"
+cuda13="no"
 libcufile="no"
 disable_lex=""
 disable_pmem="no"
@@ -2811,6 +2812,26 @@ fi
 print_config "libcufile" "$libcufile"
 
 ##########################################
+# cuda 13 probe
+if test "$cuda" != "no" || test "$libcufile" != "no"; then
+cat > $TMPC << EOF
+#include <cuda.h>
+
+int main(int argc, char **argv)
+{
+  cuCtxCreate(NULL, NULL, 0, NULL);
+  return 0;
+}
+EOF
+  if compile_prog "" "-lcuda" "cuda13"; then
+    cuda13="yes"
+  else
+    cuda13="no"
+  fi
+  print_config "cuda>=13" "$cuda13"
+fi
+
+##########################################
 # check for cc -march=native
 build_native="no"
 cat > $TMPC << EOF
@@ -3304,6 +3325,9 @@ if test "$cuda" = "yes" ; then
 fi
 if test "$libcufile" = "yes" ; then
   output_sym "CONFIG_LIBCUFILE"
+fi
+if test "$cuda13" = "yes" ; then
+  output_sym "CONFIG_CUDA13"
 fi
 if test "$dfs" = "yes" ; then
   output_sym "CONFIG_DFS"

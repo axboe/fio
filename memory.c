@@ -215,6 +215,9 @@ static int alloc_mem_cudamalloc(struct thread_data *td, size_t total_mem)
 #ifdef CONFIG_CUDA
 	CUresult ret;
 	char name[128];
+#ifdef CONFIG_CUDA13
+	CUctxCreateParams ctx_params = {};
+#endif
 
 	ret = cuInit(0);
 	if (ret != CUDA_SUCCESS) {
@@ -250,7 +253,11 @@ static int alloc_mem_cudamalloc(struct thread_data *td, size_t total_mem)
 	dprint(FD_MEM, "dev_id = [%d], device name = [%s]\n", \
 	       td->gpu_dev_id, name);
 
-	ret = cuCtxCreate(&td->cu_ctx, CU_CTX_MAP_HOST, td->cu_dev);
+#ifdef CONFIG_CUDA13
+	ret = cuCtxCreate(&td->cu_ctx, &ctx_params, CU_CTX_MAP_HOST, td->cu_dev);
+#else
+	ret = cuCtxCreate(&td->cu_ctx CU_CTX_MAP_HOST, td->cu_dev);
+#endif
 	if (ret != CUDA_SUCCESS) {
 		log_err("fio: failed to create cuda context: %d\n", ret);
 		return 1;
