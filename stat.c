@@ -565,7 +565,7 @@ static void show_ddir_status(const struct group_run_stats *rs, struct thread_sta
 
 	iops = (1000 * (uint64_t)ts->total_io_u[ddir]) / runt;
 	iops_p = num2str(iops, ts->sig_figs, 1, 0, N2S_NONE);
-	if (ddir == DDIR_WRITE || ddir == DDIR_TRIM)
+	if (ts->count_zone_resets)
 		post_st = zbd_write_status(ts);
 	else if (ddir == DDIR_READ && ts->cachehit && ts->cachemiss) {
 		uint64_t total;
@@ -2360,7 +2360,10 @@ void sum_thread_stats(struct thread_stat *dst, const struct thread_stat *src)
 	dst->total_run_time += src->total_run_time;
 	dst->total_submit += src->total_submit;
 	dst->total_complete += src->total_complete;
-	dst->nr_zone_resets += src->nr_zone_resets;
+	if (src->count_zone_resets) {
+		dst->count_zone_resets = 1;
+		dst->nr_zone_resets += src->nr_zone_resets;
+	}
 	dst->cachehit += src->cachehit;
 	dst->cachemiss += src->cachemiss;
 }

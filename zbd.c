@@ -1284,6 +1284,10 @@ int zbd_setup_files(struct thread_data *td)
 		return 1;
 	}
 
+	/* Enable zone reset stat report for write and trim workloads */
+	if (td_write(td) || td_trim(td))
+		td->ts.count_zone_resets = 1;
+
 	for_each_file(td, f, i) {
 		struct zoned_block_device_info *zbd = f->zbd_info;
 		struct fio_zone_info *z;

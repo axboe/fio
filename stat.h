@@ -233,17 +233,18 @@ struct thread_stat {
 	uint32_t first_error;
 	uint64_t total_err_count;
 
-	/* ZBD stats */
-	uint64_t nr_zone_resets;
-
 	uint64_t nr_block_infos;
 	uint32_t block_infos[MAX_NR_BLOCK_INFOS];
 
 	uint32_t kb_base;
 	uint32_t unit_base;
 
+	/* ZBD stats */
+	uint64_t nr_zone_resets;
+	uint16_t count_zone_resets; /* Flag to enable nr_zone_resets */
+	uint16_t pad3;
+
 	uint32_t latency_depth;
-	uint32_t pad3;
 	uint64_t latency_target;
 	fio_fp64_t latency_percentile;
 	uint64_t latency_window;

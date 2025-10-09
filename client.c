@@ -1027,7 +1027,6 @@ static void convert_ts(struct thread_stat *dst, struct thread_stat *src)
 
 	dst->total_submit	= le64_to_cpu(src->total_submit);
 	dst->total_complete	= le64_to_cpu(src->total_complete);
-	dst->nr_zone_resets	= le64_to_cpu(src->nr_zone_resets);
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		dst->io_bytes[i]	= le64_to_cpu(src->io_bytes[i]);
@@ -1042,6 +1041,9 @@ static void convert_ts(struct thread_stat *dst, struct thread_stat *src)
 	dst->unit_base		= le32_to_cpu(src->unit_base);
 
 	dst->sig_figs		= le32_to_cpu(src->sig_figs);
+
+	dst->nr_zone_resets	= le64_to_cpu(src->nr_zone_resets);
+	dst->count_zone_resets	= le16_to_cpu(src->count_zone_resets);
 
 	dst->latency_depth	= le32_to_cpu(src->latency_depth);
 	dst->latency_target	= le64_to_cpu(src->latency_target);

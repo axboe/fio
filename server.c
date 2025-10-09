@@ -1770,7 +1770,6 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 
 	p.ts.total_submit	= cpu_to_le64(ts->total_submit);
 	p.ts.total_complete	= cpu_to_le64(ts->total_complete);
-	p.ts.nr_zone_resets	= cpu_to_le64(ts->nr_zone_resets);
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		p.ts.io_bytes[i]	= cpu_to_le64(ts->io_bytes[i]);
@@ -1783,6 +1782,9 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 	p.ts.first_error	= cpu_to_le32(ts->first_error);
 	p.ts.kb_base		= cpu_to_le32(ts->kb_base);
 	p.ts.unit_base		= cpu_to_le32(ts->unit_base);
+
+	p.ts.nr_zone_resets	= cpu_to_le64(ts->nr_zone_resets);
+	p.ts.count_zone_resets	= cpu_to_le16(ts->count_zone_resets);
 
 	p.ts.latency_depth	= cpu_to_le32(ts->latency_depth);
 	p.ts.latency_target	= cpu_to_le64(ts->latency_target);
