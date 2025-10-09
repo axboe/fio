@@ -174,11 +174,7 @@ extern int fio_cpus_split(os_cpu_mask_t *mask, unsigned int cpu);
 #endif
 
 #ifndef FIO_PREFERRED_CLOCK_SOURCE
-#ifdef CONFIG_CLOCK_GETTIME
 #define FIO_PREFERRED_CLOCK_SOURCE	CS_CGETTIME
-#else
-#define FIO_PREFERRED_CLOCK_SOURCE	CS_GTOD
-#endif
 #endif
 
 #ifndef CONFIG_SOCKLEN_T

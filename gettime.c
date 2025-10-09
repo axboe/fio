@@ -136,20 +136,10 @@ int fio_get_mono_time(struct timespec *ts)
 {
 	int ret;
 
-#ifdef CONFIG_CLOCK_GETTIME
 #if defined(CONFIG_CLOCK_MONOTONIC)
 	ret = clock_gettime(CLOCK_MONOTONIC, ts);
 #else
 	ret = clock_gettime(CLOCK_REALTIME, ts);
-#endif
-#else
-	struct timeval tv;
-
-	ret = gettimeofday(&tv, NULL);
-	if (ret == 0) {
-		ts->tv_sec = tv.tv_sec;
-		ts->tv_nsec = tv.tv_usec * 1000;
-	}
 #endif
 	assert(ret <= 0);
 	return ret;
@@ -168,7 +158,6 @@ static void __fio_gettime(struct timespec *tp)
 		break;
 		}
 #endif
-#ifdef CONFIG_CLOCK_GETTIME
 	case CS_CGETTIME: {
 		if (fio_get_mono_time(tp) < 0) {
 			log_err("fio: fio_get_mono_time() fails\n");
@@ -176,7 +165,6 @@ static void __fio_gettime(struct timespec *tp)
 		}
 		break;
 		}
-#endif
 #ifdef ARCH_HAVE_CPU_CLOCK
 	case CS_CPUCLOCK: {
 		uint64_t nsecs, t, multiples;
