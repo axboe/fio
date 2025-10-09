@@ -1946,6 +1946,10 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 		json_object_add_value_array(data, "bw", bw);
 	}
 
+	if (ts->count_zone_resets)
+		json_object_add_value_int(root, "zone_resets",
+					  ts->nr_zone_resets);
+
 	return root;
 }
 
