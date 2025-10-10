@@ -256,7 +256,7 @@ static int alloc_mem_cudamalloc(struct thread_data *td, size_t total_mem)
 #ifdef CONFIG_CUDA13
 	ret = cuCtxCreate(&td->cu_ctx, &ctx_params, CU_CTX_MAP_HOST, td->cu_dev);
 #else
-	ret = cuCtxCreate(&td->cu_ctx CU_CTX_MAP_HOST, td->cu_dev);
+	ret = cuCtxCreate(&td->cu_ctx, CU_CTX_MAP_HOST, td->cu_dev);
 #endif
 	if (ret != CUDA_SUCCESS) {
 		log_err("fio: failed to create cuda context: %d\n", ret);
