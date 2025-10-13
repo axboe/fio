@@ -592,6 +592,8 @@ static int ignore_error_type(struct thread_data *td, enum error_type_bit etype,
 		}
 		if (fname[0] == 'E') {
 			error[i] = str2error(fname);
+		} else if (fname[0] == '-' && fname[1] == 'E') {
+			error[i] = -str2error(fname + 1);
 		} else {
 			int base = 10;
 			if (!strncmp(fname, "0x", 2) ||
