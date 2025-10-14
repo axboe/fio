@@ -2196,7 +2196,16 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 		}
 	} else if (io_u->error) {
 error:
-		icd->error = io_u->error;
+		if (io_u->flags & IO_U_F_DEVICE_ERROR)
+			icd->error = io_u->error;
+		else {
+			/*
+			 * If @io_u has system error(non-device erorr), it must
+			 * have been negative value.
+			 */
+			icd->error = -io_u->error;
+		}
+
 		io_u_log_error(td, io_u);
 	}
 	if (icd->error) {
