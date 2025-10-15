@@ -439,6 +439,7 @@ static int io_uring_setup(unsigned entries, struct io_uring_params *p)
 	p->flags |= IORING_SETUP_COOP_TASKRUN;
 	p->flags |= IORING_SETUP_SINGLE_ISSUER;
 	p->flags |= IORING_SETUP_DEFER_TASKRUN;
+	p->flags |= IORING_SETUP_NO_SQARRAY;
 retry:
 	ret = syscall(__NR_io_uring_setup, entries, p);
 	if (!ret)
@@ -454,6 +455,10 @@ retry:
 	}
 	if (errno == EINVAL && p->flags & IORING_SETUP_DEFER_TASKRUN) {
 		p->flags &= ~IORING_SETUP_DEFER_TASKRUN;
+		goto retry;
+	}
+	if (errno == EINVAL && p->flags & IORING_SETUP_NO_SQARRAY) {
+		p->flags &= ~IORING_SETUP_NO_SQARRAY;
 		goto retry;
 	}
 
@@ -941,8 +946,13 @@ static int setup_ring(struct submitter *s)
 	sring->ring_mask = ptr + p.sq_off.ring_mask;
 	sring->ring_entries = ptr + p.sq_off.ring_entries;
 	sring->flags = ptr + p.sq_off.flags;
-	sring->array = ptr + p.sq_off.array;
 	sq_ring_mask = *sring->ring_mask;
+
+	if (!(p.flags & IORING_SETUP_NO_SQARRAY)) {
+		sring->array = ptr + p.sq_off.array;
+		for (i = 0; i < p.sq_entries; i++)
+			sring->array[i] = i;
+	}
 
 	if (p.flags & IORING_SETUP_SQE128)
 		len = 2 * p.sq_entries * sizeof(struct io_uring_sqe);
@@ -968,9 +978,6 @@ static int setup_ring(struct submitter *s)
 	cring->ring_entries = ptr + p.cq_off.ring_entries;
 	cring->cqes = ptr + p.cq_off.cqes;
 	cq_ring_mask = *cring->ring_mask;
-
-	for (i = 0; i < p.sq_entries; i++)
-		sring->array[i] = i;
 
 	s->per_file_depth = INT_MAX;
 	if (s->nr_files)
