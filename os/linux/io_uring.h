@@ -162,6 +162,32 @@ enum {
  */
 #define IORING_SETUP_DEFER_TASKRUN	(1U << 13)
 
+/*
+ * Application provides the memory for the rings
+ */
+#define IORING_SETUP_NO_MMAP		(1U << 14)
+
+/*
+ * Register the ring fd in itself for use with
+ * IORING_REGISTER_USE_REGISTERED_RING; return a registered fd index rather
+ * than an fd.
+ */
+#define IORING_SETUP_REGISTERED_FD_ONLY	(1U << 15)
+
+/*
+ * Removes indirection through the SQ index array.
+ */
+#define IORING_SETUP_NO_SQARRAY		(1U << 16)
+
+/* Use hybrid poll in iopoll process */
+#define IORING_SETUP_HYBRID_IOPOLL	(1U << 17)
+
+/*
+ * Allow both 16b and 32b CQEs. If a 32b CQE is posted, it will have
+ * IORING_CQE_F_32 set in cqe->flags.
+ */
+#define IORING_SETUP_CQE_MIXED		(1U << 18)
+
 enum {
 	IORING_OP_NOP,
 	IORING_OP_READV,
