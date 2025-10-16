@@ -522,12 +522,40 @@ static int str2error(char *str)
 			    "EXDEV", "ENODEV", "ENOTDIR", "EISDIR",
 			    "EINVAL", "ENFILE", "EMFILE", "ENOTTY",
 			    "ETXTBSY","EFBIG", "ENOSPC", "ESPIPE",
-			    "EROFS","EMLINK", "EPIPE", "EDOM", "ERANGE" };
+			    "EROFS","EMLINK", "EPIPE", "EDOM", "ERANGE",
+			    "EDEADLK", "ENAMETOOLONG", "ENOLCK", "ENOSYS", "ENOTEMPTY",
+			    "ELOOP", "EWOULDBLOCK", "ENOMSG", "EIDRM", "ECHRNG",
+			    "EL2NSYNC", "EL3HLT", "EL3RST", "ELNRNG", "EUNATCH",
+			    "ENOCSI", "EL2HLT", "EBADE", "EBADR", "EXFULL",
+			    "ENOANO", "EBADRQC", "EBADSLT", "EDEADLOCK", "EBFONT",
+			    "ENOSTR", "ENODATA", "ETIME", "ENOSR", "ENONET",
+			    "ENOPKG", "EREMOTE", "ENOLINK", "EADV", "ESRMNT",
+			    "ECOMM", "EPROTO", "EMULTIHOP", "EDOTDOT", "EBADMSG",
+			    "EOVERFLOW", "ENOTUNIQ", "EBADFD", "EREMCHG", "ELIBACC",
+			    "ELIBBAD", "ELIBSCN", "ELIBMAX", "ELIBEXEC", "EILSEQ",
+			    "ERESTART", "ESTRPIPE", "EUSERS", "ENOTSOCK", "EDESTADDRREQ",
+			    "EMSGSIZE", "EPROTOTYPE", "ENOPROTOOPT", "EPROTONOSUPPORT", "ESOCKTNOSUPPORT",
+			    "EOPNOTSUPP", "EPFNOSUPPORT", "EAFNOSUPPORT", "EADDRINUSE", "EADDRNOTAVAIL",
+			    "ENETDOWN", "ENETUNREACH", "ENETRESET", "ECONNABORTED", "ECONNRESET",
+			    "ENOBUFS", "EISCONN", "ENOTCONN", "ESHUTDOWN", "ETOOMANYREFS",
+			    "ETIMEDOUT", "ECONNREFUSED", "EHOSTDOWN", "EHOSTUNREACH", "EALREADY",
+			    "EINPROGRESS", "ESTALE", "EUCLEAN", "ENOTNAM", "ENAVAIL",
+			    "EISNAM", "EREMOTEIO", "EDQUOT", "ENOMEDIUM", "EMEDIUMTYPE",
+			    "ECANCELED", "ENOKEY", "EKEYEXPIRED", "EKEYREVOKED", "EKEYREJECTED",
+			    "EOWNERDEAD", "ENOTRECOVERABLE", "ERFKILL", "EHWPOISON" };
 	int i = 0, num = sizeof(err) / sizeof(char *);
+	int retval;
 
 	while (i < num) {
-		if (!strcmp(err[i], str))
-			return i + 1;
+		if (!strcmp(err[i], str)) {
+			retval = i + 1;
+			/* Handle errno aliases that should map to actual errno values */
+			if (!strcmp(str, "EWOULDBLOCK"))
+				retval = EAGAIN;
+			else if (!strcmp(str, "EDEADLOCK"))
+				retval = EDEADLK;
+			return retval;
+		}
 		i++;
 	}
 	return 0;
@@ -564,6 +592,8 @@ static int ignore_error_type(struct thread_data *td, enum error_type_bit etype,
 		}
 		if (fname[0] == 'E') {
 			error[i] = str2error(fname);
+		} else if (fname[0] == '-' && fname[1] == 'E') {
+			error[i] = -str2error(fname + 1);
 		} else {
 			int base = 10;
 			if (!strncmp(fname, "0x", 2) ||
