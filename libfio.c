@@ -406,10 +406,6 @@ int initialize_fio(char *envp[])
 		return 1;
 	}
 
-#if !defined(CONFIG_GETTIMEOFDAY) && !defined(CONFIG_CLOCK_GETTIME)
-#error "No available clock source!"
-#endif
-
 	arch_init(envp);
 
 	sinit();
