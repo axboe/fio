@@ -189,11 +189,61 @@ static void test_overflow_detection(void) {
            "Safe calculation: %.3e < %.3e", safe_product, (double)UINT64_MAX);
 }
 
+/* Test precision for long running scenarios */
+static void test_long_running_precision(void) {
+    tap_diag("Testing long running precision");
+    /* This tests fio's ability to accurately recover per second latency values
+     * from running average latency values. Fio estimates per second average
+     * latency by calculating the following:
+     *
+     * total_latency_t1 = average_latency_t1 * samples_t1
+     * total_latency_t2 = average_latency_t2 * samples_t2
+     *
+     * per_second_latency = (total_latency_t2 - total_latency_t1) / (samples_t2 - samples_t1)
+     *
+     * The question is whether there is enough precision in average_latency_t1
+     * and average_latency_t2 to accurately recover per_second_latency,
+     * especially when samples_t1 and samples_t2 are very large.
+     */
+
+    /* Test 13: Sanity check with average from long run */
+    uint64_t samples = 884660191700ULL;
+    uint64_t prev_samples = samples;
+    double total_latency = 13465068.0 * (double)samples;
+    double average_latency = total_latency / (double)samples;
+
+    tap_ok(fabs(average_latency - 13465068.0) < 0.001*average_latency,
+	   "Long run average latency accurate: %.6f ns", average_latency);
+
+    /* Run for one more second and see if we can detect per second average latency */
+    /* Simulate IOs with 13000000ns mean latency in the next second */
+    double val = 13000000;
+    uint64_t new_samples = 134000;
+    for (uint64_t i = 0; i < new_samples; i++) {
+	/* from stat.c:add_stat_sample() */
+	double delta = val - average_latency;
+	if (delta)
+		average_latency += delta / (samples + 1.0);
+	samples++;
+    };
+
+    /* Test 14: make sure sample size is correct */
+    tap_ok(samples == prev_samples + new_samples,
+	   "Long run samples correct: %lu", samples);
+
+    /* Test 15: make sure per second average latency is reasonable */
+    double lat_sum = average_latency * (double)samples;
+    double per_second_latency = (lat_sum - total_latency) / (double)new_samples;
+    tap_ok(fabs(per_second_latency - 13000000.0) < 0.001*per_second_latency,
+	   "Long run per second latency accurate: %.6f ns", per_second_latency);
+}
+
+
 int main(void) {
     tap_init();
 
-    /* We have 12 tests total */
-    tap_plan(12);
+    /* We have 15 tests total */
+    tap_plan(15);
 
     tap_diag("=== FIO Latency Precision Mock Test ===");
     tap_diag("Testing numerical precision improvements in steady state calculations");
@@ -203,6 +253,7 @@ int main(void) {
     test_accumulation_precision();
     test_precision_improvements();
     test_overflow_detection();
+    test_long_running_precision();
 
     return tap_done();
 }
