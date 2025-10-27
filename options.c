@@ -4751,6 +4751,8 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.name	= "log_hist_coarseness",
 		.lname	= "Histogram logs coarseness",
 		.type	= FIO_OPT_INT,
+		.maxval = 6,
+		.minval = 0,
 		.off1	= offsetof(struct thread_options, log_hist_coarseness),
 		.help	= "Integer in range [0,6]. Higher coarseness outputs"
 			" fewer histogram bins per sample. The number of bins for"
