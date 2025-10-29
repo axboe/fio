@@ -215,6 +215,8 @@ for opt do
   ;;
   --extra-cflags=*) CFLAGS="$CFLAGS $optarg"
   ;;
+  --extra-ldflags=*) LDFLAGS="$LDFLAGS $optarg"
+  ;;
   --build-32bit-win) build_32bit_win="yes"
   ;;
   --target-win-ver=*) target_win_ver="$optarg"
