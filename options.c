@@ -3109,12 +3109,10 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .help = "Use gettimeofday(2) for timing",
 			  },
 #endif
-#ifdef CONFIG_CLOCK_GETTIME
 			  { .ival = "clock_gettime",
 			    .oval = CS_CGETTIME,
 			    .help = "Use clock_gettime(2) for timing",
 			  },
-#endif
 #ifdef ARCH_HAVE_CPU_CLOCK
 			  { .ival = "cpu",
 			    .oval = CS_CPUCLOCK,

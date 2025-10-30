@@ -1188,6 +1188,8 @@ if compile_prog "" "" "clock_gettime"; then
 elif compile_prog "" "-lrt" "clock_gettime"; then
     clock_gettime="yes"
     LIBS="-lrt $LIBS"
+else
+  fatal "clock_gettime is not supported"
 fi
 print_config "clock_gettime" "$clock_gettime"
 
@@ -1212,26 +1214,6 @@ EOF
   fi
 fi
 print_config "CLOCK_MONOTONIC" "$clock_monotonic"
-
-##########################################
-# clockid_t probe
-if test "$clockid_t" != "yes" ; then
-  clockid_t="no"
-fi
-cat > $TMPC << EOF
-#include <time.h>
-#include <string.h>
-int main(int argc, char **argv)
-{
-  volatile clockid_t cid;
-  memset((void*)&cid, 0, sizeof(cid));
-  return 0;
-}
-EOF
-if compile_prog "" "$LIBS" "clockid_t"; then
-  clockid_t="yes"
-fi
-print_config "clockid_t" "$clockid_t"
 
 ##########################################
 # gettimeofday() probe
@@ -3125,14 +3107,8 @@ fi
 if test "$libverbs" = "yes" -a "$rdmacm" = "yes" ; then
   output_sym "CONFIG_RDMA"
 fi
-if test "$clock_gettime" = "yes" ; then
-  output_sym "CONFIG_CLOCK_GETTIME"
-fi
 if test "$clock_monotonic" = "yes" ; then
   output_sym "CONFIG_CLOCK_MONOTONIC"
-fi
-if test "$clockid_t" = "yes"; then
-  output_sym "CONFIG_CLOCKID_T"
 fi
 if test "$gettimeofday" = "yes" ; then
   output_sym "CONFIG_GETTIMEOFDAY"

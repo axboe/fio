@@ -30,10 +30,6 @@ int main(int argc, char *argv[], char *envp[])
 	if (initialize_fio(envp))
 		return 1;
 
-#if !defined(CONFIG_GETTIMEOFDAY) && !defined(CONFIG_CLOCK_GETTIME)
-#error "No available clock source!"
-#endif
-
 	if (fio_server_create_sk_key())
 		goto done;
 
