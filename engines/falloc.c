@@ -1,5 +1,5 @@
 /*
- * falloc: ioengine for git://git.kernel.dk/fio.git
+ * falloc: ioengine for https://git.kernel.org/pub/scm/linux/kernel/git/axboe/fio
  *
  * IO engine that does regular fallocate to simulate data transfer 
  * as fio ioengine.

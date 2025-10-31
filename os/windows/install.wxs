@@ -100,7 +100,7 @@
 		<ComponentRef Id="fio_verify_state.exe"/>
 	</Feature>
 
-	<Property Id="ARPURLINFOABOUT" Value="http://git.kernel.dk/cgit/fio/" />
+	<Property Id="ARPURLINFOABOUT" Value="https://git.kernel.org/pub/scm/linux/kernel/git/axboe/fio.git/" />
 	<Property Id='ARPCONTACT'>fio@vger.kernel.org</Property>
 	<Property Id='ARPHELPLINK'>http://www.spinics.net/lists/fio/</Property>
 	<Property Id='ARPURLUPDATEINFO'>https://bluestop.org/fio/</Property>

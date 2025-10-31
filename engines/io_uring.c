@@ -1,9 +1,7 @@
 /*
  * io_uring engine
  *
- * IO engine using the new native Linux aio io_uring interface. See:
- *
- * http://git.kernel.dk/cgit/linux-block/log/?h=io_uring
+ * IO engine using the new native Linux aio io_uring interface.
  *
  */
 #include <stdlib.h>

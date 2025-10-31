@@ -14,7 +14,7 @@
 #
 #
 # EXAMPLE
-# # git clone git://git.kernel.dk/fio.git
+# # git clone https://git.kernel.org/pub/scm/linux/kernel/git/axboe/fio
 # # cd fio
 # # make -j
 # # python3 t/run-fio-tests.py

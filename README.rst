@@ -27,7 +27,7 @@ Source
 
 Fio resides in a git repo, the canonical place is:
 
-	https://git.kernel.dk/cgit/fio/
+	https://git.kernel.org/pub/scm/linux/kernel/git/axboe/fio
 
 Snapshots are frequently generated and :file:`fio-git-*.tar.gz` include the git
 meta data as well. Other tarballs are archives of official fio releases.

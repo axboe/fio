@@ -1,5 +1,5 @@
 /*
- * ioe_e4defrag:  ioengine for git://git.kernel.dk/fio.git
+ * ioe_e4defrag:  ioengine for https://git.kernel.org/pub/scm/linux/kernel/git/axboe/fio
  *
  * IO engine that does regular EXT4_IOC_MOVE_EXT ioctls to simulate
  * defragment activity
