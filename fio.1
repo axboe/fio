@@ -2131,6 +2131,18 @@ and \fBnrfiles\fP, so that files will be created.
 This engine is to measure file lookup and meta data access.
 Example job file: filestat-ioengine.fio.
 .TP
+.B filesetxattr
+Simply set files extended attributes via setxattr(). You need to set \fBfilesize\fP
+and \fBnrfiles\fP, so that files will be created.
+This engine is to measure extended attributes access.
+Example job file: filexattr-ioengine.fio.
+.TP
+.B filelistxattr
+Simply list and then get all files extended attributes via listxattr and getxattr.
+You need to set \fBfilesize\fP and \fBnrfiles\fP, so that files will be created.
+This engine is to measure extended attributes access.
+Example job file: filexattr-ioengine.fio.
+.TP
 .B filedelete
 Simply delete the files by unlink() and do no I/O to them. You need to set \fBfilesize\fP
 and \fBnrfiles\fP, so that the files will be created.
@@ -4501,6 +4513,10 @@ to complete one file or directory operation.
 \fBfilecreate engine\fP:\tthe time cost to create a new file
 .TP
 \fBfilestat engine\fP:\tthe time cost to look up an existing file
+.TP
+\fBfilesetxattr engine\fP:\tnumber of files for which extended attributes can been set per second
+.TP
+\fBfilelistxattr engine\fP:\tnumber of all file extended attributes fetches per second
 .TP
 \fBfiledelete engine\fP:\tthe time cost to delete a file
 .TP
