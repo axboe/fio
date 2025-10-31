@@ -666,12 +666,20 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 				} else if (io_u->ddir == DDIR_TRIM) {
 					io_u->ddir = DDIR_READ;
 					io_u_set(td, io_u, IO_U_F_TRIMMED);
+					if (td_io_prep(td, io_u)) {
+						put_io_u(td, io_u);
+						continue;
+					}
 					break;
 				} else if (io_u->ddir == DDIR_WRITE) {
 					io_u->ddir = DDIR_READ;
 					io_u->numberio = td->verify_read_issues;
 					td->verify_read_issues++;
 					populate_verify_io_u(td, io_u);
+					if (td_io_prep(td, io_u)) {
+						put_io_u(td, io_u);
+						continue;
+					}
 					break;
 				} else {
 					put_io_u(td, io_u);
