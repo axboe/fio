@@ -1,5 +1,5 @@
 /*
- * ftruncate: ioengine for git://git.kernel.dk/fio.git
+ * ftruncate: ioengine for https://git.kernel.org/pub/scm/linux/kernel/git/axboe/fio
  *
  * IO engine that does regular truncates to simulate data transfer
  * as fio ioengine.
