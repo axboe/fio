@@ -1079,6 +1079,7 @@ static void convert_ts(struct thread_stat *dst, struct thread_stat *src)
 		for (i = 0; i < dst->ss_dur; i++ ) {
 			dst->ss_iops_data[i] = le64_to_cpu(src->ss_iops_data[i]);
 			dst->ss_bw_data[i] = le64_to_cpu(src->ss_bw_data[i]);
+			dst->ss_lat_data[i] = le64_to_cpu(src->ss_lat_data[i]);
 		}
 	}
 
