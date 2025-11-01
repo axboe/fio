@@ -2332,6 +2332,18 @@ I/O engine
 			This engine is to measure file lookup and meta data access.
 			Example job file: filestat-ioengine.fio.
 
+		**filesetxattr**
+			Simply set files extended attributes via setxattr(). You need to set 'filesize'
+			and 'nrfiles', so that files will be created.
+			This engine is to measure extended attributes access.
+			Example job file: filexattr-ioengine.fio.
+
+		**filelistxattr**
+			Simply list and then get all files extended attributes via listxattr and getxattr.
+			You need to set 'filesize' and 'nrfiles', so that files will be created.
+			This engine is to measure extended attributes access.
+			Example job file: filexattr-ioengine.fio.
+
 		**filedelete**
 			Simply delete the files by unlink() and do no I/O to them. You need to set 'filesize'
 			and 'nrfiles', so that the files will be created.
@@ -4854,17 +4866,21 @@ writes in the example above).  In the order listed, they denote:
 		For file and directory operation engines, **clat** denotes the time
 		to complete one file or directory operation.
 
-		  **filecreate engine**:the time cost to create a new file
+		  **filecreate engine**:  the time cost to create a new file
 
-		  **filestat engine**:	the time cost to look up an existing file
+		  **filestat engine**:	  the time cost to look up an existing file
 
-		  **filedelete engine**:the time cost to delete a file
+		  **filesetxattr engine**:the time cost to set a bunch of file extended attributes
 
-		  **dircreate engine**:	the time cost to create a new directory
+		  **filestat engine**:	  the time cost to look up all file extended attributes
 
-		  **dirstat engine**:	the time cost to look up an existing directory
+		  **filedelete engine**:  the time cost to delete a file
 
-		  **dirdelete engine**:	the time cost to delete a directory
+		  **dircreate engine**:	  the time cost to create a new directory
+
+		  **dirstat engine**:	  the time cost to look up an existing directory
+
+		  **dirdelete engine**:	  the time cost to delete a directory
 
 **lat**
 		Total latency. Same names as slat and clat, this denotes the time from
@@ -4896,17 +4912,19 @@ writes in the example above).  In the order listed, they denote:
 		fundamental index to denote the performance.
 		It means how many files or directories can be operated per second.
 
-		  **filecreate engine**:number of files can be created per second
+		  **filecreate engine**:   number of files can be created per second
 
-		  **filestat engine**:	number of files can be looked up per second
+		  **filestat engine**:	   number of files can be looked up per second
 
-		  **filedelete engine**:number of files can be deleted per second
+		  **filesetxattr engine**: number of files for which extended attributes can been set per second
 
-		  **dircreate engine**:	number of directories can be created per second
+		  **filelistxattr engine**:number of all file extended attributes fetches per second
 
-		  **dirstat engine**:	number of directories can be looked up per second
+		  **dircreate engine**:	   number of directories can be created per second
 
-		  **dirdelete engine**:	number of directories can be deleted per second
+		  **dirstat engine**:	   number of directories can be looked up per second
+
+		  **dirdelete engine**:	   number of directories can be deleted per second
 
 **lat (nsec/usec/msec)**
 		The distribution of I/O completion latencies. This is the time from when
