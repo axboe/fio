@@ -2085,6 +2085,13 @@ I/O without transferring buffers between user-space and the kernel,
 unless \fBverify\fR is set or \fBcuda_io\fR is \fBposix\fR. \fBiomem\fR must
 not be \fBcudamalloc\fR. This ioengine defines engine specific options.
 .TP
+.B libhipfile
+I/O engine supporting libhipfile synchronous access an AMD Infinity
+Storage-supported filesystem. This engine performs I/O without transferring
+buffers between user-space and the kernel, unless \fBverify\fR is set or
+\fBrocm_io\fR is \fBposix\fR. \fBiomem\fR must not be \fBhipMalloc\fR. This
+ioengine defines engine specific options.
+.TP
 .B dfs
 I/O engine supporting asynchronous read and write operations to the DAOS File
 System (DFS) via libdfs.
@@ -2885,6 +2892,34 @@ cudaMemcpy to transfer data between RAM and the GPU(s).
 Data is copied from GPU to RAM before a write and copied
 from RAM to GPU after a read. \fBverify\fR does not affect
 the use of cudaMemcpy.
+.RE
+.RE
+.TP
+.BI (libhipfile)gpu_dev_ids\fR=\fPstr
+Specify the GPU IDs to use with ROCm. This is a colon-separated list of int.
+GPUs are assigned to workers roundrobin. Default is 0.
+.TP
+.BI (libhipfile))rocm_io\fR=\fPstr
+Specify the type of I/O to use with ROCm. This option takes the following
+values:
+.RS
+.RS
+.TP
+.B hipfile (default)
+Use libhipfile. This option performs I/O directly
+between an AMD Infinity Storage filesystem and GPU buffers,
+avoiding use of a bounce buffer. If \fBverify\fR is set,
+hipMemcpy is used to copy verification data between RAM and GPU(s).
+Verification data is copied from RAM to GPU before a write
+and from GPU to RAM after a read.
+\fBdirect\fR must be 1.
+.TP
+.BI posix
+Use POSIX to perform I/O with a RAM buffer, and use
+hipMemcpy to transfer data between RAM and the GPU(s).
+Data is copied from GPU to RAM before a write and copied
+from RAM to GPU after a read. \fBverify\fR does not affect
+the use of hipMemcpy.
 .RE
 .RE
 .TP
