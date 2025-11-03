@@ -182,6 +182,7 @@ pmem="no"
 cuda="no"
 cuda13="no"
 libcufile="no"
+libhipfile="no"
 disable_lex=""
 disable_pmem="no"
 disable_native="no"
@@ -255,6 +256,8 @@ for opt do
   ;;
   --enable-libcufile) libcufile="yes"
   ;;
+  --enable-libhipfile) libhipfile="yes"
+  ;;
   --disable-native) disable_native="yes"
   ;;
   --with-ime=*) ime_path="$optarg"
@@ -326,6 +329,7 @@ if test "$show_help" = "yes" ; then
   echo "--disable-optimizations Don't enable compiler optimizations"
   echo "--enable-cuda           Enable GPUDirect RDMA support"
   echo "--enable-libcufile      Enable GPUDirect Storage cuFile support"
+  echo "--enable-libhipfile     Enable AMD Infinity Storage hipFile support"
   echo "--disable-native        Don't build for native host"
   echo "--with-ime=             Install path for DDN's Infinite Memory Engine"
   echo "--enable-libiscsi       Enable iscsi support"
@@ -2833,6 +2837,34 @@ fi
 print_config "libcufile" "$libcufile"
 
 ##########################################
+# libhipfile probe
+if test "$libhipfile" != "no" ; then
+cat > $TMPC << EOF
+#include <hipfile.h>
+#include <hip/hip_runtime.h>
+
+int main(int argc, char* argv[]) {
+  hipMalloc(NULL, 0);
+  hipFileBufRegister(NULL, 0, 0);
+  return 0;
+}
+EOF
+  HIPFILE_CFLAGS="-D__HIP_PLATFORM_AMD__"
+  HIPFILE_LIBS="-lamdhip64 -lhipfile"
+  if compile_prog "$HIPFILE_CFLAGS" "$HIPFILE_LIBS" "libhipfile"; then
+    libhipfile="yes"
+    CFLAGS="$HIPFILE_CFLAGS $CFLAGS"
+    LIBS="$HIPFILE_LIBS $LIBS"
+  else
+    if test "$libhipfile" = "yes" ; then
+      feature_not_found "libhipfile" ""
+    fi
+    libhipfile ="no"
+  fi
+fi
+print_config "libhipfile" "$libhipfile"
+
+##########################################
 # cuda 13 probe
 if test "$cuda" != "no" || test "$libcufile" != "no"; then
 cat > $TMPC << EOF
@@ -3346,6 +3378,9 @@ if test "$cuda" = "yes" ; then
 fi
 if test "$libcufile" = "yes" ; then
   output_sym "CONFIG_LIBCUFILE"
+fi
+if test "$libhipfile" = "yes" ; then
+  output_sym "CONFIG_LIBHIPFILE"
 fi
 if test "$cuda13" = "yes" ; then
   output_sym "CONFIG_CUDA13"

@@ -121,6 +121,9 @@ endif
 ifdef CONFIG_LIBCUFILE
   SOURCE += engines/libcufile.c
 endif
+ifdef CONFIG_LIBHIPFILE
+  SOURCE += engines/libhipfile.c
+endif
 ifdef CONFIG_LINUX_SPLICE
   SOURCE += engines/splice.c
 endif

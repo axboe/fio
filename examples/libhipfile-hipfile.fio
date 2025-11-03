@@ -1,0 +1,42 @@
+# Example hipFile job, using hipFile I/O
+#
+# Required environment variables:
+#     GPU_DEV_IDS : refer to option 'gpu_dev_ids'
+#     FIO_DIR     : 'directory'. This job uses rocm_io=rocs, so path(s) must
+#                   point to GPUDirect Storage filesystem(s)
+#
+
+[global]
+ioengine=libhipfile
+directory=${FIO_DIR}
+gpu_dev_ids=${GPU_DEV_IDS}
+rocm_io=hipfile
+# 'direct' must be 1 when using rocm_io=hipfile
+direct=1
+# Performance is negatively affected if 'bs' is not a multiple of 4k.
+# Refer to GDS hipFile documentation.
+bs=1m
+size=1m
+numjobs=16
+# hipMalloc fails if too many processes attach to the GPU, use threads.
+thread
+
+[read]
+rw=read
+
+[write]
+rw=write
+
+[randread]
+rw=randread
+
+[randwrite]
+rw=randwrite
+
+[verify]
+rw=write
+verify=md5
+
+[randverify]
+rw=randwrite
+verify=md5
