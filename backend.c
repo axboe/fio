@@ -621,6 +621,7 @@ static enum fio_q_status io_u_submit(struct thread_data *td, struct io_u *io_u)
  */
 static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 {
+	uint64_t expected_numberio = UINT64_MAX;
 	struct fio_file *f;
 	struct io_u *io_u;
 	unsigned int i;
@@ -677,6 +678,38 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 				break;
 			}
 
+			/*
+			 * Advance verify_state to the seed that was used when
+			 * this block was written.  Any numberio gap between
+			 * expected_numberio and io_u->numberio represents writes
+			 * that were skipped (e.g. failed writes), so we advance
+			 * through them as well to stay in sync.  Falls back to a
+			 * single advance when entries arrive out of numberio order
+			 * (rb-tree / overlap-risk case).
+			 */
+			if (!td->o.verify_pattern_bytes) {
+				uint64_t seed = 0;
+				/*
+				 * On the first piece (sentinel) start from its own
+				 * numberio so we advance exactly once.  For subsequent
+				 * in-order pieces start from expected_numberio so we
+				 * advance through any gap (failed writes).  For
+				 * out-of-order pieces (rb-tree / overlap-risk) fall
+				 * back to a single advance from the current state.
+				 */
+				uint64_t from = (expected_numberio == UINT64_MAX ||
+						 io_u->numberio < expected_numberio)
+						? io_u->numberio : expected_numberio;
+
+				for (uint64_t n = from; n <= io_u->numberio; n++) {
+					seed = __rand(&td->verify_state);
+					if (sizeof(int) != sizeof(long *))
+						seed *= __rand(&td->verify_state);
+				}
+				io_u->rand_seed = seed;
+				expected_numberio = io_u->numberio + 1;
+			}
+
 			if (td_io_prep(td, io_u)) {
 				put_io_u(td, io_u);
 				break;
@@ -731,6 +764,12 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 
 			if (!io_u)
 				break;
+		}
+
+		if (verify_state_should_skip(td, io_u->numberio)) {
+			td->io_issues[DDIR_READ]++;
+			put_io_u(td, io_u);
+			continue;
 		}
 
 		if (verify_state_should_stop(td, io_u->numberio)) {
@@ -1207,7 +1246,17 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 					io_u->rand_seed *= __rand(&td->verify_state);
 			}
 
-			if (verify_state_should_stop(td, td->io_issues[io_u->ddir])) {
+			if (!td_rw(td) && !(io_u->flags & IO_U_F_VER_LIST))
+				io_u->numberio = td->io_issues[io_u->ddir];
+
+			if (verify_state_should_skip(td, io_u->numberio)) {
+				/* Account for this I/O so we move to the next sequence */
+				td->io_issues[io_u->ddir]++;
+				put_io_u(td, io_u);
+				continue;
+			}
+
+			if (verify_state_should_stop(td, io_u->numberio)) {
 				put_io_u(td, io_u);
 				break;
 			}
@@ -1380,6 +1429,8 @@ static void free_inflight_logging(struct thread_data *td)
 {
 	if (td->inflight_numberio)
 		sfree(td->inflight_numberio);
+	if (td->failed_numberio)
+		free(td->failed_numberio);
 }
 
 static void cleanup_io_u(struct thread_data *td)
@@ -1780,8 +1831,10 @@ static uint64_t do_dry_run(struct thread_data *td)
 		if (td_write(td) && io_u->ddir == DDIR_WRITE &&
 		    td->o.do_verify &&
 		    td->o.verify != VERIFY_NONE &&
-		    !td->o.experimental_verify)
-			log_io_piece(td, io_u);
+		    !td->o.experimental_verify) {
+			if (!verify_state_should_skip(td, io_u->numberio))
+				log_io_piece(td, io_u);
+		}
 
 		ret = io_u_sync_complete(td, io_u);
 		(void) ret;

@@ -2138,6 +2138,25 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 		zbd_recover_write_error(td, io_u);
 
 	/*
+	 * Track failed write I/Os for offline verification (independent of io_u->ipo).
+	 * This works even when do_verify=0 is set.  In case of online
+	 * verification, `unlog_io_piece()` will be called so that the ipo will
+	 * be removed from the `io_hist`.
+	 */
+	if (io_u->error && ddir == DDIR_WRITE && io_u->numberio != INVALID_NUMBERIO) {
+		if (td->failed_numberio_count >= td->failed_numberio_alloc) {
+			unsigned int new_alloc = td->failed_numberio_alloc ?
+						td->failed_numberio_alloc * 2 : 16;
+			td->failed_numberio = realloc(td->failed_numberio,
+						new_alloc * sizeof(uint64_t));
+			td->failed_numberio_alloc = new_alloc;
+		}
+		td->failed_numberio[td->failed_numberio_count++] = io_u->numberio;
+		dprint(FD_VERIFY, "Recorded failed write numberio=%"PRIu64"\n",
+			io_u->numberio);
+	}
+
+	/*
 	 * Mark IO ok to verify
 	 */
 	if (io_u->ipo) {
