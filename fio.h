@@ -387,6 +387,13 @@ struct thread_data {
 	uint64_t inflight_issued;
 
 	/*
+	 * Track failed write I/Os for offline verification (to exclude from verify state)
+	 */
+	uint64_t *failed_numberio;
+	unsigned int failed_numberio_count;
+	unsigned int failed_numberio_alloc;
+
+	/*
 	 * Completions
 	 */
 	uint64_t io_blocks[DDIR_RWDIR_CNT];
