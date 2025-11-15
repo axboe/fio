@@ -2080,9 +2080,12 @@ bool log_io_piece_shared(struct thread_data *td, struct io_u *io_u)
 
 	io_u->ipo = ipo;
 
-	if (io_u_should_trim(td, io_u) || io_u->ddir == DDIR_TRIM) {
+	if (io_u_should_trim(td, io_u) || io_u->ddir == DDIR_TRIM)
 		ipo->flags |= IP_F_TRIMMED;
-	}
+	else if (io_u->flags & IO_U_F_ZEROED)
+		ipo->flags |= IP_F_ZEROED;
+	else if (io_u->flags & IO_U_F_ERRORED)
+		ipo->flags |= IP_F_ERRORED;
 
 	/*
 	 * Use lock-free skiplist for concurrent insertion.
