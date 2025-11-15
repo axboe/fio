@@ -3083,6 +3083,18 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_RUNTIME,
 	},
 	{
+		.name	= "verify_table_id",
+		.lname	= "Shared Verify Table ID",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct thread_options, verify_table_id),
+		.help	= "Share verify state across jobs with same table ID (0 = per-job default)",
+		.def	= "0",
+		.minval	= 0,
+		.maxval	= 255,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_VERIFY,
+	},
+	{
 		.name	= "ramp_time",
 		.lname	= "Ramp time",
 		.type	= FIO_OPT_STR_VAL_TIME,
