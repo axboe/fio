@@ -892,23 +892,28 @@ static int mem_is_zero_slow(const void *data, size_t length, size_t *offset)
 	return !length;
 }
 
-static int verify_trimmed_io_u(struct thread_data *td, struct io_u *io_u)
+static int verify_zero(struct io_u *io_u)
 {
 	size_t offset;
-
-	if (!td->o.trim_zero)
-		return 0;
 
 	if (mem_is_zero(io_u->buf, io_u->buflen))
 		return 0;
 
 	mem_is_zero_slow(io_u->buf, io_u->buflen, &offset);
 
-	log_err("trim: verify failed at file %s offset %llu, length %llu"
+	log_err("verify failed for zeroed data at file %s offset %llu, length %llu"
 		", block offset %lu\n",
 			io_u->file->file_name, io_u->verify_offset, io_u->buflen,
 			(unsigned long) offset);
 	return EILSEQ;
+}
+
+static int verify_trimmed_io_u(struct thread_data *td, struct io_u *io_u)
+{
+	if (!td->o.trim_zero)
+		return 0;
+
+	return verify_zero(io_u);
 }
 
 static int verify_header(struct io_u *io_u, struct thread_data *td,
@@ -1011,6 +1016,9 @@ int verify_io_u(struct thread_data *td, struct io_u **io_u_ptr)
 
 	if (io_u->flags & IO_U_F_TRIMMED) {
 		ret = verify_trimmed_io_u(td, io_u);
+		goto done;
+	} else if (io_u->flags & IO_U_F_ZEROED) {
+		ret = verify_zero(io_u);
 		goto done;
 	}
 
@@ -2029,8 +2037,21 @@ out:
 		io_u->file = resolved_file;
 		io_u_set(td, io_u, IO_U_F_VER_LIST);
 
+		/*
+		 * Clear data pattern related flags since @io_u might have been initialized
+		 * in the ioengine for a specific usages, but with shared verify table, all
+		 * the @io_u instances should be initialized as per @ipo, not ioengine-specific
+		 * configurations.
+		 */
+		io_u_clear(td, io_u, IO_U_F_TRIMMED | IO_U_F_ZEROED |
+				IO_U_F_ERRORED);
+
 		if (ipo->flags & IP_F_TRIMMED)
 			io_u_set(td, io_u, IO_U_F_TRIMMED);
+		else if (ipo->flags & IP_F_ZEROED)
+			io_u_set(td, io_u, IO_U_F_ZEROED);
+		else if (ipo->flags & IP_F_ERRORED)
+			io_u_set(td, io_u, IO_U_F_ERRORED);
 
 		if (!fio_file_open(io_u->file)) {
 			int r = td_io_open_file(td, io_u->file);

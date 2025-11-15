@@ -1609,6 +1609,16 @@ static int fio_ioring_io_u_init(struct thread_data *td, struct io_u *io_u)
 		io_u->engine_data = pi_data;
 	}
 
+	if (ld->is_uring_cmd_eng) {
+		if (ld->write_opcode == nvme_cmd_write_zeroes) {
+			if (o->deac)
+				io_u_set(td, io_u, IO_U_F_TRIMMED);
+			else
+				io_u_set(td, io_u, IO_U_F_ZEROED);
+		} else if (ld->write_opcode == nvme_cmd_write_uncor)
+			io_u_set(td, io_u, IO_U_F_ERRORED);
+	}
+
 	return 0;
 }
 
