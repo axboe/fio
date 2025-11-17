@@ -1703,8 +1703,11 @@ static uint64_t do_dry_run(struct thread_data *td)
 		io_u_set(td, io_u, IO_U_F_FLIGHT);
 		io_u->error = 0;
 		io_u->resid = 0;
-		if (ddir_rw(acct_ddir(io_u)))
+		if (ddir_rw(acct_ddir(io_u))) {
+			io_u->numberio = td->io_issues[acct_ddir(io_u)];
 			td->io_issues[acct_ddir(io_u)]++;
+		}
+
 		if (ddir_rw(io_u->ddir)) {
 			io_u_mark_depth(td, 1);
 			td->ts.total_io_u[io_u->ddir]++;
