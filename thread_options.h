@@ -416,6 +416,8 @@ struct thread_options {
 	unsigned int log_entries;
 	unsigned int log_prio;
 	unsigned int log_issue_time;
+
+	unsigned int trim_error;
 };
 
 #define FIO_TOP_STR_MAX		256
@@ -750,6 +752,8 @@ struct thread_options_pack {
 	uint8_t dp_scheme_file[FIO_TOP_STR_MAX];
 
 	uint32_t num_range;
+
+	uint32_t trim_error;
 	/*
 	 * verify_pattern followed by buffer_pattern from the unpacked struct
 	 */

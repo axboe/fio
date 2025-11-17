@@ -910,6 +910,12 @@ static int verify_zero(struct io_u *io_u)
 
 static int verify_trimmed_io_u(struct thread_data *td, struct io_u *io_u)
 {
+	if (td->o.trim_error) {
+		if (td->o.trim_error == io_u->error)
+			return 0;
+		return EILSEQ;
+	}
+
 	if (!td->o.trim_zero)
 		return 0;
 
