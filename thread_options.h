@@ -287,6 +287,7 @@ struct thread_options {
 	unsigned int trim_percentage;
 	unsigned int trim_batch;
 	unsigned int trim_zero;
+	unsigned int trim_error;
 	unsigned long long trim_backlog;
 	unsigned int clat_percentiles;
 	unsigned int slat_percentiles;
@@ -620,12 +621,14 @@ struct thread_options_pack {
 	uint32_t trim_percentage;
 	uint32_t trim_batch;
 	uint32_t trim_zero;
+	uint32_t trim_error;
 	uint64_t trim_backlog;
 	uint32_t clat_percentiles;
 	uint32_t lat_percentiles;
 	uint32_t slat_percentiles;
 	uint32_t percentile_precision;
 	uint32_t pad;
+	uint32_t pad2;
 	fio_fp64_t percentile_list[FIO_IO_U_LIST_MAX_LEN];
 
 	uint8_t read_iolog_file[FIO_TOP_STR_MAX];
