@@ -15,7 +15,7 @@
 #include "../verify.h"
 
 /*
- * Limits us to 1GiB of mapped files in total
+ * Limits us to 1GiB of mapped files in total on 32-bit architectures
  */
 #define MMAP_TOTAL_SZ	(1 * 1024 * 1024 * 1024UL)
 
@@ -157,11 +157,8 @@ static int fio_mmapio_prep_limited(struct thread_data *td, struct io_u *io_u)
 		return EIO;
 	}
 
-	fmd->mmap_sz = mmap_map_size;
-	if (fmd->mmap_sz  > f->io_size)
-		fmd->mmap_sz = f->io_size;
-
 	fmd->mmap_off = io_u->offset;
+	fmd->mmap_sz = io_u->buflen;
 
 	return fio_mmap_file(td, f, fmd->mmap_sz, fmd->mmap_off);
 }
@@ -177,8 +174,8 @@ static int fio_mmapio_prep_full(struct thread_data *td, struct io_u *io_u)
 
 	if (fio_file_partial_mmap(f))
 		return EINVAL;
-	if (io_u->offset != (size_t) io_u->offset ||
-	    f->io_size != (size_t) f->io_size) {
+
+	if (sizeof(size_t) < 8 && f->io_size > mmap_map_size) {
 		fio_file_set_partial_mmap(f);
 		return EINVAL;
 	}
