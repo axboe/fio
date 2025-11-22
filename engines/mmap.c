@@ -184,7 +184,7 @@ static int fio_mmapio_prep_full(struct thread_data *td, struct io_u *io_u)
 	}
 
 	fmd->mmap_sz = f->io_size;
-	fmd->mmap_off = 0;
+	fmd->mmap_off = f->file_offset;
 
 	ret = fio_mmap_file(td, f, fmd->mmap_sz, fmd->mmap_off);
 	if (ret)
@@ -223,8 +223,7 @@ static int fio_mmapio_prep(struct thread_data *td, struct io_u *io_u)
 	}
 
 done:
-	io_u->mmap_data = fmd->mmap_ptr + io_u->offset - fmd->mmap_off -
-				f->file_offset;
+	io_u->mmap_data = fmd->mmap_ptr + io_u->offset - fmd->mmap_off;
 	return 0;
 }
 
