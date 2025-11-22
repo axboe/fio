@@ -53,6 +53,7 @@ static bool fio_madvise_file(struct thread_data *td, struct fio_file *f,
 			     size_t length)
 
 {
+	int flags;
 	struct fio_mmap_data *fmd = FILE_ENG_DATA(f);
 #ifdef CONFIG_HAVE_THP
 	struct mmap_options *o = td->eo;
@@ -65,16 +66,20 @@ static bool fio_madvise_file(struct thread_data *td, struct fio_file *f,
 	if (!td->o.fadvise_hint)
 		return true;
 
-	if (!td_random(td)) {
-		if (posix_madvise(fmd->mmap_ptr, length, POSIX_MADV_SEQUENTIAL) < 0) {
-			td_verror(td, errno, "madvise");
-			return false;
-		}
-	} else {
-		if (posix_madvise(fmd->mmap_ptr, length, POSIX_MADV_RANDOM) < 0) {
-			td_verror(td, errno, "madvise");
-			return false;
-		}
+	if (td->o.fadvise_hint == F_ADV_TYPE)
+		flags = td_random(td) ? POSIX_MADV_RANDOM : POSIX_MADV_SEQUENTIAL;
+	else if (td->o.fadvise_hint == F_ADV_RANDOM)
+		flags = POSIX_MADV_RANDOM;
+	else if (td->o.fadvise_hint == F_ADV_SEQUENTIAL)
+		flags = POSIX_MADV_SEQUENTIAL;
+	else {
+		log_err("fio: unknown madvise type %d\n", td->o.fadvise_hint);
+		return false;
+	}
+
+	if (posix_madvise(fmd->mmap_ptr, length, flags) < 0) {
+		td_verror(td, errno, "madvise");
+		return false;
 	}
 
 	return true;
