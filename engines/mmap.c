@@ -15,7 +15,7 @@
 #include "../verify.h"
 
 /*
- * Limits us to 1GiB of mapped files in total
+ * Limits us to 1GiB of mapped files in total on 32-bit architectures
  */
 #define MMAP_TOTAL_SZ	(1 * 1024 * 1024 * 1024UL)
 
@@ -53,6 +53,7 @@ static bool fio_madvise_file(struct thread_data *td, struct fio_file *f,
 			     size_t length)
 
 {
+	int flags;
 	struct fio_mmap_data *fmd = FILE_ENG_DATA(f);
 #ifdef CONFIG_HAVE_THP
 	struct mmap_options *o = td->eo;
@@ -65,16 +66,20 @@ static bool fio_madvise_file(struct thread_data *td, struct fio_file *f,
 	if (!td->o.fadvise_hint)
 		return true;
 
-	if (!td_random(td)) {
-		if (posix_madvise(fmd->mmap_ptr, length, POSIX_MADV_SEQUENTIAL) < 0) {
-			td_verror(td, errno, "madvise");
-			return false;
-		}
-	} else {
-		if (posix_madvise(fmd->mmap_ptr, length, POSIX_MADV_RANDOM) < 0) {
-			td_verror(td, errno, "madvise");
-			return false;
-		}
+	if (td->o.fadvise_hint == F_ADV_TYPE)
+		flags = td_random(td) ? POSIX_MADV_RANDOM : POSIX_MADV_SEQUENTIAL;
+	else if (td->o.fadvise_hint == F_ADV_RANDOM)
+		flags = POSIX_MADV_RANDOM;
+	else if (td->o.fadvise_hint == F_ADV_SEQUENTIAL)
+		flags = POSIX_MADV_SEQUENTIAL;
+	else {
+		log_err("fio: unknown madvise type %d\n", td->o.fadvise_hint);
+		return false;
+	}
+
+	if (posix_madvise(fmd->mmap_ptr, length, flags) < 0) {
+		td_verror(td, errno, "madvise");
+		return false;
 	}
 
 	return true;
@@ -152,11 +157,8 @@ static int fio_mmapio_prep_limited(struct thread_data *td, struct io_u *io_u)
 		return EIO;
 	}
 
-	fmd->mmap_sz = mmap_map_size;
-	if (fmd->mmap_sz  > f->io_size)
-		fmd->mmap_sz = f->io_size;
-
 	fmd->mmap_off = io_u->offset;
+	fmd->mmap_sz = io_u->buflen;
 
 	return fio_mmap_file(td, f, fmd->mmap_sz, fmd->mmap_off);
 }
@@ -172,14 +174,14 @@ static int fio_mmapio_prep_full(struct thread_data *td, struct io_u *io_u)
 
 	if (fio_file_partial_mmap(f))
 		return EINVAL;
-	if (io_u->offset != (size_t) io_u->offset ||
-	    f->io_size != (size_t) f->io_size) {
+
+	if (sizeof(size_t) < 8 && f->io_size > mmap_map_size) {
 		fio_file_set_partial_mmap(f);
 		return EINVAL;
 	}
 
 	fmd->mmap_sz = f->io_size;
-	fmd->mmap_off = 0;
+	fmd->mmap_off = f->file_offset;
 
 	ret = fio_mmap_file(td, f, fmd->mmap_sz, fmd->mmap_off);
 	if (ret)
@@ -218,8 +220,7 @@ static int fio_mmapio_prep(struct thread_data *td, struct io_u *io_u)
 	}
 
 done:
-	io_u->mmap_data = fmd->mmap_ptr + io_u->offset - fmd->mmap_off -
-				f->file_offset;
+	io_u->mmap_data = fmd->mmap_ptr + io_u->offset - fmd->mmap_off;
 	return 0;
 }
 
