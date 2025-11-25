@@ -21,6 +21,8 @@
 #include <linux/falloc.h>
 #endif
 
+static const char *flist_bucket_name = "flist_bucket";
+
 static FLIST_HEAD(filename_list);
 
 /*
@@ -1701,9 +1703,9 @@ static bool is_already_allocated(const char *fname)
 {
 	bool ret;
 
-	fio_file_hash_lock();
+	fio_file_hash_lock(fname);
 	ret = __is_already_allocated(fname, false);
-	fio_file_hash_unlock();
+	fio_file_hash_unlock(fname);
 
 	return ret;
 }
@@ -1715,12 +1717,12 @@ static void set_already_allocated(const char *fname)
 	fn = malloc(sizeof(struct file_name));
 	fn->filename = strdup(fname);
 
-	fio_file_hash_lock();
+	fio_file_hash_lock(flist_bucket_name);
 	if (!__is_already_allocated(fname, true)) {
 		flist_add_tail(&fn->list, &filename_list);
 		fn = NULL;
 	}
-	fio_file_hash_unlock();
+	fio_file_hash_unlock(flist_bucket_name);
 
 	if (fn) {
 		free(fn->filename);
@@ -1736,7 +1738,7 @@ static void free_already_allocated(void)
 	if (flist_empty(&filename_list))
 		return;
 
-	fio_file_hash_lock();
+	fio_file_hash_lock(flist_bucket_name);
 	flist_for_each_safe(entry, tmp, &filename_list) {
 		fn = flist_entry(entry, struct file_name, list);
 		free(fn->filename);
@@ -1744,7 +1746,7 @@ static void free_already_allocated(void)
 		free(fn);
 	}
 
-	fio_file_hash_unlock();
+	fio_file_hash_unlock(flist_bucket_name);
 }
 
 static struct fio_file *alloc_new_file(struct thread_data *td)
