@@ -1818,7 +1818,7 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 
 	dprint(FD_NET, "ts->ss_state = %d\n", ts->ss_state);
 	if (ts->ss_state & FIO_SS_DATA)
-		ss_extra_size = 2 * ts->ss_dur * sizeof(uint64_t);
+		ss_extra_size = 3 * ts->ss_dur * sizeof(uint64_t);
 
 	extended_buf_size += ss_extra_size;
 	if (!extended_buf_size) {
@@ -1863,7 +1863,7 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 	}
 
 	if (ss_extra_size) {
-		uint64_t *ss_iops, *ss_bw;
+		uint64_t *ss_iops, *ss_bw, *ss_lat;
 		uint64_t offset;
 		struct cmd_ts_pdu *ptr = extended_buf;
 
@@ -1885,6 +1885,15 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 
 		offset = (char *)extended_buf_wp - (char *)extended_buf;
 		ptr->ts.ss_bw_data_offset = cpu_to_le64(offset);
+		extended_buf_wp = ss_bw + (int) ts->ss_dur;
+
+		/* ss lat */
+		ss_lat = extended_buf_wp;
+		for (i = 0; i < ts->ss_dur; i++)
+			ss_lat[i] = cpu_to_le64(ts->ss_lat_data[i]);
+
+		offset = (char *)extended_buf_wp - (char *)extended_buf;
+		ptr->ts.ss_lat_data_offset = cpu_to_le64(offset);
 	}
 
 	fio_net_queue_cmd(FIO_NET_CMD_TS, extended_buf, extended_buf_size, NULL, SK_F_COPY);
