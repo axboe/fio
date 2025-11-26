@@ -546,6 +546,7 @@ static int fio_libhipfile_iomem_alloc(struct thread_data *td, size_t total_mem)
 	if (rc != 0)
 		goto exit_error;
 	check_hipruntimecall(hipMemset(o->gpu_mem_ptr, 0xab, total_mem), rc);
+	check_hipruntimecall(hipStreamSynchronize(NULL), rc);
 	if (rc != 0)
 		goto exit_error;
 
