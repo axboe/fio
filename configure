@@ -195,6 +195,7 @@ isal64=""
 libblkio=""
 libzbc=""
 dfs=""
+zondafs=""
 seed_buckets=""
 dynamic_engines="no"
 prefix=/usr/local
@@ -283,6 +284,10 @@ for opt do
   ;;
   --disable-dfs) dfs="no"
   ;;
+  --enable-zondafs) zondafs="yes"
+  ;;
+  --disable-zondafs) zondafs="no"
+  ;;
   --enable-asan) asan="yes"
   ;;
   --seed-buckets=*) seed_buckets="$optarg"
@@ -338,6 +343,8 @@ if test "$show_help" = "yes" ; then
   echo "--disable-tcmalloc      Disable tcmalloc support"
   echo "--dynamic-libengines    Lib-based ioengines as dynamic libraries"
   echo "--disable-dfs           Disable DAOS File System support even if found"
+  echo "--enable-zondafs        Enable zondafs (Zonda2 File System) support"
+  echo "--disable-zondafs       Disable zondafs support even if found"
   echo "--enable-asan           Enable address sanitizer"
   echo "--seed-buckets=         Number of seed buckets for the refill-buffer"
   echo "--disable-tls		Disable __thread local storage"
@@ -2344,6 +2351,68 @@ fi
 print_config "DAOS File System (dfs) Engine" "$dfs"
 
 ##########################################
+# check for zondafs (Zonda2 File System)
+if test "$zondafs" != "no" ; then
+  if test "$FIO_ZONDAFS_PATH" = "" ; then
+    FIO_ZONDAFS_PATH="/home/lanyan/zonda2"
+  fi
+  
+  zondafs_base_path="$FIO_ZONDAFS_PATH"
+  zondafs_lib_path="$zondafs_base_path/deps"
+  zondafs_include_path="$zondafs_base_path/deps/file_client/include"
+  
+  # Check if required library files exist
+  if test ! -f "$zondafs_lib_path/file_client/lib/libfile_client.a" ; then
+    if test "$zondafs" = "yes" ; then
+      feature_not_found "zondafs" "libfile_client.a not found at $zondafs_lib_path/file_client/lib/"
+    fi
+    zondafs="no"
+  elif test ! -f "$zondafs_lib_path/brpc/lib/libbrpc.a" ; then
+    if test "$zondafs" = "yes" ; then
+      feature_not_found "zondafs" "libbrpc.a not found at $zondafs_lib_path/brpc/lib/"
+    fi
+    zondafs="no"
+  elif test ! -d "$zondafs_include_path" ; then
+    if test "$zondafs" = "yes" ; then
+      feature_not_found "zondafs" "include directory not found at $zondafs_include_path"
+    fi
+    zondafs="no"
+  else
+    # Try to compile a test program
+    cat > $TMPC << EOF
+#include <zonda_fs.h>
+
+int main(int argc, char **argv)
+{
+  zonda_fs_client_t *client = NULL;
+  zonda_fs_conn_config_t config = {0};
+  zonda_error_code_t code;
+  
+  code = zonda_fs_client_new(&config, &client);
+  if (code == 0 && client != NULL) {
+    zonda_fs_client_destroy(client);
+  }
+  
+  return 0;
+}
+EOF
+    zondafs_cflags="-I$zondafs_base_path/deps/brpc/include -I$zondafs_base_path/deps/file_client/include -I$zondafs_base_path/deps/fmt/include -I$zondafs_base_path/deps/isal/include -I$zondafs_base_path/deps/gflags/include -I$zondafs_base_path"
+    zondafs_ldflags="$zondafs_lib_path/file_client/lib/libfile_client.a $zondafs_lib_path/brpc/lib/libbrpc.a $zondafs_lib_path/fmt/lib/libfmt.a $zondafs_lib_path/isal/lib/libisal.a $zondafs_lib_path/gflags/lib/libgflags.a -lprotobuf -lrt -lcrypto -lssl -lleveldb"
+    
+    if compile_prog "$zondafs_cflags" "$zondafs_ldflags" "zondafs"; then
+      zondafs="yes"
+      FIO_ZONDAFS_PATH="$zondafs_base_path"
+    else
+      if test "$zondafs" = "yes" ; then
+        feature_not_found "zondafs" "compilation test failed"
+      fi
+      zondafs="no"
+    fi
+  fi
+fi
+print_config "Zonda2 File System (zondafs) Engine" "$zondafs"
+
+##########################################
 # Check if we have libnfs (for userspace nfs support).
 if test "$libnfs" != "no" ; then
   if $(pkg-config libnfs > /dev/null 2>&1); then
@@ -3309,6 +3378,10 @@ if test "$cuda13" = "yes" ; then
 fi
 if test "$dfs" = "yes" ; then
   output_sym "CONFIG_DFS"
+fi
+if test "$zondafs" = "yes" ; then
+  output_sym "CONFIG_ZONDAFS"
+  echo "FIO_ZONDAFS_PATH=$FIO_ZONDAFS_PATH" >> $config_host_mak
 fi
 if test "$march_set" = "no" && test "$build_native" = "yes" ; then
   output_sym "CONFIG_BUILD_NATIVE"

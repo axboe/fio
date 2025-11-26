@@ -2276,6 +2276,11 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .help = "DAOS File System (dfs) IO engine",
 			  },
 #endif
+#ifdef CONFIG_ZONDAFS
+			  { .ival = "zondafs",
+			    .help = "Zonda2 File System (zondafs) IO engine",
+			  },
+#endif
 #ifdef CONFIG_LIBNFS
 			  { .ival = "nfs",
 			    .help = "NFS IO engine",

@@ -150,6 +150,22 @@ ifdef CONFIG_DFS
   dfs_LIBS = -luuid -ldaos -ldfs
   ENGINES += dfs
 endif
+ifdef CONFIG_ZONDAFS
+  zondafs_SRCS = engines/zondafs.c
+  zondafs_LIBS = $(FIO_ZONDAFS_PATH)/deps/file_client/lib/libfile_client.a \
+                 $(FIO_ZONDAFS_PATH)/deps/brpc/lib/libbrpc.a \
+                 $(FIO_ZONDAFS_PATH)/deps/fmt/lib/libfmt.a \
+                 $(FIO_ZONDAFS_PATH)/deps/isal/lib/libisal.a \
+                 $(FIO_ZONDAFS_PATH)/deps/gflags/lib/libgflags.a \
+                 -lprotobuf -lrt -lcrypto -lssl -lleveldb
+  zondafs_CFLAGS = -I$(FIO_ZONDAFS_PATH)/deps/brpc/include \
+                   -I$(FIO_ZONDAFS_PATH)/deps/file_client/include \
+                   -I$(FIO_ZONDAFS_PATH)/deps/fmt/include \
+                   -I$(FIO_ZONDAFS_PATH)/deps/isal/include \
+                   -I$(FIO_ZONDAFS_PATH)/deps/gflags/include \
+                   -I$(FIO_ZONDAFS_PATH)
+  ENGINES += zondafs
+endif
 SOURCE += oslib/asprintf.c
 ifndef CONFIG_STRSEP
   SOURCE += oslib/strsep.c
