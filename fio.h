@@ -826,7 +826,8 @@ extern void clear_inflight(struct thread_data *);
 static inline bool fio_offset_overlap_risk(struct thread_data *td)
 {
 	if (td->o.norandommap || td->o.softrandommap ||
-	    td->o.ddir_seq_add || (td->o.ddir_seq_nr > 1))
+	    td->o.ddir_seq_add || (td->o.ddir_seq_nr > 1) ||
+	    td->o.io_size > td->o.size)
 		return true;
 
 	return false;
