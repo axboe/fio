@@ -1194,7 +1194,7 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 				td->rate_io_issue_bytes[__ddir] += blen;
 			}
 
-			if (should_check_rate(td)) {
+			if (ddir_rw(__ddir) && should_check_rate(td)) {
 				td->rate_next_io_time[__ddir] = usec_for_io(td, __ddir);
 				fio_gettime(&comp_time, NULL);
 			}
@@ -1202,7 +1202,7 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 		} else {
 			ret = io_u_submit(td, io_u);
 
-			if (should_check_rate(td))
+			if (ddir_rw(ddir) && should_check_rate(td))
 				td->rate_next_io_time[ddir] = usec_for_io(td, ddir);
 
 			if (io_queue_event(td, io_u, &ret, ddir, &bytes_issued, 0, &comp_time))
