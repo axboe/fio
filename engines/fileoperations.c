@@ -10,6 +10,9 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#ifndef _WIN32
+#include <sys/xattr.h>
+#endif
 #include <unistd.h>
 #include "../fio.h"
 #include "../optgroup.h"
@@ -31,13 +34,47 @@ struct filestat_options {
 	unsigned int stat_type;
 };
 
+struct xattr_options {
+	void* pad;
+	int size;
+	int count;
+};
+
 enum {
 	FIO_FILESTAT_STAT	= 1,
 	FIO_FILESTAT_LSTAT	= 2,
 	FIO_FILESTAT_STATX	= 3,
 };
 
-static struct fio_option options[] = {
+#ifndef _WIN32
+static struct fio_option xattr_options[] = {
+	{
+		.name   = "xattr_size",
+		.lname  = "xattr_size",
+		.type   = FIO_OPT_INT,
+		.off1   = offsetof(struct xattr_options, size),
+		.help   = "Specify the size of the extended attribute to be set.",
+		.def    = "512",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_FILEXATTR,
+	},
+	{
+		.name   = "xattr_count",
+		.lname  = "xattr_count",
+		.type   = FIO_OPT_INT,
+		.off1   = offsetof(struct xattr_options, count),
+		.help   = "Specify the number of the extended attributes to be set.",
+		.def    = "1",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_FILEXATTR,
+	},
+	{
+		.name	= NULL,
+	}
+};
+#endif
+
+static struct fio_option stat_options[] = {
 	{
 		.name	= "stat_type",
 		.lname	= "stat_type",
@@ -206,6 +243,178 @@ static int stat_file(struct thread_data *td, struct fio_file *f)
 	return 0;
 }
 
+#ifndef _WIN32
+static int file_setxattr(struct thread_data *td, struct fio_file *f)
+{
+	struct xattr_options *o = td->eo;
+	struct timespec start;
+	int attrcount;
+	char attrname[256];
+	char *attrval;
+	int ret;
+
+	dprint(FD_FILE, "fd setxattr %s, count = %i, size = %i\n", f->file_name,
+		o->count, o->size);
+
+	if (f->filetype != FIO_TYPE_FILE) {
+		log_err("fio: only files are supported\n");
+		return 1;
+	}
+	if (!strcmp(f->file_name, "-")) {
+		log_err("fio: can't read/write to stdin/out\n");
+		return 1;
+	}
+
+	if (!td->o.disable_lat)
+		fio_gettime(&start, NULL);
+
+	attrcount = o->count;
+	while (attrcount > 0) {
+		attrval = malloc(o->size);
+		snprintf(attrname, 256, "user.fio_xattr_%i", attrcount--);
+#ifdef __linux__
+		ret = setxattr(f->file_name, attrname, attrval, o->size, 0);
+#elif defined (__APPLE__)
+		ret = setxattr(f->file_name, attrname, attrval, o->size, 0, 0);
+#else
+		ret = -1;
+#endif
+		free(attrval);
+
+		if (ret == -1) {
+			char buf[FIO_VERROR_SIZE];
+			int e = errno;
+
+			snprintf(buf, sizeof(buf), "setxattr(%s)", f->file_name);
+			td_verror(td, e, buf);
+			return 1;
+		}
+	}
+
+	if (!td->o.disable_lat) {
+		struct fc_data *data = td->io_ops_data;
+		uint64_t nsec;
+
+		nsec = ntime_since_now(&start);
+		add_clat_sample(td, data->stat_ddir, nsec, 0, NULL);
+	}
+
+	return 0;
+}
+
+static int file_listxattr(struct thread_data *td, struct fio_file *f)
+{
+	struct timespec start;
+
+	ssize_t buflen;
+	ssize_t vallen;
+	size_t namelen;
+	char *attrname;
+	char *attrbuf;
+	char *attrval;
+
+	const char *errfn;
+	char buf[FIO_VERROR_SIZE];
+	int e;
+
+	dprint(FD_FILE, "fd listxattr %s\n", f->file_name);
+
+	if (f->filetype != FIO_TYPE_FILE) {
+		log_err("fio: only files are supported\n");
+		return 1;
+	}
+	if (!strcmp(f->file_name, "-")) {
+		log_err("fio: can't read/write to stdin/out\n");
+		return 1;
+	}
+
+	if (!td->o.disable_lat)
+		fio_gettime(&start, NULL);
+
+#ifdef __linux__
+	buflen = listxattr(f->file_name, NULL, 0);
+#elif defined (__APPLE__)
+	buflen = listxattr(f->file_name, NULL, 0, 0);
+#else
+	buflen = -1;
+#endif
+	if (buflen == -1) {
+		errfn = "listxattr";
+		goto err;
+	} else if (buflen == 0) {
+		return 0;
+	}
+
+	attrbuf = malloc(buflen);
+#ifdef __linux__
+	buflen = listxattr(f->file_name, attrbuf, buflen);
+#elif defined (__APPLE__)
+	buflen = listxattr(f->file_name, attrbuf, buflen, 0);
+#else
+	buflen = -1;
+#endif
+	if (buflen == -1) {
+		errfn = "listxattr";
+		goto err_cleanup;
+	}
+
+	attrname = attrbuf;
+	while (buflen > 0) {
+#ifdef __linux__
+		vallen = getxattr(f->file_name, attrname, NULL, 0);
+#elif defined (__APPLE__)
+		vallen = getxattr(f->file_name, attrname, NULL, 0, 0, 0);
+#else
+		vallen = -1;
+#endif
+		if (vallen == -1) {
+			errfn = "getxattr";
+			goto err_cleanup;
+		}
+
+		if (vallen > 0) {
+			attrval = malloc(vallen);
+#ifdef __linux__
+			vallen = getxattr(f->file_name, attrname, attrval, vallen);
+#elif defined (__APPLE__)
+			vallen = getxattr(f->file_name, attrname, attrval, vallen, 0, 0);
+#else
+			vallen = -1;
+#endif
+			free(attrval);
+			if (vallen == -1) {
+				errfn = "getxattr";
+				goto err_cleanup;
+			}
+		}
+
+		namelen = strlen(attrname) + 1;
+		buflen -= namelen;
+		attrname += namelen;
+	}
+
+	free(attrbuf);
+
+	if (!td->o.disable_lat) {
+		struct fc_data *data = td->io_ops_data;
+		uint64_t nsec;
+
+		nsec = ntime_since_now(&start);
+		add_clat_sample(td, data->stat_ddir, nsec, 0, NULL);
+	}
+
+	return 0;
+
+err_cleanup:
+	free(attrbuf);
+err:
+	e = errno;
+	snprintf(buf, sizeof(buf), "%s(%s)", errfn, f->file_name);
+	td_verror(td, e, buf);
+	return 1;
+}
+#endif
+
 static int delete_file(struct thread_data *td, struct fio_file *f)
 {
 	struct timespec start;
@@ -341,7 +550,7 @@ static struct ioengine_ops ioengine_filestat = {
 	.open_file	= stat_file,
 	.flags		=  FIO_SYNCIO | FIO_FAKEIO |
 				FIO_NOSTATS | FIO_NOFILEHASH,
-	.options	= options,
+	.options	= stat_options,
 	.option_struct_size = sizeof(struct filestat_options),
 };
 
@@ -385,7 +594,7 @@ static struct ioengine_ops ioengine_dirstat = {
 	.unlink_file	= remove_dir,
 	.flags		=  FIO_DISKLESSIO | FIO_SYNCIO | FIO_FAKEIO |
 				FIO_NOSTATS | FIO_NOFILEHASH,
-	.options	= options,
+	.options	= stat_options,
 	.option_struct_size = sizeof(struct filestat_options),
 };
 
@@ -404,6 +613,36 @@ static struct ioengine_ops ioengine_dirdelete = {
 				FIO_NOSTATS | FIO_NOFILEHASH,
 };
 
+#ifndef _WIN32
+static struct ioengine_ops ioengine_filesetxattr = {
+	.name		= "filesetxattr",
+	.version	= FIO_IOOPS_VERSION,
+	.init		= init,
+	.cleanup	= cleanup,
+	.queue		= queue_io,
+	.invalidate	= invalidate_do_nothing,
+	.get_file_size	= generic_get_file_size,
+	.open_file	= file_setxattr,
+	.flags		= FIO_SYNCIO | FIO_FAKEIO |
+				FIO_NOSTATS | FIO_NOFILEHASH,
+	.options    = xattr_options,
+	.option_struct_size = sizeof(struct xattr_options),
+};
+
+static struct ioengine_ops ioengine_filelistxattr = {
+	.name		= "filelistxattr",
+	.version	= FIO_IOOPS_VERSION,
+	.init		= init,
+	.invalidate	= invalidate_do_nothing,
+	.cleanup	= cleanup,
+	.queue		= queue_io,
+	.get_file_size	= generic_get_file_size,
+	.open_file	= file_listxattr,
+	.flags		= FIO_SYNCIO | FIO_FAKEIO |
+				FIO_NOSTATS | FIO_NOFILEHASH,
+};
+#endif
+
 static void fio_init fio_fileoperations_register(void)
 {
 	register_ioengine(&ioengine_filecreate);
@@ -412,6 +651,10 @@ static void fio_init fio_fileoperations_register(void)
 	register_ioengine(&ioengine_dircreate);
 	register_ioengine(&ioengine_dirstat);
 	register_ioengine(&ioengine_dirdelete);
+#ifndef _WIN32
+	register_ioengine(&ioengine_filesetxattr);
+	register_ioengine(&ioengine_filelistxattr);
+#endif
 }
 
 static void fio_exit fio_fileoperations_unregister(void)
@@ -422,4 +665,8 @@ static void fio_exit fio_fileoperations_unregister(void)
 	unregister_ioengine(&ioengine_dircreate);
 	unregister_ioengine(&ioengine_dirstat);
 	unregister_ioengine(&ioengine_dirdelete);
+#ifndef _WIN32
+	unregister_ioengine(&ioengine_filesetxattr);
+	unregister_ioengine(&ioengine_filelistxattr);
+#endif
 }
