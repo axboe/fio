@@ -1794,6 +1794,7 @@ int add_file(struct thread_data *td, const char *fname, int numjob, int inc)
 	char file_name[PATH_MAX];
 	struct fio_file *f;
 	int len = 0;
+	uint64_t hash = 0;
 
 	dprint(FD_FILE, "add file %s\n", fname);
 
@@ -1846,6 +1847,15 @@ int add_file(struct thread_data *td, const char *fname, int numjob, int inc)
 
 	/* can't handle smalloc failure from here */
 	assert(f->file_name);
+
+	/*
+	 * Get hashed value from the file name.
+	 */
+	while (*fname) {
+		hash = (hash << 5) - hash + *fname;
+		fname++;
+	}
+	f->file_name_hash = hash;
 
 	if (td->o.filetype)
 		f->filetype = td->o.filetype;

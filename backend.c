@@ -587,6 +587,22 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 	dprint(FD_VERIFY, "starting loop\n");
 
 	/*
+	 * If using shared verify table, wait for all write jobs to complete
+	 */
+	if (td->shared_verify_table) {
+		int active = atomic_load(&td->shared_verify_table->write_jobs_active);
+		int done = atomic_load(&td->shared_verify_table->write_jobs_done);
+
+		if (active > 0 && done < active) {
+			while (atomic_load(&td->shared_verify_table->write_jobs_done) < active) {
+				usleep(10000);
+				if (td->terminate)
+					return;
+			}
+		}
+	}
+
+	/*
 	 * sync io first and invalidate cache, to make sure we really
 	 * read from disk.
 	 */
@@ -936,7 +952,11 @@ void log_inflight(struct thread_data *td, struct io_u *io_u)
 		abort();
 	}
 
-	if (td->inflight_issued != io_u->numberio) {
+	/*
+	 * With shared verify tables, numberio is allocated globally across jobs,
+	 * so skip this check as td->inflight_issued is per-job
+	 */
+	if (!td->shared_verify_table && td->inflight_issued != io_u->numberio) {
 		log_err("inflight_issued does not match: numberio=%"PRIu64", inflight_issued=%"PRIu64"\n",
 			io_u->numberio, td->inflight_issued);
 		abort();
@@ -1125,7 +1145,10 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 		if (io_u->ddir == DDIR_WRITE && td->flags & TD_F_DO_VERIFY) {
 			if (!(io_u->flags & IO_U_F_PATTERN_DONE)) {
 				io_u_set(td, io_u, IO_U_F_PATTERN_DONE);
-				io_u->numberio = td->io_issues[io_u->ddir];
+				if (td->shared_verify_table)
+					io_u->numberio = atomic_fetch_add(&td->shared_verify_table->shared_numberio, 1);
+				else
+					io_u->numberio = td->io_issues[io_u->ddir];
 				populate_verify_io_u(td, io_u);
 				log_inflight(td, io_u);
 			}
@@ -1172,11 +1195,18 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 		 * order of it. The logged unit will track when the IO has
 		 * completed.
 		 */
-		if (td_write(td) && io_u->ddir == DDIR_WRITE &&
+		if (((td_write(td) && io_u->ddir == DDIR_WRITE) || io_u->ddir == DDIR_TRIM) &&
 		    td->o.do_verify &&
 		    td->o.verify != VERIFY_NONE &&
-		    !td->o.experimental_verify)
-			log_io_piece(td, io_u);
+		    !td->o.experimental_verify) {
+			if (!log_io_piece(td, io_u)) {
+				dprint(FD_IO, "Overlap detected, skipping...\n");
+				invalidate_inflight(td, io_u);
+				clear_io_u(td, io_u);
+				ret = FIO_Q_BUSY;
+				goto reap;
+			}
+		}
 
 		if (td->o.io_submit_mode == IO_MODE_OFFLOAD) {
 			const unsigned long long blen = io_u->xfer_buflen;
@@ -1434,10 +1464,11 @@ int init_io_u_buffers(struct thread_data *td)
 
 	/*
 	 * For reads, writes, and multi-range trim operations we need a
-	 * data buffer
+	 * data buffer. Also need buffer if we're verifying trimmed data.
 	 */
 	if (td_ioengine_flagged(td, FIO_NOIO) ||
-	    !(td_read(td) || td_write(td) || (td_trim(td) && td->o.num_range > 1)))
+	    !(td_read(td) || td_write(td) || (td_trim(td) && td->o.num_range > 1) ||
+	      (td_trim(td) && td->o.do_verify && td->o.trim_zero)))
 		data_xfer = 0;
 
 	/*
@@ -1780,6 +1811,17 @@ static void *thread_main(void *data)
 		goto err;
 	}
 
+	if (o->verify_table_id > 0) {
+		td->shared_verify_table = get_shared_verify_table(o->verify_table_id);
+		if (!td->shared_verify_table) {
+			td_verror(td, ENOMEM, "failed to get shared verify table");
+			goto err;
+		}
+
+		if ((td_write(td) || td_trim(td)) && o->do_verify)
+			atomic_fetch_add(&td->shared_verify_table->write_jobs_active, 1);
+	}
+
 	td_set_runstate(td, TD_INITIALIZED);
 	dprint(FD_MUTEX, "up startup_sem\n");
 	fio_sem_up(startup_sem);
@@ -2056,6 +2098,9 @@ static void *thread_main(void *data)
 		fio_gettime(&td->start, NULL);
 		fio_sem_up(stat_sem);
 
+		if (td->shared_verify_table && (td_write(td) || td_trim(td)))
+			atomic_fetch_add(&td->shared_verify_table->write_jobs_done, 1);
+
 		if (td->error || td->terminate)
 			break;
 
@@ -2063,6 +2108,18 @@ static void *thread_main(void *data)
 		    o->verify == VERIFY_NONE ||
 		    td_ioengine_flagged(td, FIO_UNIDIR))
 			continue;
+
+		/*
+		 * If --verify_table_id= is given, only one job can win the
+		 * race among write jobs and verify the entire io pieces at
+		 * once.  Until the verify job is done, wait here.
+		 */
+		if (td->shared_verify_table) {
+			int expected = 0;
+
+			if (!atomic_compare_exchange_strong(&td->shared_verify_table->verify_done, &expected, 1))
+				continue;
+		}
 
 		clear_io_state(td, 0);
 
@@ -2139,6 +2196,11 @@ err:
 
 	if (o->verify_async)
 		verify_async_exit(td);
+
+	if (td->shared_verify_table) {
+		put_shared_verify_table(td->shared_verify_table);
+		td->shared_verify_table = NULL;
+	}
 
 	close_and_free_files(td);
 	cleanup_io_u(td);
