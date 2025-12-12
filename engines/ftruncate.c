@@ -15,16 +15,17 @@ static enum fio_q_status fio_ftruncate_queue(struct thread_data *td,
 					     struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
-	int ret;
+	int ret = 0;
 
 	fio_ro_check(td, io_u);
 
-	if (io_u->ddir != DDIR_WRITE) {
+	if (io_u->ddir == DDIR_WRITE)
+		ret = ftruncate(f->fd, io_u->offset);
+	else if (io_u->ddir == DDIR_SYNC)
+		ret = do_io_u_sync(td, io_u);
+	else
 		io_u->error = EINVAL;
-		return FIO_Q_COMPLETED;
-	}
 
-	ret = ftruncate(f->fd, io_u->offset);
 	if (ret)
 		io_u->error = errno;
 
