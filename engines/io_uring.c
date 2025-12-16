@@ -1593,11 +1593,11 @@ static int fio_ioring_io_u_init(struct thread_data *td, struct io_u *io_u)
 		pi_attr->len = o->md_per_io_size;
 		pi_attr->app_tag = o->apptag;
 		pi_attr->flags = 0;
-		if (strstr(o->pi_chk, "GUARD") != NULL)
+		if (o->prchk & NVME_IO_PRINFO_PRCHK_GUARD)
 			pi_attr->flags |= IO_INTEGRITY_CHK_GUARD;
-		if (strstr(o->pi_chk, "REFTAG") != NULL)
+		if (o->prchk & NVME_IO_PRINFO_PRCHK_REF)
 			pi_attr->flags |= IO_INTEGRITY_CHK_REFTAG;
-		if (strstr(o->pi_chk, "APPTAG") != NULL)
+		if (o->prchk & NVME_IO_PRINFO_PRCHK_APP)
 			pi_attr->flags |= IO_INTEGRITY_CHK_APPTAG;
 	}
 
