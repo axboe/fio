@@ -2717,12 +2717,11 @@ with the caveat that when used on the command line, they must come after the
 
 .. option:: num_range=int : [io_uring_cmd]
 
-	For trim command this will be the number of ranges to trim per I/O
-	request. The number of logical blocks per range is determined by the
+	For some commands this will be the number of ranges per I/O request.
+	The number of logical blocks per range is determined by the
 	:option:`bs` option which should be a multiple of logical block size.
-	This cannot be used with read or write. Note that setting this
-	option > 1, :option:`log_offset` will not be able to log all the
-	offsets. Default: 1.
+	Note that setting this option > 1, :option:`log_offset` will not be
+	able to log all the offsets. Default: 1.
 
 .. option:: cpuload=int : [cpuio]
 

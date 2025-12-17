@@ -1582,6 +1582,10 @@ static int fio_ioring_io_u_init(struct thread_data *td, struct io_u *io_u)
 	p += o->md_per_io_size * io_u->index;
 	io_u->mmap_data = p;
 
+	if ((ld->is_uring_cmd_eng && o->cmd_type == FIO_URING_CMD_NVME) &&
+			td_trim(td) && td->o.num_range > 1)
+		io_u_set(td, io_u, IO_U_F_MULTI_RANGE);
+
 	if (ld->pi_attr) {
 		struct io_uring_attr_pi *pi_attr;
 

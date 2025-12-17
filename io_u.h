@@ -24,6 +24,7 @@ enum {
 	IO_U_F_PATTERN_DONE	= 1 << 8,
 	IO_U_F_DEVICE_ERROR	= 1 << 9,
 	IO_U_F_VER_IN_DEV	= 1 << 10, /* Verify data in device */
+	IO_U_F_MULTI_RANGE	= 1 << 11, /* Use multi range */
 };
 
 /*

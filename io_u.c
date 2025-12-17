@@ -1062,7 +1062,7 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	else if (td->o.zone_mode == ZONE_MODE_ZBD)
 		setup_zbd_zone_mode(td, io_u);
 
-	if (multi_range_trim(td, io_u)) {
+	if (multi_range_io_u(td, io_u)) {
 		if (fill_multi_range_io_u(td, io_u))
 			return 1;
 	} else {
@@ -1105,11 +1105,11 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	/*
 	 * mark entry before potentially trimming io_u
 	 */
-	if (!multi_range_trim(td, io_u) && td_random(td) && file_randommap(td, io_u->file))
+	if (!multi_range_io_u(td, io_u) && td_random(td) && file_randommap(td, io_u->file))
 		io_u->buflen = mark_random_map(td, io_u, offset, io_u->buflen);
 
 out:
-	if (!multi_range_trim(td, io_u))
+	if (!multi_range_io_u(td, io_u))
 		dprint_io_u(io_u, "fill");
 	io_u->verify_offset = io_u->offset;
 	td->zone_bytes += io_u->buflen;
@@ -1926,7 +1926,7 @@ struct io_u *get_io_u(struct thread_data *td)
 
 	assert(fio_file_open(f));
 
-	if (ddir_rw(io_u->ddir) && !multi_range_trim(td, io_u)) {
+	if (ddir_rw(io_u->ddir) && !multi_range_io_u(td, io_u)) {
 		if (!io_u->buflen && !td_ioengine_flagged(td, FIO_NOIO)) {
 			dprint(FD_IO, "get_io_u: zero buflen on %p\n", io_u);
 			goto err_put;
