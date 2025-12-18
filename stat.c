@@ -1970,7 +1970,7 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 				json_array_add_value_int(lat, ts->ss_lat_data[k]);
 			}
 			json_object_add_value_int(data, "lat_mean", steadystate_lat_mean(ts));
-			json_object_add_value_array(data, "lat", lat);
+			json_object_add_value_array(data, "lat_ns", lat);
 		}
 		json_object_add_value_array(data, "iops", iops);
 		json_object_add_value_array(data, "bw", bw);
