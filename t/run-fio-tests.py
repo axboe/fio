@@ -1156,6 +1156,8 @@ def parse_args():
                         help='pass-through an argument to an executable test')
     parser.add_argument('--nvmecdev', action='store', default=None,
                         help='NVMe character device for **DESTRUCTIVE** testing (e.g., /dev/ng0n1)')
+    parser.add_argument('-c', '--cleanup', action='store_true', default=False,
+                        help='Delete artifacts for passing tests')
     args = parser.parse_args()
 
     return args
