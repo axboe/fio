@@ -110,31 +110,31 @@ uint64_t utime_since_genesis(void)
 	return utime_since_now(&genesis);
 }
 
-bool in_ramp_time(struct thread_data *td)
+bool in_ramp_period(struct thread_data *td)
 {
-	return td->o.ramp_time && !td->ramp_time_over;
+	return td->o.ramp_time && !td->ramp_period_over;
 }
 
 static bool parent_update_ramp(struct thread_data *td)
 {
 	struct thread_data *parent = td->parent;
 
-	if (!parent || parent->ramp_time_over)
+	if (!parent || parent->ramp_period_over)
 		return false;
 
 	reset_all_stats(parent);
-	parent->ramp_time_over = true;
+	parent->ramp_period_over = true;
 	td_set_runstate(parent, TD_RAMP);
 	return true;
 }
 
-bool ramp_time_over(struct thread_data *td)
+bool ramp_period_over(struct thread_data *td)
 {
-	if (!td->o.ramp_time || td->ramp_time_over)
+	if (!td->o.ramp_time || td->ramp_period_over)
 		return true;
 
 	if (utime_since_now(&td->epoch) >= td->o.ramp_time) {
-		td->ramp_time_over = true;
+		td->ramp_period_over = true;
 		reset_all_stats(td);
 		reset_io_stats(td);
 		td_set_runstate(td, TD_RAMP);

@@ -298,7 +298,7 @@ static inline void update_ts_cache(struct thread_data *td)
 
 static inline bool runtime_exceeded(struct thread_data *td, struct timespec *t)
 {
-	if (in_ramp_time(td))
+	if (in_ramp_period(td))
 		return false;
 	if (!td->o.timeout)
 		return false;
@@ -1031,7 +1031,7 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 	for (i = 0; i < DDIR_RWDIR_CNT; i++)
 		bytes_done[i] = td->bytes_done[i];
 
-	if (in_ramp_time(td))
+	if (in_ramp_period(td))
 		td_set_runstate(td, TD_RAMP);
 	else
 		td_set_runstate(td, TD_RUNNING);
@@ -1162,7 +1162,7 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 			else
 				io_u->end_io = verify_io_u;
 			td_set_runstate(td, TD_VERIFYING);
-		} else if (in_ramp_time(td))
+		} else if (in_ramp_period(td))
 			td_set_runstate(td, TD_RAMP);
 		else
 			td_set_runstate(td, TD_RUNNING);
@@ -1232,7 +1232,7 @@ reap:
 		    !td_ioengine_flagged(td, FIO_NOIO))
 			continue;
 
-		if (!in_ramp_time(td) && should_check_rate(td)) {
+		if (!in_ramp_period(td) && should_check_rate(td)) {
 			if (check_min_rate(td, &comp_time)) {
 				if (exitall_on_terminate || td->o.exitall_error)
 					fio_terminate_threads(td->groupid, td->o.exit_what);
@@ -1240,7 +1240,7 @@ reap:
 				break;
 			}
 		}
-		if (!in_ramp_time(td) && td->o.latency_target)
+		if (!in_ramp_period(td) && td->o.latency_target)
 			lat_target_check(td);
 	}
 
@@ -2673,7 +2673,7 @@ reap:
 			if (td->runstate != TD_INITIALIZED)
 				continue;
 
-			if (in_ramp_time(td))
+			if (in_ramp_period(td))
 				td_set_runstate(td, TD_RAMP);
 			else
 				td_set_runstate(td, TD_RUNNING);

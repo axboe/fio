@@ -274,12 +274,12 @@ static unsigned long thread_eta(struct thread_data *td)
 			uint64_t ramp_time = td->o.ramp_time;
 
 			t_eta = __timeout + start_delay;
-			if (!td->ramp_time_over) {
+			if (!td->ramp_period_over) {
 				t_eta += ramp_time;
 			}
 			t_eta /= 1000000ULL;
 
-			if ((td->runstate == TD_RAMP) && in_ramp_time(td)) {
+			if ((td->runstate == TD_RAMP) && in_ramp_period(td)) {
 				unsigned long ramp_left;
 
 				ramp_left = mtime_since_now(&td->epoch);
@@ -522,7 +522,7 @@ static bool calc_thread_status(struct jobs_eta *je, int force)
 
 	any_td_in_ramp = false;
 	for_each_td(td) {
-		any_td_in_ramp |= in_ramp_time(td);
+		any_td_in_ramp |= in_ramp_period(td);
 	} end_for_each();
 	if (write_bw_log && rate_time > bw_avg_time && !any_td_in_ramp) {
 		calc_rate(unified_rw_rep, rate_time, io_bytes, rate_io_bytes,

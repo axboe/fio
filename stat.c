@@ -3657,7 +3657,7 @@ static int add_iops_samples(struct thread_data *td, struct timespec *t)
 
 static bool td_in_logging_state(struct thread_data *td)
 {
-	if (in_ramp_time(td))
+	if (in_ramp_period(td))
 		return false;
 
 	switch(td->runstate) {

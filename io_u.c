@@ -2106,7 +2106,7 @@ static void file_log_write_comp(const struct thread_data *td, struct fio_file *f
 
 static bool should_account(struct thread_data *td)
 {
-	return ramp_time_over(td) && (td->runstate == TD_RUNNING ||
+	return ramp_period_over(td) && (td->runstate == TD_RUNNING ||
 					   td->runstate == TD_VERIFYING);
 }
 
@@ -2333,7 +2333,7 @@ int io_u_queued_complete(struct thread_data *td, int min_evts)
  */
 void io_u_queued(struct thread_data *td, struct io_u *io_u)
 {
-	if (!td->o.disable_slat && ramp_time_over(td) && td->o.stats) {
+	if (!td->o.disable_slat && ramp_period_over(td) && td->o.stats) {
 		if (td->parent)
 			td = td->parent;
 		add_slat_sample(td, io_u);
