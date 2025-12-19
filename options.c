@@ -3115,6 +3115,16 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_RUNTIME,
 	},
 	{
+		.name	= "ramp_size",
+		.lname	= "Ramp size",
+		.type	= FIO_OPT_STR_VAL,
+		.off1	= offsetof(struct thread_options, ramp_size),
+		.minval = 1,
+		.help	= "Amount of data transferred before measuring performance",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_RUNTIME,
+	},
+	{
 		.name	= "clocksource",
 		.lname	= "Clock source",
 		.type	= FIO_OPT_STR,

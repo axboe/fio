@@ -125,11 +125,57 @@ bool ramp_period_enabled = false;
 
 int ramp_period_check(void)
 {
+	uint64_t group_bytes = 0;
+	int prev_groupid = -1;
+	bool group_ramp_period_over = false;
+
 	for_each_td(td) {
 		if (td->ramp_period_state != RAMP_RUNNING)
 			continue;
-		if (utime_since_now(&td->epoch) >= td->o.ramp_time)
+
+		if (td->o.ramp_time &&
+		    utime_since_now(&td->epoch) >= td->o.ramp_time) {
 			td->ramp_period_state = RAMP_FINISHING;
+			continue;
+		}
+
+		if (td->o.ramp_size) {
+			int ddir;
+			const bool needs_lock = td_async_processing(td);
+
+			if (!td->o.group_reporting ||
+			    (td->o.group_reporting &&
+			     td->groupid != prev_groupid)) {
+				group_bytes = 0;
+				prev_groupid = td->groupid;
+				group_ramp_period_over = false;
+			}
+
+			if (needs_lock)
+				__td_io_u_lock(td);
+
+			for (ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++)
+				group_bytes += td->io_bytes[ddir];
+
+			if (needs_lock)
+				__td_io_u_unlock(td);
+
+			if (group_bytes >= td->o.ramp_size) {
+				td->ramp_period_state = RAMP_FINISHING;
+				/*
+				 * Mark ramp up for all threads in the group as
+				 * done.
+				 */
+				if (td->o.group_reporting &&
+				    !group_ramp_period_over) {
+					group_ramp_period_over = true;
+					for_each_td(td2) {
+						if (td2->groupid == td->groupid)
+							 td2->ramp_period_state = RAMP_FINISHING;
+					} end_for_each();
+				}
+			}
+		}
 	} end_for_each();
 
 	return 0;
@@ -173,14 +219,27 @@ bool ramp_period_over(struct thread_data *td)
 	return true;
 }
 
-void td_ramp_period_init(struct thread_data *td)
+int td_ramp_period_init(struct thread_data *td)
 {
-	if (td->o.ramp_time) {
+	if (td->o.ramp_time || td->o.ramp_size) {
+		if (td->o.ramp_time && td->o.ramp_size) {
+			td_verror(td, EINVAL, "job rejected: cannot specify both ramp_time and ramp_size");
+			return 1;
+		}
+		/* Make sure options are consistent within reporting group */
+		for_each_td(td2) {
+			if (td->groupid == td2->groupid &&
+			    td->o.ramp_size != td2->o.ramp_size) {
+				td_verror(td, EINVAL, "job rejected: inconsistent ramp_size within reporting group");
+				return 1;
+			}
+		} end_for_each();
 		td->ramp_period_state = RAMP_RUNNING;
 		ramp_period_enabled = true;
 	} else {
 		td->ramp_period_state = RAMP_DONE;
 	}
+	return 0;
 }
 
 void fio_time_init(void)

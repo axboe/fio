@@ -34,7 +34,7 @@ extern void set_genesis_time(void);
 extern int ramp_period_check(void);
 extern bool ramp_period_over(struct thread_data *);
 extern bool in_ramp_period(struct thread_data *);
-extern void td_ramp_period_init(struct thread_data *);
+extern int td_ramp_period_init(struct thread_data *);
 extern void fio_time_init(void);
 extern void timespec_add_msec(struct timespec *, unsigned int);
 extern void set_epoch_time(struct thread_data *, clockid_t, clockid_t);
