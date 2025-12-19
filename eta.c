@@ -274,9 +274,8 @@ static unsigned long thread_eta(struct thread_data *td)
 			uint64_t ramp_time = td->o.ramp_time;
 
 			t_eta = __timeout + start_delay;
-			if (!td->ramp_period_over) {
+			if (in_ramp_period(td))
 				t_eta += ramp_time;
-			}
 			t_eta /= 1000000ULL;
 
 			if ((td->runstate == TD_RAMP) && in_ramp_period(td)) {
