@@ -6,6 +6,12 @@
 static struct timespec genesis;
 static unsigned long ns_granularity;
 
+enum ramp_period_states {
+	RAMP_RUNNING,
+	RAMP_FINISHING,
+	RAMP_DONE
+};
+
 void timespec_add_msec(struct timespec *ts, unsigned int msec)
 {
 	uint64_t adj_nsec = 1000000ULL * msec;
@@ -112,51 +118,69 @@ uint64_t utime_since_genesis(void)
 
 bool in_ramp_period(struct thread_data *td)
 {
-	return !td->ramp_period_over;
+	return td->ramp_period_state != RAMP_DONE;
+}
+
+bool ramp_period_enabled = false;
+
+int ramp_period_check(void)
+{
+	for_each_td(td) {
+		if (td->ramp_period_state != RAMP_RUNNING)
+			continue;
+		if (utime_since_now(&td->epoch) >= td->o.ramp_time)
+			td->ramp_period_state = RAMP_FINISHING;
+	} end_for_each();
+
+	return 0;
 }
 
 static bool parent_update_ramp(struct thread_data *td)
 {
 	struct thread_data *parent = td->parent;
 
-	if (!parent || parent->ramp_period_over)
+	if (!parent || parent->ramp_period_state == RAMP_DONE)
 		return false;
 
 	reset_all_stats(parent);
-	parent->ramp_period_over = true;
+	parent->ramp_period_state = RAMP_DONE;
 	td_set_runstate(parent, TD_RAMP);
 	return true;
 }
 
+
 bool ramp_period_over(struct thread_data *td)
 {
-	if (td->ramp_period_over)
+	if (td->ramp_period_state == RAMP_DONE)
 		return true;
 
-	if (utime_since_now(&td->epoch) >= td->o.ramp_time) {
-		td->ramp_period_over = true;
-		reset_all_stats(td);
-		reset_io_stats(td);
-		td_set_runstate(td, TD_RAMP);
+	if (td->ramp_period_state == RAMP_RUNNING)
+		return false;
 
-		/*
-		 * If we have a parent, the parent isn't doing IO. Hence
-		 * the parent never enters do_io(), which will switch us
-		 * from RAMP -> RUNNING. Do this manually here.
-		 */
-		if (parent_update_ramp(td))
-			td_set_runstate(td, TD_RUNNING);
+	td->ramp_period_state = RAMP_DONE;
+	reset_all_stats(td);
+	reset_io_stats(td);
+	td_set_runstate(td, TD_RAMP);
 
-		return true;
-	}
+	/*
+	 * If we have a parent, the parent isn't doing IO. Hence
+	 * the parent never enters do_io(), which will switch us
+	 * from RAMP -> RUNNING. Do this manually here.
+	 */
+	if (parent_update_ramp(td))
+		td_set_runstate(td, TD_RUNNING);
 
-	return false;
+	return true;
 }
 
 void td_ramp_period_init(struct thread_data *td)
 {
-	if (!td->o.ramp_time)
-		td->ramp_period_over = true;
+	if (td->o.ramp_time) {
+		td->ramp_period_state = RAMP_RUNNING;
+		ramp_period_enabled = true;
+	} else {
+		td->ramp_period_state = RAMP_DONE;
+	}
 }
 
 void fio_time_init(void)

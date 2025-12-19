@@ -8,6 +8,10 @@
 /* IWYU pragma: end_exports */
 #include "lib/types.h"
 
+#define RAMP_PERIOD_CHECK_MSEC 1000
+
+extern bool ramp_period_enabled;
+
 struct thread_data;
 extern uint64_t ntime_since(const struct timespec *, const struct timespec *);
 extern uint64_t ntime_since_now(const struct timespec *);
@@ -27,6 +31,7 @@ extern uint64_t usec_spin(unsigned int);
 extern uint64_t usec_sleep(struct thread_data *, unsigned long);
 extern void fill_start_time(struct timespec *);
 extern void set_genesis_time(void);
+extern int ramp_period_check(void);
 extern bool ramp_period_over(struct thread_data *);
 extern bool in_ramp_period(struct thread_data *);
 extern void td_ramp_period_init(struct thread_data *);

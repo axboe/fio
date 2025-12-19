@@ -290,7 +290,13 @@ static void *helper_thread_main(void *data)
 			.interval_ms = steadystate_enabled ? ss_check_interval :
 				0,
 			.func = steadystate_check,
-		}
+		},
+		{
+			.name = "ramp_period",
+			.interval_ms = ramp_period_enabled ?
+				RAMP_PERIOD_CHECK_MSEC : 0,
+			.func = ramp_period_check,
+		},
 	};
 	struct timespec ts;
 	long clk_tck;
