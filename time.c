@@ -112,7 +112,7 @@ uint64_t utime_since_genesis(void)
 
 bool in_ramp_period(struct thread_data *td)
 {
-	return td->o.ramp_time && !td->ramp_period_over;
+	return !td->ramp_period_over;
 }
 
 static bool parent_update_ramp(struct thread_data *td)
@@ -130,7 +130,7 @@ static bool parent_update_ramp(struct thread_data *td)
 
 bool ramp_period_over(struct thread_data *td)
 {
-	if (!td->o.ramp_time || td->ramp_period_over)
+	if (td->ramp_period_over)
 		return true;
 
 	if (utime_since_now(&td->epoch) >= td->o.ramp_time) {
@@ -151,6 +151,12 @@ bool ramp_period_over(struct thread_data *td)
 	}
 
 	return false;
+}
+
+void td_ramp_period_init(struct thread_data *td)
+{
+	if (!td->o.ramp_time)
+		td->ramp_period_over = true;
 }
 
 void fio_time_init(void)
