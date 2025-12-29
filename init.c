@@ -1769,7 +1769,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		const char *suf;
 
 #ifndef CONFIG_ZLIB
-		if (td->client_type) {
+		if (is_backend) {
 			log_err("fio: --write_hist_log requires zlib in client/server mode\n");
 			goto err;
 		}
