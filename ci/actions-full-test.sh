@@ -52,7 +52,7 @@ main() {
     fi
 
     echo python3 t/run-fio-tests.py --skip "${skip[@]}" "${args[@]}"
-    python3 t/run-fio-tests.py --skip "${skip[@]}" "${args[@]}"
+    python3 t/run-fio-tests.py -c --skip "${skip[@]}" "${args[@]}"
     make -C doc html
 }
 

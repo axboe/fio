@@ -13,6 +13,7 @@ import os
 import sys
 import json
 import locale
+import shutil
 import logging
 import platform
 import traceback
@@ -473,6 +474,8 @@ def run_fio_tests(test_list, test_env, args):
         if test.passed:
             result = "PASSED"
             passed = passed + 1
+            if hasattr(args, 'cleanup') and args.cleanup:
+                shutil.rmtree(test_env['artifact_root'] + f"/{config['test_id']:04d}", ignore_errors=True)
         else:
             result = f"FAILED: {test.failure_reason}"
             failed = failed + 1

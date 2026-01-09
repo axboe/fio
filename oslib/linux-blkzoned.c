@@ -25,6 +25,7 @@
 #ifndef BLKFINISHZONE
 #define BLKFINISHZONE _IOW(0x12, 136, struct blk_zone_range)
 #endif
+#include <linux/falloc.h>
 
 /*
  * If the uapi headers installed on the system lacks zone capacity support,

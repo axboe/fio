@@ -2352,8 +2352,23 @@ print_config "DAOS File System (dfs) Engine" "$dfs"
 if test "$libnfs" != "no" ; then
   if $(pkg-config libnfs > /dev/null 2>&1); then
     libnfs="yes"
-    libnfs_cflags=$(pkg-config --cflags libnfs gnutls)
-    libnfs_libs=$(pkg-config --libs libnfs gnutls)
+    libnfs_cflags=$(pkg-config --cflags libnfs)
+    libnfs_libs=$(pkg-config --libs libnfs)
+
+    # libnfs >= 6.0.0 requires gnutls for TLS support
+    libnfs_version=$(pkg-config --modversion libnfs 2>/dev/null)
+    if test -n "$libnfs_version" ; then
+      libnfs_major=$(echo $libnfs_version | cut -d. -f1)
+      if test "$libnfs_major" -ge 6 ; then
+        if $(pkg-config gnutls > /dev/null 2>&1); then
+          libnfs_cflags="$libnfs_cflags $(pkg-config --cflags gnutls)"
+          libnfs_libs="$libnfs_libs $(pkg-config --libs gnutls)"
+        else
+          feature_not_found "gnutls" "gnutls (required for libnfs >= 6.0.0)"
+          libnfs="no"
+        fi
+      fi
+    fi
   else
     if test "$libnfs" = "yes" ; then
       feature_not_found "libnfs" "libnfs"

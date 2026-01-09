@@ -715,6 +715,16 @@ Time related parameters
 	:option:`runtime` is specified.  When the unit is omitted, the value is
 	given in seconds.
 
+.. option:: ramp_size=size
+
+	If set, fio will wait until the job does given amount of IO before
+	logging any performance numbers. When ``group_reporting`` is enabled,
+	the logging starts when all jobs in the group together perform given
+	amount of IO. Similarly to ``ramp_time`` this is useful for letting
+	performance to settle before logging results and will increase the total
+	runtime if a special timeout or :option:`runtime` is specified. When
+	the unit is omitted, the value is given in bytes.
+
 .. option:: clocksource=str
 
 	Use the given clocksource as the base of timing. The supported options are:
@@ -4249,6 +4259,16 @@ Steady state
 		**bw_slope**
 			Collect bandwidth data and calculate the least squares regression
 			slope. Stop the job if the slope falls below the specified limit.
+
+		**lat**
+			Collect completion latency data and calculate the maximum mean
+			deviation. Stop the job if the deviation falls below the specified
+			limit.
+
+		**lat_slope**
+			Collect completion latency data and calculate the least squares
+			regression slope. Stop the job if the slope falls below the
+			specified limit.
 
 .. option:: steadystate_duration=time, ss_dur=time
 

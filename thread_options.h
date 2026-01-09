@@ -212,6 +212,7 @@ struct thread_options {
 	unsigned long long start_delay_high;
 	unsigned long long timeout;
 	unsigned long long ramp_time;
+	unsigned long long ramp_size;
 	unsigned int ss_state;
 	fio_fp64_t ss_limit;
 	unsigned long long ss_dur;
@@ -546,6 +547,7 @@ struct thread_options_pack {
 	uint64_t start_delay_high;
 	uint64_t timeout;
 	uint64_t ramp_time;
+	uint64_t ramp_size;
 	uint64_t ss_dur;
 	uint64_t ss_ramp_time;
 	uint32_t ss_state;

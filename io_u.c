@@ -1727,9 +1727,13 @@ struct io_u *__get_io_u(struct thread_data *td)
 		__td_io_u_lock(td);
 
 again:
-	if (td->runstate != TD_FSYNCING && !io_u_rempty(&td->io_u_requeues)) {
+	if (!io_u_rempty(&td->io_u_requeues)) {
 		io_u = io_u_rpop(&td->io_u_requeues);
 		io_u->resid = 0;
+		if (io_u->file && td->runstate == TD_FSYNCING) {
+			put_file_log(td, io_u->file);
+			io_u->file = NULL;
+		}
 	} else if (!queue_full(td)) {
 		io_u = io_u_qpop(&td->io_u_freelist);
 
@@ -2102,7 +2106,7 @@ static void file_log_write_comp(const struct thread_data *td, struct fio_file *f
 
 static bool should_account(struct thread_data *td)
 {
-	return ramp_time_over(td) && (td->runstate == TD_RUNNING ||
+	return ramp_period_over(td) && (td->runstate == TD_RUNNING ||
 					   td->runstate == TD_VERIFYING);
 }
 
@@ -2329,7 +2333,7 @@ int io_u_queued_complete(struct thread_data *td, int min_evts)
  */
 void io_u_queued(struct thread_data *td, struct io_u *io_u)
 {
-	if (!td->o.disable_slat && ramp_time_over(td) && td->o.stats) {
+	if (!td->o.disable_slat && ramp_period_over(td) && td->o.stats) {
 		if (td->parent)
 			td = td->parent;
 		add_slat_sample(td, io_u);
