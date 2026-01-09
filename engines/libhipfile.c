@@ -109,7 +109,7 @@ static pthread_mutex_t running_lock = PTHREAD_MUTEX_INITIALIZER;
 static const char *fio_libhipfile_get_hip_error(hipFileError_t st)
 {
 	if (IS_HIPFILE_ERR(st.err))
-		return hipFileOpStatusError(st.err);
+		return hipFileGetOpErrorString(st.err);
 	return "unknown";
 }
 
@@ -379,7 +379,7 @@ static enum fio_q_status fio_libhipfile_queue(struct thread_data *td,
 					} else if (sz < 0) {
 						io_u->error = EIO;
 						log_err("hipFileRead: err=%ld:%s\n", sz,
-							hipFileOpStatusError(-sz));
+							hipFileGetOpErrorString(-sz));
 					}
 				} else if (o->rocm_io == IO_POSIX) {
 					sz = pread(io_u->file->fd, ((char*) io_u->xfer_buf) + xfered,
@@ -403,7 +403,7 @@ static enum fio_q_status fio_libhipfile_queue(struct thread_data *td,
 					} else if (sz < 0) {
 						io_u->error = EIO;
 						log_err("hipFileWrite: err=%ld:%s\n", sz,
-							hipFileOpStatusError(-sz));
+							hipFileGetOpErrorString(-sz));
 					}
 				} else if (o->rocm_io == IO_POSIX) {
 					sz = pwrite(io_u->file->fd,
