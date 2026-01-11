@@ -148,6 +148,7 @@ static int use_sync = 0;	/* use preadv2 */
 static int numa_placement = 0;	/* set to node of device */
 static int vectored = 0;	/* use vectored IO */
 static int pt = 0;		/* passthrough I/O or not */
+static int restriction = 0;	/* for testing restriction filter */
 
 static unsigned long tsc_rate;
 
@@ -883,6 +884,39 @@ static int setup_aio(struct submitter *s)
 #endif
 }
 
+static int io_uring_register_restrictions(struct submitter *s)
+{
+	struct io_uring_restriction res[8] = { };
+	int ret;
+
+	res[0].opcode = IORING_RESTRICTION_SQE_OP;
+	res[0].sqe_op = IORING_OP_NOP;
+	res[1].opcode = IORING_RESTRICTION_SQE_OP;
+	res[1].sqe_op = IORING_OP_READ;
+	res[2].opcode = IORING_RESTRICTION_SQE_OP;
+	res[2].sqe_op = IORING_OP_READV;
+	res[3].opcode = IORING_RESTRICTION_SQE_OP;
+	res[3].sqe_op = IORING_OP_READ_FIXED;
+
+	res[4].opcode = IORING_RESTRICTION_REGISTER_OP;
+	res[4].sqe_op = IORING_REGISTER_BUFFERS;
+	res[5].opcode = IORING_RESTRICTION_REGISTER_OP;
+	res[5].sqe_op = IORING_REGISTER_ENABLE_RINGS;
+	res[6].opcode = IORING_RESTRICTION_REGISTER_OP;
+	res[6].sqe_op = IORING_REGISTER_RING_FDS;
+	res[7].opcode = IORING_RESTRICTION_REGISTER_OP;
+	res[7].sqe_op = IORING_REGISTER_FILES;
+
+	ret = syscall(__NR_io_uring_register, s->ring_fd,
+			IORING_REGISTER_RESTRICTIONS, res, 8);
+	if (ret) {
+		fprintf(stderr, "IORING_REGISTER_RESTRICTIONS: %d\n", ret);
+		return ret;
+	}
+
+	return syscall(__NR_io_uring_register, s->ring_fd, IORING_REGISTER_ENABLE_RINGS, NULL, 0);
+}
+
 static int setup_ring(struct submitter *s)
 {
 	struct io_sq_ring *sring = &s->sq_ring;
@@ -907,6 +941,8 @@ static int setup_ring(struct submitter *s)
 		p.flags |= IORING_SETUP_SQE128;
 		p.flags |= IORING_SETUP_CQE32;
 	}
+	if (restriction)
+		p.flags |= IORING_SETUP_R_DISABLED;
 
 	fd = io_uring_setup(depth, &p);
 	if (fd < 0) {
@@ -914,6 +950,15 @@ static int setup_ring(struct submitter *s)
 		return 1;
 	}
 	s->ring_fd = s->enter_ring_fd = fd;
+
+	if (restriction) {
+		/* enables rings too */
+		ret = io_uring_register_restrictions(s);
+		if (ret) {
+			fprintf(stderr, "Failed to set restrictions\n");
+			return ret;
+		}
+	}
 
 	if (fixedbufs) {
 		struct rlimit rlim;
@@ -1510,11 +1555,13 @@ static void usage(char *argv, int status)
 		" -X <bool> : Use registered ring %d\n"
 		" -P <bool> : Automatically place on device home node %d\n"
 		" -V <bool> : Vectored IO, default %d\n"
+		" -e <bool> : Set restriction filter on opcodes %d\n"
 		" -u <bool> : Use nvme-passthrough I/O, default %d\n",
 		argv, DEPTH, BATCH_SUBMIT, BATCH_COMPLETE, BS, polled,
 		fixedbufs, register_files, nthreads, !buffered, do_nop,
 		stats, runtime == 0 ? "unlimited" : runtime_str, random_io, aio,
-		use_sync, register_ring, numa_placement, vectored, pt);
+		use_sync, register_ring, numa_placement, vectored, restriction,
+		pt);
 	exit(status);
 }
 
@@ -1573,7 +1620,7 @@ int main(int argc, char *argv[])
 	if (!do_nop && argc < 2)
 		usage(argv[0], 1);
 
-	while ((opt = getopt(argc, argv, "d:s:c:b:p:B:F:n:N:O:t:T:a:r:D:R:X:S:P:V:u:h?")) != -1) {
+	while ((opt = getopt(argc, argv, "e:d:s:c:b:p:B:F:n:N:O:t:T:a:r:D:R:X:S:P:V:u:h?")) != -1) {
 		switch (opt) {
 		case 'a':
 			aio = !!atoi(optarg);
@@ -1656,6 +1703,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'u':
 			pt = !!atoi(optarg);
+			break;
+		case 'e':
+			restriction = !!atoi(optarg);
 			break;
 		case 'h':
 		case '?':
