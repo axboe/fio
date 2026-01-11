@@ -76,14 +76,18 @@ static enum fio_q_status fio_fallocate_queue(struct thread_data *td,
 
 	fio_ro_check(td, io_u);
 
-	if (io_u->ddir == DDIR_READ)
-		flags = FALLOC_FL_KEEP_SIZE;
-	else if (io_u->ddir == DDIR_WRITE)
-		flags = 0;
-	else if (io_u->ddir == DDIR_TRIM)
-		flags = FALLOC_FL_PUNCH_HOLE | FALLOC_FL_KEEP_SIZE;
+	if (io_u->ddir != DDIR_SYNC) {
+		if (io_u->ddir == DDIR_READ)
+			flags = FALLOC_FL_KEEP_SIZE;
+		else if (io_u->ddir == DDIR_WRITE)
+			flags = 0;
+		else if (io_u->ddir == DDIR_TRIM)
+			flags = FALLOC_FL_PUNCH_HOLE | FALLOC_FL_KEEP_SIZE;
 
-	ret = fallocate(f->fd, flags, io_u->offset, io_u->xfer_buflen);
+		ret = fallocate(f->fd, flags, io_u->offset, io_u->xfer_buflen);
+	} else {
+		ret = do_io_u_sync(td, io_u);
+	}
 
 	if (ret)
 		io_u->error = errno;

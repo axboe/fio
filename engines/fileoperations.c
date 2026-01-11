@@ -264,6 +264,8 @@ static int invalidate_do_nothing(struct thread_data *td, struct fio_file *f)
 
 static enum fio_q_status queue_io(struct thread_data *td, struct io_u *io_u)
 {
+	if (io_u->ddir == DDIR_SYNC && do_io_u_sync(td, io_u))
+		io_u->error = errno;
 	return FIO_Q_COMPLETED;
 }
 
