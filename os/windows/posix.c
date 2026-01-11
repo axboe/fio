@@ -297,7 +297,7 @@ void Time_tToSystemTime(time_t dosTime, SYSTEMTIME *systemTime)
 	LONGLONG jan1970;
 	SYSTEMTIME tempSystemTime;
 
-	jan1970 = Int32x32To64(dosTime, 10000000) + 116444736000000000;
+	jan1970 = (dosTime * 10000000LL) + 116444736000000000LL;
 	utcFT.dwLowDateTime = (DWORD)jan1970;
 	utcFT.dwHighDateTime = jan1970 >> 32;
 
