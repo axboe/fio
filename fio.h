@@ -403,7 +403,7 @@ struct thread_data {
 	int64_t last_thinktime_blocks;
 
 	/*
-	 * State for random io, a bitmap of blocks done vs not done
+	 * State for random offsets
 	 */
 	struct frand_state offset_state;
 
