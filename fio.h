@@ -405,7 +405,7 @@ struct thread_data {
 	/*
 	 * State for random io, a bitmap of blocks done vs not done
 	 */
-	struct frand_state random_state;
+	struct frand_state offset_state;
 
 	struct timespec start;	/* start of this loop */
 	struct timespec epoch;	/* time job was started */

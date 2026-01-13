@@ -110,11 +110,11 @@ static int __get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 	if (td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE ||
 	    td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE64) {
 
-		r = __rand(&td->random_state);
+		r = __rand(&td->offset_state);
 
 		dprint(FD_RANDOM, "off rand %llu\n", (unsigned long long) r);
 
-		*b = lastb * (r / (rand_max(&td->random_state) + 1.0));
+		*b = lastb * (r / (rand_max(&td->offset_state) + 1.0));
 	} else {
 		uint64_t off = 0;
 

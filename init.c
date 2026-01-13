@@ -1183,7 +1183,7 @@ void td_fill_rand_seeds(struct thread_data *td)
 	init_rand_seed(&td->prio_state, td->rand_seeds[FIO_RAND_PRIO_CMDS], false);
 	init_rand_seed(&td->dedupe_working_set_index_state, td->rand_seeds[FIO_RAND_DEDUPE_WORKING_SET_IX], use64);
 
-	init_rand_seed(&td->random_state, td->rand_seeds[FIO_RAND_BLOCK_OFF], use64);
+	init_rand_seed(&td->offset_state, td->rand_seeds[FIO_RAND_BLOCK_OFF], use64);
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		struct frand_state *s = &td->seq_rand_state[i];

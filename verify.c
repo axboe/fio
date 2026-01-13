@@ -1682,18 +1682,18 @@ struct all_io_list *get_all_io_list(int save_mask, size_t *sz)
 		s->depth = cpu_to_le32((uint32_t) td->o.iodepth);
 		s->numberio = cpu_to_le64((uint64_t) atomic_load_acquire(&td->inflight_issued));
 		s->index = cpu_to_le64((uint64_t) __td_index);
-		if (td->random_state.use64) {
-			s->rand.state64.s[0] = cpu_to_le64(td->random_state.state64.s1);
-			s->rand.state64.s[1] = cpu_to_le64(td->random_state.state64.s2);
-			s->rand.state64.s[2] = cpu_to_le64(td->random_state.state64.s3);
-			s->rand.state64.s[3] = cpu_to_le64(td->random_state.state64.s4);
-			s->rand.state64.s[4] = cpu_to_le64(td->random_state.state64.s5);
+		if (td->offset_state.use64) {
+			s->rand.state64.s[0] = cpu_to_le64(td->offset_state.state64.s1);
+			s->rand.state64.s[1] = cpu_to_le64(td->offset_state.state64.s2);
+			s->rand.state64.s[2] = cpu_to_le64(td->offset_state.state64.s3);
+			s->rand.state64.s[3] = cpu_to_le64(td->offset_state.state64.s4);
+			s->rand.state64.s[4] = cpu_to_le64(td->offset_state.state64.s5);
 			s->rand.state64.s[5] = 0;
 			s->rand.use64 = cpu_to_le64((uint64_t)1);
 		} else {
-			s->rand.state32.s[0] = cpu_to_le32(td->random_state.state32.s1);
-			s->rand.state32.s[1] = cpu_to_le32(td->random_state.state32.s2);
-			s->rand.state32.s[2] = cpu_to_le32(td->random_state.state32.s3);
+			s->rand.state32.s[0] = cpu_to_le32(td->offset_state.state32.s1);
+			s->rand.state32.s[1] = cpu_to_le32(td->offset_state.state32.s2);
+			s->rand.state32.s[2] = cpu_to_le32(td->offset_state.state32.s3);
 			s->rand.state32.s[3] = 0;
 			s->rand.use64 = 0;
 		}
