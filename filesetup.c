@@ -1515,6 +1515,7 @@ static int check_rand_gen_limits(struct thread_data *td, struct fio_file *f,
 			 "random_generator= option to get rid of this "
 			 "warning.\n");
 		td->o.random_generator = FIO_RAND_GEN_TAUSWORTHE64;
+		init_rand_offset_seed(td);
 		return 0;
 	}
 

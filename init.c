@@ -1134,6 +1134,23 @@ static void init_rand_file_service(struct thread_data *td)
 	}
 }
 
+/*
+ * Separate initialization of the random generator for offsets in case we need
+ * to re-initialize it if we discover later on that the combination of filesize
+ * and block size exceeds the limits of the default random generator.
+ */
+void init_rand_offset_seed(struct thread_data *td)
+{
+	bool use64;
+
+	if (td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE64)
+		use64 = true;
+	else
+		use64 = false;
+
+	init_rand_seed(&td->offset_state, td->rand_seeds[FIO_RAND_BLOCK_OFF], use64);
+}
+
 void td_fill_rand_seeds(struct thread_data *td)
 {
 	uint64_t read_seed = td->rand_seeds[FIO_RAND_BS_OFF];
@@ -1183,7 +1200,7 @@ void td_fill_rand_seeds(struct thread_data *td)
 	init_rand_seed(&td->prio_state, td->rand_seeds[FIO_RAND_PRIO_CMDS], false);
 	init_rand_seed(&td->dedupe_working_set_index_state, td->rand_seeds[FIO_RAND_DEDUPE_WORKING_SET_IX], use64);
 
-	init_rand_seed(&td->offset_state, td->rand_seeds[FIO_RAND_BLOCK_OFF], use64);
+	init_rand_offset_seed(td);
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		struct frand_state *s = &td->seq_rand_state[i];
