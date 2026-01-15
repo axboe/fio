@@ -2515,6 +2515,9 @@ reap:
 		}
 	} end_for_each();
 
+	/* make sure child processes have empty stream buffers before fork */
+	log_info_flush();
+
 	/* start idle threads before io threads start to run */
 	fio_idle_prof_start();
 
@@ -2607,6 +2610,9 @@ reap:
 					int ret;
 
 					ret = (int)(uintptr_t)thread_main(fd);
+					/* _exit() does not flush buffers, so
+					 * do it ourselves */
+					log_info_flush();
 					_exit(ret);
 				} else if (__td_index == fio_debug_jobno)
 					*fio_debug_jobp = pid;
