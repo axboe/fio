@@ -3929,7 +3929,8 @@ Verification
 	for workloads that write data, and does not support workloads with the
 	:option:`time_based` option set. :option:`verify_write_sequence` and
 	:option:`verify_header_seed` will be disabled in this mode, unless they are
-	explicitly enabled.
+	explicitly enabled. The writes reported in the output when this option is
+	specified are phantom writes, since no writes are actually issued.
 
 .. option:: do_verify=bool
 

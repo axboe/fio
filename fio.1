@@ -3641,7 +3641,8 @@ times at a later date without overwriting it. This option makes sense only
 for workloads that write data, and does not support workloads with the
 \fBtime_based\fR option set. Options \fBverify_write_sequence\fR and
 \fBverify_header_seed\fR will be disabled in this mode, unless they are
-explicitly enabled.
+explicitly enabled. The writes reported in the output when this option is
+specified are phantom writes, since no writes are actually issued.
 .TP
 .BI do_verify \fR=\fPbool
 Run the verify phase after a write phase. Only valid if \fBverify\fR is
