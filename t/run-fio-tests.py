@@ -1131,6 +1131,14 @@ TEST_LIST = [
         'success':          SUCCESS_DEFAULT,
         'requirements':     [Requirements.linux, Requirements.libaio],
     },
+    {
+        'test_id':          1020,
+        'test_class':       FioExeTest,
+        'exe':              't/t64-switch.sh',
+        'parameters':       ['{fio_path}'],
+        'success':          SUCCESS_DEFAULT,
+        'requirements':     [Requirements.not_windows],
+    },
 ]
 
 
