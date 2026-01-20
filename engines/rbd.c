@@ -166,12 +166,12 @@ static bool _fio_rbd_setup_encryption(struct rbd_data *rbd, struct rbd_options *
 	rbd_encryption_luks2_format_options_t luks2_opts;
 
 	if (!options->encryption_format)
-        return true; // No encryption requested
+		return true; // No encryption requested
 
-    if (!options->encryption_passphrase) {
-        log_err("rbd_encryption_passphrase is required when a rbd_encryption_format is specified.\n");
-        return false;
-    }	
+	if (!options->encryption_passphrase) {
+		log_err("rbd_encryption_passphrase is required when a rbd_encryption_format is specified.\n");
+		return false;
+	}
 
 	if (!strcmp(options->encryption_format, "luks2")) {
 		fmt = RBD_ENCRYPTION_FORMAT_LUKS2;
@@ -188,8 +188,7 @@ static bool _fio_rbd_setup_encryption(struct rbd_data *rbd, struct rbd_options *
 		opts_ptr = &luks1_opts;
 		opts_size = sizeof(luks1_opts);
 	} else {
-		log_err("rbd_encryption_load failed. Unknown rbd_encryption_format: %s\n", 
-			options->encryption_format);
+		log_err("rbd_encryption_load failed. Unknown rbd_encryption_format: %s\n", options->encryption_format);
 		return false;
 	}
 	r = rbd_encryption_load(rbd->image, fmt, opts_ptr, opts_size);
@@ -199,7 +198,7 @@ static bool _fio_rbd_setup_encryption(struct rbd_data *rbd, struct rbd_options *
 	}
 	return true;
 }
-#else 
+#else
 static bool _fio_rbd_setup_encryption(struct rbd_data *rbd, struct rbd_options *options)
 {
 	if (options->encryption_format) {
