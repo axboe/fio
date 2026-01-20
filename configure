@@ -2012,6 +2012,28 @@ print_config "rbd_invalidate_cache" "$rbd_inval"
 fi
 
 ##########################################
+# check for rbd_encryption_load()
+if test "$rbd_encryption" != "yes" ; then
+  rbd_encryption="no"
+fi
+if test "$rbd" = "yes" ; then
+cat > $TMPC << EOF
+#include <rbd/librbd.h>
+
+int main(int argc, char **argv)
+{
+  rbd_image_t image;
+
+  return rbd_encryption_load(image, RBD_ENCRYPTION_FORMAT_LUKS1, 0, 0);
+}
+EOF
+if compile_prog "" "-lrbd -lrados" "rbd_encryption"; then
+    rbd_encryption="yes"
+fi
+  print_config "rbd_encryption_load" "$rbd_encryption"
+fi
+
+##########################################
 # Check whether we have setvbuf
 if test "$setvbuf" != "yes" ; then
   setvbuf="no"
@@ -3220,6 +3242,9 @@ if test "$rbd_poll" = "yes" ; then
 fi
 if test "$rbd_inval" = "yes" ; then
   output_sym "CONFIG_RBD_INVAL"
+fi
+if test "$rbd_encryption" = "yes" ; then
+  output_sym "CONFIG_RBD_ENCRYPTION"
 fi
 if test "$setvbuf" = "yes" ; then
   output_sym "CONFIG_SETVBUF"
