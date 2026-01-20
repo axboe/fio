@@ -40,6 +40,8 @@ struct rbd_options {
 	char *pool_name;
 	char *client_name;
 	int busy_poll;
+	char *encryption_format;
+    char *encryption_passphrase;
 };
 
 static struct fio_option options[] = {
@@ -90,6 +92,24 @@ static struct fio_option options[] = {
 		.group		= FIO_OPT_G_RBD,
 	},
 	{
+        .name     = "rbd_encryption_format",
+        .lname    = "RBD Encryption Format",
+        .type     = FIO_OPT_STR_STORE,
+        .off1     = offsetof(struct rbd_options, encryption_format),
+        .help     = "RBD Encryption Format (luks1, luks2)",
+        .category = FIO_OPT_C_ENGINE,
+        .group    = FIO_OPT_G_RBD,
+    },
+    {
+        .name     = "rbd_encryption_passphrase",
+        .lname    = "RBD Encryption Passphrase",
+        .type     = FIO_OPT_STR_STORE,
+        .off1     = offsetof(struct rbd_options, encryption_passphrase),
+        .help     = "Passphrase for unlocking the RBD image",
+        .category = FIO_OPT_C_ENGINE,
+        .group    = FIO_OPT_G_RBD,
+    },
+	{
 		.name = NULL,
 	},
 };
@@ -133,6 +153,66 @@ failed:
 	return 1;
 
 }
+
+#ifdef CONFIG_RBD_ENCRYPTION
+static bool _fio_rbd_setup_encryption(struct rbd_data *rbd, struct rbd_options *options)
+{
+	rbd_encryption_format_t fmt;
+	void *opts_ptr = NULL;
+	size_t opts_size = 0;
+	int r;
+
+	rbd_encryption_luks1_format_options_t luks1_opts;
+	rbd_encryption_luks2_format_options_t luks2_opts;
+
+	if (!options->encryption_format)
+        return true; // No encryption requested
+
+    if (!options->encryption_passphrase) {
+        log_err("rbd_encryption_passphrase is required when a rbd_encryption_format is specified.\n");
+        return false;
+    }	
+
+	if (!strcmp(options->encryption_format, "luks2")) {
+		fmt = RBD_ENCRYPTION_FORMAT_LUKS2;
+		memset(&luks2_opts, 0, sizeof(luks2_opts));
+		luks2_opts.passphrase = options->encryption_passphrase;
+		luks2_opts.passphrase_size = strlen(options->encryption_passphrase);
+		opts_ptr = &luks2_opts;
+		opts_size = sizeof(luks2_opts);
+	} else if (!strcmp(options->encryption_format, "luks1")) {
+		fmt = RBD_ENCRYPTION_FORMAT_LUKS1;
+		memset(&luks1_opts, 0, sizeof(luks1_opts));
+		luks1_opts.passphrase = options->encryption_passphrase;
+		luks1_opts.passphrase_size = strlen(options->encryption_passphrase);
+		opts_ptr = &luks1_opts;
+		opts_size = sizeof(luks1_opts);
+	} else {
+		log_err("rbd_encryption_load failed. Unknown rbd_encryption_format: %s\n", 
+			options->encryption_format);
+		return false;
+	}
+	r = rbd_encryption_load(rbd->image, fmt, opts_ptr, opts_size);
+	if (r < 0) {
+		log_err("rbd_encryption_load failed.\n");
+		return false;
+	}
+	return true;
+}
+#else 
+static bool _fio_rbd_setup_encryption(struct rbd_data *rbd, struct rbd_options *options)
+{
+	if (options->encryption_format) {
+		int major, minor, extra;
+        rbd_version(&major, &minor, &extra);
+
+        log_err("rbd encryption requested but not supported by this librbd version (%d.%d.%d).\n",
+                major, minor, extra);
+        return false;
+    }
+	return true;
+}
+#endif
 
 #ifdef CONFIG_RBD_POLL
 static bool _fio_rbd_setup_poll(struct rbd_data *rbd)
@@ -251,12 +331,15 @@ static int _fio_rbd_connect(struct thread_data *td)
 		}
 	}
 
+	if (!_fio_rbd_setup_encryption(rbd, o))
+		goto failed_post_open;
+
 	if (!_fio_rbd_setup_poll(rbd))
-		goto failed_poll;
+		goto failed_post_open;
 
 	return 0;
 
-failed_poll:
+failed_post_open:
 	rbd_close(rbd->image);
 	rbd->image = NULL;
 failed_open:

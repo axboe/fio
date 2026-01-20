@@ -2637,6 +2637,20 @@ During initialization, touch (create if do not exist) all objects (files).
 Touching all objects affects ceph caches and likely impacts test results.
 Enabled by default.
 .TP
+.BI (rbd)rbd_encryption_format \fR=\fPstr
+Specifies the encryption format of the RBD image. Supported values are
+`luks1' and `luks2'. If set, \fBrbd_encryption_passphrase\fR must
+also be specified. Note that the image must have been previously formatted
+using `rbd encryption format <image>'; the fio rbd engine will only
+attempt to load the encryption context, not format the image.
+The RBD encryption feature is disabled by default.
+Support for this feature requires librbd version 16.2 (Ceph Pacific) 
+or later.
+.TP
+.BI (rbd)rbd_encryption_passphrase \fR=\fPstr
+The passphrase used to unlock the encrypted RBD image. Required if
+\fBrbd_encryption_format\fR is set.
+.TP
 .BI (http)http_host \fR=\fPstr
 Hostname to connect to.  HTTP port 80 is used automatically when the value 
 of the \fBhttps\fP parameter is \fBoff\fP, and HTTPS port 443 if it is \fBon\fP.

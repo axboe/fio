@@ -2891,6 +2891,22 @@ with the caveat that when used on the command line, they must come after the
         Touching all objects affects ceph caches and likely impacts test results.
         Enabled by default.
 
+.. option:: rbd_encryption_format=str : [rbd]
+
+		Specifies the encryption format of the RBD image. Supported values are
+		``luks1`` and ``luks2``. If set, :option:`rbd_encryption_passphrase` must 
+		also be specified. Note that the image must have been previously formatted 
+		using :command:`rbd encryption format <image>`; the fio rbd engine will only 
+		attempt to load the encryption context, not format the image.
+		The RBD encryption feature is disabled by default.
+		Support for this feature requires librbd version 16.2 (Ceph Pacific) 
+		or later.
+
+.. option:: rbd_encryption_passphrase=str : [rbd]
+
+		The passphrase used to unlock the encrypted RBD image. Required if
+		:option:`rbd_encryption_format` is set.
+
 .. option:: pool=str :
 
    [rbd,rados]
