@@ -2432,9 +2432,11 @@ static bool waitee_running(struct thread_data *me)
 static void run_threads(struct sk_out *sk_out)
 {
 	struct thread_data *td;
-	unsigned int i, todo, nr_running, nr_started;
+	struct timespec last_finish_time;
+	unsigned int i, todo, nr_running, nr_started, prev_nr_running;
 	uint64_t m_rate, t_rate;
 	uint64_t spent;
+	uint64_t per_job_spent;
 
 	if (fio_gtod_offload && fio_start_gtod_thread())
 		return;
@@ -2475,6 +2477,7 @@ static void run_threads(struct sk_out *sk_out)
 	todo = thread_number;
 	nr_running = 0;
 	nr_started = 0;
+	prev_nr_running = 0;
 	m_rate = t_rate = 0;
 
 	for_each_td(td) {
@@ -2522,6 +2525,7 @@ reap:
 	fio_idle_prof_start();
 
 	set_genesis_time();
+	fio_gettime(&last_finish_time, NULL);
 
 	while (todo) {
 		struct thread_data *map[REAL_MAX_JOBS];
@@ -2562,6 +2566,13 @@ reap:
 				dprint(FD_PROCESS, "%s: waiting for %s\n",
 						td->o.name, td->o.wait_for);
 				continue;
+			}
+
+			if (td->o.stonewall && td->o.per_job_start_delay) {
+				per_job_spent = utime_since_now(&last_finish_time);
+
+				if (td->o.per_job_start_delay > per_job_spent)
+					continue;
 			}
 
 			init_disk_util(td);
@@ -2691,7 +2702,12 @@ reap:
 			fio_sem_up(td->sem);
 		} end_for_each();
 
+		prev_nr_running = nr_running;
 		reap_threads(&nr_running, &t_rate, &m_rate);
+		if (nr_running == prev_nr_running - 1) {
+				//sequential job has finished get new base time
+				fio_gettime(&last_finish_time, NULL);
+		}
 
 		if (todo)
 			do_usleep(100000);
