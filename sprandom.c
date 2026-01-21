@@ -570,6 +570,7 @@ static int sprandom_setup(struct sprandom_info *spr_info, uint64_t logical_size,
 			  uint64_t align_bs)
 {
 	double over_provisioning = spr_info->over_provisioning;
+	int ret = 0;
 	uint64_t physical_size;
 	uint64_t region_sz;
 	uint64_t region_write_count;
@@ -584,8 +585,10 @@ static int sprandom_setup(struct sprandom_info *spr_info, uint64_t logical_size,
 
 	validity_dist = compute_validity_dist(spr_info->num_regions,
 					      spr_info->over_provisioning);
-	if (!validity_dist)
-		return -ENOMEM;
+	if (!validity_dist) {
+		ret = -ENOMEM;
+		goto err;
+	}
 
 	/* Initialize validity_distribution */
 	print_d_array("validity resampled:", validity_dist, spr_info->num_regions);
@@ -593,8 +596,10 @@ static int sprandom_setup(struct sprandom_info *spr_info, uint64_t logical_size,
 	/* Precompute invalidity percentage array */
 	spr_info->invalid_pct = calloc(spr_info->num_regions,
 				       sizeof(spr_info->invalid_pct[0]));
-	if (!spr_info->invalid_pct)
+	if (!spr_info->invalid_pct) {
+		ret = -ENOMEM;
 		goto err;
+	}
 
 	total_alloc += spr_info->num_regions * sizeof(spr_info->invalid_pct[0]);
 
@@ -606,8 +611,24 @@ static int sprandom_setup(struct sprandom_info *spr_info, uint64_t logical_size,
 	region_sz = physical_size / spr_info->num_regions;
 	region_write_count = region_sz / align_bs;
 
-	invalid_capacity = estimate_inv_capacity(region_write_count,
-						 validity_dist[0]);
+	if ((spr_info->cache_sz) && (spr_info->cache_sz > region_sz)) {
+		log_err("fio: sprandom: spr_cs [%"PRIu64"] must be smaller than"
+			" region_sz [%"PRIu64"] which means [%"PRIu64"] regions"
+			" allowed", spr_info->cache_sz, region_sz,
+		    (physical_size / spr_info->cache_sz));
+		ret = -EINVAL;
+		goto err;
+	}
+
+	if (spr_info->cache_sz) {
+		/* Need 2x size to be safe since we wait to invalidate until after next region */
+		invalid_capacity = estimate_inv_capacity(region_write_count,
+							validity_dist[0]) * 2;
+	} else {
+		invalid_capacity = estimate_inv_capacity(region_write_count,
+							validity_dist[0]);
+	}
+
 	spr_info->invalid_capacity = invalid_capacity;
 
 	spr_info->invalid_buf = pcb_alloc(invalid_capacity);
@@ -633,6 +654,10 @@ static int sprandom_setup(struct sprandom_info *spr_info, uint64_t logical_size,
 	dprint(FD_SPRANDOM, "  op: %02f\n", spr_info->over_provisioning);
 	dprint(FD_SPRANDOM, "  region_size:        %"PRIu64"\n", region_sz);
 	dprint(FD_SPRANDOM, "  num_regions:        %u\n", spr_info->num_regions);
+	dprint(FD_SPRANDOM, "  cache_size:         %"PRIu64": %s\n",
+		spr_info->cache_sz,
+		bytes2str_simple(bytes2str_buf, sizeof(bytes2str_buf),
+						 spr_info->cache_sz));
 	dprint(FD_SPRANDOM, "  region_write_count: %"PRIu64"\n", region_write_count);
 	dprint(FD_SPRANDOM, "  invalid_capacity:   %zu\n", invalid_capacity);
 	dprint(FD_SPRANDOM, "  dynamic memory:     %zu: %s\n",
@@ -644,7 +669,7 @@ static int sprandom_setup(struct sprandom_info *spr_info, uint64_t logical_size,
 err:
 	free(validity_dist);
 	free(spr_info->invalid_pct);
-	return -ENOMEM;
+	return ret;
 }
 
 /**
@@ -717,16 +742,32 @@ int sprandom_get_next_offset(struct sprandom_info *info, struct fio_file *f, uin
 	uint64_t offset = 0;
 	uint32_t phase = info->curr_phase;
 
-	/* replay invalidation */
-	if (pcb_pop(info->invalid_buf, &offset)) {
-		sprandom_add_with_probability(info, offset,  phase ^ 1);
-		dprint(FD_SPRANDOM, "Write %"PRIu64" over %d\n",
-		       offset, info->current_region);
-		goto out;
+	if (!info->cache_sz) {
+		/* replay invalidation at start of next region prior to moving
+		 * to new region.
+		 */
+		if (pcb_pop(info->invalid_buf, &offset)) {
+			sprandom_add_with_probability(info, offset,  phase ^ 1);
+			dprint(FD_SPRANDOM, "Write %"PRIu64" over %d\n",
+				offset, info->current_region);
+			goto out;
+		}
 	}
 
 	/* Move to next region */
 	if (info->writes_remaining == 0) {
+		if (info->cache_sz) {
+			/* replay invalidation for previous region at end of this
+			 * region to avoid invalidations hitting the defined cache.
+			 */
+			if (pcb_pop(info->invalid_buf, &offset)) {
+				sprandom_add_with_probability(info, offset,  phase ^ 1);
+				dprint(FD_SPRANDOM, "Cache Defer Write %"PRIu64" "
+					" over %d\n", offset, info->current_region);
+				goto out;
+			}
+		}
+
 		if (info->current_region >= info->num_regions) {
 			dprint(FD_SPRANDOM, "End: Last Region %d cur%d\n",
 			       info->current_region, info->num_regions);
@@ -747,6 +788,17 @@ int sprandom_get_next_offset(struct sprandom_info *info, struct fio_file *f, uin
 
 	/* Fetch new offset */
 	if (lfsr_next(&f->lfsr, &offset)) {
+		if (info->cache_sz) {
+			/* Since we defer invalidation to the end of next region we
+			 * need to take into account end of lfsr case
+			 */
+			if (pcb_pop(info->invalid_buf, &offset)) {
+				dprint(FD_SPRANDOM, "lfsr cache exit Write %"PRIu64" "
+					" over %d\n", offset, info->current_region);
+				goto out;
+			}
+		}
+
 		dprint(FD_SPRANDOM, "End: LFSR exhausted %d [%zu] [%zu]\n",
 			info->current_region,
 			info->invalid_count[phase],
@@ -802,6 +854,7 @@ int sprandom_init(struct thread_data *td, struct fio_file *f)
 	over_provisioning = td->o.spr_over_provisioning.u.f;
 	info->num_regions = td->o.spr_num_regions;
 	info->over_provisioning = over_provisioning;
+	info->cache_sz = td->o.spr_cache_size;
 	td->o.io_size = sprandom_physical_size(over_provisioning,
 					       logical_size, align_bs);
 	info->rand_state = &td->sprandom_state;

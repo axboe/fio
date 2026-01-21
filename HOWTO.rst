@@ -1674,6 +1674,24 @@ I/O type
         Default=0.15
 
 
+.. option:: spr_cs=int
+
+	See :option:`sprandom`. Define a cache size in bytes, as specified
+	    by the SSD manufacturer. When this is non-zero, delay invalidating
+		writes by one region in order to make sure that all original
+		writes from a region are flushed from cache before the later
+		invalidating writes are sent to the device. This deferral
+		prevents the original write and the later invalidating write
+		from being present in the device's cache at the same time which
+		would allow the device to ignore the original write and prevent
+		sprandom from achieving its target validity fractions. The
+		actual cache size is used to ensure that the number of regions
+		is not set so large that the size of a region is smaller than
+		the device cache.
+
+        Default=0
+
+
 Block size
 ~~~~~~~~~~
 
