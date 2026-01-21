@@ -25,6 +25,7 @@ from fiotestcommon import SUCCESS_DEFAULT, SUCCESS_NONZERO
 SPRANDOM_OPT_LIST = [
     'spr_op',
     'spr_num_regions',
+    'spr_cs',
     'size',
     'norandommap',
     'random_generator',
@@ -66,6 +67,7 @@ TEST_LIST = [
         "fio_opts": {
             "spr_op": "0.10",
             "spr_num_regions": "50",
+            "spr_cs": "0",
             "size": "32M",
         },
         "success": SUCCESS_DEFAULT,
@@ -76,6 +78,7 @@ TEST_LIST = [
         "fio_opts": {
             "spr_op": "0.25",
             "spr_num_regions": "100",
+            "spr_cs": "0",
             "size": "64M",
         },
         "success": SUCCESS_DEFAULT,
@@ -86,6 +89,7 @@ TEST_LIST = [
         "fio_opts": {
             "spr_op": "0.50",
             "spr_num_regions": "200",
+            "spr_cs": "0",
             "size": "128M",
             "random_generator": "tausworthe",
         },
@@ -97,6 +101,7 @@ TEST_LIST = [
         "fio_opts": {
             "spr_op": "0.75",
             "spr_num_regions": "400",
+            "spr_cs": "0",
             "size": "256M",
             "norandommap": "0"
         },
@@ -105,14 +110,48 @@ TEST_LIST = [
         "test_class": FioSPrandomTest,
     },
     {
-        "test_id": 4,
+        "test_id": 5,
         "fio_opts": {
             "spr_op": "0.75",
             "spr_num_regions": "400",
+            "spr_cs": "0",
             "size": "256M",
             "rw": "randread",
         },
         "bs": "16K",
+        "success": SUCCESS_NONZERO,
+        "test_class": FioSPrandomTest,
+    },
+    {
+        "test_id": 6,
+        "fio_opts": {
+            "spr_op": "0.10",
+            "spr_num_regions": "100",
+            "spr_cs": "32K",
+            "size": "32M",
+        },
+        "success": SUCCESS_DEFAULT,
+        "test_class": FioSPrandomTest,
+    },
+    {
+        "test_id": 7,
+        "fio_opts": {
+            "spr_op": "0.10",
+            "spr_num_regions": "2000",
+            "spr_cs": "32K",
+            "size": "32M",
+        },
+        "success": SUCCESS_NONZERO,
+        "test_class": FioSPrandomTest,
+    },
+    {
+        "test_id": 8,
+        "fio_opts": {
+            "spr_op": "0.10",
+            "spr_num_regions": "50",
+            "spr_cs": "32M",
+            "size": "32M",
+        },
         "success": SUCCESS_NONZERO,
         "test_class": FioSPrandomTest,
     },
