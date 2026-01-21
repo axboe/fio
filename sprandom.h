@@ -31,6 +31,7 @@
 struct sprandom_info {
 	double    over_provisioning;
 	uint64_t  region_sz;
+	uint64_t  cache_sz;
 	uint32_t  num_regions;
 
 	uint32_t  *invalid_pct;
