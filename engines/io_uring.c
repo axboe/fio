@@ -194,6 +194,8 @@ struct ioring_options {
 	enum uring_cmd_type cmd_type;
 };
 
+static unsigned int enter_flags = IORING_ENTER_GETEVENTS;
+
 static const int ddir_to_op[2][2] = {
 	{ IORING_OP_READV, IORING_OP_READ },
 	{ IORING_OP_WRITEV, IORING_OP_WRITE }
@@ -825,8 +827,7 @@ static int fio_ioring_getevents(struct thread_data *td, unsigned int min,
 		}
 
 		if (!o->sqpoll_thread) {
-			r = io_uring_enter(ld, 0, actual_min,
-						IORING_ENTER_GETEVENTS);
+			r = io_uring_enter(ld, 0, actual_min, enter_flags);
 			if (r < 0) {
 				if (errno == EAGAIN || errno == EINTR)
 					continue;
@@ -979,7 +980,7 @@ static int fio_ioring_commit(struct thread_data *td)
 		unsigned start = *ld->sq_ring.head;
 		long nr = ld->queued;
 
-		ret = io_uring_enter(ld, nr, 0, IORING_ENTER_GETEVENTS);
+		ret = io_uring_enter(ld, nr, 0, enter_flags);
 		if (ret > 0) {
 			fio_ioring_queued(td, start, ret);
 			io_u_mark_submit(td, ret);
@@ -1182,6 +1183,8 @@ retry:
 		return ret;
 	}
 
+	if (p.features & IORING_FEAT_NO_IOWAIT)
+		enter_flags |= IORING_ENTER_NO_IOWAIT;
 	ld->ring_fd = ret;
 
 	fio_ioring_probe(td);
