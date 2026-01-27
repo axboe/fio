@@ -31,6 +31,11 @@
 #include <math.h>
 #include <pthread.h>
 
+#ifdef CONFIG_LINUX
+#include <linux/prctl.h>
+#include <sys/prctl.h>
+#endif
+
 #include "fio.h"
 #include "smalloc.h"
 #include "verify.h"
@@ -1757,6 +1762,10 @@ static void *thread_main(void *data)
 		td->pid = gettid();
 
 	fio_local_clock_init();
+
+#ifdef CONFIG_LINUX
+	prctl(PR_SET_NAME, o->comm);
+#endif
 
 	dprint(FD_PROCESS, "jobs pid=%d started\n", (int) td->pid);
 

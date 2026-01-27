@@ -3454,6 +3454,10 @@ limitations. First, the waitee must be defined prior to the waiter job
 (meaning no forward references). Second, if a job is being referenced as a
 waitee, it must have a unique name (no duplicate waitees).
 .TP
+.BI comm \fR=\fPstr
+Set the job process comm to the specified string. See man \fBprctrl\fR\|(2).
+Note: This option is currently supported only on Linux.
+.TP
 .BI nice \fR=\fPint
 Run the job with the given nice value. See man \fBnice\fR\|(2).
 .\" ignore blank line here from HOWTO as it looks normal without it
