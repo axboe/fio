@@ -871,6 +871,11 @@ void put_io_u(struct thread_data *td, struct io_u *io_u)
 	if (needs_lock)
 		__td_io_u_lock(td);
 
+	if (io_u->file && (td->o.file_service_type & __FIO_FSERVICE_NONREPEAT)) {
+		fio_file_clear_busy(io_u->file);
+		td->nr_busy_files--;
+	}
+
 	if (io_u->file && !(io_u->flags & IO_U_F_NO_FILE_PUT))
 		put_file_log(td, io_u->file);
 
@@ -1334,7 +1339,8 @@ static unsigned int __get_next_fileno_rand(struct thread_data *td)
 {
 	unsigned long fileno;
 
-	if (td->o.file_service_type == FIO_FSERVICE_RANDOM) {
+	if (td->o.file_service_type == FIO_FSERVICE_RANDOM ||
+	    td->o.file_service_type == FIO_FSERVICE_RANDOM1) {
 		uint64_t frand_max = rand_max(&td->next_file_state);
 		unsigned long r;
 
@@ -1374,8 +1380,11 @@ static struct fio_file *get_next_file_rand(struct thread_data *td,
 		fno = __get_next_fileno_rand(td);
 
 		f = td->files[fno];
-		if (fio_file_done(f))
+		if (fio_file_done(f) || fio_file_busy(f)) {
+			if (td->nr_busy_files >= td->nr_open_files)
+				return ERR_PTR(-EBUSY);
 			continue;
+		}
 
 		if (!fio_file_open(f)) {
 			int err;
@@ -1417,7 +1426,9 @@ static struct fio_file *get_next_file_rr(struct thread_data *td, int goodf,
 			td->next_file = 0;
 
 		dprint(FD_FILE, "trying file %s %x\n", f->file_name, f->flags);
-		if (fio_file_done(f)) {
+		if (fio_file_done(f) || fio_file_busy(f)) {
+			if (td->nr_busy_files >= td->nr_open_files)
+				return ERR_PTR(-EBUSY);
 			f = NULL;
 			continue;
 		}
@@ -1478,6 +1489,7 @@ static struct fio_file *__get_next_file(struct thread_data *td)
 	}
 
 	if (td->o.file_service_type == FIO_FSERVICE_RR ||
+	    td->o.file_service_type == FIO_FSERVICE_RR1 ||
 	    td->o.file_service_type == FIO_FSERVICE_SEQ)
 		f = get_next_file_rr(td, FIO_FILE_open, FIO_FILE_closing);
 	else
@@ -1488,6 +1500,11 @@ static struct fio_file *__get_next_file(struct thread_data *td)
 
 	td->file_service_file = f;
 	td->file_service_left = td->file_service_nr - 1;
+
+	if (f && (td->o.file_service_type & __FIO_FSERVICE_NONREPEAT)) {
+		fio_file_set_busy(f);
+		td->nr_busy_files++;
+	}
 out:
 	if (f)
 		dprint(FD_FILE, "get_next_file: %p [%s]\n", f, f->file_name);

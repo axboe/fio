@@ -236,6 +236,7 @@ struct thread_data {
 	unsigned int files_index;
 	unsigned int nr_open_files;
 	unsigned int nr_done_files;
+	unsigned int nr_busy_files;
 	union {
 		unsigned int next_file;
 		struct frand_state next_file_state;

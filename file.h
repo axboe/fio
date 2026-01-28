@@ -35,6 +35,7 @@ enum fio_file_flags {
 	FIO_FILE_axmap		= 1 << 7,	/* uses axmap */
 	FIO_FILE_lfsr		= 1 << 8,	/* lfsr is used */
 	FIO_FILE_smalloc	= 1 << 9,	/* smalloc file/file_name */
+	FIO_FILE_busy		= 1 << 10,	/* out of service */
 };
 
 enum file_lock_mode {
@@ -53,6 +54,9 @@ enum {
 	FIO_FSERVICE_RR			= 2,
 	FIO_FSERVICE_SEQ		= 3,
 	__FIO_FSERVICE_NONUNIFORM	= 0x100,
+	__FIO_FSERVICE_NONREPEAT	= 0x200,
+	FIO_FSERVICE_RANDOM1		= __FIO_FSERVICE_NONREPEAT | FIO_FSERVICE_RANDOM,
+	FIO_FSERVICE_RR1		= __FIO_FSERVICE_NONREPEAT | FIO_FSERVICE_RR,
 	FIO_FSERVICE_ZIPF		= __FIO_FSERVICE_NONUNIFORM | 4,
 	FIO_FSERVICE_PARETO		= __FIO_FSERVICE_NONUNIFORM | 5,
 	FIO_FSERVICE_GAUSS		= __FIO_FSERVICE_NONUNIFORM | 6,
@@ -192,6 +196,7 @@ FILE_FLAG_FNS(partial_mmap);
 FILE_FLAG_FNS(axmap);
 FILE_FLAG_FNS(lfsr);
 FILE_FLAG_FNS(smalloc);
+FILE_FLAG_FNS(busy);
 #undef FILE_FLAG_FNS
 
 /*
