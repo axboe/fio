@@ -1180,7 +1180,8 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 		if (td_write(td) && io_u->ddir == DDIR_WRITE &&
 		    td->o.do_verify &&
 		    td->o.verify != VERIFY_NONE &&
-		    !td->o.experimental_verify)
+		    !td->o.experimental_verify &&
+		    !td_ioengine_flagged(td, FIO_UNIDIR))
 			log_io_piece(td, io_u);
 
 		if (td->o.io_submit_mode == IO_MODE_OFFLOAD) {
