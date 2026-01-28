@@ -3744,6 +3744,11 @@ Threads, processes and job synchronization
 	(meaning no forward references). Second, if a job is being referenced as a
 	waitee, it must have a unique name (no duplicate waitees).
 
+.. option:: comm=str
+
+	Set the job process comm to the specified string. See man :manpage:`prctrl(2)`.
+	Note: This option is currently supported only on Linux.
+
 .. option:: nice=int
 
 	Run the job with the given nice value. See man :manpage:`nice(2)`.

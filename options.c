@@ -4034,6 +4034,17 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_RWMIX,
 	},
+#ifdef CONFIG_LINUX
+	{
+		.name	= "comm",
+		.lname	= "Job process comm",
+		.type	= FIO_OPT_STR_STORE,
+		.off1	= offsetof(struct thread_options, comm),
+		.help	= "Process comm of this job",
+		.category = FIO_OPT_C_GENERAL,
+		.group	= FIO_OPT_G_DESC,
+	},
+#endif
 	{
 		.name	= "nice",
 		.lname	= "Nice",

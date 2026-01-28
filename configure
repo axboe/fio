@@ -3075,6 +3075,9 @@ if test "$bigendian" = "yes" ; then
 else
   output_sym "CONFIG_LITTLE_ENDIAN"
 fi
+if test "$targetos" = "Linux" ; then
+  output_sym "CONFIG_LINUX"
+fi
 if test "$zlib" = "yes" ; then
   output_sym "CONFIG_ZLIB"
 fi

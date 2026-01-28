@@ -252,6 +252,7 @@ struct thread_options {
 	unsigned int iolog;
 	unsigned int rwmixcycle;
 	unsigned int rwmix[DDIR_RWDIR_CNT];
+	char *comm;
 	unsigned int nice;
 	unsigned int ioprio;
 	unsigned int ioprio_class;
@@ -585,6 +586,7 @@ struct thread_options_pack {
 	uint32_t iolog;
 	uint32_t rwmixcycle;
 	uint32_t rwmix[DDIR_RWDIR_CNT];
+	uint8_t comm[FIO_TOP_STR_MAX];
 	uint32_t nice;
 	uint32_t ioprio;
 	uint32_t ioprio_class;
