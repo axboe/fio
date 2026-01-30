@@ -1,0 +1,12 @@
+[Unit]
+Description=Flexible I/O Tester as service
+After=network.target
+Documentation=man:fio(1)
+
+[Service]
+Type=forking
+PIDFile=/run/fio.pid
+ExecStart=/usr/bin/fio --server --daemonize /run/fio.pid
+
+[Install]
+WantedBy=multi-user.target

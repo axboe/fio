@@ -1,0 +1,326 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: fio
+Upstream-Contact: Jens Axboe <axboe@kernel.dk>
+Source: http://brick.kernel.dk/snaps/
+
+Files: *
+Copyright: 2005 Jens Axboe <axboe@suse.de>
+           2006-2017 Jens Axboe <axboe@kernel.dk>
+License: GPL-2
+
+Files: debian/*
+Copyright: Martin Steigerwald <martin@steigerwald-training.de>
+Comment:
+ This package was debianized by Martin Steigerwald <martin@steigerwald-training.de> on
+ Tue, 19 May 2009 15:04:02 +0200.
+License: GPL-2+
+
+Files: fifo.c fifo.h
+Copyright: 2004 Stelian Pop <stelian@popies.net>
+License: GPL-2+
+
+Files: fio.1
+Copyright: Written by Aaron Carroll <aaronc@cse.unsw.edu.au>
+ based on documentation by Jens Axboe
+License: GPL-2
+
+Files: gfio.c
+Copyright: 2012 Stephen M. Cameron <stephenmcameron@gmail.com>
+           2012 Jens Axboe <axboe@kernel.dk>
+License: GPL-2
+
+Files: graph.c
+Copyright: 2012 Stephen M. Cameron <stephenmcameron@gmail.com>
+License: GPL-2
+
+Files: hash.h
+Copyright: 2002 William Lee Irwin III, IBM
+License: GPL-2+
+
+Files: rate-submit.c
+Copyright: 2015 Jens Axboe <axboe@kernel.dk>
+License: GPL-2
+
+Files: tickmarks.c
+Copyright: adapted from Paul Heckbert's algorithm on p 657-659 o
+           Andrew S. Glassner's book, "Graphics Gems"
+           ISBN 0-12-286166-3
+License: GPL-2+
+
+Files: workqueue.c
+Copyright: 2015 Jens Axboe <axboe@kernel.dk>
+License: GPL-2
+
+Files: crc/crc16.h
+Copyright: 2005 Ben Gardner <bgardner@wabtec.com>
+License: GPL-2
+
+Files: crc/crc32.c crc/crc32.h crc/crc32c.h
+Copyright: 1992, 1995-1999 Free Software Foundation, Inc.
+License: GPL-2+
+
+Files: crc/crc32c.c
+Copyright: 2004 Cisco Systems, Inc.
+License: GPL-2+
+
+Files: crc/crc32c-intel.c
+Copyright: Based on a posting to LKML by Austin Zhang <austin.zhang@intel.com>
+License: GPL-2+
+
+Files: crc/md5.c
+Copyright: Shamelessly lifted from the 2.6 kernel (crypto/md5.c)
+License: GPL-2
+
+Files: crc/sha1.c crc/sha1.h
+Copyright: Based on the Mozilla SHA1 (see mozilla-sha1/sha1.c)
+License: GPL-2
+
+Files: crc/sha3.c
+Copyright: SHA-3 code by Jeff Garzik <jeff@garzik.org>
+License: GPL-2+
+
+Files: crc/sha256.c
+Copyright: Jean-Luc Cooke <jlcooke@certainkey.com>
+           Andrew McDonald <andrew@mcdonald.org.uk>
+           2002 James Morris <jmorris@intercode.com.au>
+License: GPL-2+
+
+Files: crc/sha512.c
+Copyright: Jean-Luc Cooke <jlcooke@certainkey.com>
+           Andrew McDonald <andrew@mcdonald.org.uk>
+           2003 Kyle McMartin <kyle@debian.org>
+License: GPL-2+
+
+Files: crc/xxhash.c crc/xxhash.h
+Copyright: 2012-2014 Yann Collet
+License: BSD-2-clause
+
+Files: engines/dev-dax.c
+Copyright: 2016 Intel Corp
+License: GPL-2
+
+Files: engines/dfs.c
+Copyright: 2020-2021 Intel Corporation
+License: GPL-2
+
+Files: engines/http.c
+Copyright: 2018 SUSE LLC
+License: GPL-2
+
+Files: engines/ime.c
+Copyright: 2018 DataDirect Networks
+License: GPL-2
+
+Files: engines/libcufile.c
+Copyright: 2020 System Fabric Works <info@systemfabricworks.com>
+License: GPL-2
+
+Files: engines/libpmem.c
+Copyright: 2017 Nippon Telegraph and Telephone Corporation
+           2018-2021, Intel Corporation
+License: GPL-2
+
+Files: engines/libzbc.c
+Copyright: 2019 Western Digital Corporation or its affiliates
+License: GPL-2
+
+Files: engines/nbd.c
+Copyright: 2019 Red Hat Inc.
+           Written by Richard W.M. Jones <rjones@redhat.com>
+License: GPL-2
+
+Files: examples/gfapi.fio
+Copyright: Originally authored by Castor Fu
+License: GPL-2
+
+Files: examples/jesd219.fio
+Copyright: Based on a posting from Jeff Furlong <jeff.furlong@hgst.com>
+License: GPL-2
+
+Files: exp/expression-parser.l exp/expression-parser.y exp/test-expression-parser.c
+Copyright: 2014, Stephen M. Cameron
+License: GPL-2
+
+Files: lib/ieee754.c
+Copyright: Shamelessly lifted from Beej's Guide to Network Programming, found here:
+           http://beej.us/guide/bgnet/output/html/singlepage/bgnet.html#serialization
+           Brian "Beej Jorgensen" Hall <beej@beej.us>
+License: public-domain
+
+Files: lib/lfsr.c
+Copyright: LFSR taps retrieved from:
+           http://home1.gte.net/res0658s/electronics/LFSRtaps.html
+License: GPL-2+
+
+Files: lib/prio_tree.c
+Copyright: 2004 Rajesh Venkatasubramanian <vrajesh@umich.edu>
+License: GPL-2
+
+Files: lib/rand.c
+Copyright: Based on code from GNU Scientific Library 1.5 (30 Jun 2004)
+License: GPL-2
+
+Files: lib/rbtree.c
+Copyright: 1999 Andrea Arcangeli <andrea@suse.de>
+           2002 David Woodhouse <dwmw2@infradead.org>
+License: GPL-2+
+
+Files: lib/rbtree.h
+Copyright: 1999 Andrea Arcangeli <andrea@suse.de>
+License: GPL-2+
+
+Files: oslib/blkzoned.h oslib/linux-blkzoned.c
+Copyright: 2020 Western Digital Corporation or its affiliates
+License: GPL-2
+
+Files: oslib/getopt_long.c
+Copyright: This file was imported from the klibc library from hpa
+License: GPL-2
+
+Files: oslib/libmtd.c oslib/libmtd_int.h
+Copyright: 2006 International Business Machines Corp.
+           2009 Nokia Corporation
+License: GPL-2+
+
+Files: oslib/libmtd.h
+Copyright: 2008, 2009 Nokia Corporation
+License: GPL-2+
+
+Files: oslib/libmtd_common.h
+Copyright: 2007, 2008 Artem Bityutskiy
+License: GPL-2+
+
+Files: oslib/libmtd_legacy.c
+Copyright: 2009 Nokia Corporation
+License: GPL-2+
+
+Files: oslib/libmtd_xalloc.h
+Copyright: 2001, 2002 Red Hat, Inc.
+           2001 David A. Schleef <ds@lineo.com>
+           2002 Axis Communications AB
+           2001, 2002 Erik Andersen <andersen@codepoet.org>
+           2004 University of Szeged, Hungary
+           2006 KaiGai Kohei <kaigai@ak.jp.nec.com>
+License: GPL-2+
+
+Files: oslib/strlcat.c
+Copyright: 1998, 2015 Todd C. Miller <Todd.Miller@courtesan.com>
+License: BSD-0-clause
+
+Files: t/read-to-pipe-async.c
+Copyright: 2016 Jens Axboe
+License: GPL-2+
+
+Files: t/jsonplus2csv_test.py t/latency_percentiles.py t/readonly.py t/run-fio-tests.py
+Copyright: 2019, 2020 Western Digital Corporation or its affiliates
+License: GPL-2
+
+Files: t/zbd/test-zbd-support t/zbd/run-tests-against-nullb
+Copyright: 2018, 2020 Western Digital Corporation or its affiliates
+License: GPL-2
+
+Files: tools/fio_generate_plots.1
+Copyright: Written by Martin Steigerwald <ms@teamix.de>
+License: GPL-2
+
+Files: tools/fiologparser.py
+Copyright: 2016 Mark Nelson <mnelson@redhat.com>
+           2016 Ben England <bengland@redhat.com>
+License: GPL-2
+
+Files: tools/hist/*
+Copyright: Karl Cronburg
+License: GPL-2
+
+Files: tools/genfio tools/plot/fio2gnuplot tools/plot/fio2gnuplot.1 tools/plot/fio2gnuplot.manpage tools/plot/graph2D.gpm tools/plot/graph3D.gpm tools/plot/math.gpm
+Copyright: 2013 eNovance SAS <licensing@enovance.com>
+           Erwan Velu <erwan@enovance.com>
+License: GPL-2
+
+Files: unittests/unittest.c
+Copyright: 2018 Tomohiro Kusumi <kusumi.tomohiro@osnexus.com>
+License: GPL-2
+
+Files: unittests/oslib/strcasestr.c unittests/oslib/strsep.c
+Copyright: 2019 Tomohiro Kusumi <tkusumi@netbsd.org>
+License: GPL-2
+
+Files: zbd.c zbd.h zbd_types.h
+Copyright: 2018-2020 Western Digital Corporation or its affiliates
+License: GPL-2
+
+License: BSD-0-clause
+ Permission to use, copy, modify, and distribute this software for any
+ purpose with or without fee is hereby granted, provided that the above
+ copyright notice and this permission notice appear in all copies.
+ .
+ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+License: BSD-2-clause
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are
+ met:
+ .
+ * Redistributions of source code must retain the above copyright
+ notice, this list of conditions and the following disclaimer.
+ * Redistributions in binary form must reproduce the above
+ copyright notice, this list of conditions and the following disclaimer
+ in the documentation and/or other materials provided with the
+ distribution.
+ .
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+License: GPL-2
+ This package is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; version 2 dated June, 1991.
+ .
+ This package is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the·
+ GNU General Public License for more details.
+ .
+ You should have received a copy of the GNU General Public License
+ along with this program. If not, see <http://www.gnu.org/licenses/>
+ .
+ On Debian systems, the complete text of the GNU General
+ Public License version 2 can be found in "/usr/share/common-licenses/GPL-2".
+
+License: GPL-2+
+ This package is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 2 of the License, or
+ (at your option) any later version.
+ .
+ This package is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+ GNU General Public License for more details.
+ .
+ You should have received a copy of the GNU General Public License
+ along with this program. If not, see <http://www.gnu.org/licenses/>
+ .
+ On Debian systems, the complete text of the GNU General
+ Public License version 2 can be found in "/usr/share/common-licenses/GPL-2".
+
+License: public-domain
+ The C source code presented in this document is hereby granted to the public domain, and is completely free of any license restriction.
+Comment:
+ http://beej.us/guide/bgnet/output/html/singlepage/bgnet.html#copyright
+

@@ -1,0 +1,37 @@
+How flexible I/O tester uses measurement units
+----------------------------------------------
+
+fio uses the opposite symbol for kibibytes/kilobytes (Kb/KiB) than
+ISO 80000-1 by default in *jobfiles*. The user readable output however
+adheres to the standard, while the parseable output for scripts also
+uses the opposite symbol.
+
+This leads to weird scenarios like:
+
+% fio --name=rand-read --bs=4k --size=1MiB --iodepth=64 --runtime=10 --rw=randread
+rand-read: (g=0): rw=randread, bs=(R) 4096B-4096B, (W) 4096B-4096B, (T) 4096B-4096B, ioengine=psync, iodepth=64
+[…]
+% ls -l rand-read.0.0                                                             
+-rw-r--r-- 1 root root 1000000 Mär 26 13:10 rand-read.0.0
+
+In case you decide to write fio jobs in a way that adheres to the ISO
+standard, you can use:
+
+% fio --name=rand-read --kb_base=1000 --bs=4KiB --size=1MiB --iodepth=64 --runtime=10 --rw=randread
+rand-read: (g=0): rw=randread, bs=(R) 4096B-4096B, (W) 4096B-4096B, (T) 4096B-4096B, ioengine=psync, iodepth=64
+[…]
+% ls -l rand-read.0.0                                                                              
+-rw-r--r-- 1 root root 1048576 Mär 26 13:19 rand-read.0.0
+
+Note: In this case the block size needs to be in "KiB" as well, otherwise
+it would be just 4000 bytes in this example.
+
+I received no feedback from upstream developers regarding this issue. As I
+decided to keep upstream behavior rather than diverting from it, using
+'--kib_base=1000' is your option in case you decide to adhere to the
+standard. For further discussion see:
+
+fio: uses the opposite symbol for kibibytes/kilobytes (Kb/KiB) than ISO 80000-1
+https://bugs.debian.org/872321
+
+-- Martin Steigerwald <martin@steigerwald-training.de>, Mon, Mar 26 13:29:45 +0200

@@ -1,0 +1,9 @@
+Document: fio
+Title: Flexible I/O tester HOWTO
+Author: Jens Axboe
+Abstract: This document describes how to run
+ the Flexible I/O tester fio and how it works.
+Section: Help/HOWTO
+
+Format: text
+Files: /usr/share/doc/fio/HOWTO.rst.gz

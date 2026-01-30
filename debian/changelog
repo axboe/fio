@@ -1,0 +1,742 @@
+fio (3.41-2) unstable; urgency=medium
+
+  * d/rules: Link against libatomic on armel and others.
+  * Update Maintainer email address.
+
+ -- Sven Hoexter <hoexter@debian.org>  Tue, 16 Sep 2025 14:11:45 +0200
+
+fio (3.41-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Drop makefile-manpagepath patch, applied upstream.
+  * d/watch: Update to version 5.
+  * d/control: Remove Rules-Requires-Root: no, it's the new default.
+  * d/control: Build-Depend on libgnutls28-dev.
+
+ -- Sven Hoexter <hoexter@debian.org>  Tue, 16 Sep 2025 12:22:37 +0200
+
+fio (3.39-1) unstable; urgency=medium
+
+  * Imported new upstream version 3.39.
+  * control: Bumped standards version to 4.7.2. No changes needed.
+
+ -- Martin Steigerwald <martin.steigerwald@proact.de>  Tue, 18 Mar 2025 14:25:01 +0100
+
+fio (3.38-1) unstable; urgency=medium
+
+  * Imported new upstream version 3.38.
+  * control: Enabled NFS engine. Thanks to Braiam for the report and the
+    patch (Closes: #1084803).
+  * copyright: RPMA engine has been removed.
+
+ -- Martin Steigerwald <martin.steigerwald@proact.de>  Mon, 14 Oct 2024 15:32:53 +0200
+
+fio (3.37-1) unstable; urgency=medium
+
+  * Imported new upstream version 3.37 (Closes: #1059937).
+  * Refreshed patches.
+  * control:
+    * Add build support for LoongArch64 (Closes: #1061728).
+      Thanks to Dandan for providing a patch.
+    * Bumped standards version to 4.7.0. No changes needed.
+
+ -- Martin Steigerwald <martin.steigerwald@proact.de>  Tue, 09 Apr 2024 14:19:20 +0200
+
+fio (3.36-1) unstable; urgency=medium
+
+  * Imported new upstream version 3.36.
+  * patches: Removed patch makefile-hardening. Applied upstream.
+  * NEWS: Explained the removal of gfio since fio 3.35-3 and mentioned
+    an alternative.
+
+ -- Martin Steigerwald <martin.steigerwald@proact.de>  Mon, 23 Oct 2023 11:47:12 +0200
+
+fio (3.35-4) unstable; urgency=medium
+
+  * Only build with librbd-dev on 64 bit architectures and as before on
+    Linux (Closes: #1053167).
+
+ -- Martin Steigerwald <martin.steigerwald@proact.de>  Wed, 04 Oct 2023 15:29:11 +0200
+
+fio (3.35-3) unstable; urgency=medium
+
+  [ Bastian Germann ]
+  * gfio will not be ported to gtk3 or later. So drop this gtk2 dependent
+    package. (Closes: #967339)
+
+  [ Martin Steigerwald ]
+  * control: Drop libpmemblk from Build-Depends. Thanks to Adam Borowski for
+    his merge request.
+
+ -- Martin Steigerwald <martin.steigerwald@proact.de>  Tue, 12 Sep 2023 09:46:14 +0200
+
+fio (3.35-2) unstable; urgency=medium
+
+  * Restrict building with GlusterFS support to 64 bit architectures
+    (amd64, arm64, ppc64el, ppc64, riscv64, mips64el, s390x, ia64, sparc64).
+    (Closes: #1041995, also see bug #1039604)
+
+ -- Martin Steigerwald <martin.steigerwald@proact.de>  Wed, 26 Jul 2023 10:27:36 +0200
+
+fio (3.35-1) unstable; urgency=medium
+
+  * Imported new upstream version 3.35.
+  * control: Bumped standards version to 4.6.2. No changes needed.
+  * copyright:
+    * Removed years from Debian packaging copyright.
+    * Updated my mail address in all places.
+    * "engines/pmemblk.c" is gone.
+    * Added "zbd.c", "zbd.h", "zbd_types.h", "oslib/blkzoned.h" and
+      "oslib/linux-blkzoned.c".
+    * Added "crc/sha3.c".
+    * Added files in directory "engines" that I missed before.
+    * Added files in directories "t" and "t/zbd".
+    * Added "oslib/strlcat.c".
+    * Added "unittests/unittest.c", "unittests/oslib/strcasestr.c", and
+      "unittests/oslib/strsep.c".
+
+ -- Martin Steigerwald <martin.steigerwald@proact.de>  Tue, 04 Jul 2023 12:42:05 +0200
+
+fio (3.33-3) unstable; urgency=medium
+
+  [ Sven Hoexter ]
+  * control: Remove suggest for python-scipy. It was used in
+    the original implementation of fiologparser.py. (LP: #1950003)
+    Dropped upstream in commit f4042e41df95da9677220556c891ca6ba5649ec1
+
+  [ Martin Steigerwald ]
+  * control: Add Breaks+Replaces for fio version lower than 3.32-2 to
+    fix update failures. Thanks to Andreas Beckmann for bug report
+    (Closes: #1025371).
+
+ -- Martin Steigerwald <martin.steigerwald@proact.de>  Mon, 05 Dec 2022 11:07:42 +0100
+
+fio (3.33-2) unstable; urgency=medium
+
+  * control: Mark package fio-examples as Multi-Arch: foreign.
+  * patches:
+    * makefile-hardening: Readd part of the original patch I removed with
+      commit d2242de28d9d0d2ea3a64849c9acc014b05b6318. The part for C pre
+      processor build flags is still needed.
+    * fio2gnuplot-manpage: Fixed in upstream commit
+      aed4796b989d3b33f86fb3be6b915e532df2d59d.
+
+ -- Martin Steigerwald <martin.steigerwald@proact.de>  Wed, 30 Nov 2022 10:38:05 +0100
+
+fio (3.33-1) unstable; urgency=medium
+
+  * Imported new upstream version 3.33.
+  * control:
+    * Recommend fio for package fio-examples to make clear what
+      to install in order to run an example.
+    * Drop versioned constraint on dpkg-dev, since it is not
+      necessary anymore since Debian buster.
+  * control and rules: Enable NBD support. Thanks to Christian Ehrhardt
+    for initial merge request (Closes: #966222).
+  * Fix wrong day of week for changelog entry 1.59-1. Thanks to
+    Jelmer Vernooĳ.
+
+ -- Martin Steigerwald <martin.steigerwald@proact.de>  Mon, 28 Nov 2022 11:47:27 +0100
+
+fio (3.32-2) unstable; urgency=medium
+
+  * control and docs: Put example job files and images into extra package
+    to make it possible to only install them where needed.
+  * control: Suggest package "fio-examples".
+  * fio.docs: Add fiograph python script and configuration.
+  * NEWS: Explain that example job files are now in package "fio-examples".
+    These are generated by fiograph and visualize what the examples are
+    doing. Thanks to Sven Hoexter for improvement of this explanation.
+
+ -- Martin Steigerwald <martin.steigerwald@proact.de>  Wed, 23 Nov 2022 14:59:56 +0100
+
+fio (3.32-1) unstable; urgency=medium
+
+  * Imported new upstream version 3.32 (Closes: #1022045).
+  * control: Bumped standards version to 4.6.1. No changes needed.
+  * copyright: Updated copyright years for files in "debian".
+  * rules: Removed "-Wl,--as-needed". No need to support for a backport
+    to Debian Buster anymore.
+
+ -- Martin Steigerwald <martin.steigerwald@proact.de>  Mon, 24 Oct 2022 10:47:27 +0200
+
+fio (3.30-1) unstable; urgency=medium
+
+  * Imported new upstream version 3.30 (Closes: #1009880).
+  * docs: Install README.rst and HOWTO.rst instead of README and HOWTO.
+  * control:
+    * Add Sphinx as build-dependency in order to build manpage from it.
+    * Bumped standards version to 4.6.0.1. No changes needed.
+
+ -- Martin Steigerwald <martin.steigerwald@proact.de>  Wed, 20 Apr 2022 12:03:54 +0200
+
+fio (3.28-1) unstable; urgency=medium
+
+  [ Sven Hoexter ]
+  * Imported new upstream version 3.28.
+    Removes raw device support. (Closes: #997201)
+
+ -- Martin Steigerwald <martin.steigerwald@proact.de>  Wed, 20 Apr 2022 11:15:57 +0200
+
+fio (3.25-2) unstable; urgency=medium
+
+  * Moved manpage for 'fiologparser_hist.py' into '/usr/share/doc/fio'
+    as well to fix manpage being installed with language 'py'.
+
+ -- Martin Steigerwald <martin.steigerwald@proact.de>  Tue, 22 Dec 2020 11:07:22 +0100
+
+fio (3.25-1) unstable; urgency=medium
+
+  * Imported new upstream version 3.25.
+  * patches:
+    * Refreshed.
+    * Removed 'makefile-hardening'. Upstream makefile should no longer
+      override user CFLAGS.
+  * control: Bumped standards version to 4.5.1.
+
+ -- Martin Steigerwald <martin.steigerwald@proact.de>  Mon, 21 Dec 2020 16:52:09 +0100
+
+fio (3.23-1) unstable; urgency=medium
+
+  * Imported new upstream version 3.23.
+
+ -- Martin Steigerwald <martin.steigerwald@proact.de>  Wed, 11 Nov 2020 16:16:31 +0100
+
+fio (3.21-1) unstable; urgency=medium
+
+  * Imported new upstream version 3.21.
+    * Fixes: ftbfs with GCC-10 (Closes: #957204).
+    * Fixes: fio: Python2 removal in sid/bullseye (Closes: #957204).
+  * control: Switched Python dependency to python3 as all scripts work with
+    Python 3 now.
+
+ -- Martin Steigerwald <martin.steigerwald@proact.de>  Wed, 22 Jul 2020 14:49:05 +0200
+
+fio (3.20-1) unstable; urgency=medium
+
+  * Imported new upstream version 3.20.
+  * patches: Refreshed.
+  * Bumped debhelper compat level from 11 to 13:
+    * Adapted paths to files reported by 'dh_missing'.
+    * Added some new files reported by 'dh_missing'.
+  * Allow build without root privileges. Produces the same binaries
+    according to diffoscope.
+
+ -- Martin Steigerwald <martin.steigerwald@proact.de>  Tue, 02 Jun 2020 16:34:25 +0200
+
+fio (3.19-2) unstable; urgency=medium
+
+  * Re-Release for a source only upload. Package is unchanged.
+
+ -- Sven Hoexter <hoexter@debian.org>  Sat, 11 Apr 2020 13:17:44 +0200
+
+fio (3.19-1) unstable; urgency=medium
+
+  * Imported new upstream version 3.19.
+  * patches:
+    * Refreshed.
+    * fix-compilation-3.16: Removed, applied upstream.
+    * genfio-interpreter: Removed, changed accordingly by upstream.
+  * Enable persistent memory based engines in fio by adding libpmem-dev
+    and libpmemblk-dev to build dependencies. Thanks to Adam Borowski
+    for bug report and patch (Closes: #950848).
+  * watch: Use HTTPS URL.
+  * control: Bumped standards version to 4.5.0.
+  * rules: Removed '--no-scripts' from dh_installinit to make package
+    compliant to standards version 4.5.0. Bug I reported back then
+    seems to be fixed (Closes: #894084).
+
+ -- Martin Steigerwald <martin.steigerwald@proact.de>  Wed, 08 Apr 2020 17:24:39 +0200
+
+fio (3.16-1) unstable; urgency=medium
+
+  [ Sven Hoexter ]
+  * Import new upstream version 3.16. Closes: #942537
+  * Add debian/patches/fix-compilation-3.16 to fix the compilation of
+    3.16. Picked from upstream master 5b215853ed4b438b5b2d4ac3e56d5f0d19e145d9.
+
+ -- Sven Hoexter <hoexter@debian.org>  Mon, 21 Oct 2019 09:50:07 +0200
+
+fio (3.15-1) unstable; urgency=medium
+
+  [ Martin Steigerwald ]
+  * Imported new upstream version 3.15:
+    * New engine 'io_uring' for new IO uring asynchronous I/O interface
+      of Linux.
+    * New engine 'libiscsi' for iSCSI targets.
+    * Addresses bug #929579 for upstream related changes to support cross
+      building (see messages 15 and 20 of this bug report).
+  * patches: Refreshed.
+  * control: Bumped standards version to 4.4.0.1, no changes needed.
+
+  [ Sven Hoexter ]
+  * Bump Standards-Version to 4.4.1, no changes required.
+  * Export CROSS_COMPILE when required to allow cross compilation.
+    Patch provided by Helmut Grohne. Closes: #929579
+
+ -- Sven Hoexter <hoexter@debian.org>  Sun, 20 Oct 2019 19:48:57 +0200
+
+fio (3.12-2) unstable; urgency=medium
+
+  * control: Depend on libglusterfs-dev instead of glusterfs-common
+    (Closes: #919670).
+  * control: Bumped standards version to 4.3.0, no changes needed.
+
+ -- Martin Steigerwald <martin.steigerwald@proact.de>  Mon, 21 Jan 2019 09:29:38 +0100
+
+fio (3.12-1) unstable; urgency=medium
+
+  * Imported upstream version 3.12.
+  * patches: Refreshed.
+  * copyright: Removed engines/fusion-aw.c, removed by upstream.
+  * control: Bumped standards version to 4.2.1, no changes needed.
+
+ -- Martin Steigerwald <martin.steigerwald@proact.de>  Wed, 28 Nov 2018 16:47:49 +0100
+
+fio (3.8-1) unstable; urgency=medium
+
+  * Imported upstream version 3.8.
+  * rules: Use '--disable-native' to disable build system local CPU
+    optimizations (Closes: #898473). Thank you, Sitsofe.
+  * control: Bumped standards version to 4.2.0, no changes needed.
+
+ -- Martin Steigerwald <martin.steigerwald@proact.de>  Tue, 21 Aug 2018 16:19:28 +0200
+
+fio (3.6-4) unstable; urgency=medium
+
+  * Contrary to what I stated in 3.5-1 changelog entry libnuma1-dev appears
+    to be available in buster/sid. As it is only available for Linux platforms
+    restrict the build dependency to those instead.
+
+ -- Martin Steigerwald <martin.steigerwald@proact.de>  Wed, 16 May 2018 11:24:41 +0200
+
+fio (3.6-3) unstable; urgency=medium
+
+  * control: Also build libibverbs-dev only on Linux platforms as it is only
+    available for those.
+
+ -- Martin Steigerwald <martin.steigerwald@proact.de>  Tue, 15 May 2018 14:04:56 +0200
+
+fio (3.6-2) unstable; urgency=medium
+
+  * control: Build with librdmacm-dev and librbd-dev only on Linux platforms as
+    they are only available for those.
+
+ -- Martin Steigerwald <martin.steigerwald@proact.de>  Tue, 15 May 2018 10:21:30 +0200
+
+fio (3.6-1) unstable; urgency=medium
+
+  * Imported upstream version 3.6.
+  * patches: Refreshed.
+  * control: Build with libaio-dev only on Linux platforms instead of all
+    other platforms than Linux. Thanks for Sven Hoexter for finding the
+    mistake in the build depends. Thanks Hillel Lubman for the report
+    (Closes: #898210).
+
+ -- Martin Steigerwald <martin.steigerwald@proact.de>  Wed, 09 May 2018 08:55:08 +0200
+
+fio (3.5-1) unstable; urgency=medium
+
+  * Imported upstream version 3.5.
+  * Install systemd service file for running fio as a service, disabled
+    by default (also see #893778).
+  * Install sysvinit script for running fio as a service, disabled by
+    default. Thanks to KatolaZ from Devuan project for helpful hint.
+    Does not install any symlinks currently (see #894084).
+  * patches:
+    - Refreshed.
+    - fix-ftbfs-with-libmtd.h: Removed. Implemented upstream (also see
+    #893778).
+    - makefile-hardening: Allow adding hardening options to CPPFLAGS as
+      well.
+    - reproducible-build: Removed. Implemented upstream (also see #893778
+      and upstream commit 785e49c659023df1735bff195ad4ba133ebd23a7).
+    - genfio-interpreter: Keep /bin/bash as interpreter, no usrmerge (yet).
+  * changelog, rules: Removed trailing white spaces as lintian suggests.
+  * compat: Switched debhelper compat level from 9 to 11 as lintian and
+    debhelper manpage recommend.
+  * control:
+    - Switched Vcs URLs from Alioth to Salsa as I migrated the repo.
+    - Bumped standards version to 4.1.4. No changes needed.
+    - Updated build dependency to debhelper version 11 or later.
+    - Added build dependency for libnuma1 for all architectures, except
+      armhf and armel, where this library is not available (Closes: #861554,
+      also see #893778).
+    - Added build dependencies bison and flex to enable arithmetic
+      calculations in fio jobs (see #893778, also see fio manpage,
+      JOB FILE PARAMETERS).
+    - Added build dependency for the fio GlusterFS engine (see #893778).
+    - Disable build dependency for libaio for all platforms except Linux,
+      to enable build on non-Linux platforms like Hurd (see #893778).
+    - Change binary dependency to python2.7 as all the python scripts use
+      this version.
+  * rules:
+    - Enable verbose build to allow tools like blhc to check for
+      hardening flags for compiler and linker (see #893778).
+    - Enable all hardening build flags, not just bindnow.
+  * docs: Removed tools/fio_latency2csv.py, not in upstream source anymore.
+  * copyright: Switched copyright format URL to https as Lintian suggests.
+  * Implemented all suggestions from sitsofe´s Debian patch comments I
+    decided to implement (Closes: #893778).
+  * README.Debian: Added a note about fio´s weird usage of units in job
+    files and parseable output (Closes: #872321).
+
+ -- Martin Steigerwald <martin.steigerwald@proact.de>  Mon, 09 Apr 2018 13:45:59 +0200
+
+fio (3.1-1) unstable; urgency=medium
+
+  * Imported upstream versions 3.0 and 3.1 (Closes: #869686).
+  * Adapted my mail address to new company domain.
+  * patches:
+    - Refreshed.
+    - Dropped patch spelling-errors. Applied upstream.
+    - Changed author in all of my patches to new mail address.
+  * control: Bumped standards version to 4.1.1.0.
+    * watch: Changed to pgpsigurlmangle as recommended by policy 4.1.0.0,
+      section 4.11.
+
+ -- Martin Steigerwald <martin.steigerwald@proact.de>  Tue, 24 Oct 2017 09:47:45 +0200
+
+fio (2.17-1) unstable; urgency=medium
+
+  * Imported upstream version 2.17.
+  * debian/patches: Refreshed.
+  * debian/copyright: Updated, added some files, all GPL-2.
+  * debian/docs: Added fio_latency2csv.py, example systemd fio.service file, and
+    logparser histogram scripts from tools/hist.
+
+ -- Martin Steigerwald <martin.steigerwald@teamix.de>  Mon, 23 Jan 2017 11:10:42 +0100
+
+fio (2.16-1) unstable; urgency=medium
+
+  * Imported upstream version 2.16.
+  * debian/patches: Refreshed.
+
+ -- Martin Steigerwald <martin.steigerwald@teamix.de>  Fri, 23 Dec 2016 17:09:43 +0100
+
+fio (2.15-1) unstable; urgency=medium
+
+  * Imported upstream version 2.15.
+  * debian/patches:
+    - Refreshed.
+    - spelling-errors: Fix some spelling errors in HOWTO, fio binary
+      and manpage.
+    - reproducible-build: Sort object files for deterministic linking order
+      to enable reproducible builds. Thank to Rainer Herrmann for the bug
+      report and patch (Closes: #828791).
+  * debian/watch: Check for GPG signature of upstream tarball.
+
+ -- Martin Steigerwald <martin.steigerwald@teamix.de>  Mon, 19 Dec 2016 16:02:52 +0100
+
+fio (2.10-2) unstable; urgency=medium
+
+  * copyright: Added fiologparser.py copyrights as per git blame.
+  * control: Added python-scipy as suggests for fiologparser.py.
+  * control: Removed Sven Hoexter as uploader again as per his request.
+
+ -- Martin Steigerwald <martin.steigerwald@teamix.de>  Tue, 24 May 2016 12:33:25 +0200
+
+fio (2.10-1) unstable; urgency=medium
+
+  * Imported Upstream version 2.10.
+  * patches: Refreshed, no manual changes needed.
+  * debian/rules: Enabled using the "bindnow" linker flag to disable more
+    insecure late binding.
+  * docs: Added file tools/fiologparser.py.
+  * Imported Upstream version 2.9.
+  * patches: Refreshed, no manual changes needed.
+  * control:
+    * Upgraded to standards version 3.9.8.0, no changes needed.
+    * Removed Michael Prokop as uploader as per his request. Thanks
+      for sponsoring the package initially.
+    * Added Sven Hoexter as uploader as he sponsored the last versions.
+  * docs: Add file MORAL-LICENSE.
+
+ -- Martin Steigerwald <martin.steigerwald@teamix.de>  Mon, 23 May 2016 16:28:16 +0200
+
+fio (2.6-1) unstable; urgency=medium
+
+  * Imported Upstream version 2.6.
+  * patches/fix-ftbfs-with-libmtd.h: Fix FTBFS: libmtd.h:288:8: error:
+    unknown type name 'uint8_t'. Thanks Chris. (Closes: #815735)
+  * control:
+    - Updated to standards version 3.9.7. No changes needed.
+    - Made Vcs-Browser and Vcs-Git URLs secure.
+  - copyright:
+    - Adapted path for library files that are now in oslib.
+    - fio.1: Fixed license to GPL-2. Don´t know how I came to the
+      conclusion that it would be GPL-2+, if the rest without any
+      license specified is GPL-2.
+    - rate_submit.c: Added copyright.
+
+ -- Martin Steigerwald <martin.steigerwald@teamix.de>  Wed, 24 Feb 2016 10:47:40 +0100
+
+fio (2.2.10-1) unstable; urgency=medium
+
+  * Imported Upstream version 2.2.10 (Closes: #803991).
+    * Fixes fio: calc_clat_percentiles() create unaligned access on armhf.
+      (Closes: #779336). Thanks to Andreas Bießmann.
+    * Fixes ssd-test 1g file size too small (Closes: #776701). Thanks to
+      Daniel Pocock.
+  * patches:
+    * Removed makefile patches as makefile is now generated via autoconf.
+    * configure-no-configlog: Remove config.log at end of configure process
+      to avoid error about uncommitted change from dpkg-source.
+  * rules:
+    * Switched to dh_$@ wildcard version of rules file.
+    * Added override for dh_auto_configure cause upstream configure file
+      does not understand many options dh_auto_configure passed to it.
+    * Enabled build of graphical fio frontend gfio.
+    * Made sure that is only links in needed libraries for gfio to avoid
+      unnecessary dependencies.
+  * control:
+    * Updated to standards version 3.9.6. No changes needed.
+    * Point to github page as new homepage as it appears to be closest to a
+      homepage of any of the URLs mentioned in the README.
+    * Added new binary package gfio for graphical frontend of fio.
+    * Mentioned relationship between fio and gfio in package descriptions
+      and added suggests for each other.
+  * copyright:
+    * Fixed lintian messages about changed/wrong paths to
+      referenced files.
+    * Reviewed and updated by rechecking against all source files.
+  * Switched to debhelper 9 in order to have dpkg-buildflags and thus
+    hardening by default.
+
+ -- Martin Steigerwald <martin.steigerwald@teamix.de>  Tue, 10 Nov 2015 10:00:35 +0100
+
+fio (2.1.11-2) unstable; urgency=medium
+
+  * debian/control: Added RBD support by adding librbd-dev to build
+    dependencies. Thanks to Benjamin Drung for report and patch.
+    Closes: #760266.
+
+ -- Martin Steigerwald <ms@teamix.de>  Tue, 02 Sep 2014 15:37:28 +0200
+
+fio (2.1.11-1) unstable; urgency=medium
+
+  * dh_builddeb without -z9, so use xz, but do not set default level.
+  * Imported Upstream version 2.1.11.
+  * debian/patches:
+    - makefile-hardening: Adapted to new C++ build option.
+    - makefile-clean-delete-config-log-and-d-files: Deleted. Fixed upstream.
+    - makefile-rm-configlog: Added.
+  * debian/control: Updated to standards version 3.9.5.
+    No changes needed.
+
+ -- Martin Steigerwald <ms@teamix.de>  Mon, 21 Jul 2014 15:53:36 +0200
+
+fio (2.1.3-1) unstable; urgency=low
+
+  * Imported Upstream version 2.1.2.
+  * debian/patches:
+    * makefile:  Refreshed.
+    * makefile-hardening: Refreshed.
+    * fio_generate_plots-gnuplot: Removed. Applied upstream.
+  * debian/control: Add python dependency for tools/fio2gnuplot.py.
+  * Add as binary dependency instead. I think dh_python stuff is not required.
+  * Imported Upstream version 2.1.3.
+  * debian/patches:
+    - makefile-hardening: Refreshed.
+    - makefile-clean-delete-config-log-and-d-files: Refreshed.
+    - manpage-spelling: Removed. Applied upstream.
+    - fio2gnuplot-manpage: Added. Fix lintian tag manpage-section-mismatch.
+  * debian/source/options:
+    - Removed, let default setting decide which compression level to use.
+
+ -- Martin Steigerwald <ms@teamix.de>  Mon, 07 Oct 2013 11:53:41 +0200
+
+fio (2.1.1-1) unstable; urgency=low
+
+  * Imported Upstream version 2.1.1.
+  * debian/patches/ftbfs-fix-for-mips-architecture:
+    Dropped. Applied upstream.
+  * debian/patches/makefile-clean-delete-config-log-and-d-files:
+    Delete config.log and *.d files as leaving them behind make
+    repeated dpkg-buildpackage builds fail with:
+    dpkg-source: info: local changes detected, …
+  * debian/patches/manpage-spelling: Fix lintian tag
+    spelling-error-in-manpage.
+  * debian/control: Added build dependency zlib1g-dev as fio can use
+    zlib to compress client/server communication.
+  * Switched to xz compression. Saved almost 37 KiB on binary package.
+  * Updated to Standards-Version to 3.9.4, no changes needed.
+  * debian/patches/fio_generate_plots-gnuplot:
+    Make test for gnuplot work with empty strings (Closes: #700580).
+    Thanks to Hervé Werner for providing bug report and fix.
+
+ -- Martin Steigerwald <ms@teamix.de>  Mon, 05 Aug 2013 16:47:21 +0200
+
+fio (2.0.8-2) unstable; urgency=low
+
+  * debian/patches/ftbfs-fix-for-mips-architecture:
+    Fixed build failure on mips and mipsel architectures. Sven Hoexter
+    suggested the fix and Jens Axboe confirmed it. Thanks.
+
+ -- Martin Steigerwald <ms@teamix.de>  Wed, 27 Jun 2012 09:25:49 +0200
+
+fio (2.0.8-1) unstable; urgency=low
+
+  [ Ritesh Raj Sarraf ]
+  * Fix Vcs-Browser URL.
+
+  [ Martin Steigerwald ]
+  * Imported Upstream version 2.0.7 which sports a client / server
+    architecture.
+  * debian/control: Updated to standards version 3.9.3.
+    No changes needed.
+  * debian/patches:
+    * makefile: Updated for fio 2.0.7 makefile.
+    * manpage: Removed, applied upstream.
+  * debian/copyright:
+    * Updated to 2012.
+    * Converted to machine readable format 1.0.
+  * Imported Upstream version 2.0.8
+  * patches/makefile-hardening and debian/rules: Changed to build
+    fio with hardening flags.
+
+ -- Martin Steigerwald <ms@teamix.de>  Tue, 26 Jun 2012 09:28:22 +0200
+
+fio (1.59-1) unstable; urgency=low
+
+  * Imported Upstream version 1.59.
+    - Added support for SuperH architecture (Closes: #561891).
+      Thanks to Nobuhiro Iwamatsu for the patch and build testing.
+  * debian/patches/manpage: Escape minus signs to fix lintian warning
+    I: fio: hyphen-used-as-minus-sign usr/share/man/man1/fio.1.gz:934
+  * New rdma engine in engines/rdma.c:
+    * debian/rules: Add variables for makefile to build new rdma engine.
+    * debian/control: Added build dependencies for new rdma engine.
+
+ -- Martin Steigerwald <ms@teamix.de>  Mon, 10 Oct 2011 17:19:00 +0200
+
+fio (1.57-1) unstable; urgency=low
+
+  * Imported Upstream version 1.57.
+  * Dropped manpage patch with manpage spelling fixes. Merged upstream.
+  * Implemented suggestions from Sebastian 'Tokkee' Harl. Thanks.
+    * Added -a to debhelper commands in architecture dependent sections
+      of the makefile.
+    * debian/copyright: Added authors of manpages for fio and
+      fio_generate_plots.
+    * debian/copyright: Added copyright hints for sha1.c, sha.h,
+      engines/windowsaio.c, lib/getopt_long.c, lib/rand.c.
+
+ -- Martin Steigerwald <ms@teamix.de>  Wed, 03 Aug 2011 14:05:33 +0200
+
+fio (1.55-1) UNRELEASED; urgency=low
+
+  * Corrected debian/watch file, thanks Ilya Barygin (Closes: #629174).
+  * Imported Upstream version 1.55.
+    * Includes commit e52947d15cf0d7d31c30ccdc43450a10081976da
+      that fixes build failure with --as-needed linker option
+      (Closes: #631690).
+  * Updated to Standards-Version to 3.9.2, no changes needed.
+  * debian/watch: Removed template to fix lintian warning
+    debian-watch-contains-dh_make-template.
+  * debian/rules: Added build-arch and build-indep as targets as
+    recommended by lintian 2.5.1 in order to prepare for a future
+    policy change.
+    * build-indep does nothing as there are no architecture
+      independent packages for now.
+
+ -- Martin Steigerwald <ms@teamix.de>  Mon, 27 Jun 2011 14:32:05 +0200
+
+fio (1.50-1) unstable; urgency=low
+
+  * Thanks for importing, Ritesh. Found my mistake with
+    help of Sebastian Harl. Thanks.
+  * New upstream version 1.5.0 (Closes: #613432).
+  * Updated to Standards-Version to 3.9.1, no changes needed.
+  * Patch to fix spelling errors in manpage. Forwarded upstream.
+  * Updated upstream copyright.
+
+ -- Martin Steigerwald <ms@teamix.de>  Wed, 16 Feb 2011 11:57:56 +0100
+
+fio (1.50-1~1.gbpa4517a) UNRELEASED; urgency=low
+
+  * Imported Upstream version 1.50.
+
+ -- Ritesh Raj Sarraf <rrs@debian.org>  Tue, 15 Feb 2011 19:19:14 +0530
+
+fio (1.38-1) unstable; urgency=low
+
+  * New Upstream Version:
+    * Should build on ARMv7 now, thanks Jamie Bennett (Closes: #573027).
+
+ -- Martin Steigerwald <ms@teamix.de>  Wed, 14 Apr 2010 18:23:14 +0200
+
+fio (1.36-1) unstable; urgency=low
+
+  * New upstream version.
+  * Doesn't build on sh4 / sh4a / sh5 at the moment. Fix is being
+    worked on: See debian bug #561891.
+  * Updated Standards-Version to 3.8.4, no changes.
+  * Updated source format to 3.0 (quilt), no changes.
+
+ -- Martin Steigerwald <ms@teamix.de>  Mon, 15 Feb 2010 15:17:22 +0100
+
+fio (1.33.1-2) UNRELEASED; urgency=low
+
+  * Moved over repository to Alioth/CollabMaint.
+  * debian/control: Updated Vcs-Git and Vcs-Browser.
+  * Added debian/gbp.conf with option to always use pristine-tar.
+  * debian/gbp.conf: Added option to call git-dch after import.
+    Since git-buildpackage 0.4.57 git-import-orig doesn't add a
+    changelog entry manually anymore.
+  * Added forgotten pristine-tar delta for fio 1.33.1.
+  * Added tags that I forgot to push. Thanks to Bruno Kleinert for help.
+
+ -- Martin Steigerwald <ms@teamix.de>  Thu, 17 Sep 2009 11:07:00 +0200
+
+fio (1.33.1-1) unstable; urgency=low
+
+  * arch/arch-alpha.h: Removed my FTBFS on alpha bugfix. Applied upstream.
+  * New Upstream Version. (Closes: #545839).
+  * control: Added Vcs-Git and Vcs-Browser.
+  * Updated Standards-Version to 3.8.3.
+
+ -- Martin Steigerwald <ms@teamix.de>  Thu, 10 Sep 2009 11:37:00 +0200
+
+fio (1.32-2) UNRELEASED; urgency=low
+
+  * arch/arch-alpha.h: Correct typo writer_barrier to write_barrier.
+    Thanks, Kurt Roeckx. (Closes: #545839).
+
+ -- Martin Steigerwald <ms@teamix.de>  Thu, 10 Sep 2009 09:30:07 +0200
+
+fio (1.32-1) unstable; urgency=low
+
+  [ Martin Steigerwald ]
+  * New upstream release.
+  * Dropped patch for lintian error in original manpage, fixed
+    upstream.
+  * Dropped manpage for bash shell script fio_generate_plots,
+    upstream integrated it.
+  * Imported to git-buildpackage with pristine tar.
+  * Included examples as documentation.
+  * Fixed watch file to ignore git-latest snapshots.
+
+  [ Michael Prokop ]
+  * fio.1: fix hyphen-used-as-minus-sign
+  * debian/copyright: refer to gpl2 and include its header;
+    updated URLs; some formating changes
+  * debian/rules: drop unnecessary configure target;
+    replace dh_clean with dh_prep; drop templates
+  * Bump Standard-Version to 3.8.2; add myself to Uploaders
+
+  [ Martin Steigerwald ]
+  * debian/copyright: fix copyright unicode char and replaced
+    another (C) with it, thanks Michael.
+
+ -- Martin Steigerwald <ms@teamix.de>  Thu, 13 Aug 2009 08:22:40 +0200
+
+fio (1.26-1) UNRELEASED; urgency=low
+
+  * Initial release (Closes: #524790).
+  * Changed Makefile to build to /usr instead of /usr/local.
+  * Changed Makefile to install the manpage /usr/share/man.
+  * Fixed a lintian reported error in the original manpage.
+  * Created manpage for bash shell script fio_generate_plots.
+
+ -- Martin Steigerwald <ms@teamix.de>  Tue, 19 May 2009 17:12:02 +0200
