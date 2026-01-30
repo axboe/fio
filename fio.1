@@ -594,9 +594,9 @@ the first device, `\\\\.\\PhysicalDrive1' for the second etc.
 Note: Windows and FreeBSD prevent write access to areas
 of the disk containing in-use data (e.g. filesystems).
 .P
-For HTTP and S3 access, specify a valid URL path or S3 key, respectively. 
-A filename for path-style S3 includes a bucket name (`/bucket/k/e.y') 
-while a virtual-hosted-style S3 filename (`/k/e.y') does not because its 
+For HTTP and S3 access, specify a valid URL path or S3 key, respectively.
+A filename for path-style S3 includes a bucket name (`/bucket/k/e.y')
+while a virtual-hosted-style S3 filename (`/k/e.y') does not because its
 bucket name is specified in \fBhttp_host\fR.
 .P
 The filename `\-' is a reserved name, meaning *stdin* or *stdout*. Which
@@ -1467,6 +1467,19 @@ Specifies the number of regions used for SPRandom. Default=100
 .RS
 For large devices it is better to use more regions, to increase precision
 and reduce memory allocation. The allocation is proportional to the region size.
+.RE
+.TP
+.B spr_cs=int
+See
+.BR sprandom .
+Specifies the device cache size for SPRandom. Default=0
+.P
+.RS
+For large devices it is better to use more regions, to increase precision
+and reduce memory allocation.  If the device has a large cache then it can
+affect the invalidations done by SPRandom and it is required that region size
+is greater than the cache size to avoid cache invalidations.
+The default is 0.
 .RE
 .TP
 .B spr_op=float
@@ -2651,9 +2664,9 @@ The passphrase used to unlock the encrypted RBD image. Required if
 \fBrbd_encryption_format\fR is set.
 .TP
 .BI (http)http_host \fR=\fPstr
-Hostname to connect to.  HTTP port 80 is used automatically when the value 
+Hostname to connect to.  HTTP port 80 is used automatically when the value
 of the \fBhttps\fP parameter is \fBoff\fP, and HTTPS port 443 if it is \fBon\fP.
-A virtual-hosted-style S3 hostname starts with a bucket name, while a 
+A virtual-hosted-style S3 hostname starts with a bucket name, while a
 path-style S3 hostname does not.  Default is \fBlocalhost\fR.
 .TP
 .BI (http)http_user \fR=\fPstr

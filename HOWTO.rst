@@ -1674,6 +1674,14 @@ I/O type
         Default=0.15
 
 
+.. option:: spr_cs=int
+
+	See :option:`sprandom`. Define a cache size in bytes,
+        as specified by the SSD manufacturer.
+
+        Default=0
+
+
 Block size
 ~~~~~~~~~~
 
