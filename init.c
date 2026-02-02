@@ -715,7 +715,7 @@ static int fixup_options(struct thread_data *td)
 				o->norandommap = 1;
 			}
 		} else {
-			log_err("fio: sprandom requires random write, random_generator=lfsr, norandommap=1");
+			log_err("fio: sprandom requires random write, random_generator=lfsr, norandommap=1\n");
 			ret |= 1;
 		}
 	}
