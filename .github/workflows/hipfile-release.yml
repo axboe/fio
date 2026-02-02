@@ -1,0 +1,158 @@
+name: FIO-hipFile-Release
+on:
+  pull_request_target: # A.K.A. This is a privileged action. See `pull_request`.
+    types:
+      - closed # CAUTION: Includes un-merged PR's.
+    branches:
+      - hipfile
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  package_on_debian:
+    if: ${{ github.event.pull_request.merged == true }}
+    runs-on: [ubuntu-24.04]
+    container:
+      image: ubuntu:noble
+      env:
+        ROCM_VERSION: 7.2.0
+    defaults:
+      run:
+        shell: bash
+    permissions:
+      contents: write
+    steps:
+      - name: Setup ROCm Repo
+        run: |
+          apt update
+          apt install -y curl gpg gh git
+          curl https://repo.radeon.com/rocm/rocm.gpg.key | gpg --dearmor >> /etc/apt/keyrings/rocm.gpg
+          export ROCM_PKG_REPO_VERSION="$(echo ${ROCM_PKG_REPO_OVERRIDE:-$ROCM_VERSION} | sed -E 's|([^.]+\.[^.]+)\.0$|\1|')"
+          cat <<EOF > /etc/apt/sources.list.d/rocm.list
+          deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/rocm/apt/${ROCM_PKG_REPO_VERSION} noble main
+          EOF
+          cat <<EOF > /etc/ld.so.conf.d/rocm.conf
+          /opt/rocm/lib
+          /opt/rocm/lib64
+          EOF
+          ldconfig
+      - name: Install FIO development dependencies
+        run: |
+          apt update
+          apt install -y \
+            debhelper \
+            libaio-dev \
+            zlib1g-dev \
+            librdmacm-dev \
+            libibverbs-dev \
+            librbd-dev \
+            libcairo2-dev \
+            libnuma-dev \
+            flex \
+            bison \
+            sphinx \
+            python3-sphinx \
+            libglusterfs-dev \
+            libpmem-dev \
+            libnbd-dev \
+            libnfs-dev \
+            libgnutls28-dev
+      - name: Install hipfile dev pkg deps
+        run: |
+          apt update
+          apt install -y \
+            clang \
+            dpkg-dev \
+            hip-dev \
+            libmount-dev
+      - name: Install latest hipFile dev package
+        run: |
+          curl -L https://github.com/ROCm/hipFile/releases/download/nightly/hipfile_0.2.0.70200-nightly.9999.24.04_amd64.deb -o hipfile.deb
+          curl -L https://github.com/ROCm/hipFile/releases/download/nightly/hipfile-dev_0.2.0.70200-nightly.9999.24.04_amd64.deb -o hipfile-dev.deb
+          apt install -y ./hipfile.deb ./hipfile-dev.deb
+      - name: Fetching fio repository...
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+        with:
+          path: ${{ github.workspace }}/fio/fio-src
+      - name: Build FIO with hipFile support
+        working-directory: ${{ github.workspace }}/fio/fio-src
+        run: dpkg-buildpackage --sanitize-env --build=binary -uc
+      - name: Capture package metadata
+        id: pkg-metadata
+        working-directory: ${{ github.workspace }}/fio
+        run: |
+          shopt -s nullglob
+          ls -al
+          FIO_PKG_DEBUG_FILENAME="$(echo fio-dbgsym_[0-9]*.ddeb)"
+          FIO_PKG_FILENAME="$(echo fio_[0-9]*.deb)"
+          echo "FIO_PKG_DEBUG_FILENAME=${FIO_PKG_DEBUG_FILENAME}" >> "${GITHUB_OUTPUT}"
+          echo "FIO_PKG_FILENAME=${FIO_PKG_FILENAME}" >> "${GITHUB_OUTPUT}"
+      - name: Print package metadata for debugging
+        working-directory: ${{ github.workspace }}/fio
+        run: |
+          echo "Runtime Package:"
+          ${{ format( 'dpkg-deb -I "{0}" && dpkg-deb -c "{0}"', steps.pkg-metadata.outputs.FIO_PKG_FILENAME) }}
+          echo -e "\n\nDebug Package:"
+          ${{ format( 'dpkg-deb -I "{0}" && dpkg-deb -c "{0}"', steps.pkg-metadata.outputs.FIO_PKG_DEBUG_FILENAME) }}
+      - name: Upload runtime FIO Package as an Artifact
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f #v6.0.0
+        with:
+          name: ${{ steps.pkg-metadata.outputs.FIO_PKG_FILENAME }}
+          path: ${{ format('{0}/fio/{1}', github.workspace, steps.pkg-metadata.outputs.FIO_PKG_FILENAME) }}
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+      - name: Upload debug FIO Package as an Artifact
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f #v6.0.0
+        with:
+          name: ${{ steps.pkg-metadata.outputs.FIO_PKG_DEBUG_FILENAME }}
+          path: ${{ format('{0}/fio/{1}', github.workspace, steps.pkg-metadata.outputs.FIO_PKG_DEBUG_FILENAME) }}
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+      - name: List Releases
+        working-directory: ${{ github.workspace }}/fio/fio-src
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release list
+      - name: Test if 'latest' already exists.
+        id: latest-exists
+        working-directory: ${{ github.workspace }}/fio/fio-src
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view latest
+      - name: Delete 'latest' if it already exists.
+        if: ${{ steps.latest-exists.outcome == 'success' }}
+        working-directory: ${{ github.workspace }}/fio/fio-src
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest --yes
+      - name: Create a release
+        working-directory: ${{ github.workspace }}/fio/fio-src
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          shopt -s nullglob
+          gh release create \
+            --notes "
+              Latest Build as of: $(date)
+
+              This release tracks the 'hipFile' branch.
+
+              The packages contained here are not suitable for production workloads.
+              This contains a build of FIO with hipFile support. hipFile is currently in
+              pre-release and not stable. Updates to the hipFile library/package may cause
+              a break to occur in this FIO package. In this event, please try reinstalling
+              FIO with the latest packages available from this page.
+            " \
+            --prerelease \
+            --target hipFile \
+            --title Latest \
+            latest \
+            fio{,-dbgsym}_[0-9]*.{deb,ddeb}
