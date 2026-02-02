@@ -30,7 +30,7 @@ endif
 	dh $@
 
 override_dh_auto_configure:
-	./configure --disable-native --prefix=/usr --enable-libnbd
+	./configure --disable-native --prefix=/usr --enable-libnbd --enable-libhipfile
 
 override_dh_installsystemd:
 	dh_installsystemd --no-start --no-enable

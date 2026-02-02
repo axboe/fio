@@ -1,3 +1,9 @@
+fio (3.41-2+hipfile) unstable; urgency=medium
+
+  * Build FIO with hipFile IO engine support.
+
+ -- AMD ROCm hipFile <hipfile-maintainer@amd.com>  Mon, 02 Feb 2026 11:30:00 -0700
+
 fio (3.41-2) unstable; urgency=medium
 
   * d/rules: Link against libatomic on armel and others.
