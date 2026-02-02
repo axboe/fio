@@ -72,6 +72,33 @@ DPKGCFG
 		pkgs+=(
 		   nvidia-cuda-dev
 		)
+            # Setup ROCm & Hacky Install hipFile
+            # We require some additional packages to even setup the ROCm repo
+            # Need to be aware though if a given pipeline runs on a supported ROCm release
+            _sudo apt-get -qq update
+            _sudo apt-get install -qq -y ca-certificates curl gpg
+            curl -s https://repo.radeon.com/rocm/rocm.gpg.key | gpg --dearmor | _sudo tee /etc/apt/keyrings/rocm.gpg >> /dev/null
+            _sudo tee /etc/apt/sources.list.d/rocm.list > /dev/null <<EOF 
+deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/rocm/apt/7.2 $(source /etc/os-release && echo ${VERSION_CODENAME}) main
+EOF
+            _sudo tee /etc/apt/preferences.d/rocm-pin-600 >> /dev/null <<EOF
+Package: *
+Pin: release o=repo.radeon.com
+Pin-Priority: 600
+EOF
+            _sudo tee /etc/ld.so.conf.d/rocm.conf >> /dev/null <<EOF
+/opt/rocm/lib
+/opt/rocm/lib64
+EOF
+            _sudo ldconfig
+            curl -s -L https://github.com/ROCm/hipFile/releases/download/nightly/hipfile_0.2.0.70200-nightly.9999.24.04_amd64.deb -o hipfile.deb
+            curl -s -L https://github.com/ROCm/hipFile/releases/download/nightly/hipfile-dev_0.2.0.70200-nightly.9999.24.04_amd64.deb -o hipfile-dev.deb
+            pkgs+=(
+                hip-dev
+                ./hipfile.deb
+                ./hipfile-dev.deb
+            )
+            # End setting up ROCm & hipFile
 	    fi
             ;;
     esac
@@ -146,6 +173,33 @@ install_fedora() {
             pkgs+=(
                 glusterfs-api-devel
             )
+            ;;&
+        "rocky")
+            # Setup ROCm & Hacky Install hipFile
+            # We require some additional packages to even setup the ROCm repo
+            _sudo tee /etc/yum.repos.d/rocm.repo >> /dev/null <<EOF
+[ROCm-7.2.0]
+name=ROCm7.2.0
+baseurl=https://repo.radeon.com/rocm/el9/7.2/main
+enabled=1
+priority=50
+gpgcheck=1
+gpgkey=https://repo.radeon.com/rocm/rocm.gpg.key
+EOF
+            _sudo tee /etc/ld.so.conf.d/rocm.conf >> /dev/null <<EOF
+/opt/rocm/lib
+/opt/rocm/lib64
+EOF
+            _sudo ldconfig
+
+            curl -s -L https://github.com/ROCm/hipFile/releases/download/nightly/hipfile-0.2.0.70200-nightly.9999.el9.x86_64.rpm -o hipfile.rpm
+            curl -s -L https://github.com/ROCm/hipFile/releases/download/nightly/hipfile-devel-0.2.0.70200-nightly.9999.el9.x86_64.rpm -o hipfile-devel.rpm
+            pkgs+=(
+                ./hipfile.rpm
+                ./hipfile-devel.rpm
+                hip-devel
+            )
+            # End setting up ROCm & hipFile
             ;;
     esac
     dnf install -y "${pkgs[@]}"
