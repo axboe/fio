@@ -1,0 +1,125 @@
+# Debian based distro's usually just use the upstream package that Debian maintains.
+name: FIO-Debian-Build
+on:
+  workflow_call:
+    outputs:
+      fio_pkg_debug_filename:
+        description: "Filename for the FIO debug DEB package."
+        value: ${{ jobs.build.outputs.fio_pkg_debug_filename }}
+      fio_pkg_debug_artifact_id:
+        description: "GHA Artifact ID for debug FIO DEB package."
+        value: ${{ jobs.build.outputs.fio_pkg_debug_artifact_id }}
+      fio_pkg_filename:
+        description: "Filename for the FIO runtime DEB package."
+        value: ${{ jobs.build.outputs.fio_pkg_filename }}
+      fio_pkg_artifact_id:
+        description: "GHA Artifact ID for runtime FIO DEB package."
+        value: ${{ jobs.build.outputs.fio_pkg_artifact_id }}
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: [ubuntu-24.04]
+    container:
+      image: ubuntu:noble
+      env:
+        ROCM_VERSION: 7.2.0
+    defaults:
+      run:
+        shell: bash
+    outputs:
+      fio_pkg_debug_filename: ${{ steps.pkg-metadata.outputs.FIO_PKG_DEBUG_FILENAME }}
+      fio_pkg_debug_artifact_id: ${{ steps.artifact-debug.outputs.artifact-id }}
+      fio_pkg_filename: ${{ steps.pkg-metadata.outputs.FIO_PKG_FILENAME }}
+      fio_pkg_artifact_id: ${{ steps.artifact-runtime.outputs.artifact-id }}
+    steps:
+      - name: Setup ROCm Repo
+        run: |
+          apt update
+          apt install -y curl gpg gh git
+          curl https://repo.radeon.com/rocm/rocm.gpg.key | gpg --dearmor >> /etc/apt/keyrings/rocm.gpg
+          export ROCM_PKG_REPO_VERSION="$(echo ${ROCM_PKG_REPO_OVERRIDE:-$ROCM_VERSION} | sed -E 's|([^.]+\.[^.]+)\.0$|\1|')"
+          cat <<EOF > /etc/apt/sources.list.d/rocm.list
+          deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/rocm/apt/${ROCM_PKG_REPO_VERSION} noble main
+          EOF
+          cat <<EOF > /etc/ld.so.conf.d/rocm.conf
+          /opt/rocm/lib
+          /opt/rocm/lib64
+          EOF
+          ldconfig
+      - name: Install FIO development dependencies
+        run: |
+          apt update
+          apt install -y \
+            debhelper \
+            libaio-dev \
+            zlib1g-dev \
+            librdmacm-dev \
+            libibverbs-dev \
+            librbd-dev \
+            libcairo2-dev \
+            libnuma-dev \
+            flex \
+            bison \
+            sphinx \
+            python3-sphinx \
+            libglusterfs-dev \
+            libpmem-dev \
+            libnbd-dev \
+            libnfs-dev \
+            libgnutls28-dev
+      - name: Install hipfile dev pkg deps
+        run: |
+          apt update
+          apt install -y \
+            clang \
+            dpkg-dev \
+            hip-dev \
+            libmount-dev
+      - name: Install latest hipFile dev package
+        run: |
+          curl -L https://github.com/ROCm/hipFile/releases/download/nightly/hipfile_0.2.0.70200-nightly.9999.24.04_amd64.deb -o hipfile.deb
+          curl -L https://github.com/ROCm/hipFile/releases/download/nightly/hipfile-dev_0.2.0.70200-nightly.9999.24.04_amd64.deb -o hipfile-dev.deb
+          apt install -y ./hipfile.deb ./hipfile-dev.deb
+      - name: Fetching fio repository...
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+        with:
+          path: ${{ github.workspace }}/fio/fio-src
+      - name: Build FIO with hipFile support
+        working-directory: ${{ github.workspace }}/fio/fio-src
+        run: dpkg-buildpackage --sanitize-env --build=binary -uc
+      - name: Capture package metadata
+        id: pkg-metadata
+        working-directory: ${{ github.workspace }}/fio
+        run: |
+          shopt -s nullglob
+          ls -al
+          FIO_PKG_DEBUG_FILENAME="$(echo fio-dbgsym_[0-9]*.ddeb)"
+          FIO_PKG_FILENAME="$(echo fio_[0-9]*.deb)"
+          echo "FIO_PKG_DEBUG_FILENAME=${FIO_PKG_DEBUG_FILENAME}" >> "${GITHUB_OUTPUT}"
+          echo "FIO_PKG_FILENAME=${FIO_PKG_FILENAME}" >> "${GITHUB_OUTPUT}"
+      - name: Print package metadata for debugging
+        working-directory: ${{ github.workspace }}/fio
+        run: |
+          echo "Runtime Package:"
+          ${{ format( 'dpkg-deb -I "{0}" && dpkg-deb -c "{0}"', steps.pkg-metadata.outputs.FIO_PKG_FILENAME) }}
+          echo -e "\n\nDebug Package:"
+          ${{ format( 'dpkg-deb -I "{0}" && dpkg-deb -c "{0}"', steps.pkg-metadata.outputs.FIO_PKG_DEBUG_FILENAME) }}
+      - name: Upload runtime FIO Package as an Artifact
+        id: artifact-runtime
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f #v6.0.0
+        with:
+          name: ${{ steps.pkg-metadata.outputs.FIO_PKG_FILENAME }}
+          path: ${{ format('{0}/fio/{1}', github.workspace, steps.pkg-metadata.outputs.FIO_PKG_FILENAME) }}
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+      - name: Upload debug FIO Package as an Artifact
+        id: artifact-debug
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f #v6.0.0
+        with:
+          name: ${{ steps.pkg-metadata.outputs.FIO_PKG_DEBUG_FILENAME }}
+          path: ${{ format('{0}/fio/{1}', github.workspace, steps.pkg-metadata.outputs.FIO_PKG_DEBUG_FILENAME) }}
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
