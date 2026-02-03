@@ -29,8 +29,9 @@ jobs:
           artifact-ids: >-
             ${{
               format(
-                '{0},{1}',
+                '{0},{1},{2}',
                 needs.build_debian_pkg.outputs.fio_pkg_debug_artifact_id,
+                needs.build_debian_pkg.outputs.fio_pkg_example_artifact_id,
                 needs.build_debian_pkg.outputs.fio_pkg_artifact_id
               )
             }}
@@ -57,7 +58,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           shopt -s nullglob
-          echo fio{,-dbgsym}_[0-9]*.{deb,ddeb}
+          echo fio{,-dbgsym,-examples}_[0-9]*.{deb,ddeb}
           gh release create \
             --notes "
               Latest Build as of: $(date)
@@ -77,4 +78,5 @@ jobs:
             --title Latest \
             latest \
             ${{ needs.build_debian_pkg.outputs.fio_pkg_debug_filename }} \
+            ${{ needs.build_debian_pkg.outputs.fio_pkg_example_filename }} \
             ${{ needs.build_debian_pkg.outputs.fio_pkg_filename }}

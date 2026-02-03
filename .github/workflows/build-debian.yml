@@ -9,6 +9,12 @@ on:
       fio_pkg_debug_artifact_id:
         description: "GHA Artifact ID for debug FIO DEB package."
         value: ${{ jobs.build.outputs.fio_pkg_debug_artifact_id }}
+      fio_pkg_example_filename:
+        description: "Filename for the FIO examples DEB package."
+        value: ${{ jobs.build.outputs.fio_pkg_example_filename }}
+      fio_pkg_example_artifact_id:
+        description: "GHA Artifact ID for examples FIO DEB package."
+        value: ${{ jobs.build.outputs.fio_pkg_example_artifact_id }}
       fio_pkg_filename:
         description: "Filename for the FIO runtime DEB package."
         value: ${{ jobs.build.outputs.fio_pkg_filename }}
@@ -30,6 +36,8 @@ jobs:
     outputs:
       fio_pkg_debug_filename: ${{ steps.pkg-metadata.outputs.FIO_PKG_DEBUG_FILENAME }}
       fio_pkg_debug_artifact_id: ${{ steps.artifact-debug.outputs.artifact-id }}
+      fio_pkg_example_filename: ${{ steps.pkg-metadata.outputs.FIO_PKG_EXAMPLE_FILENAME }}
+      fio_pkg_example_artifact_id: ${{ steps.artifact-example.outputs.artifact-id }}
       fio_pkg_filename: ${{ steps.pkg-metadata.outputs.FIO_PKG_FILENAME }}
       fio_pkg_artifact_id: ${{ steps.artifact-runtime.outputs.artifact-id }}
     steps:
@@ -95,8 +103,10 @@ jobs:
           shopt -s nullglob
           ls -al
           FIO_PKG_DEBUG_FILENAME="$(echo fio-dbgsym_[0-9]*.ddeb)"
+          FIO_PKG_EXAMPLE_FILENAME="$(echo fio-examples_[0-9]*.deb)"
           FIO_PKG_FILENAME="$(echo fio_[0-9]*.deb)"
           echo "FIO_PKG_DEBUG_FILENAME=${FIO_PKG_DEBUG_FILENAME}" >> "${GITHUB_OUTPUT}"
+          echo "FIO_PKG_EXAMPLE_FILENAME=${FIO_PKG_EXAMPLE_FILENAME}" >> "${GITHUB_OUTPUT}"
           echo "FIO_PKG_FILENAME=${FIO_PKG_FILENAME}" >> "${GITHUB_OUTPUT}"
       - name: Print package metadata for debugging
         working-directory: ${{ github.workspace }}/fio
@@ -105,6 +115,8 @@ jobs:
           ${{ format( 'dpkg-deb -I "{0}" && dpkg-deb -c "{0}"', steps.pkg-metadata.outputs.FIO_PKG_FILENAME) }}
           echo -e "\n\nDebug Package:"
           ${{ format( 'dpkg-deb -I "{0}" && dpkg-deb -c "{0}"', steps.pkg-metadata.outputs.FIO_PKG_DEBUG_FILENAME) }}
+          echo -e "\n\nExample Package:"
+          ${{ format( 'dpkg-deb -I "{0}" && dpkg-deb -c "{0}"', steps.pkg-metadata.outputs.FIO_PKG_EXAMPLE_FILENAME) }}
       - name: Upload runtime FIO Package as an Artifact
         id: artifact-runtime
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f #v6.0.0
@@ -120,6 +132,15 @@ jobs:
         with:
           name: ${{ steps.pkg-metadata.outputs.FIO_PKG_DEBUG_FILENAME }}
           path: ${{ format('{0}/fio/{1}', github.workspace, steps.pkg-metadata.outputs.FIO_PKG_DEBUG_FILENAME) }}
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+      - name: Upload example FIO Package as an Artifact
+        id: artifact-example
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f #v6.0.0
+        with:
+          name: ${{ steps.pkg-metadata.outputs.FIO_PKG_EXAMPLE_FILENAME }}
+          path: ${{ format('{0}/fio/{1}', github.workspace, steps.pkg-metadata.outputs.FIO_PKG_EXAMPLE_FILENAME) }}
           if-no-files-found: error
           retention-days: 1
           compression-level: 0
