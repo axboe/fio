@@ -1076,7 +1076,8 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 
 	while ((td->o.read_iolog_file && !flist_empty(&td->io_log_list)) ||
 		(!flist_empty(&td->trim_list)) || !io_issue_bytes_exceeded(td) ||
-		td->o.time_based) {
+		td->o.time_based ||
+		(should_fsync(td) && ddir_is_sync(td))) {
 		struct timespec comp_time;
 		struct io_u *io_u;
 		int full;
@@ -1108,8 +1109,8 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 		 */
 		if (bytes_issued >= total_bytes &&
 		    !td->o.read_iolog_file &&
-		    (!td->o.time_based ||
-		     (td->o.time_based && td->o.verify != VERIFY_NONE)))
+		    ((!td->o.time_based && !(should_fsync(td) && ddir_is_sync(td))) ||
+		      (td->o.time_based && td->o.verify != VERIFY_NONE)))
 			break;
 
 		io_u = get_io_u(td);
