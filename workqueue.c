@@ -285,6 +285,7 @@ static int start_worker(struct workqueue *wq, unsigned int index,
 	sw->wq = wq;
 	sw->index = index;
 	sw->sk_out = sk_out;
+	sw->flags = 0;
 
 	if (wq->ops.alloc_worker_fn) {
 		ret = wq->ops.alloc_worker_fn(sw);
@@ -295,7 +296,7 @@ static int start_worker(struct workqueue *wq, unsigned int index,
 	ret = pthread_create(&sw->thread, NULL, worker_thread, sw);
 	if (!ret) {
 		pthread_mutex_lock(&sw->lock);
-		sw->flags = SW_F_IDLE;
+		sw->flags |= SW_F_IDLE;
 		pthread_mutex_unlock(&sw->lock);
 		return 0;
 	}
