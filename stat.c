@@ -2604,7 +2604,7 @@ void __show_run_stats(void)
 				ts->error = td->first_error;
 				snprintf(ts->verror, sizeof(ts->verror), "%s",
 					 td->verror);
-			} else  if (td->error) {
+			} else if (td->error) {
 				ts->error = td->error;
 				snprintf(ts->verror, sizeof(ts->verror), "%s",
 					 td->verror);
