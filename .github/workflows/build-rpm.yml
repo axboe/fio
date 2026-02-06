@@ -1,0 +1,155 @@
+# Rocky/RHEL uses the upstream package that Fedora maintains.
+name: FIO-Rocky-Build
+on:
+  workflow_call:
+    outputs:
+      # Obviously need different outputs here
+      fio_pkg_debug_filename:
+        description: "Filename for the FIO debug RPM package."
+        value: ${{ jobs.build.outputs.fio_pkg_debug_filename }}
+      fio_pkg_debug_artifact_id:
+        description: "GHA Artifact ID for FIO debug RPM package."
+        value: ${{ jobs.build.outputs.fio_pkg_debug_artifact_id }}
+      fio_pkg_debug_source_filename:
+        description: "Filename for the FIO debug source RPM package."
+        value: ${{ jobs.build.outputs.fio_pkg_debug_source_filename }}
+      fio_pkg_debug_source_artifact_id:
+        description: "GHA Artifact ID for FIO debug source RPM package."
+        value: ${{ jobs.build.outputs.fio_pkg_debug_source_artifact_id }}
+      fio_pkg_hipfile_engine_filename:
+        description: "Filename for the FIO hipFile IO engine RPM package."
+        value: ${{ jobs.build.outputs.fio_pkg_hipfile_engine_filename }}
+      fio_pkg_hipfile_engine_artifact_id:
+        description: "GHA Artifact ID for FIO hipFile IO engine RPM package."
+        value: ${{ jobs.build.outputs.fio_pkg_hipfile_engine_artifact_id }}
+      fio_pkg_filename:
+        description: "Filename for the FIO runtime RPM package."
+        value: ${{ jobs.build.outputs.fio_pkg_filename }}
+      fio_pkg_artifact_id:
+        description: "GHA Artifact ID for FIO runtime RPM package."
+        value: ${{ jobs.build.outputs.fio_pkg_artifact_id }}
+      fio_pkg_source_filename:
+        description: "Filename for the FIO source RPM package."
+        value: ${{ jobs.build.outputs.fio_pkg_source_filename }}
+      fio_pkg_source_artifact_id:
+        description: "GHA Artifact ID for FIO source RPM package."
+        value: ${{ jobs.build.outputs.fio_pkg_source_artifact_id }}
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: [ubuntu-24.04]
+    container:
+      image: rockylinux/rockylinux:9.6
+      env:
+        ROCM_VERSION: 7.2.0
+        RHEL_MAJOR_VERSION: 9
+    defaults:
+      run:
+        shell: bash
+    outputs:
+      fio_pkg_debug_filename: ${{ steps.pkg-metadata.outputs.FIO_PKG_DEBUG_FILENAME }}
+      fio_pkg_debug_artifact_id: ${{ steps.artifact-debug.outputs.artifact-id }}
+      fio_pkg_debug_source_filename: ${{ steps.pkg-metadata.outputs.FIO_PKG_DEBUG_SOURCE_FILENAME }}
+      fio_pkg_debug_source_artifact_id: ${{ steps.artifact-debug-source.outputs.artifact-id }}
+      fio_pkg_hipfile_engine_filename: ${{ steps.pkg-metadata.outputs.FIO_PKG_HIPFILE_ENGINE_FILENAME }}
+      fio_pkg_hipfile_engine_artifact_id: ${{ steps.artifact-hipfile-engine.outputs.artifact-id }}
+      fio_pkg_filename: ${{ steps.pkg-metadata.outputs.FIO_PKG_FILENAME }}
+      fio_pkg_artifact_id: ${{ steps.artifact-runtime.outputs.artifact-id }}
+      fio_pkg_source_filename: ${{ steps.pkg-metadata.outputs.FIO_PKG_SOURCE_FILENAME }}
+      fio_pkg_source_artifact_id: ${{ steps.artifact-source.outputs.artifact-id }}
+    steps:
+      - name: Setup ROCm Repo
+        run: |
+          apt update
+          apt install -y curl gpg gh git
+          export ROCM_PKG_REPO_VERSION="$(echo ${ROCM_PKG_REPO_OVERRIDE:-$ROCM_VERSION} | sed -E 's|([^.]+\.[^.]+)\.0$|\1|')"
+          cat <<EOF > /etc/yum.repos.d/rocm.repo
+          [ROCm-${ROCM_VERSION}]
+          name=ROCm${ROCM_VERSION}
+          baseurl=https://repo.radeon.com/rocm/el${ROCKY_MAJOR_VERSION}/${ROCM_PKG_REPO_VERSION}/main
+          enabled=1
+          priority=50
+          gpgcheck=1
+          gpgkey=https://repo.radeon.com/rocm/rocm.gpg.key
+          EOF
+          cat <<EOF > /etc/ld.so.conf.d/rocm.conf
+          /opt/rocm/lib
+          /opt/rocm/lib64
+          EOF
+          ldconfig
+      - name: Install FIO development dependencies
+        run: |
+          dnf install -y \
+            rpmbuild
+      - name: Install hipFile development dependencies
+        run: |
+          dnf install -y \
+            hip-devel \
+            libmount-dev
+      - name: Install latest hipFile dev package
+        run: |
+          curl -L https://github.com/ROCm/hipFile/releases/download/nightly/hipfile-0.2.0.70200-nightly.9999.el9.x86_64.rpm -o hipfile.rpm
+          curl -L https://github.com/ROCm/hipFile/releases/download/nightly/hipfile-devel-0.2.0.70200-nightly.9999.el9.x86_64.rpm -o hipfile-devel.rpm
+          dnf install -y ./hipfile.rpm ./hipfile-dev.rpm
+      - name: Fetching FIO repository...
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+        with:
+          path: ${{ github.workspace }}/fio/fio-src
+      - name: Get FIO Version
+        working-directory: ${{ github.workspace }}/fio/fio-src
+        run: |
+          stff
+      - name: Setup rpmbuild environment
+        working-directory: ${{ github.workspace }}/fio
+        run: |
+          mkdir -p rpmbuild/BUILD rpmbuild/RPMS rpmbuild/SOURCES rpmbuild/SPECS rpmbuild/SRPMS
+          export FIO_VERSION="$(./fio-hipfile/FIO-VERSION-GEN 2>&1 | sed -E 's|.*fio-([0-9.]+).*|\1|')"
+          echo "FIO_VERSION=${FIO_VERSION}" >> "${GITHUB_ENV}"
+          tar -cjf ./rpmbuild/SOURCES/fio-${FIO_VERSION}.tar.bz2 \
+            --exclude="debian" \
+            --exclude="rpm" \
+            --exclude-vcs \
+            --transform="s|^fio-src|fio-${FIO_VERSION}|" \
+            fio-src
+          cp ./fio-src/rpm/fedora/fio.spec ./rpmbuild/SPECS
+      - name: Build FIO with hipFile support
+        working-directory: ${{ github.workflow }}/fio/rpmbuild
+        run: |
+          rpmbuild \
+            -ba \
+            --define="_topdir ${{ github.workspace }}/fio/rpmbuild" \
+            --with=hipfile \
+            ${{ github.workspace }}/fio/rpmbuild/SPECS/fio.spec
+      - name: Capture package metadata
+        id: pkg-metadata
+        working-directory: ${{ github.workspace }}/fio/rpmbuild
+        run: |
+          shopt -s nullglob
+          ls -al
+          export _rpm_path=${{ github.workspace }}/fio/rpmbuild/RPMS/x86_64
+          export _srpms_path=${{ github.workspace }}/fio/rpmbuild/SRPMS
+          FIO_PKG_DEBUG_FILENAME="$(basename ${_rpm_path}/fio-debuginfo-${FIO_VERSION}-[0-9]*.rpm)"
+          FIO_PKG_DEBUG_SOURCE_FILENAME="$(basename ${_rpm_path}/fio-debugsource-${FIO_VERSION}-[0-9]*.rpm)"
+          FIO_PKG_HIPFILE_ENGINE_FILENAME="$(basename ${_rpm_path}/fio-engine-hipfile-${FIO_VERSION-[0-9]*.rpm)"
+          FIO_PKG_FILENAME="$(basename ${_rpm_path}/fio-${FIO_VERSION}-[0-9]*.rpm)"
+          FIO_PKG_SOURCE_FILENAME="$(basename ${_srpm_path}/fio-${FIO_VERSION}-[0-9]*.src.rpm)"
+
+          echo "FIO_PKG_DEBUG_FILENAME=${FIO_PKG_DEBUG_FILENAME}" >> "${GITHUB_OUTPUT}"
+          echo "FIO_PKG_DEBUG_SOURCE_FILENAME=${FIO_PKG_DEBUG_SOURCE_FILENAME}" >> "${GITHUB_OUTPUT}"
+          echo "FIO_PKG_HIPFILE_ENGINE_FILENAME=${FIO_PKG_HIPFILE_ENGINE_FILENAME}" >> "${GITHUB_OUTPUT}"
+          echo "FIO_PKG_FILENAME=${FIO_PKG_FILENAME}" >> "${GITHUB_OUTPUT}"
+          echo "FIO_PKG_SOURCE_FILENAME=${FIO_PKG_SOURCE_FILENAME}" >> "${GITHUB_OUTPUT}"
+      - name: Print package metadata for debugging
+        working-directory: ${{ github.workspace }}/fio
+        run: |
+          echo "Runtime Package:"
+          ${{ format('rpm -qpil --requires {0}', steps.pkg-metadata.outputs.FIO_PKG_FILENAME) }}
+          echo -e "\n\nDebug Package:"
+          ${{ format('rpm -qpil --requires {0}', steps.pkg-metadata.outputs.FIO_PKG_DEBUG_FILENAME) }}
+          echo -e "\n\nDebug Source Package:"
+          ${{ format('rpm -qpil --requires {0}', steps.pkg-metadata.outputs.FIO_PKG_DEBUG_SOURCE_FILENAME) }}
+          echo -e "\n\nhipFile FIO Engine Package:"
+          ${{ format('rpm -qpil --requires {0}', steps.pkg-metadata.outputs.FIO_PKG_HIPFILE_ENGINE_FILENAME) }}
+          echo -e "\n\nSource Package:"
+          ${{ format('rpm -qpil --requires {0}', steps.pkg-metadata.outputs.FIO_PKG_SOURCE_FILENAME) }}
