@@ -1,5 +1,7 @@
 name: FIO-hipFile-Release
 on:
+  pull_request:
+    types: [opened, synchronize, reopened] # Defaults
   pull_request_target: # A.K.A. This is a privileged action. See `pull_request`.
     types:
       - closed # CAUTION: Includes un-merged PR's.
@@ -54,6 +56,7 @@ jobs:
         run: |
           gh release delete latest --yes
       - name: Create a release
+        if: false
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
