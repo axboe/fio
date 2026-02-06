@@ -1985,8 +1985,14 @@ err_put:
 static void __io_u_log_error(struct thread_data *td, struct io_u *io_u)
 {
 	enum error_type_bit eb = td_error_type(io_u->ddir, io_u->error);
+	bool non_fatal_error = td_non_fatal_error(td, eb, io_u->error);
 
-	if (td_non_fatal_error(td, eb, io_u->error) && !td->o.error_dump)
+	/*
+	 * Non-fatal errors (errors that should be ignored), are normally not
+	 * dumped to the log, unless td->o.error_dump. Regardless, non-fatal
+	 * errors should never call td_verror() to set td->error.
+	 */
+	if (non_fatal_error && !td->o.error_dump)
 		return;
 
 	log_err("fio: io_u error%s%s: %s: %s offset=%llu, buflen=%llu\n",
@@ -2008,7 +2014,7 @@ static void __io_u_log_error(struct thread_data *td, struct io_u *io_u)
 		}
 	}
 
-	if (!td->error)
+	if (!td->error && !non_fatal_error)
 		td_verror(td, io_u->error, "io_u error");
 }
 
