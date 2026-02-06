@@ -1,13 +1,14 @@
 Name:		fio
-Version:	3.40
-Release:	3%{?dist}
+Version:	3.41
+Release:	31.hipfile%{?dist}
 Summary:	Multithreaded IO generation tool
 
 License:	GPL-2.0-only
 URL:		http://git.kernel.dk/?p=fio.git;a=summary
 Source0:	http://brick.kernel.dk/snaps/%{name}-%{version}.tar.bz2
-Source1:	https://brick.kernel.dk/snaps/%{name}-%{version}.tar.bz2.asc
-Source2:	https://git.kernel.org/pub/scm/docs/kernel/pgpkeys.git/plain/keys/F7D358FB2971E0A6.asc
+# hipFile: The signatures won't match as we have modified the package ourselves.
+# Source1:	https://brick.kernel.dk/snaps/%{name}-%{version}.tar.bz2.asc
+# Source2:	https://git.kernel.org/pub/scm/docs/kernel/pgpkeys.git/plain/keys/F7D358FB2971E0A6.asc
 
 %if 0%{?rhel} && 0%{?rhel} < 10
 %bcond_without nbd
@@ -34,6 +35,8 @@ Source2:	https://git.kernel.org/pub/scm/docs/kernel/pgpkeys.git/plain/keys/F7D35
 
 %bcond_with xnvme
 %bcond_with cuda
+# hipFile: Add packaging arg for the hipFile IO engine.
+%bcond_with hipfile
 
 BuildRequires:	gcc
 BuildRequires:	gnupg2
@@ -63,6 +66,10 @@ BuildRequires:	xnvme-devel
 
 %if %{with cuda}
 BuildRequires:	libcufile.so.0()(64bit)
+%endif
+
+%if %{with hipfile}
+BuildRequires: hipfile-devel
 %endif
 
 %ifnarch %{arm}
@@ -99,6 +106,9 @@ Recommends:     %{name}-engine-xnvme
 %endif
 %if %{with cuda}
 Recommends:     %{name}-engine-cuda
+%endif
+%if %{with hipfile}
+Recommends:     %{name}-engine-hipfile
 %endif
 %ifnarch %{arm}
 Recommends:     %{name}-engine-rdma
@@ -193,6 +203,14 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 cuda engine for %{name}.
 %endif
 
+%if %{with hipfile}
+%package engine-hipfile
+Summary: ROCm hipFile engine for %{name}.
+Requires: %{name}%{?_isa} = %{version}-%{release}
+
+%description engine-hipfile
+ROCm hipFile engine for %{name}.
+%endif
 
 %ifnarch %{arm}
 %package engine-rdma
@@ -205,7 +223,9 @@ RDMA engine for %{name}.
 
 %prep
 %autosetup -p1
-%{gpgverify} --keyring='%{SOURCE2}' --signature='%{SOURCE1}' --data='%{SOURCE0}'
+# hipFile: These signatures are valid only for the original source.
+#          Our modifications will cause this check to fail.
+# %{gpgverify} --keyring='%{SOURCE2}' --signature='%{SOURCE1}' --data='%{SOURCE0}'
 
 %{__python3} %{_rpmconfigdir}/redhat/pathfix.py -i %{__python3} -pn \
  tools/fio_jsonplus_clat2csv \
@@ -225,7 +245,9 @@ export CPLUS_INCLUDE_PATH=/usr/local/cuda/include
 export LIBRARY_PATH=/usr/local/cuda/lib64
 %endif
 
+# hipFile: Not tied to a particular ROCm version.
 ./configure \
+ %{?with_hipfile:--enable-libhipfile} \
  %{?with_nbd:--enable-libnbd} \
  %{!?with_xnvme:--disable-xnvme} \
  %{?with_cuda:--enable-cuda --enable-libcufile} \
@@ -283,12 +305,22 @@ make install prefix=%{_prefix} mandir=%{_mandir} libdir=%{_libdir}/fio DESTDIR=$
 %{_libdir}/fio/fio-xnvme.so
 %endif
 
+%if %{with hipfile}
+%files engine-hipfile
+%{_libdir}/fio/fio-hipfile.so
+%endif
+
 %ifnarch %{arm}
 %files engine-rdma
 %{_libdir}/fio/fio-rdma.so
 %endif
 
 %changelog
+* Fri Feb 6 2026 AMD ROCm hipFIle <> - 3.41-1.hipfile
+- Add packaging support for the hipFile IO Engine
+- CMake/Configure: Add support to build the hipFile IO Engine
+- Update to upstream v3.41
+
 * Fri Jan 16 2026 Fedora Release Engineering <releng@fedoraproject.org> - 3.40-3
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_44_Mass_Rebuild
 
