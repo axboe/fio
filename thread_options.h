@@ -180,6 +180,7 @@ struct thread_options {
 	unsigned int softrandommap;
 	unsigned int sprandom;
 	unsigned int spr_num_regions;
+	unsigned long long spr_cache_size;
 	fio_fp64_t spr_over_provisioning;
 	unsigned int bs_unaligned;
 	unsigned int fsync_on_close;
@@ -517,6 +518,7 @@ struct thread_options_pack {
 	uint32_t softrandommap;
 	uint32_t sprandom;
 	uint32_t spr_num_regions;
+	uint64_t spr_cache_size;
 	fio_fp64_t spr_over_provisioning;
 	uint32_t bs_unaligned;
 	uint32_t fsync_on_close;

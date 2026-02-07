@@ -1469,6 +1469,24 @@ For large devices it is better to use more regions, to increase precision
 and reduce memory allocation. The allocation is proportional to the region size.
 .RE
 .TP
+.B spr_cs=int
+See
+.BR sprandom .
+Define a cache size in bytes, as specified by the SSD manufacturer.
+.P
+.RS
+When this is non-zero, delay invalidating writes by one region in order
+to make sure that all original writes from a region are flushed from
+cache before the later invalidating writes are sent to the device.
+This deferral prevents the original write and the later invalidating
+write from being present in the device's cache at the same time which
+would allow the device to ignore the original write and prevent
+sprandom from achieving its target validity fractions. The actual
+cache size is used to ensure that the number of regions is not set
+so large that the size of a region is smaller than the device cache.
+The default is 0.
+.RE
+.TP
 .B spr_op=float
 See
 .BR sprandom .
