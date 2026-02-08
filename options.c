@@ -266,6 +266,9 @@ static int str_fdp_pli_cb(void *data, const char *input)
 	char *str, *p, *id1;
 	int i = 0, ret = 0;
 
+	if (!input)
+		return 1;
+
 	p = str = strdup(input);
 	strip_blank_front(&str);
 	strip_blank_end(str);
@@ -603,6 +606,8 @@ static int str_replay_skip_cb(void *data, const char *input)
 
 	if (parse_dryrun())
 		return 0;
+	if (!input)
+		return 1;
 
 	p = str = strdup(input);
 
@@ -641,6 +646,8 @@ static int str_ignore_error_cb(void *data, const char *input)
 
 	if (parse_dryrun())
 		return 0;
+	if (!input)
+		return 1;
 
 	p = str = strdup(input);
 
@@ -884,6 +891,8 @@ static int str_cpus_allowed_cb(void *data, const char *input)
 
 	if (parse_dryrun())
 		return 0;
+	if (!input)
+		return 1;
 
 	return set_cpus_allowed(td, &td->o.cpumask, input);
 }
@@ -894,6 +903,8 @@ static int str_verify_cpus_allowed_cb(void *data, const char *input)
 
 	if (parse_dryrun())
 		return 0;
+	if (!input)
+		return 1;
 
 	return set_cpus_allowed(td, &td->o.verify_cpumask, input);
 }
@@ -905,6 +916,8 @@ static int str_log_cpus_allowed_cb(void *data, const char *input)
 
 	if (parse_dryrun())
 		return 0;
+	if (!input)
+		return 1;
 
 	return set_cpus_allowed(td, &td->o.log_gz_cpumask, input);
 }
@@ -949,6 +962,8 @@ static int str_numa_mpol_cb(void *data, char *input)
 
 	if (parse_dryrun())
 		return 0;
+	if (!input)
+		return 1;
 
 	nodelist = strchr(input, ':');
 	if (nodelist) {
@@ -1567,6 +1582,9 @@ static int str_filename_cb(void *data, const char *input)
 	struct thread_data *td = cb_data_to_td(data);
 	char *fname, *str, *p;
 
+	if (!input)
+		return 1;
+
 	p = str = strdup(input);
 
 	strip_blank_front(&str);
@@ -1688,6 +1706,9 @@ static int str_verify_pattern_cb(void *data, const char *input)
 {
 	struct thread_data *td = cb_data_to_td(data);
 	int ret;
+
+	if (!input)
+		return 1;
 
 	td->o.verify_fmt_sz = FIO_ARRAY_SIZE(td->o.verify_fmt);
 	ret = parse_and_fill_pattern_alloc(input, strlen(input),
