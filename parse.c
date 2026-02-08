@@ -577,8 +577,6 @@ static int __handle_option(const struct fio_option *o, const char *ptr,
 		posval_sort(o, posval);
 
 		ret = 1;
-		if (!ptr)
-			break;
 		for (i = 0; i < PARSE_MAX_VP; i++) {
 			vp = &posval[i];
 			if (!vp->ival || vp->ival[0] == '\0')
@@ -817,7 +815,7 @@ store_option_value:
 	case FIO_OPT_STR_STORE: {
 		fio_opt_str_fn *fn = o->cb;
 
-		if (!ptr || !strlen(ptr))
+		if (!strlen(ptr))
 			return 1;
 
 		if (o->off1) {
