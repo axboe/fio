@@ -3440,6 +3440,19 @@ I/O depth
 	if none of I/O has been completed yet, we will NOT wait and immediately exit
 	the system call. In this example we simply do polling.
 
+.. option:: iodepth_batch_complete_omit=int
+
+	The number of in-flight IOs that need not be retrieved on quiescing. It
+	defaults to 0 which means all in-flight IOs will be retrieved until completion
+	as not to skew the latency. After that, if in the rate-limiting context, the
+	next IO will be set after a fixed delay. But in some cases, the in-flight IOs
+	may need be hanging for a while to merge more subsequent IOs in order to get
+	a better bandwidth or reach the EC stripe length, and so on. And the hanging
+	time may delay the next IO for long if all in-flight IOs must be retrieved.
+	Therefore, this option will be used to skip quiescing partially(IOs in merge
+	waiting) for a smooth data flow, and as such, it is not suitable for the
+	latency-sensitive scenarios.
+
 .. option:: iodepth_low=int
 
 	The low water mark indicating when to start filling the queue
