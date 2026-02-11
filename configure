@@ -2849,8 +2849,9 @@ int main(int argc, char* argv[]) {
   return 0;
 }
 EOF
-  HIPFILE_CFLAGS="-D__HIP_PLATFORM_AMD__"
-  HIPFILE_LIBS="-lamdhip64 -lhipfile"
+  ROCM_PATH=${ROCM_PATH:=/opt/rocm}
+  HIPFILE_CFLAGS="-I${ROCM_PATH}/include -D__HIP_PLATFORM_AMD__"
+  HIPFILE_LIBS="-L${ROCM_PATH}/lib -lamdhip64 -lhipfile"
   if compile_prog "$HIPFILE_CFLAGS" "$HIPFILE_LIBS" "libhipfile"; then
     libhipfile="yes"
     CFLAGS="$HIPFILE_CFLAGS $CFLAGS"

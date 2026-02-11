@@ -1,0 +1,7 @@
+# ROCm does not list shlibs deps across almost all libraries.
+# We will manually list the ROCm deps here to satisfy the build process.
+# Format: <soname> <major_version> <package_dependencies>
+# Note: Everything after `major_version` gets put into `package_dependencies`
+#       and follows the syntax of the `Depends:` field of the control file.
+libamdhip64 7 hip-runtime-amd (>= 7.2)
+libhipfile 0 hipfile (<< 1)

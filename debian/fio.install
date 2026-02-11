@@ -1,0 +1,10 @@
+usr/bin/fio			usr/bin
+usr/bin/fio-genzipf		usr/bin
+usr/bin/fio-btrace2fio		usr/bin
+usr/bin/fio-dedupe		usr/bin
+usr/bin/fio_generate_plots	usr/bin
+usr/bin/fio2gnuplot		usr/bin
+usr/bin/fio_jsonplus_clat2csv	usr/bin
+usr/bin/fio-verify-state	usr/bin
+usr/bin/genfio			usr/bin
+usr/share/fio/*.gpm		usr/share/fio

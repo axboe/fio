@@ -122,7 +122,12 @@ ifdef CONFIG_LIBCUFILE
   SOURCE += engines/libcufile.c
 endif
 ifdef CONFIG_LIBHIPFILE
-  SOURCE += engines/libhipfile.c
+  ROCM_PATH := /opt/rocm
+  hipfile_SRCS = engines/libhipfile.c
+  hipfile_CFLAGS += -I${ROCM_PATH}/include
+  LDFLAGS += -L${ROCM_PATH}/lib -Wl,-rpath,${ROCM_PATH}/lib
+  hipfile_LIBS = -lamdhip64 -lhipfile
+  ENGINES += hipfile
 endif
 ifdef CONFIG_LINUX_SPLICE
   SOURCE += engines/splice.c

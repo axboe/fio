@@ -1,0 +1,4 @@
+Version: 5
+Source: https://brick.kernel.dk/snaps/
+Pgp-Mode: auto
+Matching-Pattern: @PACKAGE@-@ANY_VERSION@.tar.gz

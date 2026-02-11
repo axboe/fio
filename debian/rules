@@ -1,0 +1,39 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+# Sample debian/rules that uses debhelper.
+# This file was originally written by Joey Hess and Craig Small.
+# As a special exception, when this file is copied by dh-make into a
+# dh-make output file, you may use that output file without restriction.
+# This special exception was added by Craig Small in version 0.37 of dh-make.
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+include /usr/share/dpkg/architecture.mk
+
+export DEB_LDFLAGS_MAINT_PREPEND := -Wl,-z,defs
+
+# link against libatomic on armel and some others
+ifeq ($(filter armel m68k powerpc sh4,$(DEB_HOST_ARCH)),$(DEB_HOST_ARCH))
+export DEB_LDFLAGS_MAINT_APPEND = -Wl,--no-as-needed -latomic -Wl,--as-needed
+endif
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
+export V = 1
+
+ifneq ($(DEB_BUILD_ARCH),$(DEB_HOST_ARCH))
+export CROSS_COMPILE=$(DEB_HOST_GNU_TYPE)-
+endif
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+	./configure --disable-native --prefix=/usr --enable-libnbd --enable-libhipfile
+
+override_dh_installsystemd:
+	dh_installsystemd --no-start --no-enable
+
+override_dh_installinit:
+	dh_installinit --no-start --no-enable

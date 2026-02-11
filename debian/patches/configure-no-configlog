@@ -1,0 +1,12 @@
+Description: Remove config.log to fix dpkg-source error about changed files.
+Author: Martin Steigerwald <martin@steigerwald-training.de>
+Forwarded: not-needed
+
+--- a/configure
++++ b/configure
+@@ -3446,3 +3446,5 @@
+ include \$(SRCDIR)/Makefile
+ EOF
+ fi
++
++rm -f config.log

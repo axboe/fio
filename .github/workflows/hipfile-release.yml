@@ -1,0 +1,84 @@
+name: FIO-hipFile-Release
+on:
+  pull_request_target: # A.K.A. This is a privileged action. See `pull_request`.
+    types:
+      - closed # CAUTION: Includes un-merged PR's.
+    branches:
+      - hipFile
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  build_debian_pkg:
+    uses: ./.github/workflows/build-debian.yml
+  release_FIO_with_hipFile:
+    if: ${{ github.event.pull_request.merged == true }}
+    runs-on: [ubuntu-24.04]
+    needs: [build_debian_pkg]
+    permissions:
+      contents: write
+    steps:
+      - name: Fetching fio repository...
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+      - name: Download FIO packages
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 #v7.0.0
+        with:
+          merge-multiple: true
+          artifact-ids: >-
+            ${{
+              format(
+                '{0},{1},{2},{3}',
+                needs.build_debian_pkg.outputs.fio_pkg_debug_artifact_id,
+                needs.build_debian_pkg.outputs.fio_pkg_example_artifact_id,
+                needs.build_debian_pkg.outputs.fio_pkg_artifact_id,
+                needs.build_debian_pkg.outputs.fio_pkg_source_artifact_id
+              )
+            }}
+      - name: List Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release list
+      - name: Test if 'latest' already exists.
+        id: latest-exists
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view latest
+      - name: Delete 'latest' if it already exists.
+        if: ${{ steps.latest-exists.outcome == 'success' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest --yes
+      - name: Create a release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          shopt -s nullglob
+          echo fio{,-dbgsym,-examples}_[0-9]*.{deb,ddeb}
+          gh release create \
+            --notes "
+              Latest Build as of: $(date)
+
+              This release tracks the 'hipFile' branch.
+
+              The packages contained here are not suitable for production workloads, are
+              provided for convenience, and are without warranty.
+
+              This contains a build of FIO with hipFile support. hipFile is currently in
+              pre-release and not stable. Updates to the hipFile library/package may cause
+              a break to occur in this FIO package. In this event, please try reinstalling
+              FIO with the latest packages available from this page.
+            " \
+            --prerelease \
+            --target hipFile \
+            --title Latest \
+            latest \
+            ${{ needs.build_debian_pkg.outputs.fio_pkg_debug_filename }} \
+            ${{ needs.build_debian_pkg.outputs.fio_pkg_example_filename }} \
+            ${{ needs.build_debian_pkg.outputs.fio_pkg_filename }} \
+            ${{ needs.build_debian_pkg.outputs.fio_pkg_source_filename }}

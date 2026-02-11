@@ -51,6 +51,16 @@ main() {
                     )
                     ;;
             esac
+	    ;;&
+        */linux | *ubuntu | */rocky)
+            # Of the distro's tested by FIO, these have hipFile support.
+            case "${CI_TARGET_ARCH}" in
+                "x86_64")
+                    configure_flags+=(
+                        "--enable-libhipfile"
+                    )
+                    ;;
+            esac
 	    ;;
         */windows)
 	    configure_flags+=("--disable-native")

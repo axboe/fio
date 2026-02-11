@@ -1,0 +1,23 @@
+fio (3.36-1) unstable; urgency=medium
+
+  Since fio 3.35-3 the graphical frontend gfio is no longer being build
+  by this package. It is unlikely to be ported to GTK-3 or later and
+  GTK-2 will no longer be included in Debian 13 aka trixie. For some use
+  cases the application kdiskmark can be a suitable alternative. It is
+  available in the package kdiskmark.
+
+ -- Martin Steigerwald <martin.steigerwald@proact.de>  Mon, 23 Oct 2023 11:35:44 +0200
+
+fio (3.32-2) unstable; urgency=medium
+
+  Since fio 3.32-2 the collection of example files is provided by the
+  "fio-examples" package, which is not installed by default. If you
+  like to make use of the examples, install the package "fio-examples".
+
+  Next to the example files you can find images, which visualize what
+  the examples are doing. For more details please take a look at the
+  commit message for commit d61215e076fe3b51c0ed92dd985101b84bbcd757.
+  Currently available at
+  https://github.com/axboe/fio/commit/d61215e076fe3b51c0ed92dd985101b84bbcd757
+
+ -- Martin Steigerwald <martin.steigerwald@proact.de>  Tue, 25 Oct 2022 15:35:54 +0200

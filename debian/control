@@ -1,0 +1,45 @@
+Source: fio
+Section: utils
+Priority: optional
+Maintainer: AMD ROCm hipFile <hipfile-maintainer@amd.com>
+Build-Depends: debhelper-compat (= 13), libaio-dev [linux-any], zlib1g-dev, librdmacm-dev [linux-any], libibverbs-dev [linux-any], librbd-dev [linux-amd64 linux-arm64 linux-loong64 linux-ppc64el linux-ppc64 linux-riscv64 linux-mips64el linux-s390x linux-ia64 linux-sparc64], libcairo2-dev, libnuma-dev [linux-any], flex, bison, sphinx, python3-sphinx, libglusterfs-dev [amd64 arm64 loong64 ppc64el ppc64 riscv64 mips64el s390x ia64 sparc64], libpmem-dev [amd64 arm64 ppc64el], libnbd-dev, libnfs-dev, libgnutls28-dev, hipfile-dev
+Standards-Version: 4.7.2
+Homepage: https://github.com/axboe/fio
+Vcs-Git: https://github.com/ROCm/fio.git
+Vcs-Browser: https://github.com/ROCm/fio
+
+Package: fio
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, python3
+Suggests: fio-examples, gnuplot
+Description: flexible I/O tester
+ fio is a tool that will spawn a number of threads or processes doing a
+ particular type of I/O action as specified by the user. fio takes a
+ number of global parameters, each inherited by the thread unless
+ otherwise parameters given to them overriding that setting is given.
+ The typical use of fio is to write a job file matching the I/O load
+ one wants to simulate.
+ .
+ This package contains the command line version of fio and all additional
+ command line tools. The package fio-examples contains the example job files.
+ .
+ This package was built with support for the hipFile IO engine for ROCm
+ releases newer than 7.2. Please be aware that hipFile is still in
+ pre-release and changes to it may impact this FIO package.
+
+Package: fio-examples
+Architecture: all
+Multi-Arch: foreign
+Depends: ${misc:Depends}
+Recommends: fio
+Replaces: fio (<< 3.32-2)
+Breaks: fio (<< 3.32-2)
+Description: flexible I/O tester - example job files
+ fio is a tool that will spawn a number of threads or processes doing a
+ particular type of I/O action as specified by the user. fio takes a
+ number of global parameters, each inherited by the thread unless
+ otherwise parameters given to them overriding that setting is given.
+ The typical use of fio is to write a job file matching the I/O load
+ one wants to simulate.
+ .
+ This package contains the example job files.
