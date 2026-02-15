@@ -892,9 +892,6 @@ static int fixup_options(struct thread_data *td)
 							o->max_bs[DDIR_WRITE]);
 
 		if (o->verify_only) {
-			if (!fio_option_is_set(o, verify_write_sequence))
-				o->verify_write_sequence = 0;
-
 			if (!fio_option_is_set(o, verify_header_seed))
 				o->verify_header_seed = 0;
 		}
