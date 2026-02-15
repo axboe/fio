@@ -451,6 +451,7 @@ struct thread_data {
 	struct rb_root io_hist_tree;
 	struct flist_head io_hist_list;
 	unsigned long io_hist_len;
+	struct shared_verify_table *shared_verify_table;
 
 	/*
 	 * For IO replaying

@@ -14,12 +14,14 @@
 
 #include "flist.h"
 #include "fio.h"
+#include "hash.h"
 #include "trim.h"
 #include "filelock.h"
 #include "smalloc.h"
 #include "blktrace.h"
 #include "pshared.h"
 #include "lib/roundup.h"
+#include "skiplist.h"
 
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -218,10 +220,10 @@ int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 
 		ret = ipo_special(td, ipo);
 		if (ret < 0) {
-			free(ipo);
+			free_io_piece(ipo);
 			break;
 		} else if (ret > 0) {
-			free(ipo);
+			free_io_piece(ipo);
 			continue;
 		}
 
@@ -245,7 +247,7 @@ int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 				usec_sleep(td, (ipo->delay - elapsed) * 1000);
 		}
 
-		free(ipo);
+		free_io_piece(ipo);
 
 		if (io_u->ddir != DDIR_WAIT)
 			return 0;
@@ -265,7 +267,7 @@ void prune_io_piece_log(struct thread_data *td)
 		rb_erase(n, &td->io_hist_tree);
 		remove_trim_entry(td, ipo);
 		td->io_hist_len--;
-		free(ipo);
+		free_io_piece(ipo);
 	}
 
 	while (!flist_empty(&td->io_hist_list)) {
@@ -273,14 +275,14 @@ void prune_io_piece_log(struct thread_data *td)
 		flist_del(&ipo->list);
 		remove_trim_entry(td, ipo);
 		td->io_hist_len--;
-		free(ipo);
+		free_io_piece(ipo);
 	}
 }
 
 /*
  * log a successful write, so we can unwind the log for verify
  */
-void log_io_piece(struct thread_data *td, struct io_u *io_u)
+static void __log_io_piece(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_rb_node **p, *parent;
 	struct io_piece *ipo, *__ipo;
@@ -295,7 +297,8 @@ void log_io_piece(struct thread_data *td, struct io_u *io_u)
 
 	io_u->ipo = ipo;
 
-	if (io_u_should_trim(td, io_u)) {
+	if (io_u_should_trim(td, io_u) || io_u->ddir == DDIR_TRIM) {
+		ipo->flags |= IP_F_TRIMMED;
 		flist_add_tail(&ipo->trim_list, &td->trim_list);
 		td->trim_entries++;
 	}
@@ -350,7 +353,7 @@ restart:
 			rb_erase(parent, &td->io_hist_tree);
 			remove_trim_entry(td, __ipo);
 			if (!(__ipo->flags & IP_F_IN_FLIGHT))
-				free(__ipo);
+				free_io_piece(__ipo);
 			goto restart;
 		}
 	}
@@ -361,7 +364,17 @@ restart:
 	td->io_hist_len++;
 }
 
-void unlog_io_piece(struct thread_data *td, struct io_u *io_u)
+bool log_io_piece(struct thread_data *td, struct io_u *io_u)
+{
+	if (td->shared_verify_table)
+		return log_io_piece_shared(td, io_u);
+	else {
+		__log_io_piece(td, io_u);
+		return true;
+	}
+}
+
+static void __unlog_io_piece(struct thread_data *td, struct io_u *io_u)
 {
 	struct io_piece *ipo = io_u->ipo;
 
@@ -385,9 +398,17 @@ void unlog_io_piece(struct thread_data *td, struct io_u *io_u)
 	else if (ipo->flags & IP_F_ONLIST)
 		flist_del(&ipo->list);
 
-	free(ipo);
+	free_io_piece(ipo);
 	io_u->ipo = NULL;
 	td->io_hist_len--;
+}
+
+void unlog_io_piece(struct thread_data *td, struct io_u *io_u)
+{
+	if (td->shared_verify_table)
+		unlog_io_piece_shared(td, io_u);
+	else
+		__unlog_io_piece(td, io_u);
 }
 
 void trim_io_piece(const struct io_u *io_u)
@@ -1950,4 +1971,214 @@ void fio_writeout_logs(bool unit_logs)
 	for_each_td(td) {
 		td_writeout_logs(td, unit_logs);
 	} end_for_each();
+}
+
+/*
+ * Shared verify table implementation
+ */
+static struct shared_verify_table *shared_verify_tables[MAX_VERIFY_TABLES];
+static pthread_mutex_t shared_verify_lock = PTHREAD_MUTEX_INITIALIZER;
+
+struct shared_verify_table *get_shared_verify_table(int table_id)
+{
+	struct shared_verify_table *table;
+
+	if (table_id <= 0 || table_id >= MAX_VERIFY_TABLES)
+		return NULL;
+
+	pthread_mutex_lock(&shared_verify_lock);
+
+	table = shared_verify_tables[table_id];
+	if (!table) {
+		table = smalloc(sizeof(*table));
+		if (!table) {
+			pthread_mutex_unlock(&shared_verify_lock);
+			return NULL;
+		}
+
+		memset(table, 0, sizeof(*table));
+		table->table_id = table_id;
+		atomic_init(&table->total_entries, 0);
+		atomic_init(&table->shared_numberio, 0);
+		atomic_init(&table->verify_done, 0);
+		atomic_init(&table->write_jobs_active, 0);
+		atomic_init(&table->write_jobs_done, 0);
+		pthread_mutex_init(&table->ref_lock, NULL);
+
+		table->skiplist = skiplist_new();
+		if (!table->skiplist) {
+			pthread_mutex_destroy(&table->ref_lock);
+			sfree(table);
+			pthread_mutex_unlock(&shared_verify_lock);
+			return NULL;
+		}
+		shared_verify_tables[table_id] = table;
+	}
+
+	pthread_mutex_lock(&table->ref_lock);
+	table->ref_count++;
+	pthread_mutex_unlock(&table->ref_lock);
+
+	pthread_mutex_unlock(&shared_verify_lock);
+	return table;
+}
+
+void put_shared_verify_table(struct shared_verify_table *table)
+{
+	int should_free = 0;
+
+	if (!table)
+		return;
+
+	pthread_mutex_lock(&table->ref_lock);
+	table->ref_count--;
+	if (table->ref_count == 0)
+		should_free = 1;
+	pthread_mutex_unlock(&table->ref_lock);
+
+	if (!should_free)
+		return;
+
+	pthread_mutex_lock(&shared_verify_lock);
+
+	if (table->skiplist) {
+		skiplist_free(table->skiplist);
+		table->skiplist = NULL;
+	}
+
+	pthread_mutex_destroy(&table->ref_lock);
+	shared_verify_tables[table->table_id] = NULL;
+	sfree(table);
+
+	pthread_mutex_unlock(&shared_verify_lock);
+}
+
+bool log_io_piece_shared(struct thread_data *td, struct io_u *io_u)
+{
+	struct shared_verify_table *table = td->shared_verify_table;
+	struct io_piece *ipo;
+	struct skiplist_node *overlap_node;
+	int backoff = 0;
+
+	if (!table)
+		return true;
+
+	ipo = calloc(1, sizeof(struct io_piece));
+	init_ipo(ipo);
+	ipo->file = io_u->file;
+	ipo->file_name_hash = io_u->file->file_name_hash;
+	ipo->file_name = smalloc_strdup(io_u->file->file_name);
+	if (!ipo->file_name) {
+		free_io_piece(ipo);
+		io_u->ipo = NULL;
+		return false;
+	}
+	ipo->offset = io_u->offset;
+	ipo->len = io_u->buflen;
+	ipo->numberio = io_u->numberio;
+	ipo->flags = IP_F_IN_FLIGHT;
+
+	io_u->ipo = ipo;
+
+	if (io_u_should_trim(td, io_u) || io_u->ddir == DDIR_TRIM)
+		ipo->flags |= IP_F_TRIMMED;
+	else if (io_u->flags & IO_U_F_ZEROED)
+		ipo->flags |= IP_F_ZEROED;
+	else if (io_u->flags & IO_U_F_ERRORED)
+		ipo->flags |= IP_F_ERRORED;
+
+	/*
+	 * Use lock-free skiplist for concurrent insertion.
+	 * Handle overlaps by detecting and deleting them before insert.
+	 * Retry indefinitely with exponential backoff.
+	 */
+	while (1) {
+		/* Check for overlapping ranges */
+		overlap_node = skiplist_search_overlap(table->skiplist,
+		                                        io_u->offset, io_u->buflen);
+
+		if (overlap_node) {
+			struct io_piece *overlap_ipo = (struct io_piece *)overlap_node->data;
+
+			/* If previous write is still in-flight, serialize by returning busy */
+			if (overlap_ipo && (atomic_load_acquire(&overlap_ipo->flags) & IP_F_IN_FLIGHT)) {
+				dprint(FD_VERIFY, "skiplist: overlap in-flight [%llu, %llu), blocked by [%llu, %llu)\n",
+				       (unsigned long long)io_u->offset,
+				       (unsigned long long)(io_u->offset + io_u->buflen),
+				       (unsigned long long)overlap_ipo->offset,
+				       (unsigned long long)(overlap_ipo->offset + overlap_ipo->len));
+				free_io_piece(ipo);
+				io_u->ipo = NULL;
+				return false;
+			}
+
+			if (skiplist_delete_node(table->skiplist, overlap_node) == 0) {
+				dprint(FD_VERIFY, "skiplist: delete overlap [%llu, %llu) for new [%llu, %llu)\n",
+				       (unsigned long long)overlap_ipo->offset,
+				       (unsigned long long)(overlap_ipo->offset + overlap_ipo->len),
+				       (unsigned long long)io_u->offset,
+				       (unsigned long long)(io_u->offset + io_u->buflen));
+				if (overlap_ipo) {
+					remove_trim_entry(td, overlap_ipo);
+					free_io_piece(overlap_ipo);
+				}
+				atomic_fetch_sub(&table->total_entries, 1);
+			}
+		}
+
+		if (skiplist_insert(table->skiplist, io_u->offset, io_u->buflen, ipo) == 0) {
+			dprint(FD_VERIFY, "skiplist: insert [%llu, %llu) numberio=%llu\n",
+			       (unsigned long long)io_u->offset,
+			       (unsigned long long)(io_u->offset + io_u->buflen),
+			       (unsigned long long)io_u->numberio);
+			ipo->flags |= IP_F_ONRB;
+			atomic_fetch_add(&table->total_entries, 1);
+			return true;
+		}
+
+		/* Insert failed (overlap detected by skiplist_insert), retry with backoff */
+		if (backoff < 1000) {
+			/* Exponential backoff up to 1000 iterations */
+			for (volatile int i = 0; i < backoff; i++)
+				;
+			backoff = backoff ? backoff * 2 : 1;
+		}
+	}
+}
+
+void unlog_io_piece_shared(struct thread_data *td, struct io_u *io_u)
+{
+	struct io_piece *ipo = io_u->ipo;
+
+	if (td->ts.nr_block_infos) {
+		uint32_t *info = io_u_block_info(td, io_u);
+		if (BLOCK_INFO_STATE(*info) < BLOCK_STATE_TRIM_FAILURE) {
+			if (io_u->ddir == DDIR_TRIM)
+				*info = BLOCK_INFO_SET_STATE(*info,
+						BLOCK_STATE_TRIM_FAILURE);
+			else if (io_u->ddir == DDIR_WRITE)
+				*info = BLOCK_INFO_SET_STATE(*info,
+						BLOCK_STATE_WRITE_FAILURE);
+		}
+	}
+
+	if (!ipo)
+		return;
+
+	if (ipo->flags & IP_F_ONRB) {
+		struct shared_verify_table *table = td->shared_verify_table;
+
+		if (skiplist_delete(table->skiplist, io_u->offset) == 0) {
+			dprint(FD_VERIFY, "skiplist: unlog delete [%llu, %llu) numberio=%llu\n",
+			       (unsigned long long)io_u->offset,
+			       (unsigned long long)(io_u->offset + io_u->buflen),
+			       (unsigned long long)io_u->numberio);
+			atomic_fetch_sub(&table->total_entries, 1);
+		}
+
+		ipo->flags &= ~IP_F_ONRB;
+	}
+
+	free_io_piece(ipo);
+	io_u->ipo = NULL;
 }

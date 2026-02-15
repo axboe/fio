@@ -16,6 +16,7 @@
 #include "lib/hweight.h"
 #include "lib/pattern.h"
 #include "oslib/asprintf.h"
+#include "skiplist.h"
 
 #include "crc/md5.h"
 #include "crc/crc64.h"
@@ -891,23 +892,34 @@ static int mem_is_zero_slow(const void *data, size_t length, size_t *offset)
 	return !length;
 }
 
-static int verify_trimmed_io_u(struct thread_data *td, struct io_u *io_u)
+static int verify_zero(struct io_u *io_u)
 {
 	size_t offset;
-
-	if (!td->o.trim_zero)
-		return 0;
 
 	if (mem_is_zero(io_u->buf, io_u->buflen))
 		return 0;
 
 	mem_is_zero_slow(io_u->buf, io_u->buflen, &offset);
 
-	log_err("trim: verify failed at file %s offset %llu, length %llu"
+	log_err("verify failed for zeroed data at file %s offset %llu, length %llu"
 		", block offset %lu\n",
 			io_u->file->file_name, io_u->verify_offset, io_u->buflen,
 			(unsigned long) offset);
 	return EILSEQ;
+}
+
+static int verify_trimmed_io_u(struct thread_data *td, struct io_u *io_u)
+{
+	if (td->o.trim_error) {
+		if (td->o.trim_error == io_u->error)
+			return 0;
+		return EILSEQ;
+	}
+
+	if (!td->o.trim_zero)
+		return 0;
+
+	return verify_zero(io_u);
 }
 
 static int verify_header(struct io_u *io_u, struct thread_data *td,
@@ -1010,6 +1022,9 @@ int verify_io_u(struct thread_data *td, struct io_u **io_u_ptr)
 
 	if (io_u->flags & IO_U_F_TRIMMED) {
 		ret = verify_trimmed_io_u(td, io_u);
+		goto done;
+	} else if (io_u->flags & IO_U_F_ZEROED) {
+		ret = verify_zero(io_u);
 		goto done;
 	}
 
@@ -1403,7 +1418,7 @@ void populate_verify_io_u(struct thread_data *td, struct io_u *io_u)
 	fill_pattern_headers(td, io_u, 0, 0);
 }
 
-int get_next_verify(struct thread_data *td, struct io_u *io_u)
+static int __get_next_verify(struct thread_data *td, struct io_u *io_u)
 {
 	struct io_piece *ipo = NULL;
 
@@ -1471,7 +1486,7 @@ int get_next_verify(struct thread_data *td, struct io_u *io_u)
 		io_u->xfer_buflen = io_u->buflen;
 
 		remove_trim_entry(td, ipo);
-		free(ipo);
+		free_io_piece(ipo);
 		dprint(FD_VERIFY, "get_next_verify: ret io_u %p\n", io_u);
 
 		if (!td->o.verify_pattern_bytes) {
@@ -1485,6 +1500,14 @@ int get_next_verify(struct thread_data *td, struct io_u *io_u)
 nothing:
 	dprint(FD_VERIFY, "get_next_verify: empty\n");
 	return 1;
+}
+
+int get_next_verify(struct thread_data *td, struct io_u *io_u)
+{
+	if (td->shared_verify_table)
+		return get_next_verify_shared(td, io_u);
+	else
+		return __get_next_verify(td, io_u);
 }
 
 void fio_verify_init(struct thread_data *td)
@@ -1935,4 +1958,134 @@ int verify_state_should_stop(struct thread_data *td, uint64_t numberio)
 	}
 
 	return 0;
+}
+
+static struct fio_file *resolve_shared_verify_file(struct thread_data *td,
+						   const struct io_piece *ipo)
+{
+	struct fio_file *f;
+	unsigned int i;
+
+	if (!ipo->file_name)
+		return ipo->file;
+
+	for_each_file(td, f, i) {
+		if (f->file_name_hash == ipo->file_name_hash &&
+		    !strcmp(f->file_name, ipo->file_name))
+			return f;
+	}
+
+	return NULL;
+}
+
+int get_next_verify_shared(struct thread_data *td, struct io_u *io_u)
+{
+	struct shared_verify_table *table = td->shared_verify_table;
+	struct io_piece *ipo = NULL;
+	struct skiplist_node *node;
+
+	if (!table)
+		return 1;
+
+	/*
+	 * this io_u is from a requeue, we already filled the offsets
+	 */
+	if (io_u->file)
+		return 0;
+
+	/* Use skiplist to get first entry */
+	node = skiplist_first(table->skiplist);
+	if (!node)
+		goto out;
+
+	ipo = (struct io_piece *)node->data;
+	if (!ipo)
+		goto out;
+
+	/*
+	 * Ensure that the associated IO has completed
+	 */
+	if (atomic_load_acquire(&ipo->flags) & IP_F_IN_FLIGHT) {
+		ipo = NULL;
+		goto out;
+	}
+
+	/* Delete from skiplist (lock-free) */
+	if (skiplist_delete_node(table->skiplist, node) == 0) {
+		atomic_fetch_sub(&table->total_entries, 1);
+		assert(ipo->flags & IP_F_ONRB);
+		ipo->flags &= ~IP_F_ONRB;
+	} else {
+		/* Another thread deleted it */
+		ipo = NULL;
+	}
+
+out:
+
+	if (ipo) {
+		struct fio_file *resolved_file;
+
+		resolved_file = resolve_shared_verify_file(td, ipo);
+		if (!resolved_file) {
+			const char *name = ipo->file_name ? : "unknown";
+
+			log_err("fio: job %s cannot resolve shared verify file '%s'\n",
+				td->o.name, name);
+			remove_trim_entry(td, ipo);
+			free_io_piece(ipo);
+			return 1;
+		}
+
+		io_u->offset = ipo->offset;
+		io_u->verify_offset = ipo->offset;
+		io_u->buflen = ipo->len;
+		io_u->numberio = ipo->numberio;
+		io_u->file = resolved_file;
+		io_u_set(td, io_u, IO_U_F_VER_LIST);
+
+		/*
+		 * Clear data pattern related flags since @io_u might have been initialized
+		 * in the ioengine for a specific usages, but with shared verify table, all
+		 * the @io_u instances should be initialized as per @ipo, not ioengine-specific
+		 * configurations.
+		 */
+		io_u_clear(td, io_u, IO_U_F_TRIMMED | IO_U_F_ZEROED |
+				IO_U_F_ERRORED);
+
+		if (ipo->flags & IP_F_TRIMMED)
+			io_u_set(td, io_u, IO_U_F_TRIMMED);
+		else if (ipo->flags & IP_F_ZEROED)
+			io_u_set(td, io_u, IO_U_F_ZEROED);
+		else if (ipo->flags & IP_F_ERRORED)
+			io_u_set(td, io_u, IO_U_F_ERRORED);
+
+		if (!fio_file_open(io_u->file)) {
+			int r = td_io_open_file(td, io_u->file);
+
+			if (r) {
+				dprint(FD_VERIFY, "failed file %s open\n",
+						io_u->file->file_name);
+				return 1;
+			}
+		}
+
+		get_file(io_u->file);
+		assert(fio_file_open(io_u->file));
+		io_u->ddir = DDIR_READ;
+		io_u->xfer_buf = io_u->buf;
+		io_u->xfer_buflen = io_u->buflen;
+
+		free_io_piece(ipo);
+		dprint(FD_VERIFY, "get_next_verify_shared: ret io_u %p\n", io_u);
+
+		if (!td->o.verify_pattern_bytes) {
+			io_u->rand_seed = __rand(&td->verify_state);
+			if (sizeof(int) != sizeof(long *))
+				io_u->rand_seed *= __rand(&td->verify_state);
+		}
+		return 0;
+	}
+
+	dprint(FD_VERIFY, "get_next_verify_shared: empty\n");
+	return 1;
 }
