@@ -132,15 +132,28 @@ void clear_io_state(struct thread_data *td, int all)
 	clear_inflight(td);
 }
 
-void reset_all_stats(struct thread_data *td)
+/*
+ * Update thinktime block counter
+ */
+static void update_thinktime_blocks_counter(struct thread_data *td)
 {
 	unsigned long long b;
+
+	/* an offload worker has no thinktime blocks counters initialized */
+	if (!td->thinktime_blocks_counter)
+		return;
+
+	b = ddir_rw_sum(td->thinktime_blocks_counter);
+	td->last_thinktime_blocks -= b;
+}
+
+void reset_all_stats(struct thread_data *td)
+{
 	int i;
 
 	reset_io_counters(td, 1);
 
-	b = ddir_rw_sum(td->thinktime_blocks_counter);
-	td->last_thinktime_blocks -= b;
+	update_thinktime_blocks_counter(td);
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		td->io_bytes[i] = 0;

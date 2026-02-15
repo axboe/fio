@@ -197,6 +197,14 @@ static bool parent_update_ramp(struct thread_data *td)
 
 bool ramp_period_over(struct thread_data *td)
 {
+	/* In offload mode, ramp state is tracked on the parent job td.
+	 * The transition to RAMP_FINISHING is handled by the parent, so
+	 * propagate it here to ensure the worker advances to RAMP_DONE.
+	*/
+	if (td->o.io_submit_mode == IO_MODE_OFFLOAD && td->parent &&
+	    td->parent->ramp_period_state == RAMP_FINISHING)
+		td->ramp_period_state = RAMP_FINISHING;
+
 	if (td->ramp_period_state == RAMP_DONE)
 		return true;
 
