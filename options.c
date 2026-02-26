@@ -3138,6 +3138,18 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_RUNTIME,
 	},
 	{
+		.name	= "verify_table_id",
+		.lname	= "Shared Verify Table ID",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct thread_options, verify_table_id),
+		.help	= "Share verify state across jobs with same table ID (0 = per-job default)",
+		.def	= "0",
+		.minval	= 0,
+		.maxval	= 255,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_VERIFY,
+	},
+	{
 		.name	= "ramp_time",
 		.lname	= "Ramp time",
 		.type	= FIO_OPT_STR_VAL_TIME,
@@ -3583,6 +3595,16 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_TRIM,
 	},
 	{
+		.name	= "trim_verify_error",
+		.lname	= "Trim verify error",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct thread_options, trim_error),
+		.help	= "Error value for trim verification",
+		.def	= "0",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_TRIM,
+	},
+	{
 		.name	= "trim_backlog",
 		.lname	= "Trim backlog",
 		.type	= FIO_OPT_STR_VAL,
@@ -3616,6 +3638,12 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 	{
 		.name	= "trim_verify_zero",
 		.lname	= "Verify trim zero",
+		.type	= FIO_OPT_UNSUPPORTED,
+		.help	= "Fio does not support TRIM on your platform",
+	},
+	{
+		.name	= "trim_verify_error",
+		.lname	= "Trim verify error",
 		.type	= FIO_OPT_UNSUPPORTED,
 		.help	= "Fio does not support TRIM on your platform",
 	},
