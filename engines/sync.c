@@ -433,7 +433,7 @@ static struct ioengine_ops ioengine_rw = {
 	.open_file	= generic_open_file,
 	.close_file	= generic_close_file,
 	.get_file_size	= generic_get_file_size,
-	.flags		= FIO_SYNCIO,
+	.flags		= FIO_SYNCIO | FIO_SYNCFS,
 };
 
 static struct ioengine_ops ioengine_prw = {
@@ -443,7 +443,7 @@ static struct ioengine_ops ioengine_prw = {
 	.open_file	= generic_open_file,
 	.close_file	= generic_close_file,
 	.get_file_size	= generic_get_file_size,
-	.flags		= FIO_SYNCIO,
+	.flags		= FIO_SYNCIO | FIO_SYNCFS,
 };
 
 static struct ioengine_ops ioengine_vrw = {
@@ -458,7 +458,7 @@ static struct ioengine_ops ioengine_vrw = {
 	.open_file	= generic_open_file,
 	.close_file	= generic_close_file,
 	.get_file_size	= generic_get_file_size,
-	.flags		= FIO_SYNCIO,
+	.flags		= FIO_SYNCIO | FIO_SYNCFS,
 };
 
 #ifdef CONFIG_PWRITEV
@@ -471,7 +471,7 @@ static struct ioengine_ops ioengine_pvrw = {
 	.open_file	= generic_open_file,
 	.close_file	= generic_close_file,
 	.get_file_size	= generic_get_file_size,
-	.flags		= FIO_SYNCIO,
+	.flags		= FIO_SYNCIO | FIO_SYNCFS,
 };
 #endif
 
@@ -485,8 +485,7 @@ static struct ioengine_ops ioengine_pvrw2 = {
 	.open_file	= generic_open_file,
 	.close_file	= generic_close_file,
 	.get_file_size	= generic_get_file_size,
-	.flags		= FIO_SYNCIO |
-			  FIO_ATOMICWRITES,
+	.flags		= FIO_SYNCIO | FIO_ATOMICWRITES | FIO_SYNCFS,
 	.options	= options,
 	.option_struct_size	= sizeof(struct psyncv2_options),
 };
