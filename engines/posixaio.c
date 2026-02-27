@@ -142,7 +142,10 @@ static enum fio_q_status fio_posixaio_queue(struct thread_data *td,
 		return FIO_Q_COMPLETED;
 	} else {
 #ifdef CONFIG_POSIXAIO_FSYNC
-		ret = aio_fsync(O_SYNC, aiocb);
+		if (io_u->ddir != DDIR_SYNCFS)
+			ret = aio_fsync(O_SYNC, aiocb);
+		else
+			ret = 0;
 #else
 		if (pd->queued)
 			return FIO_Q_BUSY;
@@ -196,7 +199,8 @@ static int fio_posixaio_init(struct thread_data *td)
 static struct ioengine_ops ioengine = {
 	.name		= "posixaio",
 	.version	= FIO_IOOPS_VERSION,
-	.flags		= FIO_ASYNCIO_SYNC_TRIM,
+	.flags		= FIO_ASYNCIO_SYNC_TRIM |
+				FIO_ASYNCIO_SYNC_SYNCFS,
 	.init		= fio_posixaio_init,
 	.prep		= fio_posixaio_prep,
 	.queue		= fio_posixaio_queue,
