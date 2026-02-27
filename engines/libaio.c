@@ -274,11 +274,14 @@ static enum fio_q_status fio_libaio_queue(struct thread_data *td,
 	if (ld->queued == td->o.iodepth)
 		return FIO_Q_BUSY;
 
-	if (io_u->ddir == DDIR_TRIM) {
+	if (io_u->ddir == DDIR_TRIM || io_u->ddir == DDIR_SYNCFS) {
 		if (ld->queued)
 			return FIO_Q_BUSY;
 
-		do_io_u_trim(td, io_u);
+		if (io_u->ddir == DDIR_TRIM)
+			do_io_u_trim(td, io_u);
+		else
+			do_io_u_sync(td, io_u);
 		io_u_mark_submit(td, 1);
 		io_u_mark_complete(td, 1);
 		return FIO_Q_COMPLETED;
@@ -456,6 +459,7 @@ FIO_STATIC struct ioengine_ops ioengine = {
 	.name			= "libaio",
 	.version		= FIO_IOOPS_VERSION,
 	.flags			= FIO_ASYNCIO_SYNC_TRIM |
+					FIO_ASYNCIO_SYNC_SYNCFS |
 					FIO_ASYNCIO_SETS_ISSUE_TIME |
 					FIO_ATOMICWRITES,
 	.init			= fio_libaio_init,
