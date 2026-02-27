@@ -21,7 +21,7 @@ static enum fio_q_status fio_ftruncate_queue(struct thread_data *td,
 
 	if (io_u->ddir == DDIR_WRITE)
 		ret = ftruncate(f->fd, io_u->offset);
-	else if (io_u->ddir == DDIR_SYNC)
+	else if (ddir_sync(io_u->ddir))
 		ret = do_io_u_sync(td, io_u);
 	else
 		io_u->error = EINVAL;
@@ -39,7 +39,7 @@ static struct ioengine_ops ioengine = {
 	.open_file	= generic_open_file,
 	.close_file	= generic_close_file,
 	.get_file_size	= generic_get_file_size,
-	.flags		= FIO_SYNCIO | FIO_FAKEIO
+	.flags		= FIO_SYNCIO | FIO_FAKEIO | FIO_SYNCFS,
 };
 
 static void fio_init fio_syncio_register(void)
