@@ -76,7 +76,7 @@ static enum fio_q_status fio_fallocate_queue(struct thread_data *td,
 
 	fio_ro_check(td, io_u);
 
-	if (io_u->ddir != DDIR_SYNC) {
+	if (!ddir_sync(io_u->ddir)) {
 		if (io_u->ddir == DDIR_READ)
 			flags = FALLOC_FL_KEEP_SIZE;
 		else if (io_u->ddir == DDIR_WRITE)
@@ -102,7 +102,7 @@ static struct ioengine_ops ioengine = {
 	.open_file	= open_file,
 	.close_file	= generic_close_file,
 	.get_file_size	= generic_get_file_size,
-	.flags		= FIO_SYNCIO
+	.flags		= FIO_SYNCIO | FIO_SYNCFS,
 };
 
 static void fio_init fio_syncio_register(void)
