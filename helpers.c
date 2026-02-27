@@ -26,6 +26,14 @@ int sync_file_range(int fd, uint64_t offset, uint64_t nbytes,
 }
 #endif
 
+#ifndef CONFIG_SYNCFS
+int syncfs(int fd)
+{
+	errno = ENOSYS;
+	return -1;
+}
+#endif
+
 #ifndef CONFIG_POSIX_FADVISE
 int posix_fadvise(int fd, off_t offset, off_t len, int advice)
 {

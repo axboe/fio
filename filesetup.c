@@ -874,12 +874,63 @@ static int get_file_sizes(struct thread_data *td)
 	return err;
 }
 
-struct fio_mount {
-	struct flist_head list;
-	const char *base;
-	char __base[256];
-	unsigned int key;
-};
+static void free_fs_list(struct thread_data *td)
+{
+	struct flist_head *n, *tmp;
+	struct fio_mount *fm;
+
+	flist_for_each_safe(n, tmp, &td->fs_list) {
+		fm = flist_entry(n, struct fio_mount, list);
+		flist_del(&fm->list);
+		free(fm);
+	}
+}
+
+/*
+ * Get the list of unique file system mounts storing the thread files.
+ */
+static int add_file_fs(struct thread_data *td, struct fio_file *f)
+{
+#ifdef CONFIG_SYNCFS
+	struct flist_head *n;
+	struct fio_mount *fm;
+	struct stat sb;
+	char buf[256];
+	char *fsdir;
+
+	if (f->filetype != FIO_TYPE_FILE)
+		return 0;
+
+	snprintf(buf, FIO_ARRAY_SIZE(buf), "%s", f->file_name);
+	fsdir = dirname(buf);
+	if (stat(fsdir, &sb) < 0) {
+		log_err("fio: failed to get dir %s information (%s)\n",
+			fsdir, strerror(errno));
+		return 1;
+	}
+
+	fm = NULL;
+	flist_for_each(n, &td->fs_list) {
+		fm = flist_entry(n, struct fio_mount, list);
+		if (fm->key == sb.st_dev)
+			return 0;
+	}
+
+	fm = calloc(1, sizeof(*fm));
+	if (!fm) {
+		free_fs_list(td);
+		return 1;
+	}
+
+	snprintf(fm->__base, FIO_ARRAY_SIZE(fm->__base), "%s", fsdir);
+	fm->base = fm->__base;
+	fm->key = sb.st_dev;
+	flist_add(&fm->list, &td->fs_list);
+
+	dprint(FD_FILE, "Add FS %s\n", fm->base);
+#endif
+	return 0;
+}
 
 /*
  * Get free number of bytes for each file on each unique mount.
@@ -1100,6 +1151,14 @@ int setup_files(struct thread_data *td)
 			goto err_out;
 	}
 
+	if (td->o.end_syncfs &&
+	    !td_ioengine_flagged(td, FIO_SYNCFS) &&
+	    !td_ioengine_flagged(td, FIO_ASYNCIO_SYNC_SYNCFS)) {
+		log_err("%s: I/O engine does not support syncfs\n", o->name);
+		td_verror(td, EINVAL, "end_syncfs");
+		goto err_out;
+	}
+
 	/*
 	 * Find out physical size of files or devices for this thread,
 	 * before we determine I/O size and range of our targets.
@@ -1127,7 +1186,8 @@ int setup_files(struct thread_data *td)
 
 	/*
 	 * check sizes. if the files/devices do not exist and the size
-	 * isn't passed to fio, abort.
+	 * isn't passed to fio, abort. While at it, build the list of file
+	 * system mounts if end_syncfs is specified.
 	 */
 	total_size = 0;
 	for_each_file(td, f, i) {
@@ -1136,6 +1196,12 @@ int setup_files(struct thread_data *td)
 			total_size = -1ULL;
 		else
 			total_size += f->real_file_size;
+
+		if (td->o.end_syncfs) {
+			err = add_file_fs(td, f);
+			if (err)
+				goto err_out;
+		}
 	}
 
 	if (o->fill_device)
@@ -2096,6 +2162,8 @@ int get_fileno(struct thread_data *td, const char *fname)
  */
 void free_release_files(struct thread_data *td)
 {
+	free_fs_list(td);
+
 	close_files(td);
 	td->o.nr_files = 0;
 	td->o.open_files = 0;
@@ -2165,3 +2233,53 @@ int fio_set_directio(struct thread_data *td, struct fio_file *f)
 	return -1;
 #endif
 }
+
+#ifdef CONFIG_SYNCFS
+int fio_open_fs(struct thread_data *td, struct fio_mount *fm)
+{
+	struct fio_file *f;
+
+	assert(!fm->f);
+	assert(!fm->dir);
+
+	f = alloc_new_file(td);
+	if (!f)
+		return -1;
+
+	if (td_ioengine_flagged(td, FIO_NOFILEHASH))
+		f->file_name = strdup(fm->base);
+	else
+		f->file_name = smalloc_strdup(fm->base);
+
+	fm->dir = opendir(fm->base);
+	if (!fm->dir) {
+		log_err("fio: open dir %s failed (%s)\n",
+			fm->base, strerror(errno));
+		return -1;
+	}
+
+	f->filetype = FIO_TYPE_DIR;
+	f->fd = dirfd(fm->dir);
+	fio_file_set_open(f);
+
+	fm->f = f;
+
+	return 0;
+}
+
+void fio_close_fs(struct fio_mount *fm)
+{
+	struct fio_file *f = fm->f;
+
+	assert(f && fio_file_open(f));
+	assert(f->filetype == FIO_TYPE_DIR);
+	assert(fm->dir);
+
+	closedir(fm->dir);
+	fm->dir = NULL;
+
+	fio_file_clear_open(f);
+	fio_file_free(f);
+	fm->f = NULL;
+}
+#endif

@@ -508,6 +508,7 @@ static struct thread_data *get_new_job(bool global, struct thread_data *parent,
 
 	td->o.uid = td->o.gid = -1U;
 
+	INIT_FLIST_HEAD(&td->fs_list);
 	dup_files(td, parent);
 	fio_options_mem_dupe(td);
 

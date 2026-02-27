@@ -1328,6 +1328,29 @@ fi
 print_config "sync_file_range" "$sync_file_range"
 
 ##########################################
+# syncfs() probe
+if test "$syncfs" != "yes" ; then
+  syncfs="no"
+fi
+cat > $TMPC << EOF
+#include <sys/types.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <libgen.h>
+#include <dirent.h>
+int main(int argc, char **argv)
+{
+  char *dir = dirname("/foo/bar");
+  DIR *foo = NULL;
+  return syncfs(dirfd(foo));
+}
+EOF
+if compile_prog "" "" "syncfs"; then
+  syncfs="yes"
+fi
+print_config "syncfs" "$syncfs"
+
+##########################################
 # ASharedMemory_create() probe
 if test "$ASharedMemory_create" != "yes" ; then
   ASharedMemory_create="no"
@@ -3131,6 +3154,9 @@ if test "$pread" = "yes" ; then
 fi
 if test "$sync_file_range" = "yes" ; then
   output_sym "CONFIG_SYNC_FILE_RANGE"
+fi
+if test "$syncfs" = "yes" ; then
+  output_sym "CONFIG_SYNCFS"
 fi
 if test "$ASharedMemory_create" = "yes" ; then
   output_sym "CONFIG_ASHAREDMEMORY_CREATE"

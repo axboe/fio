@@ -11,6 +11,9 @@ extern int posix_fallocate(int fd, off_t offset, off_t len);
 extern int sync_file_range(int fd, uint64_t offset, uint64_t nbytes,
 					unsigned int flags);
 #endif
+#ifndef CONFIG_SYNCFS
+extern int syncfs(int fd);
+#endif
 extern int posix_fadvise(int fd, off_t offset, off_t len, int advice);
 
 #endif /* FIO_HELPERS_H_ */

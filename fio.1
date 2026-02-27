@@ -1239,7 +1239,7 @@ as a parameter, fio will sync the file after every 32 writes issued. If fio is
 using non-buffered I/O, we may not sync the file. The exception is the sg
 I/O engine, which synchronizes the disk cache anyway. Defaults to 0, which
 means fio does not periodically issue and wait for a sync to complete. Also
-see \fBend_fsync\fR and \fBfsync_on_close\fR.
+see \fBend_fsync\fR, \fBend_syncfs\fR and \fBfsync_on_close\fR.
 .TP
 .BI fdatasync \fR=\fPint
 Like \fBfsync\fR but uses \fBfdatasync\fR\|(2) to only sync data and
@@ -1282,6 +1282,12 @@ will be done. Default: false.
 .TP
 .BI end_fsync \fR=\fPbool
 If true, \fBfsync\fR\|(2) file contents when a write stage has completed.
+Default: false.
+.TP
+.BI end_syncfs \fR=\fPbool
+Equivalent to \fBend_fsync\fR but instead of executing \fBfsync\fR\|(2) for
+each file of a write stage, execute \fBsyncfs\fR\|(2) to synchronize all
+written files with a single system call when a write stage has completed.
 Default: false.
 .TP
 .BI fsync_on_close \fR=\fPbool

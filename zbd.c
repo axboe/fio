@@ -2310,6 +2310,7 @@ retry:
 		/* fall-through */
 	case DDIR_DATASYNC:
 	case DDIR_SYNC_FILE_RANGE:
+	case DDIR_SYNCFS:
 	case DDIR_WAIT:
 	case DDIR_LAST:
 	case DDIR_INVAL:

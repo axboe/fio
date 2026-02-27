@@ -231,7 +231,8 @@ static bool check_min_rate(struct thread_data *td, struct timespec *now)
  * Helper to handle the final sync of a file. Works just like the normal
  * io path, just does everything sync.
  */
-static bool fio_io_sync(struct thread_data *td, struct fio_file *f)
+static bool fio_io_sync(struct thread_data *td, struct fio_file *f,
+			enum fio_ddir ddir)
 {
 	struct io_u *io_u = __get_io_u(td);
 	enum fio_q_status ret;
@@ -239,7 +240,7 @@ static bool fio_io_sync(struct thread_data *td, struct fio_file *f)
 	if (!io_u)
 		return true;
 
-	io_u->ddir = DDIR_SYNC;
+	io_u->ddir = ddir;
 	io_u->file = f;
 	io_u_set(td, io_u, IO_U_F_NO_FILE_PUT);
 
@@ -278,16 +279,50 @@ static int fio_file_fsync(struct thread_data *td, struct fio_file *f)
 	int ret, ret2;
 
 	if (fio_file_open(f))
-		return fio_io_sync(td, f);
+		return fio_io_sync(td, f, DDIR_SYNC);
 
 	if (td_io_open_file(td, f))
 		return 1;
 
-	ret = fio_io_sync(td, f);
+	ret = fio_io_sync(td, f, DDIR_SYNC);
 	ret2 = 0;
 	if (fio_file_open(f))
 		ret2 = td_io_close_file(td, f);
 	return (ret || ret2);
+}
+
+static int fio_syncfs(struct thread_data *td)
+{
+#ifdef CONFIG_SYNCFS
+	struct flist_head *n;
+	struct fio_mount *fm;
+	int err = 0;
+
+	/* Sync all file system mounts. */
+	flist_for_each(n, &td->fs_list) {
+		fm = flist_entry(n, struct fio_mount, list);
+
+		dprint(FD_IO, "sync FS %s\n", fm->base);
+
+		if (fio_open_fs(td, fm)) {
+			log_err("open %s for syncfs failed\n", fm->base);
+			err = -1;
+			continue;
+		}
+
+		if (fio_io_sync(td, fm->f, DDIR_SYNCFS)) {
+			log_err("syncfs %s failed\n", fm->base);
+			err = -1;
+			continue;
+		}
+
+		fio_close_fs(fm);
+	}
+
+	return err;
+#else
+	return -ENOSYS;
+#endif
 }
 
 static inline void __update_ts_cache(struct thread_data *td)
@@ -598,7 +633,7 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 	for_each_file(td, f, i) {
 		if (!fio_file_open(f))
 			continue;
-		if (fio_io_sync(td, f))
+		if (fio_io_sync(td, f, DDIR_SYNC))
 			break;
 		if (file_invalidate_cache(td, f))
 			break;
@@ -1274,15 +1309,21 @@ reap:
 				td->error = 0;
 		}
 
-		if (should_fsync(td) && (td->o.end_fsync || td->o.fsync_on_close)) {
+		if (should_fsync(td) &&
+		    (td->o.end_fsync || td->o.end_syncfs ||
+		     td->o.fsync_on_close)) {
 			td_set_runstate(td, TD_FSYNCING);
 
-			for_each_file(td, f, i) {
-				if (!fio_file_fsync(td, f))
-					continue;
+			if (td->o.end_syncfs) {
+				fio_syncfs(td);
+			} else {
+				for_each_file(td, f, i) {
+					if (!fio_file_fsync(td, f))
+						continue;
 
-				log_err("fio: end_fsync failed for file %s\n",
-								f->file_name);
+					log_err("fio: end_fsync failed for file %s\n",
+						f->file_name);
+				}
 			}
 		}
 	} else {

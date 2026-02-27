@@ -539,7 +539,8 @@ static void show_ddir_status(const struct group_run_stats *rs, struct thread_sta
 
 	if (ddir_sync(ddir)) {
 		if (calc_lat(&ts->sync_stat, &min, &max, &mean, &dev)) {
-			log_buf(out, "  %s:\n", "fsync/fdatasync/sync_file_range");
+			log_buf(out, "  %s:\n",
+				"fsync/fdatasync/sync_file_range/syncfs");
 			display_lat(io_ddir_name(ddir), min, max, mean, dev, out);
 			show_clat_percentiles(ts->io_u_sync_plat,
 						ts->sync_stat.samples,

@@ -22,6 +22,7 @@ enum fio_filetype {
 	FIO_TYPE_BLOCK,			/* block device */
 	FIO_TYPE_CHAR,			/* character device */
 	FIO_TYPE_PIPE,			/* pipe */
+	FIO_TYPE_DIR,			/* directory */
 };
 
 enum fio_file_flags {
@@ -195,6 +196,18 @@ FILE_FLAG_FNS(smalloc);
 #undef FILE_FLAG_FNS
 
 /*
+ * File FS mount information.
+ */
+struct fio_mount {
+	struct flist_head list;
+	const char *base;
+	char __base[256];
+	unsigned int key;
+	struct fio_file *f;
+	void *dir;
+};
+
+/*
  * File setup/shutdown
  */
 struct thread_data;
@@ -235,5 +248,9 @@ extern bool fio_files_done(struct thread_data *);
 extern bool exists_and_not_regfile(const char *);
 extern int fio_set_directio(struct thread_data *, struct fio_file *);
 extern void fio_file_free(struct fio_file *);
+#ifdef CONFIG_SYNCFS
+extern int fio_open_fs(struct thread_data *td, struct fio_mount *fm);
+extern void fio_close_fs(struct fio_mount *fm);
+#endif
 
 #endif

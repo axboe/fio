@@ -2482,9 +2482,11 @@ int do_io_u_sync(const struct thread_data *td, struct io_u *io_u)
 		ret = io_u->xfer_buflen;
 		io_u->error = EINVAL;
 #endif
-	} else if (io_u->ddir == DDIR_SYNC_FILE_RANGE)
+	} else if (io_u->ddir == DDIR_SYNC_FILE_RANGE) {
 		ret = do_sync_file_range(td, io_u->file);
-	else {
+	} else if (io_u->ddir == DDIR_SYNCFS) {
+		ret = syncfs(io_u->file->fd);
+	} else {
 		ret = io_u->xfer_buflen;
 		io_u->error = EINVAL;
 	}

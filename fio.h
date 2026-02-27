@@ -230,6 +230,7 @@ struct thread_data {
 	struct rusage ru_start;
 	struct rusage ru_end;
 
+	struct flist_head fs_list;
 	struct fio_file **files;
 	unsigned char *file_locks;
 	unsigned int files_size;

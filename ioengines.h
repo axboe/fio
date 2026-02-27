@@ -90,6 +90,7 @@ enum {
 	__FIO_NOSTATS,			/* don't do IO stats */
 	__FIO_NOFILEHASH,		/* doesn't hash the files for lookup later. */
 	__FIO_ASYNCIO_SYNC_TRIM,	/* io engine has async ->queue except for trim */
+	__FIO_ASYNCIO_SYNC_SYNCFS,	/* io engine has async ->queue except for syncfs */
 	__FIO_NO_OFFLOAD,		/* no async offload */
 	__FIO_ASYNCIO_SETS_ISSUE_TIME,	/* async ioengine with commit function that sets
 					   issue_time */
@@ -98,6 +99,7 @@ enum {
 					   affects ioengines using generic_open_file */
 	__FIO_MULTI_RANGE_TRIM,		/* ioengine supports trim with more than one range */
 	__FIO_ATOMICWRITES,		/* ioengine supports atomic writes */
+	__FIO_SYNCFS,			/* ioengine supports syncfs */
 	__FIO_IOENGINE_F_LAST,		/* not a real bit; used to count number of bits */
 };
 
@@ -117,12 +119,14 @@ enum fio_ioengine_flags {
 	FIO_NOSTATS			= 1 << __FIO_NOSTATS,
 	FIO_NOFILEHASH			= 1 << __FIO_NOFILEHASH,
 	FIO_ASYNCIO_SYNC_TRIM		= 1 << __FIO_ASYNCIO_SYNC_TRIM,
+	FIO_ASYNCIO_SYNC_SYNCFS		= 1 << __FIO_ASYNCIO_SYNC_SYNCFS,
 	FIO_NO_OFFLOAD			= 1 << __FIO_NO_OFFLOAD,
 	FIO_ASYNCIO_SETS_ISSUE_TIME	= 1 << __FIO_ASYNCIO_SETS_ISSUE_TIME,
 	FIO_SKIPPABLE_IOMEM_ALLOC	= 1 << __FIO_SKIPPABLE_IOMEM_ALLOC,
 	FIO_RO_NEEDS_RW_OPEN		= 1 << __FIO_RO_NEEDS_RW_OPEN,
 	FIO_MULTI_RANGE_TRIM		= 1 << __FIO_MULTI_RANGE_TRIM,
 	FIO_ATOMICWRITES		= 1 << __FIO_ATOMICWRITES,
+	FIO_SYNCFS			= 1 << __FIO_SYNCFS,
 };
 
 /*

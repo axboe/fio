@@ -1450,7 +1450,7 @@ I/O type
 	using non-buffered I/O, we may not sync the file. The exception is the sg
 	I/O engine, which synchronizes the disk cache anyway. Defaults to 0, which
 	means fio does not periodically issue and wait for a sync to complete. Also
-	see :option:`end_fsync` and :option:`fsync_on_close`.
+	see :option:`end_fsync`, :option:`fsync_on_close`, and :option:`end_syncfs`.
 
 .. option:: fdatasync=int
 
@@ -1493,6 +1493,13 @@ I/O type
 
 	If true, :manpage:`fsync(2)` file contents when a write stage has completed.
 	Default: false.
+
+.. option:: end_syncfs=bool
+
+        Equivalent to :option:`end_fsync` but instead of executing
+        :manpage:`fsync(2)` for each file of a write stage, executes
+        :manpage:`syncfs(2)` to synchronize all written files with a single
+        system call when a write stage has completed.  Default: false.
 
 .. option:: fsync_on_close=bool
 

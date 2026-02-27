@@ -138,6 +138,7 @@ struct thread_options {
 	unsigned int create_on_open;
 	unsigned int create_only;
 	unsigned int end_fsync;
+	unsigned int end_syncfs;
 	unsigned int pre_read;
 	unsigned int sync_io;
 	unsigned int write_hint;
@@ -528,6 +529,8 @@ struct thread_options_pack {
 	uint32_t exitall_error;
 
 	uint32_t sync_file_range;
+	uint32_t end_syncfs;
+	uint32_t pad;
 
 	struct zone_split zone_split[DDIR_RWDIR_CNT][ZONESPLIT_MAX];
 	uint32_t zone_split_nr[DDIR_RWDIR_CNT];
@@ -627,7 +630,7 @@ struct thread_options_pack {
 	uint32_t lat_percentiles;
 	uint32_t slat_percentiles;
 	uint32_t percentile_precision;
-	uint32_t pad;
+	uint32_t pad2;
 	fio_fp64_t percentile_list[FIO_IO_U_LIST_MAX_LEN];
 
 	uint8_t read_iolog_file[FIO_TOP_STR_MAX];
