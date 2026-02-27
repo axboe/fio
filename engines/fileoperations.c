@@ -264,7 +264,7 @@ static int invalidate_do_nothing(struct thread_data *td, struct fio_file *f)
 
 static enum fio_q_status queue_io(struct thread_data *td, struct io_u *io_u)
 {
-	if (io_u->ddir == DDIR_SYNC && do_io_u_sync(td, io_u))
+	if (ddir_sync(io_u->ddir) && do_io_u_sync(td, io_u))
 		io_u->error = errno;
 	return FIO_Q_COMPLETED;
 }
@@ -329,7 +329,7 @@ static struct ioengine_ops ioengine_filecreate = {
 	.open_file	= open_file,
 	.close_file	= generic_close_file,
 	.flags		= FIO_DISKLESSIO | FIO_SYNCIO | FIO_FAKEIO |
-				FIO_NOSTATS | FIO_NOFILEHASH,
+				FIO_SYNCFS | FIO_NOSTATS | FIO_NOFILEHASH,
 };
 
 static struct ioengine_ops ioengine_filestat = {
@@ -357,7 +357,7 @@ static struct ioengine_ops ioengine_filedelete = {
 	.get_file_size	= generic_get_file_size,
 	.open_file	= delete_file,
 	.flags		=  FIO_SYNCIO | FIO_FAKEIO |
-				FIO_NOSTATS | FIO_NOFILEHASH,
+				FIO_SYNCFS | FIO_NOSTATS | FIO_NOFILEHASH,
 };
 
 static struct ioengine_ops ioengine_dircreate = {
@@ -403,7 +403,7 @@ static struct ioengine_ops ioengine_dirdelete = {
 	.open_file	= delete_file,
 	.unlink_file	= remove_dir,
 	.flags		= FIO_DISKLESSIO | FIO_SYNCIO | FIO_FAKEIO |
-				FIO_NOSTATS | FIO_NOFILEHASH,
+				FIO_SYNCFS | FIO_NOSTATS | FIO_NOFILEHASH,
 };
 
 static void fio_init fio_fileoperations_register(void)
