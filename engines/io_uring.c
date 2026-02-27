@@ -890,12 +890,19 @@ static enum fio_q_status fio_ioring_queue(struct thread_data *td,
 	if (ld->queued == td->o.iodepth)
 		return FIO_Q_BUSY;
 
-	/* if async trim has been tried and failed, punt to sync */
-	if (io_u->ddir == DDIR_TRIM && ld->async_trim_fail) {
+	/*
+	 * If this is a syncfs request, or if async trim has been tried and
+	 * failed, punt to sync.
+	 * */
+	if (io_u->ddir == DDIR_SYNCFS ||
+	    (io_u->ddir == DDIR_TRIM && ld->async_trim_fail)) {
 		if (ld->queued)
 			return FIO_Q_BUSY;
 
-		do_io_u_trim(td, io_u);
+		if (io_u->ddir == DDIR_TRIM)
+			do_io_u_trim(td, io_u);
+		else
+			do_io_u_sync(td, io_u);
 
 		io_u_mark_submit(td, 1);
 		io_u_mark_complete(td, 1);
@@ -2013,7 +2020,8 @@ static struct ioengine_ops ioengine_uring_cmd = {
 	.version		= FIO_IOOPS_VERSION,
 	.flags			= FIO_NO_OFFLOAD | FIO_MEMALIGN | FIO_RAWIO |
 					FIO_ASYNCIO_SETS_ISSUE_TIME |
-					FIO_MULTI_RANGE_TRIM,
+					FIO_MULTI_RANGE_TRIM |
+					FIO_ASYNCIO_SYNC_SYNCFS,
 	.init			= fio_ioring_init,
 	.post_init		= fio_ioring_cmd_post_init,
 	.io_u_init		= fio_ioring_io_u_init,
