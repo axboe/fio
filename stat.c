@@ -2776,8 +2776,6 @@ void __show_run_stats(void)
 		buf_output_free(out);
 	}
 
-	fio_idle_prof_cleanup();
-
 	log_info_flush();
 	free(runstats);
 

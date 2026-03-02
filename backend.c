@@ -2833,6 +2833,7 @@ int fio_backend(struct sk_out *sk_out)
 		td->sem = NULL;
 	} end_for_each();
 
+	fio_idle_prof_cleanup();
 	free_disk_util();
 	if (cgroup_list) {
 		cgroup_kill(cgroup_list);
