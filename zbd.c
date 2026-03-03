@@ -1692,7 +1692,15 @@ retry:
 		z = zbd_get_zone(f, zone_idx);
 
 		zone_lock(td, f, z);
-		if (zbd_zone_remainder(z) >= min_bs) {
+		/*
+		 * If the zone has remainder larger than min_bs, the next write
+		 * fits the zone. In that case, choose the zone for the write.
+		 * The zone might be already removed from zbdi->write_zones[] by
+		 * other jobs at this moment. Call zbd_write_zone_get() to
+		 * ensure that the zone for the write is in the array.
+		 */
+		if (zbd_zone_remainder(z) >= min_bs &&
+		    zbd_write_zone_get(td, f, z)) {
 			need_zone_finish = false;
 			goto out;
 		}
