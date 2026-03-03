@@ -1,0 +1,33 @@
+#
+# run command for this workload:
+# you can configure tmpfs to emulate cxl.mem if you do not have device as below. or configure cxl.mem into fsdax mode to test
+# mount -t tmpfs -o size=20G tmpfs /mnt/mytmpfs
+#
+[global]
+thread
+group_reporting
+norandommap
+overwrite=1
+thinktime=0
+sync=0
+direct=0
+
+ioengine=mmap
+#
+# Important note: this workload is run on a tmpfs as emulation of cxl.mem, file system, mounting
+filename=/mnt/mytmpfs/test1
+size=1GB
+#offset_increment=50G  # each of 'numjobs' will get its own space within the device
+
+time_based
+runtime=300
+ramp_time=30
+
+[SeqW]
+bs=4k
+numjobs=1  # depending on CPU core count more can be better, but also can be a bottleneck
+iodepth=1
+
+rw=write
+#rwmixread=100
+#percentage_random=0
