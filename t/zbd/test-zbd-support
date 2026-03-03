@@ -1002,10 +1002,13 @@ test33() {
     size=$((2 * zone_size))
     io_size=$((5 * capacity))
     bs=$((3 * capacity / 4))
+    if ((!write_zone_remainder)); then
+	    io_size=$((io_size / bs * bs))
+    fi
     run_fio_on_seq "$(ioengine "psync")" --iodepth=1 --rw=write	\
 		   --size=$size --io_size=$io_size --bs=$bs	\
 		   >> "${logfile}.${test_number}" 2>&1 || return $?
-    check_written $((io_size / bs * bs)) || return $?
+    check_written $((io_size)) || return $?
 }
 
 # Test repeated async write job with verify using two unaligned block sizes.
