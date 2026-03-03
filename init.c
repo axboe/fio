@@ -666,6 +666,19 @@ static int fixup_options(struct thread_data *td)
 		ret |= 1;
 	}
 
+	if (o->zone_mode == ZONE_MODE_ZBD && o->write_zone_remainder) {
+		if (fio_option_is_set(o, norandommap)) {
+			if (o->norandommap == 0) {
+				log_err("fio: write_zone_remainder=1 requires norandommap=1\n");
+				ret |= 1;
+			}
+			/* if == 1, OK */
+		} else {
+			dprint(FD_ZBD, "fio: override norandommap=1 for write_zone_remainder=1\n");
+			o->norandommap = 1;
+		}
+	}
+
 	if (o->zone_mode == ZONE_MODE_STRIDED && !o->zone_size) {
 		log_err("fio: --zonesize must be specified when using --zonemode=strided.\n");
 		ret |= 1;

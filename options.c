@@ -3940,6 +3940,16 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_ZONE,
 	},
 	{
+		.name	= "write_zone_remainder",
+		.lname	= "Fill remainders of zones by write instead of zone finish operion",
+		.type	= FIO_OPT_BOOL,
+		.off1	= offsetof(struct thread_options, write_zone_remainder),
+		.def	= 0,
+		.help	= "When block size is unaligned, zones have small remainder write areas at ends. Fill them by write instead of zone finish operations for better performance.",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_ZONE,
+	},
+	{
 		.name   = "fdp",
 		.lname  = "Flexible data placement",
 		.type   = FIO_OPT_BOOL,
