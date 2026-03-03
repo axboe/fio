@@ -13,6 +13,7 @@ usage() {
 	echo -e "\t-l Test with libzbc ioengine"
 	echo -e "\t-r Reset all zones before test start"
 	echo -e "\t-w Reset all zones before executing each write test case"
+	echo -e "\t-m Write zone remainder instead of zone finish operation"
 	echo -e "\t-o <max_open_zones> Run fio with max_open_zones limit"
 	echo -e "\t-t <test #> Run only a single test case with specified number"
 	echo -e "\t-s <test #> Start testing from the case with the specified number"
@@ -202,6 +203,30 @@ has_max_open_zones() {
 	return 1
 }
 
+has_zone_writes() {
+	local has_zonemode_zbd=0
+	local has_write=0
+	local word
+
+	while (($# > 1)); do
+		if [[ ${1} =~ "--zonemode=zbd" ]]; then
+			has_zonemode_zbd=1
+		fi
+		if [[ ${1} =~ "--rw=" ]]; then
+			word=${1}
+			word=${word/--rw=/}
+			if [[ $word =~ w ]]; then
+				has_write=1
+			fi
+		fi
+		shift
+	done
+	if ((has_zonemode_zbd && has_write)); then
+		return 0
+	fi
+	return 1
+}
+
 run_fio() {
     local fio opts
 
@@ -214,6 +239,9 @@ run_fio() {
     # max_open_zones option to fio command unless the test case already add it.
     if [[ -n ${max_open_zones_opt} ]] && ! has_max_open_zones "${opts[@]}"; then
 	    opts+=("--max_open_zones=${max_open_zones_opt}")
+    fi
+    if [[ -n ${write_zone_remainder} ]] && has_zone_writes "${opts[@]}"; then
+	    opts+=("--write_zone_remainder=1")
     fi
     { echo; echo "fio ${opts[*]}"; echo; } >>"${logfile}.${test_number}"
 
@@ -1877,6 +1905,7 @@ reset_all_zones=
 reset_before_write=
 use_libzbc=
 zbd_debug=
+write_zone_remainder=
 max_open_zones_opt=
 quit_on_err=
 force_io_uring=
@@ -1892,6 +1921,7 @@ while [ "${1#-}" != "$1" ]; do
     -l) use_libzbc=1; shift;;
     -r) reset_all_zones=1; shift;;
     -w) reset_before_write=1; shift;;
+    -m) write_zone_remainder=1; shift;;
     -t) tests+=("$2"); shift; shift;;
     -o) max_open_zones_opt="${2}"; shift; shift;;
     -s) start_test=$2; shift; shift;;

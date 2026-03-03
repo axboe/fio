@@ -23,6 +23,7 @@ usage()
 	echo -e "\t-o <max_open_zones> Specify MaxOpen value, (${set_max_open} by default)."
 	echo -e "\t-n <#number of runs> Set the number of times to run the entire suite "
 	echo -e "\t   or an individual section/test."
+	echo -e "\t-m Pass -m option to test-zbd-support to enable write_zone_remainder."
 	echo -e "\t-q Quit t/zbd/test-zbd-support run after any failed test."
 	echo -e "\t-r Remove the /dev/nullb0 device that may still exist after"
 	echo -e "\t   running this script."
@@ -426,6 +427,7 @@ dev_size=1024
 dev_blocksize=4096
 set_max_open=8
 set_extra_max_active=2
+write_zone_remainder=0
 zbd_test_opts=()
 num_of_runs=1
 test_case=0
@@ -438,6 +440,7 @@ while (($#)); do
 		-L) list_only=1; shift;;
 		-r) cleanup_nullb; exit 0;;
 		-n) num_of_runs="${2}"; shift; shift;;
+		-m) write_zone_remainder=1; shift;;
 		-t) test_case="${2}"; shift; shift;;
 		-q) quit_on_err=1; shift;;
 		-h) usage; break;;
@@ -490,6 +493,9 @@ while ((run_nr <= $num_of_runs)); do
 		fi
 		if ((quit_on_err)); then
 			zbd_test_opts+=("-q")
+		fi
+		if ((write_zone_remainder)); then
+			zbd_test_opts+=("-m")
 		fi
 		section$section_number
 		configure_nullb
