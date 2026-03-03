@@ -1034,7 +1034,14 @@ Target file/device
 				all zones instead of being restricted to a
 				single zone. The :option:`zoneskip` parameter
 				is ignored. :option:`zonerange` and
-				:option:`zonesize` must be identical.
+				:option:`zonesize` must be identical. If the
+				size of the unwritten space in a zone is not
+				a multiple of the specified block size at
+				workload start, write workloads create unwritten
+				remainder areas at the ends of zones and keep
+				the zones in open conditions. To free up the
+				open zone resources, fio issues zone finish
+				operations to the zones with the remainders.
 				Trim is handled using a zone reset operation.
 				Trim only considers non-empty sequential write
 				required and sequential write preferred zones.
@@ -1166,6 +1173,23 @@ Target file/device
 	pointer move fills blocks with zero then breaks verify data. If an
 	asynchronous IO engine and :option:`verify` workload are specified,
 	errors out. Default: false.
+
+.. option:: write_zone_remainders=bool
+
+	If the size of the unwritten space in a zone is not a multiple of the
+	specified block size at workload start, write workloads create unwritten
+	remainder areas at the ends of zones. By default, fio issues zone finish
+	operations on such zones, transitioning them to the full condition and
+	freeing up open zone resources. However, zone finish operations
+	introduces waits for in-flight writes, reducing overall write
+	throughput. If this option is specified, fio writes data to the
+	remainder areas instead of performing zone finish operations. This
+	improves write throughput by avoiding waits for in-flight writes,
+	particularly in asynchronous write workloads. The drawback of this
+	option is that it requires fio to perform writes smaller than the
+	minimum block size. Consequently, the option :option:`norandommap` must
+	be set. If :option:`norandommap` is not set, it is automatically set.
+	Default: false.
 
 I/O type
 ~~~~~~~~
