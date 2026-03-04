@@ -886,7 +886,7 @@ static inline unsigned long long td_min_bs(struct thread_data *td)
 
 	min_bs = min(td->o.min_bs[DDIR_READ], td->o.min_bs[DDIR_WRITE]);
 
-	/* Similar short-circuit as td_max_bs() when trim very zero is
+	/* Similar short-circuit as td_max_bs() when trim verify zero is
 	 * turned off.
 	 */
 	if (!td->o.trim_zero)
