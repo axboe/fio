@@ -866,6 +866,17 @@ static inline unsigned long long td_max_bs(struct thread_data *td)
 	unsigned long long max_bs;
 
 	max_bs = max(td->o.max_bs[DDIR_READ], td->o.max_bs[DDIR_WRITE]);
+	/*
+	 * If trim_zero is disabled, we skip the read-back verification,
+	 * eliminating the need to reserve a buffer for comparison.
+	 * Additionally, since the SSD TRIM command is a metadata-only operation
+	 * which specifies ranges rather than providing a data payload, no write
+	 * buffer is required for the command execution itself.
+	 * It is useful when SSD Trim's range is fairly large and high iodepth will
+	 * result in OOM.
+	 */
+	if (!td->o.trim_zero)
+		return max_bs;
 	return max(td->o.max_bs[DDIR_TRIM], max_bs);
 }
 
@@ -874,6 +885,12 @@ static inline unsigned long long td_min_bs(struct thread_data *td)
 	unsigned long long min_bs;
 
 	min_bs = min(td->o.min_bs[DDIR_READ], td->o.min_bs[DDIR_WRITE]);
+
+	/* Similar short-circuit as td_max_bs() when trim very zero is
+	 * turned off.
+	 */
+	if (!td->o.trim_zero)
+		return min_bs;
 	return min(td->o.min_bs[DDIR_TRIM], min_bs);
 }
 
