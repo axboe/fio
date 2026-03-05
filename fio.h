@@ -862,11 +862,18 @@ static inline bool should_check_rate(struct thread_data *td)
 }
 
 /*
- * Do not reserve extra space in io_u_buffer for trim operations.
+ * Do not reserve extra space in io_u_buffer for trim operations
+ * when trim_zero is disabled. (trim_verify_zero=0)
  */
 static inline unsigned long long td_max_rw_bs(struct thread_data *td)
 {
-	return max(td->o.max_bs[DDIR_READ], td->o.max_bs[DDIR_WRITE]);
+	unsigned long long max_bs;
+
+	max_bs = max(td->o.max_bs[DDIR_READ], td->o.max_bs[DDIR_WRITE]);
+	if (!td->o.trim_zero)
+		return max_bs;
+
+	return max(td->o.max_bs[DDIR_TRIM], max_bs);
 }
 
 static inline unsigned long long td_max_bs(struct thread_data *td)
