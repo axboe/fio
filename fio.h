@@ -862,8 +862,7 @@ static inline bool should_check_rate(struct thread_data *td)
 }
 
 /*
- * Do not reserve extra space in io_u_buffer for trim operations
- * when trim_zero is disabled. (trim_verify_zero=0)
+ * This function considers only read and write block sizes.
  */
 static inline unsigned long long td_max_rw_bs(struct thread_data *td)
 {
