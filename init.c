@@ -70,6 +70,7 @@ int nr_clients = 0;
 bool log_syslog = false;
 
 bool write_bw_log = false;
+const char *write_bw_log_name;
 bool read_only = false;
 int status_interval = 0;
 
@@ -109,7 +110,7 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 	},
 	{
 		.name		= (char *) "bandwidth-log",
-		.has_arg	= no_argument,
+		.has_arg	= optional_argument,
 		.val		= 'b' | FIO_CLIENT_FLAG,
 	},
 	{
@@ -2737,6 +2738,10 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			break;
 		case 'b':
 			write_bw_log = true;
+			if (optarg)
+				write_bw_log_name = optarg;
+			else
+				write_bw_log_name = "agg";
 			break;
 		case 'o': {
 			FILE *tmp;

@@ -79,6 +79,8 @@ pthread_mutex_t overlap_check = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
 pthread_mutex_t overlap_check = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
+extern char *write_bw_log_name;
+
 #define JOB_START_TIMEOUT	(5 * 1000)
 
 static void sig_int(int sig)
@@ -2773,13 +2775,18 @@ int fio_backend(struct sk_out *sk_out)
 		return 0;
 
 	if (write_bw_log) {
+		char read[PATH_MAX], write[PATH_MAX], trim[PATH_MAX];
 		struct log_params p = {
 			.log_type = IO_LOG_TYPE_BW,
 		};
 
-		setup_log(&agg_io_log[DDIR_READ], &p, "agg-read_bw.log");
-		setup_log(&agg_io_log[DDIR_WRITE], &p, "agg-write_bw.log");
-		setup_log(&agg_io_log[DDIR_TRIM], &p, "agg-trim_bw.log");
+		snprintf(read, sizeof(read), "%s-read_bw.log", write_bw_log_name);
+		snprintf(write, sizeof(write), "%s-write_bw.log", write_bw_log_name);
+		snprintf(trim, sizeof(trim), "%s-trim_bw.log", write_bw_log_name);
+
+		setup_log(&agg_io_log[DDIR_READ], &p, read);
+		setup_log(&agg_io_log[DDIR_WRITE], &p, write);
+		setup_log(&agg_io_log[DDIR_TRIM], &p, trim);
 	}
 
 	if (init_global_dedupe_working_set_seeds()) {

@@ -121,9 +121,12 @@ Command line options
 	format.  `json+` is like `json`, except it adds a full dump of the latency
 	buckets.
 
-.. option:: --bandwidth-log
+.. option:: --bandwidth-log=filename
 
-	Generate aggregate bandwidth logs.
+        Generate aggregate bandwidth logs. `filename` is an optional argument.
+        If not given, Fio will by default create files called
+        "agg-{read,write,trim}_bw.log". If the filename argument is given, Fio
+        will create files called "{filename}-{read,write,trim}_bw.log".
 
 .. option:: --minimal
 
