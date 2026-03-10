@@ -33,7 +33,7 @@ jobs:
 
     steps:
     - name: Checkout repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
     - name: Install dependencies
       run:  ./ci/actions-install.sh
     - name: Build
@@ -102,7 +102,7 @@ jobs:
       if: ${{ contains( matrix.build, 'windows' ) }}
       run: git config --global core.autocrlf input
     - name: Checkout repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
     - name: Install Cygwin toolchain (Windows)
       if: ${{ startsWith(matrix.build, 'windows-cygwin') }}
       uses: cygwin/cygwin-install-action@master
