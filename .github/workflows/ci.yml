@@ -151,7 +151,7 @@ jobs:
 
     - name: Upload installer as artifact (Windows)
       if: ${{ contains( matrix.build, 'windows' ) }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ matrix.build }}-installer
         path: os\windows\*.msi
