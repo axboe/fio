@@ -1924,7 +1924,9 @@ static int str_ioengine_external_cb(void *data, const char *str)
 		return 1;
 	}
 
-	td->o.ioengine_so_path = p;
+	if (td->o.ioengine_so_path)
+		free(td->o.ioengine_so_path);
+	td->o.ioengine_so_path = strdup(p);
 	return 0;
 }
 
@@ -6121,6 +6123,9 @@ void fio_options_mem_dupe(struct thread_data *td)
 {
 	options_mem_dupe(fio_options, &td->o);
 
+	if (td->o.ioengine_so_path)
+		td->o.ioengine_so_path = strdup(td->o.ioengine_so_path);
+
 	if (td->eo && td->io_ops) {
 		void *oldeo = td->eo;
 
@@ -6230,6 +6235,11 @@ void del_opt_posval(const char *optname, const char *ival)
 void fio_options_free(struct thread_data *td)
 {
 	options_free(fio_options, &td->o);
+	if (td->o.ioengine_so_path) {
+		free(td->o.ioengine_so_path);
+		td->o.ioengine_so_path = NULL;
+	}
+
 	if (td->eo && td->io_ops && td->io_ops->options) {
 		options_free(td->io_ops->options, td->eo);
 		free(td->eo);
