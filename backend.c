@@ -844,15 +844,31 @@ static long long usec_for_io(struct thread_data *td, enum fio_ddir ddir)
 		}
 		td->last_usec[ddir] += val;
 		return td->last_usec[ddir];
-	} else if (bps) {
+	}
+
+	if (!bps)
+		return 0;
+
+	/*
+	 * For rate_iops option combined with bssplit, recover
+	 * the user provided IOPS value and calculate the I/O delay
+	 * based on this value, not on bps.
+	 */
+	if (!td->o.rate[ddir] && td->o.bssplit_nr[ddir]) {
+		uint64_t iops = bps / td->o.min_bs[ddir];
+
+		if (!iops)
+			return 0;
+
+		td->last_usec[ddir] += (int64_t)(1000000 / iops);
+		return td->last_usec[ddir];
+	} else {
 		uint64_t bytes = td->rate_io_issue_bytes[ddir];
 		uint64_t secs = bytes / bps;
 		uint64_t remainder = bytes % bps;
 
 		return remainder * 1000000 / bps + secs * 1000000;
 	}
-
-	return 0;
 }
 
 static void init_thinktime(struct thread_data *td)
