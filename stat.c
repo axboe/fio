@@ -1205,6 +1205,27 @@ static void show_disk_util(int terse, struct json_object *parent,
 	}
 }
 
+static double scale_down_ns(unsigned long long val, const char **unit)
+{
+	double retval;
+
+	if (val >= 2000000000) {
+		retval = (double) val / 1000000000.0;
+		*unit = "s";
+	} else if (val >= 2000000) {
+		retval = (double) val / 1000000.0;
+		*unit = "ms";
+	} else if (val >= 2000) {
+		retval = (double) val / 1000.0;
+		*unit = "us";
+	} else {
+		retval = (double) val;
+		*unit = "ns";
+	}
+
+	return retval;
+}
+
 static void show_thread_status_normal(struct thread_stat *ts,
 				      const struct group_run_stats *rs,
 				      struct buf_output *out)
@@ -1306,9 +1327,14 @@ static void show_thread_status_normal(struct thread_stat *ts,
 					strerror(ts->first_error));
 	}
 	if (ts->latency_depth) {
-		log_buf(out, "     latency   : target=%llu, window=%llu, percentile=%.2f%%, depth=%u\n",
-					(unsigned long long)ts->latency_target,
-					(unsigned long long)ts->latency_window,
+		double target, window;
+		const char *target_unit, *window_unit;
+
+		target = scale_down_ns(ts->latency_target, &target_unit);
+		window = scale_down_ns(ts->latency_window*1000, &window_unit);
+		log_buf(out, "     latency   : target=%.2f%s, window=%.2f%s, percentile=%.2f%%, depth=%u\n",
+					target, target_unit,
+					window, window_unit,
 					ts->latency_percentile.u.f,
 					ts->latency_depth);
 	}
@@ -1869,8 +1895,10 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 	if (ts->latency_depth) {
 		json_object_add_value_int(root, "latency_depth", ts->latency_depth);
 		json_object_add_value_int(root, "latency_target", ts->latency_target);
+		json_object_add_value_int(root, "latency_target_ns", ts->latency_target);
 		json_object_add_value_float(root, "latency_percentile", ts->latency_percentile.u.f);
 		json_object_add_value_int(root, "latency_window", ts->latency_window);
+		json_object_add_value_int(root, "latency_window_us", ts->latency_window);
 	}
 
 	/* Additional output if description is set */
