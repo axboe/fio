@@ -1485,7 +1485,7 @@ int init_io_u_buffers(struct thread_data *td)
 	char *p;
 
 	max_units = td->o.iodepth;
-	max_bs = td_max_bs(td);
+	max_bs = ( td->o.trim_zero ) ? td_max_bs(td) : td_max_rw_bs(td);
 	min_write = td->o.min_bs[DDIR_WRITE];
 	td->orig_buffer_size = (unsigned long long) max_bs
 					* (unsigned long long) max_units;

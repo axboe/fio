@@ -861,6 +861,14 @@ static inline bool should_check_rate(struct thread_data *td)
 	return (td->flags & TD_F_CHECK_RATE) != 0;
 }
 
+/*
+ * This function considers only read and write block sizes.
+ */
+static inline unsigned long long td_max_rw_bs(struct thread_data *td)
+{
+	return max(td->o.max_bs[DDIR_READ], td->o.max_bs[DDIR_WRITE]);
+}
+
 static inline unsigned long long td_max_bs(struct thread_data *td)
 {
 	unsigned long long max_bs;
