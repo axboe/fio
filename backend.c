@@ -1823,7 +1823,8 @@ static void *thread_main(void *data)
 	fio_local_clock_init();
 
 #ifdef CONFIG_LINUX
-	prctl(PR_SET_NAME, o->comm);
+	if (o->comm)
+		prctl(PR_SET_NAME, o->comm);
 #endif
 
 	dprint(FD_PROCESS, "jobs pid=%d started\n", (int) td->pid);
