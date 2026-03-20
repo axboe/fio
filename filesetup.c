@@ -1914,6 +1914,13 @@ int add_file(struct thread_data *td, const char *fname, int numjob, int inc)
 	/* can't handle smalloc failure from here */
 	assert(f->file_name);
 
+	/*
+	 * Get hashed value from the file name using djb2 algorithm
+	 */
+	f->file_name_hash = 0;
+	for (const char *p = f->file_name; *p; p++)
+		f->file_name_hash = (f->file_name_hash << 5) - f->file_name_hash + *p;
+
 	if (td->o.filetype)
 		f->filetype = td->o.filetype;
 	else

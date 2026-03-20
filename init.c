@@ -856,7 +856,11 @@ static int fixup_options(struct thread_data *td)
 		o->size = -1ULL;
 
 	if (o->verify != VERIFY_NONE) {
-		if (td_write(td) && o->do_verify && o->numjobs > 1 &&
+		/*
+		 * In --verify_only=1 case, we don't warn users for multiple
+		 * writers data race which is for write phase.
+		 */
+		if (td_write(td) && o->do_verify && !o->verify_only && o->numjobs > 1 &&
 		    (o->filename ||
 		     !(o->unique_filename &&
 		       strstr(o->filename_format, "$jobname") &&
@@ -907,22 +911,8 @@ static int fixup_options(struct thread_data *td)
 							o->max_bs[DDIR_WRITE]);
 
 		if (o->verify_only) {
-			if (!fio_option_is_set(o, verify_write_sequence))
-				o->verify_write_sequence = 0;
-
 			if (!fio_option_is_set(o, verify_header_seed))
 				o->verify_header_seed = 0;
-		}
-
-		if (o->norandommap && !td_ioengine_flagged(td, FIO_SYNCIO) &&
-		    o->iodepth > 1) {
-			/*
-			 * Disable write sequence checks with norandommap and
-			 * iodepth > 1.
-			 * Unless we were explicitly asked to enable it.
-			 */
-			if (!fio_option_is_set(o, verify_write_sequence))
-				o->verify_write_sequence = 0;
 		}
 
 		/*
