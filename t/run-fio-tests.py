@@ -1139,6 +1139,14 @@ TEST_LIST = [
         'success':          SUCCESS_DEFAULT,
         'requirements':     [Requirements.not_windows],
     },
+    {
+        'test_id':          1021,
+        'test_class':       FioExeTest,
+        'exe':              't/numberio_overlap.py',
+        'parameters':       ['-f', '{fio_path}'],
+        'success':          SUCCESS_DEFAULT,
+        'requirements':     [],
+    },
 ]
 
 

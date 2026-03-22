@@ -32,6 +32,11 @@ main() {
 	    -p
             "1010:--skip 15 16 17 18 19 20 21 22"
         )
+	# io_uring is unavailable in containers; use psync and libaio instead
+	args+=(
+	    -p
+	    "1021:--ioengines psync,libaio"
+	)
 
     fi
 
