@@ -2095,11 +2095,10 @@ static void *thread_main(void *data)
 		clear_state = true;
 
 		/*
-		 * Make sure we've successfully updated the rusage stats
-		 * before waiting on the stat mutex. Otherwise we could have
-		 * the stat thread holding stat mutex and waiting for
-		 * the rusage_sem, which would never get upped because
-		 * this thread is waiting for the stat mutex.
+		 * Service any pending rusage request, then acquire stat_sem to update
+		 * runtime counters. This trylock loop will primarily guard against
+		 * contention from concurrent stat calls or other slow operations under
+		 * stat_sem.
 		 */
 		deadlock_loop_cnt = 0;
 		do {

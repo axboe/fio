@@ -2821,16 +2821,35 @@ int __show_running_run_stats(void)
 	unsigned long long *rt;
 	struct timespec ts;
 
-	fio_sem_down(stat_sem);
-
 	rt = malloc(thread_number * sizeof(unsigned long long));
 	fio_gettime(&ts, NULL);
 
+	/*
+	 * Collect rusage from workers outside stat_sem to prevent deadlock caused
+	 * by semaphore contention between the stat thread and the worker threads.
+	 */
 	for_each_td(td) {
 		if (td->runstate >= TD_EXITED)
 			continue;
 
-		td->update_rusage = 1;
+		if (td->rusage_sem) {
+			td->update_rusage = 1;
+			/* Prevent deadlock if worker exits between first check and sem_down */
+			if (td->runstate >= TD_EXITED) {
+				td->update_rusage = 0;
+				continue;
+			}
+			fio_sem_down(td->rusage_sem);
+		}
+		td->update_rusage = 0;
+	} end_for_each();
+
+	fio_sem_down(stat_sem);
+
+	for_each_td(td) {
+		if (td->runstate >= TD_EXITED)
+			continue;
+	
 		for_each_rw_ddir(ddir) {
 			td->ts.io_bytes[ddir] = td->io_bytes[ddir];
 		}
@@ -2843,16 +2862,6 @@ int __show_running_run_stats(void)
 			td->ts.runtime[DDIR_WRITE] += rt[__td_index];
 		if (td_trim(td) && td->ts.io_bytes[DDIR_TRIM])
 			td->ts.runtime[DDIR_TRIM] += rt[__td_index];
-	} end_for_each();
-
-	for_each_td(td) {
-		if (td->runstate >= TD_EXITED)
-			continue;
-		if (td->rusage_sem) {
-			td->update_rusage = 1;
-			fio_sem_down(td->rusage_sem);
-		}
-		td->update_rusage = 0;
 	} end_for_each();
 
 	__show_run_stats();
