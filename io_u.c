@@ -382,8 +382,12 @@ static int get_next_seq_offset(struct thread_data *td, struct fio_file *f,
 	/*
 	 * If we reach the end for a rw-io-size based run, reset us back to 0
 	 * and invalidate the cache, if we need to.
+	 *
+	 * Ff it has possibility of overlapped offsets (io_size > size), we
+	 * should get back to 0 offset to verify overlapped offsets.
 	 */
-	if (td_rw(td) && o->io_size > o->size) {
+	if ((td_rw(td) || (o->verify != VERIFY_NONE && o->do_verify)) &&
+			o->io_size > o->size) {
 		if (f->last_pos[ddir] >= f->io_size + get_start_offset(td, f)) {
 			f->last_pos[ddir] = f->file_offset;
 			loop_cache_invalidate(td, f);

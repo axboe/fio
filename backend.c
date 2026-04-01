@@ -1112,6 +1112,14 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 		total_bytes = max(total_bytes, (uint64_t)td->o.io_size);
 
 	/*
+	 * For write-only sequential jobs, allow io_size to control how much to
+	 * write even when verify is enabled.  Unlike rw mode, `bytes_issued`
+	 * only counts writes here, so `io_size` won't be consumed by reads.
+	 */
+	if (!td_rw(td) && td_write(td) && !td_random(td))
+		total_bytes = max(total_bytes, (uint64_t)td->o.io_size);
+
+	/*
 	 * If verify_backlog is enabled, we'll run the verify in this
 	 * handler as well. For that case, we may need up to twice the
 	 * amount of bytes.
