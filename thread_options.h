@@ -161,6 +161,8 @@ struct thread_options {
 	unsigned int verify_state_save;
 	unsigned int verify_write_sequence;
 	unsigned int verify_header_seed;
+	unsigned int verify_table_id;
+	unsigned int pad_verify;
 	unsigned int use_thread;
 	unsigned int unlink;
 	unsigned int unlink_each_loop;
@@ -414,6 +416,8 @@ struct thread_options {
 	unsigned int log_entries;
 	unsigned int log_prio;
 	unsigned int log_issue_time;
+
+	unsigned int trim_error;
 };
 
 #define FIO_TOP_STR_MAX		256
@@ -500,6 +504,8 @@ struct thread_options_pack {
 	uint32_t verify_state_save;
 	uint32_t verify_write_sequence;
 	uint32_t verify_header_seed;
+	uint32_t verify_table_id;
+	uint32_t pad_verify;
 	uint32_t use_thread;
 	uint32_t unlink;
 	uint32_t unlink_each_loop;
@@ -746,6 +752,8 @@ struct thread_options_pack {
 	uint8_t dp_scheme_file[FIO_TOP_STR_MAX];
 
 	uint32_t num_range;
+
+	uint32_t trim_error;
 	/*
 	 * verify_pattern followed by buffer_pattern from the unpacked struct
 	 */

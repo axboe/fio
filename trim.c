@@ -40,7 +40,7 @@ bool get_next_trim(struct thread_data *td, struct io_u *io_u)
 			rb_erase(&ipo->rb_node, &td->io_hist_tree);
 		}
 		td->io_hist_len--;
-		free(ipo);
+		free_io_piece(ipo);
 	} else
 		ipo->flags |= IP_F_TRIMMED;
 

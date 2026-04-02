@@ -614,6 +614,32 @@ static enum fio_q_status io_u_submit(struct thread_data *td, struct io_u *io_u)
 
 	return td_io_queue(td, io_u);
 }
+/*
+ * Check if this is the first job for the given verify table ID
+ */
+static bool is_first_job_for_table_id(struct thread_data *td, int table_id)
+{
+	int min_index = td->thread_number - 1;
+	int i;
+
+	for (i = 0; i < thread_number; i++) {
+		struct thread_data *td2 = tnumber_to_td(i);
+		if (td2->o.verify_table_id == table_id && i < min_index) {
+			min_index = i;
+		}
+	}
+
+	return (td->thread_number - 1) == min_index;
+}
+
+/*
+ * Check if this is the first job for the given shared verify table
+ */
+static bool is_first_job_for_table(struct thread_data *td,
+				   struct shared_verify_table *table)
+{
+	return is_first_job_for_table_id(td, table->table_id);
+}
 
 /*
  * The main verify engine. Runs over the writes we previously submitted,
@@ -627,6 +653,21 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 	int ret;
 
 	dprint(FD_VERIFY, "starting loop\n");
+
+	/*
+	 * If using shared verify table, wait for all write jobs to complete
+	 */
+	if (td->shared_verify_table) {
+		int active = atomic_load(&td->shared_verify_table->write_jobs_active);
+
+		if (active > 0) {
+			while (atomic_load(&td->shared_verify_table->write_jobs_done) < active) {
+				usleep(10000);
+				if (td->terminate)
+					return;
+			}
+		}
+	}
 
 	/*
 	 * sync io first and invalidate cache, to make sure we really
@@ -994,7 +1035,11 @@ void log_inflight(struct thread_data *td, struct io_u *io_u)
 		abort();
 	}
 
-	if (td->inflight_issued != io_u->numberio) {
+	/*
+	 * With shared verify tables, numberio is allocated globally across jobs,
+	 * so skip this check as td->inflight_issued is per-job
+	 */
+	if (!td->shared_verify_table && td->inflight_issued != io_u->numberio) {
 		log_err("inflight_issued does not match: numberio=%"PRIu64", inflight_issued=%"PRIu64"\n",
 			io_u->numberio, td->inflight_issued);
 		abort();
@@ -1180,11 +1225,16 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 			break;
 		}
 
-		if (io_u->ddir == DDIR_WRITE && td->flags & TD_F_DO_VERIFY) {
+		if ((io_u->ddir == DDIR_WRITE || io_u->ddir == DDIR_TRIM) &&
+		    td->flags & TD_F_DO_VERIFY) {
 			if (!(io_u->flags & IO_U_F_PATTERN_DONE)) {
 				io_u_set(td, io_u, IO_U_F_PATTERN_DONE);
-				io_u->numberio = td->io_issues[io_u->ddir];
-				populate_verify_io_u(td, io_u);
+				if (td->shared_verify_table)
+					io_u->numberio = atomic_fetch_add(&td->shared_verify_table->shared_numberio, 1);
+				else
+					io_u->numberio = td->io_issues[io_u->ddir];
+				if (io_u->ddir == DDIR_WRITE)
+					populate_verify_io_u(td, io_u);
 				log_inflight(td, io_u);
 			}
 		}
@@ -1230,11 +1280,18 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 		 * order of it. The logged unit will track when the IO has
 		 * completed.
 		 */
-		if (td_write(td) && io_u->ddir == DDIR_WRITE &&
-		    td->o.do_verify &&
+		if (((td_write(td) && io_u->ddir == DDIR_WRITE) || io_u->ddir == DDIR_TRIM) &&
 		    td->o.verify != VERIFY_NONE &&
-		    !td->o.experimental_verify)
-			log_io_piece(td, io_u);
+		    !td->o.experimental_verify &&
+		    (td->o.do_verify || td->shared_verify_table)) {
+			if (!log_io_piece(td, io_u)) {
+				dprint(FD_IO, "Overlap detected, skipping...\n");
+				invalidate_inflight(td, io_u);
+				clear_io_u(td, io_u);
+				ret = FIO_Q_BUSY;
+				goto reap;
+			}
+		}
 
 		if (td->o.io_submit_mode == IO_MODE_OFFLOAD) {
 			const unsigned long long blen = io_u->xfer_buflen;
@@ -1498,10 +1555,11 @@ int init_io_u_buffers(struct thread_data *td)
 
 	/*
 	 * For reads, writes, and multi-range trim operations we need a
-	 * data buffer
+	 * data buffer. Also need buffer if we're verifying trimmed data.
 	 */
 	if (td_ioengine_flagged(td, FIO_NOIO) ||
-	    !(td_read(td) || td_write(td) || (td_trim(td) && td->o.num_range > 1)))
+	    !(td_read(td) || td_write(td) || (td_trim(td) && td->o.num_range > 1) ||
+	      (td_trim(td) && td->o.do_verify && td->o.trim_zero)))
 		data_xfer = 0;
 
 	/*
@@ -1849,6 +1907,25 @@ static void *thread_main(void *data)
 		goto err;
 	}
 
+	if (o->verify_table_id > 0) {
+		td->shared_verify_table = get_shared_verify_table(o->verify_table_id);
+		if (!td->shared_verify_table) {
+			td_verror(td, ENOMEM, "failed to get shared verify table");
+			goto err;
+		}
+
+		if ((td_write(td) || td_trim(td)))
+			atomic_fetch_add(&td->shared_verify_table->write_jobs_active, 1);
+
+		/*
+		 * Load saved skiplist data from verify state if available.
+		 * Only the first job for this table should load to avoid
+		 * duplicate load attempts and error messages.
+		 */
+		if (is_first_job_for_table(td, td->shared_verify_table))
+			verify_load_state_skiplist(td);
+	}
+
 	td_set_runstate(td, TD_INITIALIZED);
 	dprint(FD_MUTEX, "up startup_sem\n");
 	fio_sem_up(startup_sem);
@@ -2066,9 +2143,12 @@ static void *thread_main(void *data)
 
 		prune_io_piece_log(td);
 
-		if (td->o.verify_only && td_write(td))
-			verify_bytes = do_dry_run(td);
-		else {
+		if (td->o.verify_only && (td_write(td) || td_trim(td))) {
+			if (!td->shared_verify_table && td_write(td))
+				verify_bytes = do_dry_run(td);
+			else
+				verify_bytes = atomic_load(&td->shared_verify_table->total_entries) * td->o.bs[DDIR_WRITE];
+		} else {
 			if (!td->o.rand_repeatable)
 				/* save verify rand state to replay hdr seeds later at verify */
 				frand_copy(&td->verify_state_last_do_io, &td->verify_state);
@@ -2124,6 +2204,10 @@ static void *thread_main(void *data)
 		fio_gettime(&td->start, NULL);
 		fio_sem_up(stat_sem);
 
+		if (td->shared_verify_table && td->o.do_verify &&
+				(td_write(td) || td_trim(td)))
+			atomic_fetch_add(&td->shared_verify_table->write_jobs_done, 1);
+
 		if (td->error || td->terminate)
 			break;
 
@@ -2131,6 +2215,18 @@ static void *thread_main(void *data)
 		    o->verify == VERIFY_NONE ||
 		    td_ioengine_flagged(td, FIO_UNIDIR))
 			continue;
+
+		/*
+		 * If --verify_table_id= is given, only one job can win the
+		 * race among write jobs and verify the entire io pieces at
+		 * once.  Until the verify job is done, wait here.
+		 */
+		if (td->shared_verify_table) {
+			int expected = 0;
+
+			if (!atomic_compare_exchange_strong(&td->shared_verify_table->verify_done, &expected, 1))
+				break;
+		}
 
 		clear_io_state(td, 0);
 
@@ -2184,8 +2280,30 @@ static void *thread_main(void *data)
 	}
 
 	if (td->o.verify_state_save && !(td->flags & TD_F_VSTATE_SAVED) &&
-	    (td->o.verify != VERIFY_NONE && td_write(td)))
-		verify_save_state(td->thread_number);
+	    (td->o.verify != VERIFY_NONE && !td->o.verify_only &&
+	     (td_write(td) || td_trim(td)))) {
+		/* For shared_verify_table, only the first job saves state */
+		if (td->shared_verify_table) {
+			struct shared_verify_table *table = td->shared_verify_table;
+
+			/* Signal this write job is done */
+			atomic_fetch_add(&table->write_jobs_done, 1);
+
+			/* Only save if this is the first job for this table */
+			if (is_first_job_for_table(td, table)) {
+				int active;
+
+				/* Wait for all write jobs to complete before saving state */
+				active = atomic_load(&table->write_jobs_active);
+				while (atomic_load(&table->write_jobs_done) < active)
+					usleep(1000);  /* Sleep 1ms */
+
+				verify_save_state(td->thread_number);
+			}
+		} else {
+			verify_save_state(td->thread_number);
+		}
+	}
 
 	fio_unpin_memory(td);
 
@@ -2207,6 +2325,11 @@ err:
 
 	if (o->verify_async)
 		verify_async_exit(td);
+
+	if (td->shared_verify_table) {
+		put_shared_verify_table(td->shared_verify_table);
+		td->shared_verify_table = NULL;
+	}
 
 	close_and_free_files(td);
 	cleanup_io_u(td);
@@ -2411,6 +2534,16 @@ static int fio_verify_load_state(struct thread_data *td)
 	int ret;
 
 	if (!td->o.verify_state)
+		return 0;
+
+	/*
+	 * For shared verify tables, only the first job should load state
+	 * to avoid duplicate load attempts and error messages.
+	 * Use verify_table_id instead of shared_verify_table pointer since
+	 * this function may be called before shared_verify_table is initialized.
+	 */
+	if (td->o.verify_table_id > 0 &&
+	    !is_first_job_for_table_id(td, td->o.verify_table_id))
 		return 0;
 
 	if (is_backend) {

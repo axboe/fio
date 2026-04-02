@@ -2206,6 +2206,8 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 		}
 	} else if (io_u->error) {
 error:
+		if (io_u->flags & IO_U_F_ERRORED)
+			return;
 		icd->error = io_u->error;
 		io_u_log_error(td, io_u);
 	}
