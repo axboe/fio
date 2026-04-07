@@ -2209,6 +2209,7 @@ err:
 		verify_async_exit(td);
 
 	close_and_free_files(td);
+	prune_io_piece_log(td);
 	cleanup_io_u(td);
 	close_ioengine(td);
 	cgroup_shutdown(td, cgroup_mnt);
