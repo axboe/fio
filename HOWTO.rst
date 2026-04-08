@@ -2379,6 +2379,11 @@ I/O engine
 			several instances to access the same device or file
 			simultaneously, but allow it for threads.
 
+		**page_fault**
+			I/O engine that uses an mmap region to simulate data transfer by
+			allocating anonymous memory and copying data on read/write to
+			intentionally trigger page faults.
+
 	File/directory operation engines define how the job operates file or directory. The
 	following types are defined:
 
