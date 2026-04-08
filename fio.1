@@ -2168,6 +2168,11 @@ instance is used per process, so all jobs setting option \fBthread\fR will share
 a single instance (with one queue per thread) and must specify compatible
 options. Note that some drivers don't allow several instances to access the same
 device or file simultaneously, but allow it for threads.
+.TP
+.B page_fault
+I/O engine that uses an mmap region to simulate data transfer by allocating
+anonymous memory and copying data on read/write to intentionally trigger page
+faults.
 .RE
 .P
 File/directory operation engines define how the job operates file or directory.
