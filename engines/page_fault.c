@@ -48,8 +48,9 @@ static int fio_page_fault_init(struct thread_data *td)
 static enum fio_q_status fio_page_fault_queue(struct thread_data *td,
 					      struct io_u *io_u)
 {
-	void *mmap_head;
 	struct fio_page_fault_data *fpd = td->io_ops_data;
+	void *mmap_head;
+
 	if (!fpd) {
 		io_u->error = EINVAL;
 		return FIO_Q_COMPLETED;
