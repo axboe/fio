@@ -26,6 +26,7 @@ static int sleep_accuracy_ms;
 static int timerfd = -1;
 
 enum action {
+	A_NOOP		= 0,
 	A_EXIT		= 1,
 	A_RESET		= 2,
 	A_DO_STAT	= 3,
@@ -222,6 +223,8 @@ static uint8_t wait_for_action(int fd, unsigned int timeout_ms)
 #endif
 	res = select(max(fd, timerfd) + 1, &rfds, NULL, &efds,
 		     timerfd >= 0 ? NULL : &timeout);
+	if (res == -1 && errno == EINTR)
+		return A_NOOP;
 	if (res < 0) {
 		log_err("fio: select() call in helper thread failed: %s",
 			strerror(errno));
