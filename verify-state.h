@@ -35,7 +35,8 @@ struct thread_io_list {
 	uint32_t depth;
 	uint32_t nofiles;
 	uint64_t numberio;
-	uint64_t index;
+	uint32_t index;
+	uint32_t no_fails;
 	struct thread_rand_state rand;
 	uint8_t name[64];
 	struct file_comp comps[0];
@@ -66,14 +67,14 @@ extern int verify_state_should_stop(struct thread_data *, struct io_u *);
 extern void verify_assign_state(struct thread_data *, void *);
 extern int verify_state_hdr(struct verify_state_hdr *, struct thread_io_list *);
 
-static inline size_t __thread_io_list_sz(uint32_t depth, uint32_t nofiles)
+static inline size_t __thread_io_list_sz(uint64_t depth, uint32_t nofiles)
 {
 	return sizeof(struct thread_io_list) + depth * nofiles * sizeof(struct file_comp);
 }
 
 static inline size_t thread_io_list_sz(struct thread_io_list *s)
 {
-	return __thread_io_list_sz(le32_to_cpu(s->depth), le32_to_cpu(s->nofiles));
+	return __thread_io_list_sz((uint64_t)le32_to_cpu(s->depth) + le32_to_cpu(s->no_fails), le32_to_cpu(s->nofiles));
 }
 
 static inline struct thread_io_list *io_list_next(struct thread_io_list *s)

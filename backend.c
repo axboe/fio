@@ -1222,6 +1222,9 @@ static void free_file_completion_logging(struct thread_data *td)
 		if (!f->last_write_comp)
 			break;
 		sfree(f->last_write_comp);
+		if (!f->last_write_fail_comp)
+			break;
+		sfree(f->last_write_fail_comp);
 	}
 }
 
@@ -1237,6 +1240,9 @@ static int init_file_completion_logging(struct thread_data *td,
 	for_each_file(td, f, i) {
 		f->last_write_comp = scalloc(depth, sizeof(uint64_t));
 		if (!f->last_write_comp)
+			goto cleanup;
+		f->last_write_fail_comp = scalloc(depth, sizeof(uint64_t));
+		if (!f->last_write_fail_comp)
 			goto cleanup;
 	}
 

@@ -2078,6 +2078,21 @@ static void file_log_write_comp(const struct thread_data *td, struct fio_file *f
 		f->last_write_idx = 0;
 }
 
+static void file_log_write_fail_comp(const struct thread_data *td, struct fio_file *f,
+				uint64_t offset)
+{
+	int idx;
+
+	if (!f)
+		return;
+
+	if (!f->last_write_fail_comp)
+		return;
+
+	idx = f->last_write_fail_idx++;
+	f->last_write_fail_comp[idx] = offset;
+}
+
 static bool should_account(struct thread_data *td)
 {
 	return ramp_time_over(td) && (td->runstate == TD_RUNNING ||
@@ -2169,6 +2184,8 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 	} else if (io_u->error) {
 error:
 		icd->error = io_u->error;
+		if (ddir == DDIR_WRITE)
+			file_log_write_fail_comp(td, f, io_u->offset);
 		io_u_log_error(td, io_u);
 	}
 	if (icd->error) {

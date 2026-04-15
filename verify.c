@@ -1543,7 +1543,7 @@ int paste_blockoff(char *buf, unsigned int len, void *priv)
 
 static int __fill_file_completions(struct thread_data *td,
 				   struct thread_io_list *s,
-				   struct fio_file *f, unsigned int *index)
+				   struct fio_file *f, unsigned int *index, unsigned int *failindex)
 {
 	unsigned int comps;
 	int i, j;
@@ -1565,19 +1565,27 @@ static int __fill_file_completions(struct thread_data *td,
 		(*index)++;
 		j--;
 	}
-
+	if (f->last_write_fail_idx > 0) {
+		j = f->last_write_fail_idx - 1;
+		for (i = 0; i < f->last_write_fail_idx; i++) {
+			s->comps[comps + *failindex].fileno = __cpu_to_le64(f->fileno);
+			s->comps[comps + *failindex].offset = cpu_to_le64(f->last_write_fail_comp[j]);
+			(*failindex)++;
+			j--;
+		}
+	}
 	return comps;
 }
 
 static int fill_file_completions(struct thread_data *td,
-				 struct thread_io_list *s, unsigned int *index)
+				 struct thread_io_list *s, unsigned int *index, unsigned int *failindex)
 {
 	struct fio_file *f;
 	unsigned int i;
 	int comps = 0;
 
 	for_each_file(td, f, i)
-		comps += __fill_file_completions(td, s, f, index);
+		comps += __fill_file_completions(td, s, f, index, failindex);
 
 	return comps;
 }
@@ -1602,7 +1610,7 @@ struct all_io_list *get_all_io_list(int save_mask, size_t *sz)
 			continue;
 		td->stop_io = 1;
 		td->flags |= TD_F_VSTATE_SAVED;
-		depth += (td->o.iodepth * td->o.nr_files);
+		depth += (2 * td->o.iodepth * td->o.nr_files);
 		nr++;
 	} end_for_each();
 
@@ -1619,18 +1627,19 @@ struct all_io_list *get_all_io_list(int save_mask, size_t *sz)
 	next = &rep->state[0];
 	for_each_td(td) {
 		struct thread_io_list *s = next;
-		unsigned int comps, index = 0;
+		unsigned int comps, index = 0, failindex = 0;
 
 		if (save_mask != IO_LIST_ALL && (__td_index + 1) != save_mask)
 			continue;
 
-		comps = fill_file_completions(td, s, &index);
+		comps = fill_file_completions(td, s, &index, &failindex);
 
 		s->no_comps = cpu_to_le64((uint64_t) comps);
 		s->depth = cpu_to_le32((uint32_t) td->o.iodepth);
 		s->nofiles = cpu_to_le32((uint32_t) td->o.nr_files);
 		s->numberio = cpu_to_le64((uint64_t) td->io_issues[DDIR_WRITE]);
-		s->index = cpu_to_le64((uint64_t) __td_index);
+		s->index = cpu_to_le32((uint32_t) __td_index);
+		s->no_fails = cpu_to_le32((uint32_t) failindex);
 		if (td->random_state.use64) {
 			s->rand.state64.s[0] = cpu_to_le64(td->random_state.state64.s1);
 			s->rand.state64.s[1] = cpu_to_le64(td->random_state.state64.s2);
@@ -1762,6 +1771,7 @@ void verify_assign_state(struct thread_data *td, void *p)
 	s->nofiles = le32_to_cpu(s->nofiles);
 	s->numberio = le64_to_cpu(s->numberio);
 	s->rand.use64 = le64_to_cpu(s->rand.use64);
+	s->no_fails = le32_to_cpu(s->no_fails);
 
 	if (s->rand.use64) {
 		for (i = 0; i < 6; i++)
@@ -1771,7 +1781,7 @@ void verify_assign_state(struct thread_data *td, void *p)
 			s->rand.state32.s[i] = le32_to_cpu(s->rand.state32.s[i]);
 	}
 
-	for (i = 0; i < s->no_comps; i++) {
+	for (i = 0; i < s->no_comps + s->no_fails; i++) {
 		s->comps[i].fileno = le64_to_cpu(s->comps[i].fileno);
 		s->comps[i].offset = le64_to_cpu(s->comps[i].offset);
 	}
@@ -1872,10 +1882,19 @@ int verify_state_should_stop(struct thread_data *td, struct io_u *io_u)
 	 * If we're not into the window of issues - depth yet, continue. If
 	 * issue is shorter than depth, do check.
 	 */
-	if ((td->io_blocks[DDIR_READ] < s->depth ||
-	    s->numberio - td->io_blocks[DDIR_READ] > s->depth) &&
-	    s->numberio > s->depth)
-		return 0;
+	if ((td->io_blocks[DDIR_READ] < (s->depth + s->no_fails) ||
+	    s->numberio - td->io_blocks[DDIR_READ] > (s->depth + s->no_fails)) &&
+	    s->numberio > (s->depth + s->no_fails)) {
+		if ((s->numberio - td->io_blocks[DDIR_READ] < (s->depth + s->no_fails)) || (td->io_blocks[DDIR_READ] < (s->depth + s->no_fails))) {
+			for (i = 0; i < s->no_fails; i++) {
+				if (s->comps[i + s->no_comps].fileno != f->fileno)
+					continue;
+				if (io_u->verify_offset == s->comps[i + s->no_comps].offset)
+					return 1;
+			}
+		}
+		return 0;		
+	}
 
 	/*
 	 * We're in the window of having to check if this io was
@@ -1889,6 +1908,13 @@ int verify_state_should_stop(struct thread_data *td, struct io_u *io_u)
 			return 0;
 	}
 
+	for (i = 0; i < s->no_fails; i++) {
+		if (s->comps[i + s->no_comps].fileno != f->fileno)
+			continue;
+		if (io_u->verify_offset == s->comps[i + s->no_comps].offset)
+			return 1;
+	}
+	
 	/*
 	 * Not found, we have to stop
 	 */

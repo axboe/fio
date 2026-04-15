@@ -128,6 +128,8 @@ struct fio_file {
 	 */
 	uint64_t *last_write_comp;
 	unsigned int last_write_idx;
+	uint64_t *last_write_fail_comp;
+	unsigned int last_write_fail_idx;
 
 	/*
 	 * For use by the io engine to store offset

@@ -48,7 +48,7 @@ static void show(struct thread_io_list *s, size_t size)
 		s->depth = le32_to_cpu(s->depth);
 		s->nofiles = le32_to_cpu(s->nofiles);
 		s->numberio = le64_to_cpu(s->numberio);
-		s->index = le64_to_cpu(s->index);
+		s->index = le32_to_cpu(s->index);
 
 		for (i = 0; i < s->no_comps; i++) {
 			s->comps[i].fileno = le64_to_cpu(s->comps[i].fileno);
