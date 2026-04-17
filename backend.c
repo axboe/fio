@@ -1104,11 +1104,8 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 	if (td_write(td) && td_random(td) && td->o.norandommap)
 		total_bytes = max(total_bytes, (uint64_t) td->o.io_size);
 
-	/*
-	 * Don't break too early if io_size > size. The exception is when
-	 * verify is enabled.
-	 */
-	if (td_rw(td) && !td_random(td) && td->o.verify == VERIFY_NONE)
+	/* Don't break too early if io_size > size */
+	if (td_write(td) && !td_random(td))
 		total_bytes = max(total_bytes, (uint64_t)td->o.io_size);
 
 	/*
