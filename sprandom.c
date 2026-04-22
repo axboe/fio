@@ -533,7 +533,7 @@ static uint64_t sprandom_physical_size(double over_provisioning, uint64_t logica
 	uint64_t size;
 
 	size = logical_sz + ceil((double)logical_sz * over_provisioning);
-	return (size + (align_bs - 1)) & ~(align_bs - 1);
+	return size - (size % align_bs);
 }
 
 /**
@@ -839,12 +839,6 @@ int sprandom_init(struct thread_data *td, struct fio_file *f)
 
 	if (!td->o.sprandom)
 		return 0;
-
-	if (!is_power_of_2(align_bs)) {
-		log_err("fio: sprandom: bs [%"PRIu64"] should be power of 2",
-			align_bs);
-		return -EINVAL;
-	}
 
 	info = calloc(1, sizeof(*info));
 	if (!info)
