@@ -1676,7 +1676,13 @@ struct all_io_list *get_all_io_list(int save_mask, size_t *sz)
 		if (save_mask != IO_LIST_ALL && (__td_index + 1) != save_mask)
 			continue;
 
-		for (int i = 0; i < td->o.iodepth; i++)
+		/*
+		 * This can be called even if --verify=none &&
+		 * --verify_state_save=0 case especially when
+		 *  --trigger-timeout= is given and it's expired.  In this
+		 *  case, td->inflight_numberio == NULL, so we should check it.
+		 */
+		for (int i = 0; td->inflight_numberio && i < td->o.iodepth; i++)
 			s->inflight[i].numberio = cpu_to_le64(atomic_load_acquire(&td->inflight_numberio[i]));
 
 		s->depth = cpu_to_le32((uint32_t) td->o.iodepth);
