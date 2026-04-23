@@ -1682,6 +1682,13 @@ struct all_io_list *get_all_io_list(int save_mask, size_t *sz)
 		for (int i = 0; td->inflight_numberio && i < td->o.iodepth; i++)
 			s->inflight[i].numberio = cpu_to_le64(atomic_load_acquire(&td->inflight_numberio[i]));
 
+		if (td->o.verify_policy & VERIFY_POLICY_FSYNCED)
+			/* 0 means no fsync happened; verify_state_should_stop treats 0 as "stop all" */
+			s->numberio = td->safe_inflight_issued ?
+				cpu_to_le64(td->safe_inflight_issued - 1) : 0;
+		else
+			s->numberio = cpu_to_le64((uint64_t) atomic_load_acquire(&td->inflight_issued));
+
 		/* Then, append failed I/Os to exclude them from verification */
 		for (unsigned int i = 0; i < td->failed_numberio_count; i++) {
 			s->inflight[td->o.iodepth + i].numberio = cpu_to_le64(td->failed_numberio[i]);
@@ -1691,7 +1698,7 @@ struct all_io_list *get_all_io_list(int save_mask, size_t *sz)
 
 		total_depth = td->o.iodepth + td->failed_numberio_count;
 		s->depth = cpu_to_le32((uint32_t) total_depth);
-		s->numberio = cpu_to_le64((uint64_t) atomic_load_acquire(&td->inflight_issued));
+		s->verify_policy = cpu_to_le32(td->o.verify_policy);
 		s->index = cpu_to_le64((uint64_t) __td_index);
 		if (td->offset_state.use64) {
 			s->rand.state64.s[0] = cpu_to_le64(td->offset_state.state64.s1);
@@ -1832,6 +1839,7 @@ void verify_assign_state(struct thread_data *td, void *p)
 	int i;
 
 	s->depth = le32_to_cpu(s->depth);
+	s->verify_policy = le32_to_cpu(s->verify_policy);
 	s->numberio = le64_to_cpu(s->numberio);
 	s->rand.use64 = le64_to_cpu(s->rand.use64);
 
@@ -1989,8 +1997,18 @@ int verify_state_should_stop(struct thread_data *td, uint64_t numberio)
 	int i;
 
 	dprint(FD_VERIFY, "verify_state_should_stop numberio=%"PRIu64"\n", numberio);
-	if (!s)
+	if (!s) {
+		/*
+		 * If verify state is NULL, it means that the current verify
+		 * sessfion is online verification.  We can simply see the cached
+		 * value in @td only in case of --verify_policy=fsynced and there was
+		 * at least one fsync happened.
+		 */
+		if (td->o.verify_policy & VERIFY_POLICY_FSYNCED)
+			return !td->safe_inflight_issued ||
+				numberio >= td->safe_inflight_issued - 1;
 		return 0;
+	}
 
 	/* If the current seq is lower than the max issued seq, check to make sure
 	 * the write was not inflight (but exclude failed writes, they should be skipped not stopped).

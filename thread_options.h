@@ -143,6 +143,7 @@ struct thread_options {
 	unsigned int sync_io;
 	unsigned int write_hint;
 	unsigned int verify;
+	unsigned int verify_policy;
 	unsigned int do_verify;
 	unsigned int verify_interval;
 	unsigned int verify_offset;
@@ -485,6 +486,7 @@ struct thread_options_pack {
 	uint32_t sync_io;
 	uint32_t write_hint;
 	uint32_t verify;
+	uint32_t verify_policy;
 	uint32_t do_verify;
 	uint32_t verify_interval;
 	uint32_t verify_offset;
@@ -535,6 +537,7 @@ struct thread_options_pack {
 
 	struct zone_split zone_split[DDIR_RWDIR_CNT][ZONESPLIT_MAX];
 	uint32_t zone_split_nr[DDIR_RWDIR_CNT];
+	uint32_t pad3;
 
 	fio_fp64_t zipf_theta;
 	fio_fp64_t pareto_h;

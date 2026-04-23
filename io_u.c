@@ -2174,6 +2174,7 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 	if (ddir_sync(ddir)) {
 		if (io_u->error)
 			goto error;
+		on_fsync_completed(td, io_u);
 		if (f) {
 			f->first_write = -1ULL;
 			f->last_write = -1ULL;

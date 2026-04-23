@@ -1114,6 +1114,46 @@ void clear_inflight(struct thread_data *td)
 }
 
 /*
+ * Called just before an fsync is submitted with verify_policy=fsynced.  Captures
+ * the current inflight_issued as the safe threshold for this fsync.
+ *
+ * The threshold must be captured here, at submission time, not at completion
+ * time: in async engines (e.g. io_uring_cmd) new writes may be submitted
+ * after the fsync SQE, so reading inflight_issued at completion would
+ * include those post-fsync writes in the safe set.  The captured value is
+ * stored in io_u->numberio and transferred to safe_inflight_issued only
+ * when the fsync successfully completes.
+ */
+void on_fsync_submitted(struct thread_data *td, struct io_u *io_u)
+{
+	if (!(td->o.verify_policy & VERIFY_POLICY_FSYNCED) || !td->inflight_numberio)
+		return;
+
+	io_u->numberio = atomic_load_acquire(&td->inflight_issued);
+
+	dprint(FD_VERIFY, "on_fsync_submitted: threshold=%"PRIu64"\n",
+		io_u->numberio);
+}
+
+/*
+ * Called when an fsync successfully completes with verify_policy=fsynced.
+ * Transfers the threshold captured at submission time to safe_inflight_issued.
+ * Store threshold+1 so that 0 remains the "no completed fsync" sentinel.
+ * Take the max so that out-of-order completions never lower the threshold.
+ */
+void on_fsync_completed(struct thread_data *td, struct io_u *io_u)
+{
+	if (!(td->o.verify_policy & VERIFY_POLICY_FSYNCED) || !td->inflight_numberio)
+		return;
+
+	if (io_u->numberio + 1 > td->safe_inflight_issued)
+		td->safe_inflight_issued = io_u->numberio + 1;
+
+	dprint(FD_VERIFY, "on_fsync_completed: threshold=%"PRIu64", safe_issued=%"PRIu64"\n",
+		io_u->numberio, td->safe_inflight_issued);
+}
+
+/*
  * Main IO worker function. It retrieves io_u's to process and queues
  * and reaps them, checking for rate and errors along the way.
  *
@@ -1223,7 +1263,8 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 				populate_verify_io_u(td, io_u);
 				log_inflight(td, io_u);
 			}
-		}
+		} else if (ddir_sync(io_u->ddir))
+			on_fsync_submitted(td, io_u);
 
 		ddir = io_u->ddir;
 
@@ -1422,6 +1463,7 @@ static int init_inflight_logging(struct thread_data *td)
 	for (i = 0; i < td->o.iodepth; i++)
 		td->inflight_numberio[i] = INVALID_NUMBERIO;
 
+	td->safe_inflight_issued = 0;
 	return 0;
 }
 
@@ -1832,7 +1874,8 @@ static uint64_t do_dry_run(struct thread_data *td)
 		    td->o.do_verify &&
 		    td->o.verify != VERIFY_NONE &&
 		    !td->o.experimental_verify) {
-			if (!verify_state_should_skip(td, io_u->numberio))
+			if (!verify_state_should_skip(td, io_u->numberio) &&
+			    !verify_state_should_stop(td, io_u->numberio))
 				log_io_piece(td, io_u);
 		}
 
