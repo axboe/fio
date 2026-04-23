@@ -1682,6 +1682,28 @@ struct all_io_list *get_all_io_list(int save_mask, size_t *sz)
 		for (int i = 0; td->inflight_numberio && i < td->o.iodepth; i++)
 			s->inflight[i].numberio = cpu_to_le64(atomic_load_acquire(&td->inflight_numberio[i]));
 
+		/*
+		 * Offline verify jobs stop under two conditions:
+		 *   1. fio tries to queue a write that was still inflight when
+		 *      the state was saved.
+		 *   2. fio tries to queue a write whose numberio exceeds the max
+		 *      numberio recorded in the state file (s->numberio).
+		 */
+		if (td->o.verify_policy & VERIFY_POLICY_FSYNCED) {
+			/*
+			 * For `verify_policy=fsynced`, store safe inflight
+			 * threshold numberio to terminate verification due to
+			 * condition 2.  If no fsync has completed yet, store 0
+			 * so that condition 2 stops all verification
+			 * immediately.
+			 */
+			if (td->safe_inflight_issued)
+				s->numberio = cpu_to_le64(td->safe_inflight_issued - 1);
+			else
+				s->numberio = 0;
+		} else
+			s->numberio = cpu_to_le64((uint64_t) atomic_load_acquire(&td->inflight_issued));
+
 		/* Then, append failed I/Os to exclude them from verification */
 		for (unsigned int i = 0; i < td->failed_numberio_count; i++) {
 			s->inflight[td->o.iodepth + i].numberio = cpu_to_le64(td->failed_numberio[i]);
@@ -1691,7 +1713,6 @@ struct all_io_list *get_all_io_list(int save_mask, size_t *sz)
 
 		total_depth = td->o.iodepth + td->failed_numberio_count;
 		s->depth = cpu_to_le32((uint32_t) total_depth);
-		s->numberio = cpu_to_le64((uint64_t) atomic_load_acquire(&td->inflight_issued));
 		s->index = cpu_to_le64((uint64_t) __td_index);
 		if (td->offset_state.use64) {
 			s->rand.state64.s[0] = cpu_to_le64(td->offset_state.state64.s1);
@@ -1990,8 +2011,19 @@ int verify_state_should_stop(struct thread_data *td, uint64_t numberio)
 	int i;
 
 	dprint(FD_VERIFY, "verify_state_should_stop numberio=%"PRIu64"\n", numberio);
-	if (!s)
+	if (!s) {
+		/*
+		 * If verify state is NULL, it means that the current verify
+		 * session is online verification.  We can simply see the cached
+		 * value in @td only in case of --verify_policy=fsynced and there was
+		 * at least one fsync happened.
+		 */
+		if (td->o.verify_policy & VERIFY_POLICY_FSYNCED) {
+			return !td->safe_inflight_issued ||
+				numberio >= td->safe_inflight_issued - 1;
+		}
 		return 0;
+	}
 
 	/* If the current seq is lower than the max issued seq, check to make sure
 	 * the write was not inflight (but exclude failed writes, they should be skipped not stopped).

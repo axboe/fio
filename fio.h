@@ -385,6 +385,7 @@ struct thread_data {
 	uint64_t *inflight_numberio;
 	unsigned int next_inflight_numberio_idx;
 	uint64_t inflight_issued;
+	uint64_t safe_inflight_issued;		/* threshold+1 from last completed fsync (0 = no fsync yet), for verify_policy=fsynced */
 
 	/*
 	 * Track failed write I/Os for offline verification (to exclude from verify state)
@@ -804,6 +805,8 @@ extern void lat_target_reset(struct thread_data *);
 extern void log_inflight(struct thread_data *, struct io_u *);
 extern void invalidate_inflight(struct thread_data *, struct io_u *);
 extern void clear_inflight(struct thread_data *);
+extern void on_fsync_submitted(struct thread_data *, struct io_u *);
+extern void on_fsync_completed(struct thread_data *, struct io_u *);
 
 /*
  * Iterates all threads/processes within all the defined jobs
