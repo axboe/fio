@@ -32,6 +32,12 @@ enum {
 	VERIFY_NULL,			/* pretend to verify */
 };
 
+/* Values for the verify_policy option (bitmask) */
+enum {
+	VERIFY_POLICY_NONE    = 0,
+	VERIFY_POLICY_FSYNCED = 1 << 0,	/* only verify writes covered by the last fsync */
+};
+
 /*
  * Set the high bit to distinguish versioned headers from older
  * non-versioned headers.
