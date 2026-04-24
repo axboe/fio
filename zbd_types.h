@@ -26,6 +26,7 @@ enum zbd_zone_type {
 	ZBD_ZONE_TYPE_CNV	= 0x1,	/* Conventional */
 	ZBD_ZONE_TYPE_SWR	= 0x2,	/* Sequential write required */
 	ZBD_ZONE_TYPE_SWP	= 0x3,	/* Sequential write preferred */
+	ZBD_ZONE_TYPE_SOBR	= 0x4,	/* Sequential Of Before Required */
 };
 
 /*

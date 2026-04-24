@@ -240,6 +240,9 @@ static int libzbc_report_zones(struct thread_data *td, struct fio_file *f,
 		case ZBC_ZT_SEQUENTIAL_PREF:
 			zbdz->type = ZBD_ZONE_TYPE_SWP;
 			break;
+		case ZBC_ZT_SEQ_OR_BEF_REQ:
+			zbdz->type = ZBD_ZONE_TYPE_SOBR;
+			break;
 		default:
 			td_verror(td, errno, "invalid zone type");
 			log_err("%s: invalid type for zone at sector %llu.\n",

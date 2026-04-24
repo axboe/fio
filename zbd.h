@@ -44,7 +44,7 @@ struct fio_zone_info {
 	uint64_t		capacity;
 	uint32_t		writes_in_flight;
 	uint32_t		max_write_error_offset;
-	enum zbd_zone_type	type:2;
+	enum zbd_zone_type	type:4;
 	enum zbd_zone_cond	cond:4;
 	unsigned int		has_wp:1;
 	unsigned int		write:1;
