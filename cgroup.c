@@ -18,6 +18,32 @@ struct cgroup_member {
 	unsigned int cgroup_nodelete;
 };
 
+static char *cgroup_path(struct thread_data *td, const char *path,
+			 const char *name, const char *onerr)
+{
+	size_t path_len = strlen(path);
+	size_t name_len = strlen(name);
+	size_t len;
+	char *str;
+	int err;
+
+	if (path_len > SIZE_MAX - name_len - 2) {
+		td_verror(td, ENAMETOOLONG, onerr);
+		return NULL;
+	}
+
+	len = path_len + name_len + 2;
+	str = malloc(len);
+	if (!str) {
+		err = errno;
+		td_verror(td, err, onerr);
+		return NULL;
+	}
+
+	snprintf(str, len, "%s/%s", path, name);
+	return str;
+}
+
 static struct cgroup_mnt *find_cgroup_mnt(struct thread_data *td)
 {
 	struct cgroup_mnt *cgroup_mnt = NULL;
@@ -113,32 +139,35 @@ void cgroup_kill(struct flist_head *clist)
 
 static char *get_cgroup_root(struct thread_data *td, struct cgroup_mnt *mnt)
 {
-	char *str = malloc(64);
-
 	if (td->o.cgroup)
-		sprintf(str, "%s/%s", mnt->path, td->o.cgroup);
+		return cgroup_path(td, mnt->path, td->o.cgroup,
+				   "cgroup root path");
 	else
-		sprintf(str, "%s/%s", mnt->path, td->o.name);
-
-	return str;
+		return cgroup_path(td, mnt->path, td->o.name,
+				   "cgroup root path");
 }
 
 static int write_int_to_file(struct thread_data *td, const char *path,
 			     const char *filename, unsigned int val,
 			     const char *onerr)
 {
-	char tmp[256];
+	char *tmp;
 	FILE *f;
 
-	sprintf(tmp, "%s/%s", path, filename);
+	tmp = cgroup_path(td, path, filename, onerr);
+	if (!tmp)
+		return 1;
+
 	f = fopen(tmp, "w");
 	if (!f) {
+		free(tmp);
 		td_verror(td, errno, onerr);
 		return 1;
 	}
 
 	fprintf(f, "%u", val);
 	fclose(f);
+	free(tmp);
 	return 0;
 
 }
@@ -178,6 +207,9 @@ int cgroup_setup(struct thread_data *td, struct flist_head *clist, struct cgroup
 	 * Create container, if it doesn't exist
 	 */
 	root = get_cgroup_root(td, *mnt);
+	if (!root)
+		return 1;
+
 	if (mkdir(root, 0755) < 0) {
 		int __e = errno;
 

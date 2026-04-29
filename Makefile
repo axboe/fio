@@ -455,6 +455,12 @@ UT_OBJS += unittests/oslib/strlcat.o
 UT_OBJS += unittests/oslib/strndup.o
 UT_OBJS += unittests/oslib/strcasestr.o
 UT_OBJS += unittests/oslib/strsep.o
+ifeq ($(CONFIG_TARGET_OS), Linux)
+UT_OBJS += unittests/cgroup.o
+endif
+ifeq ($(CONFIG_TARGET_OS), Android)
+UT_OBJS += unittests/cgroup.o
+endif
 UT_TARGET_OBJS = lib/memalign.o
 UT_TARGET_OBJS += lib/num2str.o
 UT_TARGET_OBJS += lib/strntol.o
