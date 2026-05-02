@@ -1848,6 +1848,7 @@ static uint64_t do_dry_run(struct thread_data *td)
 	while ((td->o.read_iolog_file && !flist_empty(&td->io_log_list)) ||
 		(!flist_empty(&td->trim_list)) || !io_complete_bytes_exceeded(td)) {
 		struct io_u *io_u;
+		uint64_t numberio;
 		int ret;
 
 		if (td->terminate || td->done)
@@ -1857,13 +1858,25 @@ static uint64_t do_dry_run(struct thread_data *td)
 		if (IS_ERR_OR_NULL(io_u))
 			break;
 
+		/*
+		 * Check numberio quickly and determinte whether go or no-go
+		 * since write phase might have terminated in the middle of the
+		 * session.
+		 */
+		if (ddir_rw(acct_ddir(io_u))) {
+			numberio = td->io_issues[acct_ddir(io_u)];
+			if (verify_state_should_stop(td, numberio)) {
+				put_io_u(td, io_u);
+				break;
+			}
+
+			io_u->numberio = numberio;
+			td->io_issues[acct_ddir(io_u)]++;
+		}
+
 		io_u_set(td, io_u, IO_U_F_FLIGHT);
 		io_u->error = 0;
 		io_u->resid = 0;
-		if (ddir_rw(acct_ddir(io_u))) {
-			io_u->numberio = td->io_issues[acct_ddir(io_u)];
-			td->io_issues[acct_ddir(io_u)]++;
-		}
 
 		if (ddir_rw(io_u->ddir)) {
 			io_u_mark_depth(td, 1);
