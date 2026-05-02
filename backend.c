@@ -2175,9 +2175,11 @@ static void *thread_main(void *data)
 
 		prune_io_piece_log(td);
 
-		if (td->o.verify_only && td_write(td))
+		if (td->o.verify_only && td_write(td)) {
 			verify_bytes = do_dry_run(td);
-		else {
+			if (!verify_bytes)
+				fio_mark_td_terminate(td);
+		} else {
 			if (!td->o.rand_repeatable)
 				/* save verify rand state to replay hdr seeds later at verify */
 				frand_copy(&td->verify_state_last_do_io, &td->verify_state);
