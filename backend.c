@@ -1791,6 +1791,15 @@ static bool keep_running(struct thread_data *td)
 		td->o.loops--;
 		return true;
 	}
+
+	/*
+	 * The verify state file may describe fewer I/Os than the job's
+	 * configured size or number_ios, so stop here rather than looping
+	 * again and re-verifying from the beginning.
+	 */
+	if (td->o.verify_only && td->vstate)
+		return false;
+
 	if (exceeds_number_ios(td))
 		return false;
 
