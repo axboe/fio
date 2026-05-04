@@ -1791,6 +1791,14 @@ static bool keep_running(struct thread_data *td)
 		td->o.loops--;
 		return true;
 	}
+
+	/*
+	 * Since `do_dry_run()` might stop before the byte limit which can't be
+	 * terminated by bytes limit.
+	 */
+	if (td->o.verify_only && td->vstate)
+		return false;
+
 	if (exceeds_number_ios(td))
 		return false;
 
