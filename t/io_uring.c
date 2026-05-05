@@ -114,10 +114,18 @@ struct submitter {
 	int per_file_depth;
 	const char *filename;
 
+	void *htlb_buf;		/* pre-assigned hugetlb buffer */
+
 	struct file files[MAX_FDS];
 	unsigned nr_files;
 	unsigned cur_file;
 	struct iovec iovecs[];
+};
+
+struct htlb_alloc {
+	char *path;		/* hugetlbfs file path */
+	void *base;		/* mmap base */
+	size_t size;		/* total mmap size */
 };
 
 static struct submitter *submitter;
@@ -149,6 +157,7 @@ static int numa_placement = 0;	/* set to node of device */
 static int vectored = 0;	/* use vectored IO */
 static int pt = 0;		/* passthrough I/O or not */
 static int restriction = 0;	/* for testing restriction filter */
+static struct htlb_alloc htlb;
 
 static unsigned long tsc_rate;
 
@@ -1034,6 +1043,11 @@ static void *allocate_mem(struct submitter *s, int size)
 {
 	void *buf;
 
+	if (s->htlb_buf) {
+		buf = s->htlb_buf;
+		s->htlb_buf = (char *)buf + size;
+		return buf;
+	}
 #ifdef CONFIG_LIBNUMA
 	if (s->numa_node != -1)
 		return numa_alloc_onnode(size, s->numa_node);
@@ -1531,6 +1545,51 @@ static void arm_sig_int(void)
 #endif
 }
 
+static int setup_hugetlb(void)
+{
+	size_t needed, per_thread;
+	struct stat st;
+	int fd, j;
+
+	fd = open(htlb.path, O_RDWR);
+	if (fd < 0) {
+		perror("open hugetlb file");
+		return -1;
+	}
+
+	if (fstat(fd, &st) < 0 || st.st_size <= 0) {
+		fprintf(stderr, "hugetlb file %s: invalid size\n", htlb.path);
+		close(fd);
+		return -1;
+	}
+
+	htlb.size = st.st_size;
+	needed = (size_t)nthreads * bs * roundup_pow2(depth);
+	if (htlb.size < needed) {
+		fprintf(stderr, "hugetlb file too small: %zu < %zu "
+			"(%d threads × %d bs × %d depth)\n",
+			htlb.size, needed, nthreads, bs, roundup_pow2(depth));
+		close(fd);
+		return -1;
+	}
+
+	htlb.base = mmap(NULL, htlb.size, PROT_READ | PROT_WRITE,
+			 MAP_SHARED | MAP_POPULATE, fd, 0);
+	close(fd);
+	if (htlb.base == MAP_FAILED) {
+		perror("mmap hugetlb file");
+		htlb.base = NULL;
+		return -1;
+	}
+
+	per_thread = bs * roundup_pow2(depth);
+	for (j = 0; j < nthreads; j++)
+		get_submitter(j)->htlb_buf = (char *)htlb.base + j * per_thread;
+
+	printf("Using hugetlb file %s, size %zu\n", htlb.path, htlb.size);
+	return 0;
+}
+
 static void usage(char *argv, int status)
 {
 	char runtime_str[16];
@@ -1556,7 +1615,8 @@ static void usage(char *argv, int status)
 		" -P <bool> : Automatically place on device home node %d\n"
 		" -V <bool> : Vectored IO, default %d\n"
 		" -e <bool> : Set restriction filter on opcodes %d\n"
-		" -u <bool> : Use nvme-passthrough I/O, default %d\n",
+		" -u <bool> : Use nvme-passthrough I/O, default %d\n"
+		" -H <path> : Use hugetlbfs file for IO buffers\n",
 		argv, DEPTH, BATCH_SUBMIT, BATCH_COMPLETE, BS, polled,
 		fixedbufs, register_files, nthreads, !buffered, do_nop,
 		stats, runtime == 0 ? "unlimited" : runtime_str, random_io, aio,
@@ -1620,7 +1680,7 @@ int main(int argc, char *argv[])
 	if (!do_nop && argc < 2)
 		usage(argv[0], 1);
 
-	while ((opt = getopt(argc, argv, "e:d:s:c:b:p:B:F:n:N:O:t:T:a:r:D:R:X:S:P:V:u:h?")) != -1) {
+	while ((opt = getopt(argc, argv, "e:d:s:c:b:p:B:F:H:n:N:O:t:T:a:r:D:R:X:S:P:V:u:h?")) != -1) {
 		switch (opt) {
 		case 'a':
 			aio = !!atoi(optarg);
@@ -1706,6 +1766,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'e':
 			restriction = !!atoi(optarg);
+			break;
+		case 'H':
+			htlb.path = strdup(optarg);
 			break;
 		case 'h':
 		case '?':
@@ -1801,6 +1864,9 @@ int main(int argc, char *argv[])
 	t_io_uring_page_size = sysconf(_SC_PAGESIZE);
 	if (t_io_uring_page_size < 0)
 		t_io_uring_page_size = 4096;
+
+	if (htlb.path && setup_hugetlb())
+		return 1;
 
 	for (j = 0; j < nthreads; j++) {
 		s = get_submitter(j);
