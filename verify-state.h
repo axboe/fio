@@ -29,7 +29,8 @@ struct inflight_write {
 
 struct thread_io_list {
 	uint32_t depth; /* I/O depth of the job that saves the verify state */
-	uint64_t numberio; /* Number of issued writes */
+	uint32_t verify_policy; /* verify_policy option value (VERIFY_POLICY_*) */
+	uint64_t numberio; /* fsync threshold (VERIFY_POLICY_FSYNCED) or total writes issued */
 	uint64_t index;
 	struct thread_rand_state rand;
 	uint8_t name[64];
@@ -41,7 +42,7 @@ struct all_io_list {
 	struct thread_io_list state[0];
 };
 
-#define VSTATE_HDR_VERSION	0x05
+#define VSTATE_HDR_VERSION	0x06
 
 struct verify_state_hdr {
 	uint64_t version;
@@ -57,6 +58,7 @@ extern void __verify_save_state(struct all_io_list *, const char *);
 extern void verify_save_state(int mask);
 extern int verify_load_state(struct thread_data *, const char *);
 extern void verify_free_state(struct thread_data *);
+extern int verify_state_should_skip(struct thread_data *, uint64_t);
 extern int verify_state_should_stop(struct thread_data *, uint64_t);
 extern void verify_assign_state(struct thread_data *, void *);
 extern int verify_state_hdr(struct verify_state_hdr *, struct thread_io_list *);

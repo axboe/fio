@@ -12,6 +12,7 @@
 #include "../log.h"
 #include "../os/os.h"
 #include "../verify-state.h"
+#include "../verify.h"
 #include "../crc/crc32c.h"
 #include "debug.h"
 
@@ -22,6 +23,7 @@ static void show_s(struct thread_io_list *s, unsigned int no_s)
 	printf("Thread:\t\t%u\n", no_s);
 	printf("Name:\t\t%s\n", s->name);
 	printf("Depth:\t\t%llu\n", (unsigned long long) s->depth);
+	printf("Verify policy:\t%s\n", s->verify_policy & VERIFY_POLICY_FSYNCED ? "fsynced" : "none");
 	printf("Number IOs:\t%llu\n", (unsigned long long) s->numberio);
 	printf("Index:\t\t%llu\n", (unsigned long long) s->index);
 
@@ -48,6 +50,7 @@ static void show(struct thread_io_list *s, size_t size)
 		int i;
 
 		s->depth = le32_to_cpu(s->depth);
+		s->verify_policy = le32_to_cpu(s->verify_policy);
 		s->numberio = le64_to_cpu(s->numberio);
 		s->index = le64_to_cpu(s->index);
 

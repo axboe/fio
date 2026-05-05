@@ -4156,6 +4156,27 @@ Verification
         used to speed up the process of writing each block on a device with its
         offset. Default: 0 (disabled).
 
+.. option:: verify_policy=str
+
+        Controls which writes are included during offline verification.  Only
+        takes effect when :option:`verify_state_save` is used to save state
+        during the write phase and a separate job later verifies with
+        :option:`verify_state_load`.
+
+        **none**
+                Verify all completed writes (default).
+
+        **fsynced**
+                Only verify writes that were covered by the last fsync.
+                Writes issued after the most recent fsync completion are
+                excluded, because they may not be persistent after a crash or
+                power loss.  fio maintains two in-flight tracking buffers;
+                on each fsync completion it snapshots the current buffer as the
+                safe set and starts accumulating subsequent writes in the other
+                buffer.  At state-save time the snapshot threshold and the
+                post-fsync in-flight list are recorded without changing the
+                state-file format.
+
 .. option:: verify_fatal=bool
 
 	Normally fio will keep checking the entire contents before quitting on a
