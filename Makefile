@@ -119,7 +119,7 @@ ifdef CONFIG_LINUX_EXT4_MOVE_EXTENT
   SOURCE += engines/e4defrag.c
 endif
 ifdef CONFIG_LIBCUFILE
-  SOURCE += engines/libcufile.c
+  SOURCE += engines/libcufile.c engines/gpuaccel.c
 endif
 ifdef CONFIG_LINUX_SPLICE
   SOURCE += engines/splice.c
