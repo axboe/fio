@@ -32,7 +32,9 @@ bool get_next_trim(struct thread_data *td, struct io_u *io_u)
 	 * If not verifying that trimmed ranges return zeroed data,
 	 * remove this from the to-read verify lists
 	 */
-	if (!td->o.trim_zero) {
+	if (ipo->flags & IP_F_TRIM_ONLY) {
+		free(ipo);
+	} else if (!td->o.trim_zero) {
 		if (ipo->flags & IP_F_ONLIST)
 			flist_del(&ipo->list);
 		else {
@@ -62,6 +64,28 @@ bool get_next_trim(struct thread_data *td, struct io_u *io_u)
 
 	dprint(FD_VERIFY, "get_next_trim: ret io_u %p\n", io_u);
 	return true;
+}
+
+void log_trim_piece(struct thread_data *td, struct io_u *io_u)
+{
+	struct io_piece *ipo;
+
+	td->trim_hist_len++;
+
+	if (io_u->ipo) {
+		/* verify path: reuse ipo already in io_hist */
+		flist_add_tail(&io_u->ipo->trim_list, &td->trim_list);
+	} else {
+		/* trim-only path: lightweight ipo, not in io_hist */
+		ipo = calloc(1, sizeof(struct io_piece));
+		init_ipo(ipo);
+		ipo->file = io_u->file;
+		ipo->offset = io_u->offset;
+		ipo->len = io_u->buflen;
+		ipo->flags = IP_F_TRIM_ONLY;
+		flist_add_tail(&ipo->trim_list, &td->trim_list);
+	}
+	td->trim_entries++;
 }
 
 bool io_u_should_trim(struct thread_data *td, struct io_u *io_u)

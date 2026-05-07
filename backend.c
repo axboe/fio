@@ -39,6 +39,7 @@
 #include "fio.h"
 #include "smalloc.h"
 #include "verify.h"
+#include "trim.h"
 #include "diskutil.h"
 #include "cgroup.h"
 #include "profile.h"
@@ -1227,11 +1228,13 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 		 * order of it. The logged unit will track when the IO has
 		 * completed.
 		 */
-		if (td_write(td) && io_u->ddir == DDIR_WRITE &&
-		    td->o.do_verify &&
-		    td->o.verify != VERIFY_NONE &&
-		    !td->o.experimental_verify)
-			log_io_piece(td, io_u);
+		if (td_write(td) && io_u->ddir == DDIR_WRITE) {
+			if (td->o.do_verify && td->o.verify != VERIFY_NONE &&
+			    !td->o.experimental_verify)
+				log_io_piece(td, io_u);
+			if (io_u_should_trim(td, io_u))
+				log_trim_piece(td, io_u);
+		}
 
 		if (td->o.io_submit_mode == IO_MODE_OFFLOAD) {
 			const unsigned long long blen = io_u->xfer_buflen;
@@ -1774,11 +1777,13 @@ static uint64_t do_dry_run(struct thread_data *td)
 			td->ts.total_io_u[io_u->ddir]++;
 		}
 
-		if (td_write(td) && io_u->ddir == DDIR_WRITE &&
-		    td->o.do_verify &&
-		    td->o.verify != VERIFY_NONE &&
-		    !td->o.experimental_verify)
-			log_io_piece(td, io_u);
+		if (td_write(td) && io_u->ddir == DDIR_WRITE) {
+			if (td->o.do_verify && td->o.verify != VERIFY_NONE &&
+			    !td->o.experimental_verify)
+				log_io_piece(td, io_u);
+			if (io_u_should_trim(td, io_u))
+				log_trim_piece(td, io_u);
+		}
 
 		ret = io_u_sync_complete(td, io_u);
 		(void) ret;
