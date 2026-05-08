@@ -2366,6 +2366,14 @@ I/O engine
 			:option:`iomem` must not be `cudamalloc`. This ioengine defines
 			engine specific options.
 
+		**libhipfile**
+			I/O engine supporting synchronous access to a GPUDirect Storage-supported
+			filesystem from AMD GPUs via the ROCm hipFile API. This engine performs
+			I/O without transferring buffers between user-space and the kernel,
+			unless :option:`verify` is set or :option:`rocm_io` is `posix`.
+			:option:`iomem` must not be `cudamalloc`. This ioengine defines
+			engine specific options.
+
 		**dfs**
 			I/O engine supporting asynchronous read and write operations to the
 			DAOS File System (DFS) via libdfs.
@@ -3263,6 +3271,28 @@ with the caveat that when used on the command line, they must come after the
 		to transfer data between RAM and the GPUs. Data is copied from
 		GPU to RAM before a write and copied from RAM to GPU after a
 		read. :option:`verify` does not affect use of cudaMemcpy.
+
+.. option:: gpu_dev_ids=str : [libhipfile]
+
+	Specify the GPU IDs to use with ROCm. This is a colon-separated list of
+	int. GPUs are assigned to workers roundrobin. Default is 0.
+
+.. option:: rocm_io=str : [libhipfile]
+
+	Specify the type of I/O to use with ROCm. Default is **hipfile**.
+
+	**hipfile**
+		Use the ROCm hipFile API. This option performs I/O directly
+		between a GPUDirect Storage filesystem and GPU buffers,
+		avoiding use of a bounce buffer. If :option:`verify` is set,
+		hipMemcpy is used to copy verification data between RAM and GPU.
+		Verification data is copied from RAM to GPU before a write
+		and from GPU to RAM after a read. :option:`direct` must be 1.
+	**posix**
+		Use POSIX to perform I/O with a RAM buffer, and use hipMemcpy
+		to transfer data between RAM and the GPUs. Data is copied from
+		GPU to RAM before a write and copied from RAM to GPU after a
+		read. :option:`verify` does not affect use of hipMemcpy.
 
 .. option:: nfs_url=str : [nfs]
 
