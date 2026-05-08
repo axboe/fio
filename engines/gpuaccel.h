@@ -1,6 +1,7 @@
 #ifndef FIO_GPUACCEL_H
 #define FIO_GPUACCEL_H
 
+#include <pthread.h>
 #include <unistd.h>
 
 #define GPU_ID_SEP ":"
@@ -22,6 +23,15 @@ enum {
 
 struct gpuaccel_backend {
 	const char *name;
+
+	int sync_after_posix_write_copy;
+	int sync_after_verify_read_copy;
+	int sync_after_memset;
+
+	int *running;
+	int *initialized;
+	pthread_mutex_t *running_lock;
+
 	int (*driver_open)(void);
 	void (*driver_close)(void);
 

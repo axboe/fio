@@ -234,8 +234,18 @@ static const char *libcufile_op_error_string(int error_code)
 	return cufileop_status_error(error_code);
 }
 
+static int running = 0;
+static int initialized = 0;
+static pthread_mutex_t running_lock = PTHREAD_MUTEX_INITIALIZER;
+
 static const struct gpuaccel_backend libcufile_backend = {
 	.name = "cufile",
+	.sync_after_posix_write_copy = 0,
+	.sync_after_verify_read_copy = 0,
+	.sync_after_memset = 0,
+	.running = &running,
+	.initialized = &initialized,
+	.running_lock = &running_lock,
 	.driver_open = libcufile_driver_open,
 	.driver_close = libcufile_driver_close,
 	.set_device = libcufile_set_device,
