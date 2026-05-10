@@ -2835,6 +2835,12 @@ Use Write Zeroes commands for write operations
 .B verify
 Use Verify commands for write operations
 .RE
+.P
+Multiple modes with mix ratios can be specified using the format
+\fBmode/pct:mode/pct:...\fR.  Percentages must sum to 100.  If a percentage
+is omitted, the remaining percentage is split evenly among entries with no
+percentage specified.
+Example: \fBwrite/60:zeroes/30:uncor/10\fR or \fBwrite/50:zeroes/:uncor/\fR
 .RE
 .TP
 .BI (io_uring_cmd)verify_mode \fR=\fPstr
