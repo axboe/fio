@@ -763,8 +763,7 @@ static int fio_ioring_cmd_prep(struct thread_data *td, struct io_u *io_u)
 
 				return fio_nvme_uring_cmd_prep(cmd, io_u,
 					o->nonvectored ? NULL : &ld->iovecs[io_u->index],
-					dsm, read_opcode,
-					o->wmode_split[i].opcode,
+					dsm, read_opcode, op,
 					o->wmode_split[i].cdw12_flag);
 			}
 		}
@@ -1757,6 +1756,16 @@ static int fio_ioring_io_u_init(struct thread_data *td, struct io_u *io_u)
 		pi_data->apptag_mask = o->apptag_mask;
 		pi_data->apptag = o->apptag;
 		io_u->engine_data = pi_data;
+	}
+
+	if (ld->is_uring_cmd_eng && o->wmode_split_nr <= 1) {
+		if (ld->write_opcode == nvme_cmd_write_zeroes) {
+			if (o->deac)
+				io_u_set(td, io_u, IO_U_F_TRIMMED);
+			else
+				io_u_set(td, io_u, IO_U_F_ZEROED);
+		} else if (ld->write_opcode == nvme_cmd_write_uncor)
+			io_u_set(td, io_u, IO_U_F_ERRORED);
 	}
 
 	return 0;
