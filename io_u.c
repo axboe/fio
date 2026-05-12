@@ -2231,9 +2231,16 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 				icd->error = ret;
 		}
 	} else if (io_u->error) {
+		if (!((io_u->flags & IO_U_F_ERRORED) &&
+				(io_u->flags & IO_U_F_VER_LIST))) {
 error:
-		icd->error = io_u->error;
-		io_u_log_error(td, io_u);
+			icd->error = io_u->error;
+			io_u_log_error(td, io_u);
+		} else {
+			dprint(FD_IO, "io_completed: errored io_u numberio="
+					"%"PRIu64" for verify (expected)\n",
+					io_u->numberio);
+		}
 	}
 	if (icd->error) {
 		enum error_type_bit eb = td_error_type(ddir, icd->error);
