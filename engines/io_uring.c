@@ -168,13 +168,14 @@ struct ioring_data {
 
 	struct cmdprio cmdprio;
 
-	struct nvme_dsm *dsm;
-	uint32_t cdw12_flags[DDIR_RWDIR_CNT];
 	uint8_t write_opcode;
 	struct frand_state wmode_state;
 
 	bool is_uring_cmd_eng;
 
+	/* NVMe */
+	struct nvme_dsm *dsm;
+	uint32_t cdw12_flags[DDIR_RWDIR_CNT];
 	struct nvme_cmd_ext_io_opts ext_opts;
 };
 
@@ -713,17 +714,45 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 	return 0;
 }
 
+static int fio_ioring_cmd_prep_write_split(struct thread_data *td,
+				  struct nvme_uring_cmd *cmd,
+				  struct io_u *io_u, struct iovec *iov)
+{
+	struct ioring_data *ld = td->io_ops_data;
+	struct ioring_options *o = td->eo;
+	unsigned int rand = rand_between(&ld->wmode_state, 0, 99);
+	unsigned int perc = 0;
+	int i;
+
+	for (i = 0; i < (int)o->wmode_split_nr; i++) {
+		perc += o->wmode_split[i].perc;
+		if (rand < perc) {
+			uint8_t op = o->wmode_split[i].opcode;
+
+			io_u_clear(td, io_u, IO_U_F_TRIMMED | IO_U_F_ZEROED | IO_U_F_ERRORED);
+			if (op == nvme_cmd_write_zeroes) {
+				if (o->deac)
+					io_u_set(td, io_u, IO_U_F_TRIMMED);
+				else
+					io_u_set(td, io_u, IO_U_F_ZEROED);
+			} else if (op == nvme_cmd_write_uncor) {
+				io_u_set(td, io_u, IO_U_F_ERRORED);
+			}
+
+			dprint(FD_IO, "op selected %u\n", op);
+			return fio_nvme_uring_cmd_prep(cmd, io_u, iov, NULL,
+						       nvme_cmd_read, op, o->wmode_split[i].cdw12_flag);
+		}
+	}
+	return -EINVAL;
+}
+
 static int fio_ioring_cmd_prep(struct thread_data *td, struct io_u *io_u)
 {
 	struct ioring_data *ld = td->io_ops_data;
 	struct ioring_options *o = td->eo;
 	struct fio_file *f = io_u->file;
-	struct nvme_uring_cmd *cmd;
 	struct io_uring_sqe *sqe;
-	struct nvme_dsm *dsm;
-	void *ptr = ld->dsm;
-	unsigned int dsm_size;
-	uint8_t read_opcode = nvme_cmd_read;
 
 	/* only supports nvme_uring_cmd */
 	if (o->cmd_type != FIO_URING_CMD_NVME)
@@ -748,10 +777,6 @@ static int fio_ioring_cmd_prep(struct thread_data *td, struct io_u *io_u)
 
 	sqe->opcode = IORING_OP_URING_CMD;
 	sqe->user_data = (unsigned long) io_u;
-	if (o->nonvectored)
-		sqe->cmd_op = NVME_URING_CMD_IO;
-	else
-		sqe->cmd_op = NVME_URING_CMD_IO_VEC;
 	if (o->force_async && ++ld->prepped == o->force_async) {
 		ld->prepped = 0;
 		sqe->flags |= IOSQE_ASYNC;
@@ -761,55 +786,43 @@ static int fio_ioring_cmd_prep(struct thread_data *td, struct io_u *io_u)
 		sqe->buf_index = io_u->index;
 	}
 
-	cmd = (struct nvme_uring_cmd *)sqe->cmd;
-	dsm_size = sizeof(*ld->dsm) + td->o.num_range * sizeof(struct nvme_dsm_range);
-	ptr += io_u->index * dsm_size;
-	dsm = (struct nvme_dsm *)ptr;
+	if (o->cmd_type == FIO_URING_CMD_NVME) {
+		struct nvme_uring_cmd *cmd;
+		struct nvme_dsm *dsm;
+		void *ptr = ld->dsm;
+		unsigned int dsm_size;
+		uint8_t read_opcode = nvme_cmd_read;
 
-	/*
-	 * If READ command belongs to the verification phase and the
-	 * verify_mode=compare, convert READ to COMPARE command.
-	 */
-	if (io_u->flags & IO_U_F_VER_LIST && io_u->ddir == DDIR_READ &&
-			o->verify_mode == FIO_URING_CMD_VMODE_COMPARE) {
-		populate_verify_io_u(td, io_u);
-		read_opcode = nvme_cmd_compare;
-		io_u_set(td, io_u, IO_U_F_VER_IN_DEV);
-	}
+		if (o->nonvectored)
+			sqe->cmd_op = NVME_URING_CMD_IO;
+		else
+			sqe->cmd_op = NVME_URING_CMD_IO_VEC;
 
-	if (o->wmode_split_nr > 1 && io_u->ddir == DDIR_WRITE) {
-		unsigned int rand = rand_between(&ld->wmode_state, 0, 99);
-		unsigned int perc = 0;
-		int i;
+		cmd = (struct nvme_uring_cmd *)sqe->cmd;
+		dsm_size = sizeof(*ld->dsm) + td->o.num_range * sizeof(struct nvme_dsm_range);
+		ptr += io_u->index * dsm_size;
+		dsm = (struct nvme_dsm *)ptr;
 
-		for (i = 0; i < (int)o->wmode_split_nr; i++) {
-			perc += o->wmode_split[i].perc;
-			if (rand < perc) {
-				uint8_t op = o->wmode_split[i].opcode;
-
-				io_u_clear(td, io_u, IO_U_F_TRIMMED | IO_U_F_ZEROED | IO_U_F_ERRORED);
-				if (op == nvme_cmd_write_zeroes) {
-					if (o->deac)
-						io_u_set(td, io_u, IO_U_F_TRIMMED);
-					else
-						io_u_set(td, io_u, IO_U_F_ZEROED);
-				} else if (op == nvme_cmd_write_uncor) {
-					io_u_set(td, io_u, IO_U_F_ERRORED);
-				}
-
-				dprint(FD_IO, "op selected %u\n", op);
-				return fio_nvme_uring_cmd_prep(cmd, io_u,
-					o->nonvectored ? NULL : &ld->iovecs[io_u->index],
-					dsm, read_opcode, op,
-					o->wmode_split[i].cdw12_flag);
-			}
+		/*
+		 * If READ command belongs to the verification phase and the
+		 * verify_mode=compare, convert READ to COMPARE command.
+		 */
+		if (io_u->flags & IO_U_F_VER_LIST && io_u->ddir == DDIR_READ &&
+				o->verify_mode == FIO_URING_CMD_VMODE_COMPARE) {
+			populate_verify_io_u(td, io_u);
+			read_opcode = nvme_cmd_compare;
+			io_u_set(td, io_u, IO_U_F_VER_IN_DEV);
 		}
-	}
 
-	return fio_nvme_uring_cmd_prep(cmd, io_u,
-			o->nonvectored ? NULL : &ld->iovecs[io_u->index],
-			dsm, read_opcode, ld->write_opcode,
-			ld->cdw12_flags[io_u->ddir]);
+		if (o->wmode_split_nr > 1 && io_u->ddir == DDIR_WRITE)
+			return fio_ioring_cmd_prep_write_split(td, cmd, io_u,
+					o->nonvectored ? NULL : &ld->iovecs[io_u->index]);
+
+		return fio_nvme_uring_cmd_prep(cmd, io_u,
+				o->nonvectored ? NULL : &ld->iovecs[io_u->index],
+				dsm, read_opcode, ld->write_opcode,
+				ld->cdw12_flags[io_u->ddir]);
+	}
 }
 
 static void fio_ioring_validate_md(struct thread_data *td, struct io_u *io_u)
@@ -909,8 +922,6 @@ static char *fio_ioring_cmd_errdetails(struct thread_data *td,
 				       struct io_u *io_u)
 {
 	struct ioring_options *o = td->eo;
-	unsigned int sct = (io_u->error >> 8) & 0x7;
-	unsigned int sc = io_u->error & 0xff;
 #define MAXERRDETAIL 1024
 #define MAXMSGCHUNK 128
 	char *msg, msgchunk[MAXMSGCHUNK];
@@ -925,6 +936,9 @@ static char *fio_ioring_cmd_errdetails(struct thread_data *td,
 	strlcat(msg, msgchunk, MAXERRDETAIL);
 
 	if (o->cmd_type == FIO_URING_CMD_NVME) {
+		unsigned int sct = (io_u->error >> 8) & 0x7;
+		unsigned int sc = io_u->error & 0xff;
+
 		strlcat(msg, "cq entry status (", MAXERRDETAIL);
 
 		snprintf(msgchunk, MAXMSGCHUNK, "sct=0x%02x; ", sct);
@@ -1018,11 +1032,19 @@ static inline void fio_ioring_setup_pi(struct thread_data *td,
 				      struct io_u *io_u)
 {
 	struct ioring_data *ld = td->io_ops_data;
+	struct ioring_options *o = td->eo;
+	struct fio_file *f = io_u->file;
 
 	if (io_u->ddir == DDIR_TRIM)
 		return;
 
-	fio_nvme_generate_guard(io_u, &ld->ext_opts);
+	if (o->cmd_type == FIO_URING_CMD_NVME) {
+		fio_nvme_generate_guard(io_u, &ld->ext_opts);
+	}
+	else {
+		td_verror(td, EINVAL, "wrong cmd_type");
+		log_err("%s: This cmd_type does not support generate_guard\n", f->file_name);
+	}
 }
 
 static inline void fio_ioring_cmdprio_prep(struct thread_data *td,
@@ -1492,46 +1514,48 @@ static int fio_ioring_cmd_init(struct thread_data *td, struct ioring_data *ld)
 {
 	struct ioring_options *o = td->eo;
 
-	if (td_write(td)) {
-		if (o->wmode_split_nr > 1) {
-			int i;
+	if (o->cmd_type == FIO_URING_CMD_NVME) {
+		if (td_write(td)) {
+			if (o->wmode_split_nr > 1) {
+				int i;
 
-			init_rand_seed(&ld->wmode_state,
-				       td->rand_seeds[FIO_RAND_WMODE_OFF],
-				       false);
-			for (i = 0; i < (int)o->wmode_split_nr; i++) {
-				struct wmode_split_entry *e = &o->wmode_split[i];
+				init_rand_seed(&ld->wmode_state,
+					       td->rand_seeds[FIO_RAND_WMODE_OFF],
+					       false);
+				for (i = 0; i < (int)o->wmode_split_nr; i++) {
+					struct wmode_split_entry *e = &o->wmode_split[i];
 
-				e->cdw12_flag = 0;
-				if (e->opcode == nvme_cmd_write_zeroes && o->deac)
-					e->cdw12_flag = 1 << 25;
-				else if (e->opcode == nvme_cmd_write && o->writefua)
-					e->cdw12_flag = 1 << 30;
-			}
-		} else {
-			switch (o->write_mode) {
-			case FIO_URING_CMD_WMODE_UNCOR:
-				ld->write_opcode = nvme_cmd_write_uncor;
-				break;
-			case FIO_URING_CMD_WMODE_ZEROES:
-				ld->write_opcode = nvme_cmd_write_zeroes;
-				if (o->deac)
-					ld->cdw12_flags[DDIR_WRITE] = 1 << 25;
-				break;
-			case FIO_URING_CMD_WMODE_VERIFY:
-				ld->write_opcode = nvme_cmd_verify;
-				break;
-			default:
-				ld->write_opcode = nvme_cmd_write;
-				break;
+					e->cdw12_flag = 0;
+					if (e->opcode == nvme_cmd_write_zeroes && o->deac)
+						e->cdw12_flag = 1 << 25;
+					else if (e->opcode == nvme_cmd_write && o->writefua)
+						e->cdw12_flag = 1 << 30;
+				}
+			} else {
+				switch (o->write_mode) {
+				case FIO_URING_CMD_WMODE_UNCOR:
+					ld->write_opcode = nvme_cmd_write_uncor;
+					break;
+				case FIO_URING_CMD_WMODE_ZEROES:
+					ld->write_opcode = nvme_cmd_write_zeroes;
+					if (o->deac)
+						ld->cdw12_flags[DDIR_WRITE] = 1 << 25;
+					break;
+				case FIO_URING_CMD_WMODE_VERIFY:
+					ld->write_opcode = nvme_cmd_verify;
+					break;
+				default:
+					ld->write_opcode = nvme_cmd_write;
+					break;
+				}
 			}
 		}
-	}
 
-	if (o->readfua)
-		ld->cdw12_flags[DDIR_READ] = 1 << 30;
-	if (o->writefua && o->wmode_split_nr <= 1)
-		ld->cdw12_flags[DDIR_WRITE] = 1 << 30;
+		if (o->readfua)
+			ld->cdw12_flags[DDIR_READ] = 1 << 30;
+		if (o->writefua && o->wmode_split_nr <= 1)
+			ld->cdw12_flags[DDIR_WRITE] = 1 << 30;
+	}
 
 	return 0;
 }
@@ -1618,13 +1642,16 @@ static int fio_ioring_init(struct thread_data *td)
 		}
 
 	}
-	parse_prchk_flags(o);
-	ext_opts = &ld->ext_opts;
-	if (o->pi_act)
-		ext_opts->io_flags |= NVME_IO_PRINFO_PRACT;
-	ext_opts->io_flags |= o->prchk;
-	ext_opts->apptag = o->apptag;
-	ext_opts->apptag_mask = o->apptag_mask;
+	if ((ld->is_uring_cmd_eng && o->cmd_type == FIO_URING_CMD_NVME) ||
+			!ld->is_uring_cmd_eng) {
+		parse_prchk_flags(o);
+		ext_opts = &ld->ext_opts;
+		if (o->pi_act)
+			ext_opts->io_flags |= NVME_IO_PRINFO_PRACT;
+		ext_opts->io_flags |= o->prchk;
+		ext_opts->apptag = o->apptag;
+		ext_opts->apptag_mask = o->apptag_mask;
+	}
 
 	ld->iovecs = calloc(ld->iodepth, sizeof(struct iovec));
 
@@ -1643,7 +1670,7 @@ static int fio_ioring_init(struct thread_data *td)
 	if (td_trim(td) && td->o.zone_mode == ZONE_MODE_ZBD &&
 	    ld->is_uring_cmd_eng) {
 		td->io_ops->flags |= FIO_ASYNCIO_SYNC_TRIM;
-	} else {
+	} else if (o->cmd_type == FIO_URING_CMD_NVME) {
 		dsm_size = sizeof(*ld->dsm);
 		dsm_size += td->o.num_range * sizeof(struct nvme_dsm_range);
 		ld->dsm = calloc(td->o.iodepth, dsm_size);
@@ -1664,8 +1691,7 @@ static int fio_ioring_io_u_init(struct thread_data *td, struct io_u *io_u)
 {
 	struct ioring_data *ld = td->io_ops_data;
 	struct ioring_options *o = td->eo;
-	struct nvme_pi_data *pi_data;
-	char *p, *q;
+	char *p;
 
 	ld->io_u_index[io_u->index] = io_u;
 
@@ -1673,31 +1699,37 @@ static int fio_ioring_io_u_init(struct thread_data *td, struct io_u *io_u)
 	p += o->md_per_io_size * io_u->index;
 	io_u->mmap_data = p;
 
-	if (ld->pi_attr) {
-		struct io_uring_attr_pi *pi_attr;
+	if ((ld->is_uring_cmd_eng && o->cmd_type == FIO_URING_CMD_NVME) ||
+			!ld->is_uring_cmd_eng) {
+		struct nvme_pi_data *pi_data;
+		char *q;
 
-		q = ld->pi_attr;
-		q += (sizeof(struct io_uring_attr_pi) * io_u->index);
-		io_u->pi_attr = q;
+		if (ld->pi_attr) {
+			struct io_uring_attr_pi *pi_attr;
 
-		pi_attr = io_u->pi_attr;
-		pi_attr->len = o->md_per_io_size;
-		pi_attr->app_tag = o->apptag;
-		pi_attr->flags = 0;
-		if (o->prchk & NVME_IO_PRINFO_PRCHK_GUARD)
-			pi_attr->flags |= IO_INTEGRITY_CHK_GUARD;
-		if (o->prchk & NVME_IO_PRINFO_PRCHK_REF)
-			pi_attr->flags |= IO_INTEGRITY_CHK_REFTAG;
-		if (o->prchk & NVME_IO_PRINFO_PRCHK_APP)
-			pi_attr->flags |= IO_INTEGRITY_CHK_APPTAG;
-	}
+			q = ld->pi_attr;
+			q += (sizeof(struct io_uring_attr_pi) * io_u->index);
+			io_u->pi_attr = q;
 
-	if (!o->pi_act) {
-		pi_data = calloc(1, sizeof(*pi_data));
-		pi_data->io_flags |= o->prchk;
-		pi_data->apptag_mask = o->apptag_mask;
-		pi_data->apptag = o->apptag;
-		io_u->engine_data = pi_data;
+			pi_attr = io_u->pi_attr;
+			pi_attr->len = o->md_per_io_size;
+			pi_attr->app_tag = o->apptag;
+			pi_attr->flags = 0;
+			if (o->prchk & NVME_IO_PRINFO_PRCHK_GUARD)
+				pi_attr->flags |= IO_INTEGRITY_CHK_GUARD;
+			if (o->prchk & NVME_IO_PRINFO_PRCHK_REF)
+				pi_attr->flags |= IO_INTEGRITY_CHK_REFTAG;
+			if (o->prchk & NVME_IO_PRINFO_PRCHK_APP)
+				pi_attr->flags |= IO_INTEGRITY_CHK_APPTAG;
+		}
+
+		if (!o->pi_act) {
+			pi_data = calloc(1, sizeof(*pi_data));
+			pi_data->io_flags |= o->prchk;
+			pi_data->apptag_mask = o->apptag_mask;
+			pi_data->apptag = o->apptag;
+			io_u->engine_data = pi_data;
+		}
 	}
 
 	if (ld->is_uring_cmd_eng && o->wmode_split_nr <= 1) {
@@ -1716,9 +1748,7 @@ static int fio_ioring_io_u_init(struct thread_data *td, struct io_u *io_u)
 
 static void fio_ioring_io_u_free(struct thread_data *td, struct io_u *io_u)
 {
-	struct nvme_pi *pi = io_u->engine_data;
-
-	free(pi);
+	free(io_u->engine_data);
 	io_u->engine_data = NULL;
 }
 
@@ -1945,10 +1975,10 @@ static int fio_ioring_cmd_close_file(struct thread_data *td,
 	struct ioring_options *o = td->eo;
 
 	if (o->cmd_type == FIO_URING_CMD_NVME) {
-		struct nvme_data *data = FILE_ENG_DATA(f);
-
+		free(FILE_ENG_DATA(f));
 		FILE_SET_ENG_DATA(f, NULL);
-		free(data);
+	} else {
+		log_err("%s: This cmd_type does not support\n", f->file_name);
 	}
 
 	return fio_ioring_close_file(td, f);
@@ -2031,7 +2061,14 @@ static int fio_ioring_cmd_get_zoned_model(struct thread_data *td,
 					  struct fio_file *f,
 					  enum zbd_zoned_model *model)
 {
-	return fio_nvme_get_zoned_model(td, f, model);
+	struct ioring_options *o = td->eo;
+
+	if (o->cmd_type == FIO_URING_CMD_NVME)
+		return fio_nvme_get_zoned_model(td, f, model);
+
+	td_verror(td, EINVAL, "wrong cmd_type");
+	log_err("%s: This cmd_type does not support get_zoned_model\n", f->file_name);
+	return -EINVAL;
 }
 
 static int fio_ioring_cmd_report_zones(struct thread_data *td,
@@ -2039,45 +2076,73 @@ static int fio_ioring_cmd_report_zones(struct thread_data *td,
 				       struct zbd_zone *zbdz,
 				       unsigned int nr_zones)
 {
-	return fio_nvme_report_zones(td, f, offset, zbdz, nr_zones);
+	struct ioring_options *o = td->eo;
+
+	if (o->cmd_type == FIO_URING_CMD_NVME)
+		return fio_nvme_report_zones(td, f, offset, zbdz, nr_zones);
+
+	td_verror(td, EINVAL, "wrong cmd_type");
+	log_err("%s: This cmd_type does not support report_zones\n", f->file_name);
+	return -EINVAL;
 }
 
 static int fio_ioring_cmd_reset_wp(struct thread_data *td, struct fio_file *f,
 				   uint64_t offset, uint64_t length)
 {
-	return fio_nvme_reset_wp(td, f, offset, length);
+	struct ioring_options *o = td->eo;
+
+	if (o->cmd_type == FIO_URING_CMD_NVME)
+		return fio_nvme_reset_wp(td, f, offset, length);
+
+	td_verror(td, EINVAL, "wrong cmd_type");
+	log_err("%s: This cmd_type does not support reset_wp\n", f->file_name);
+	return -EINVAL;
 }
 
 static int fio_ioring_cmd_get_max_open_zones(struct thread_data *td,
 					     struct fio_file *f,
 					     unsigned int *max_open_zones)
 {
-	return fio_nvme_get_max_open_zones(td, f, max_open_zones);
+	struct ioring_options *o = td->eo;
+
+	if (o->cmd_type == FIO_URING_CMD_NVME)
+		return fio_nvme_get_max_open_zones(td, f, max_open_zones);
+
+	td_verror(td, EINVAL, "wrong cmd_type");
+	log_err("%s: This cmd_type does not support get_max_open_zones\n", f->file_name);
+	return -EINVAL;
 }
 
 static int fio_ioring_cmd_fetch_ruhs(struct thread_data *td, struct fio_file *f,
 				     struct fio_ruhs_info *fruhs_info)
 {
+	struct ioring_options *o = td->eo;
 	struct nvme_fdp_ruh_status *ruhs;
 	int bytes, nr_ruhs, ret, i;
 
-	nr_ruhs = fruhs_info->nr_ruhs;
-	bytes = sizeof(*ruhs) + fruhs_info->nr_ruhs * sizeof(struct nvme_fdp_ruh_status_desc);
+	if (o->cmd_type == FIO_URING_CMD_NVME) {
+		nr_ruhs = fruhs_info->nr_ruhs;
+		bytes = sizeof(*ruhs) + fruhs_info->nr_ruhs * sizeof(struct nvme_fdp_ruh_status_desc);
 
-	ruhs = calloc(1, bytes);
-	if (!ruhs)
-		return -ENOMEM;
+		ruhs = calloc(1, bytes);
+		if (!ruhs)
+			return -ENOMEM;
 
-	ret = fio_nvme_iomgmt_ruhs(td, f, ruhs, bytes);
-	if (ret)
-		goto free;
+		ret = fio_nvme_iomgmt_ruhs(td, f, ruhs, bytes);
+		if (ret)
+			goto free;
 
-	fruhs_info->nr_ruhs = le16_to_cpu(ruhs->nruhsd);
-	for (i = 0; i < nr_ruhs; i++)
-		fruhs_info->plis[i] = le16_to_cpu(ruhs->ruhss[i].pid);
-free:
-	free(ruhs);
-	return ret;
+		fruhs_info->nr_ruhs = le16_to_cpu(ruhs->nruhsd);
+		for (i = 0; i < nr_ruhs; i++)
+			fruhs_info->plis[i] = le16_to_cpu(ruhs->ruhss[i].pid);
+	free:
+		free(ruhs);
+		return ret;
+	}
+
+	td_verror(td, EINVAL, "wrong cmd_type");
+	log_err("%s: This cmd_type does not support fetch_ruhs\n", f->file_name);
+	return -EINVAL;
 }
 
 static struct ioengine_ops ioengine_uring = {
