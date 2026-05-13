@@ -2564,7 +2564,7 @@ with the caveat that when used on the command line, they must come after the
 .. option:: cmd_type=str : [io_uring_cmd]
 
 	Specifies the type of uring passthrough command to be used. Supported
-	value is nvme. Default is nvme.
+	values are nvme and bsg. Default is nvme.
 
 .. option:: hipri
 

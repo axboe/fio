@@ -2708,6 +2708,23 @@ print_config "NVMe uring command support" "$nvme_uring_cmd"
 fi
 
 ##########################################
+# Check BSG_URING_CMD support
+cat > $TMPC << EOF
+#include <linux/bsg.h>
+int main(void)
+{
+  return sizeof(struct bsg_uring_cmd);
+}
+EOF
+if compile_prog "" "" "bsg uring cmd"; then
+  output_sym "CONFIG_BSG_URING_CMD"
+  bsg_uring_cmd="yes"
+else
+  bsg_uring_cmd="no"
+fi
+print_config "BSG uring command support" "$bsg_uring_cmd"
+
+##########################################
 # Check if we have xnvme
 if test "$xnvme" != "no" ; then
   if check_min_lib_version xnvme 0.7.4; then
