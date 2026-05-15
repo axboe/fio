@@ -339,6 +339,14 @@ static void free_shm(void)
 		flow_exit();
 		fio_debug_jobp = NULL;
 		fio_warned = NULL;
+
+		for_each_td(td) {
+			if (td->io_ops)
+				free_ioengine(td);
+			free(td->files);
+			td->files = NULL;
+		} end_for_each();
+
 		free_threads_shm();
 	}
 
