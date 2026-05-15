@@ -295,11 +295,6 @@ void log_io_piece(struct thread_data *td, struct io_u *io_u)
 
 	io_u->ipo = ipo;
 
-	if (io_u_should_trim(td, io_u)) {
-		flist_add_tail(&ipo->trim_list, &td->trim_list);
-		td->trim_entries++;
-	}
-
 	/*
 	 * Sort writes if we don't have a random map in which case we need to
 	 * check for duplicate blocks and drop the old one, which we rely on

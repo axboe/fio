@@ -47,6 +47,7 @@ VERIFY_OPT_LIST = [
     'trim_backlog_batch',
     'trim_verify_zero',
     'number_ios',
+    'verify',
 ]
 
 class VerifyTrimTest(FioJobCmdTest):
@@ -59,7 +60,6 @@ class VerifyTrimTest(FioJobCmdTest):
 
         fio_args = [
             "--name=verifytrim",
-            "--verify=md5",
             f"--filename={self.fio_opts['filename']}",
             f"--rw={self.fio_opts['rw']}",
             f"--trim_percentage={self.fio_opts['trim_percentage']}",
@@ -111,6 +111,7 @@ TEST_LIST = [
         "test_id": 1,
         "fio_opts": {
             "rw": "read",
+            "verify": "md5",
             "trim_percentage": 100,
             "trim_backlog": 1,
             "readonly": 1,
@@ -125,6 +126,7 @@ TEST_LIST = [
         "test_id": 100,
         "fio_opts": {
             "rw": "write",
+            "verify": "md5",
             "trim_percentage": 100,
             "trim_backlog": 1,
             "trim_verify_zero": 1,
@@ -140,6 +142,7 @@ TEST_LIST = [
         "test_id": 101,
         "fio_opts": {
             "rw": "randwrite",
+            "verify": "md5",
             "trim_percentage": 100,
             "trim_backlog": 1,
             "trim_verify_zero": 1,
@@ -155,6 +158,7 @@ TEST_LIST = [
         "test_id": 102,
         "fio_opts": {
             "rw": "write",
+            "verify": "md5",
             "trim_percentage": 50,
             "trim_backlog": 1,
             "trim_verify_zero": 1,
@@ -170,6 +174,7 @@ TEST_LIST = [
         "test_id": 103,
         "fio_opts": {
             "rw": "randwrite",
+            "verify": "md5",
             "trim_percentage": 50,
             "trim_backlog": 1,
             "trim_verify_zero": 1,
@@ -185,6 +190,7 @@ TEST_LIST = [
         "test_id": 104,
         "fio_opts": {
             "rw": "write",
+            "verify": "md5",
             "trim_percentage": 50,
             "trim_backlog": 16,
             "trim_verify_zero": 1,
@@ -200,6 +206,7 @@ TEST_LIST = [
         "test_id": 105,
         "fio_opts": {
             "rw": "randwrite",
+            "verify": "md5",
             "trim_percentage": 50,
             "trim_backlog": 16,
             "trim_verify_zero": 1,
@@ -208,7 +215,30 @@ TEST_LIST = [
             },
         "test_class": VerifyTrimTest,
     },
-
+    {
+        "test_id": 200,
+        "fio_opts": {
+            "rw": "randwrite",
+            "trim_percentage": 100,
+            "trim_backlog": 1,
+            "number_ios": 64,
+            "output-format": "json",
+            },
+        "test_class": VerifyTrimTest
+    },
+    {
+        "test_id": 201,
+        "fio_opts": {
+            "rw": "randwrite",
+            "verify": "md5",
+            "trim_verify_zero": 1,
+            "trim_percentage": 100,
+            "trim_backlog": 1,
+            "number_ios": 64,
+            "output-format": "json",
+            },
+        "test_class": VerifyTrimTest
+    },
 ]
 
 

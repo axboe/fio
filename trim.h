@@ -10,6 +10,7 @@
 
 extern bool __must_check get_next_trim(struct thread_data *td, struct io_u *io_u);
 extern bool io_u_should_trim(struct thread_data *td, struct io_u *io_u);
+extern void log_trim_piece(struct thread_data *td, struct io_u *io_u);
 
 /*
  * Determine whether a given io_u should be logged for verify or
@@ -31,6 +32,9 @@ static inline bool get_next_trim(struct thread_data *td, struct io_u *io_u)
 static inline bool io_u_should_trim(struct thread_data *td, struct io_u *io_u)
 {
 	return false;
+}
+static inline void log_trim_piece(struct thread_data *td, struct io_u *io_u)
+{
 }
 static inline void remove_trim_entry(struct thread_data *td, struct io_piece *ipo)
 {

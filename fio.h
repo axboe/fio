@@ -473,6 +473,7 @@ struct thread_data {
 	 */
 	struct flist_head trim_list;
 	unsigned long trim_entries;
+	unsigned long trim_hist_len;	/* write counter for trim_backlog (trim-only path) */
 
 	/*
 	 * for fileservice, how often to switch to a new file
@@ -627,7 +628,8 @@ extern bool eta_time_within_slack(unsigned int time);
 static inline void fio_ro_check(const struct thread_data *td, struct io_u *io_u)
 {
 	assert(!(io_u->ddir == DDIR_WRITE && !td_write(td)) &&
-	       !(io_u->ddir == DDIR_TRIM && !(td_trim(td) || td->trim_verify)));
+	       !(io_u->ddir == DDIR_TRIM &&
+		 !(td_trim(td) || td->trim_verify || td->o.trim_percentage)));
 
 	/*
 	 * The last line above allows trim operations during trim/verify
