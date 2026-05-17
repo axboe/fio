@@ -1,0 +1,18 @@
+# Example filesetxattr and filelistattr job
+
+[global]
+nrfiles=100
+filesize=4k
+openfiles=1
+directory=./small_files
+filename_format=small_file.$jobnum.$filenum
+
+[setxattr]
+ioengine=filesetxattr
+xattr_count=2
+xattr_size=128
+
+[listxattr]
+stonewall=1
+ioengine=filelistxattr
+
