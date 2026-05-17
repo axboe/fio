@@ -3049,6 +3049,10 @@ with the caveat that when used on the command line, they must come after the
                 **verify**
                         Use Verify commands for write operations
 
+        Multiple modes with mix ratios can be specified using the format
+        ``pct:mode/pct:mode/...``.  Percentages must sum to 100
+        Example: ``60:write/30:zeroes/10:uncor``
+
 .. option:: verify_mode=str : [io_uring_cmd]
 
         Specifies the type of command to be used in the verification phase.  Defaults to 'read'.
