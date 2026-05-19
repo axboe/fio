@@ -891,6 +891,28 @@ static enum fio_q_status fio_ioring_queue(struct thread_data *td,
 		return FIO_Q_BUSY;
 
 	/*
+	 * For io_uring_cmd with verify_policy=fsynced, the flush must not be
+	 * submitted while writes are still in flight. The NVMe device does
+	 * not guarantee ordering between a flush and concurrent writes in its
+	 * internal queue, so all prior writes must have completed at the
+	 * device level before the flush is issued. Return BUSY to let fio
+	 * drain in-flight ops; fio will retry the flush once the queue is
+	 * empty.
+	 *
+	 * Use td->cur_depth > 1 (not io_issues vs io_blocks) because io_blocks
+	 * only counts successful completions; errored I/Os never increment it,
+	 * causing a permanent mismatch. cur_depth is decremented for both
+	 * success and error completions. The flush io_u itself already holds
+	 * one count when fio_ioring_queue() is called, so check > 1 to
+	 * distinguish "only the flush is in-flight" from "writes still pending".
+	 */
+	if (ddir_sync(io_u->ddir) && ld->is_uring_cmd_eng &&
+	    (td->o.verify_policy & VERIFY_POLICY_FSYNCED)) {
+		if (td->cur_depth > 1)
+			return FIO_Q_BUSY;
+	}
+
+	/*
 	 * If this is a syncfs request, or if async trim has been tried and
 	 * failed, punt to sync.
 	 * */
@@ -1481,6 +1503,14 @@ static int fio_ioring_init(struct thread_data *td)
 	if (o->registerfiles && td->o.nr_files != td->o.open_files) {
 		log_err("fio: io_uring registered files require nr_files to "
 			"be identical to open_files\n");
+		return 1;
+	}
+
+	if (o->writefua && (td->o.verify_policy & VERIFY_POLICY_FSYNCED)) {
+		log_err("fio: writefua=1 is incompatible with verify_policy=fsynced. "
+			"FUA writes are individually committed to storage media "
+			"and do not require fsync coverage tracking. "
+			"Use verify_policy=none(default) instead.\n");
 		return 1;
 	}
 
