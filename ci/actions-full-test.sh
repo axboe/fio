@@ -40,22 +40,6 @@ main() {
 
     fi
 
-    # If we are running a nightly test just run the verify tests.  Skip the
-    # verify test script with pull requests and pushes because it takes so
-    # long. When this workflow is run manually everything will be run.
-    if [ "${GITHUB_EVENT_NAME}" == "schedule" ]; then
-	args+=(
-	    --run-only
-	    1017
-	    -p
-	    "1017:--complete"
-	)
-    elif [ "${GITHUB_EVENT_NAME}" == "pull_request" ] || [ "${GITHUB_EVENT_NAME}" == "push" ]; then
-	skip+=(
-	    1017
-	)
-    fi
-
     echo python3 t/run-fio-tests.py --skip "${skip[@]}" "${args[@]}"
     python3 t/run-fio-tests.py -c --skip "${skip[@]}" "${args[@]}"
     make -C doc html
