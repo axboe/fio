@@ -1,0 +1,38 @@
+# This job file demonstrates the use of the 'sequence' random distribution.
+# The 'sequence' distribution allows you to specify a precise, deterministic
+# order of block indices to be accessed during a non-sequential workload.
+#
+# See HOWTO.rst for full documentation.
+
+[global]
+ioengine=null
+rw=randread
+bs=4k
+size=48k
+io_size=24k
+
+# ==============================================================================
+# Job 1: Fixed Repeating Sequence
+# ==============================================================================
+# With random_sequence_stride=0 (default), fio repeats the absolute block
+# indices (2, then 0, then 1) over and over until io_size is reached.
+#
+# Accessed block indices: 2, 0, 1, 2, 0, 1
+[repeating_sequence]
+random_distribution=sequence:2,0,1
+random_sequence_stride=0
+
+# ==============================================================================
+# Job 2: Progressing Strided Sequence
+# ==============================================================================
+# With random_sequence_stride=1, the sequence is treated as a relative pattern
+# inside a moving block group. After each cycle, the base index advances by
+# the length of the sequence, scanning through the file.
+#
+# Accessed block indices:
+# - Cycle 1 (Group 0): 2, 0, 1
+# - Cycle 2 (Group 1): 5, 3, 4
+[strided_sequence]
+stonewall
+random_distribution=sequence:2,0,1
+random_sequence_stride=1

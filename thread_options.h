@@ -43,6 +43,7 @@ enum dedupe_mode {
 
 #define BSSPLIT_MAX	64
 #define ZONESPLIT_MAX	256
+#define FIO_SEQ_MAX	64
 
 struct split {
 	unsigned int nr;
@@ -190,6 +191,9 @@ struct thread_options {
 	unsigned int verify_only;
 
 	unsigned int random_distribution;
+	unsigned int *random_sequence;
+	unsigned int random_sequence_nr;
+	unsigned int random_sequence_stride;
 	unsigned int exitall_error;
 
 	struct zone_split *zone_split[DDIR_RWDIR_CNT];
@@ -527,6 +531,9 @@ struct thread_options_pack {
 	uint32_t bs_is_seq_rand;
 
 	uint32_t random_distribution;
+	uint32_t random_sequence[FIO_SEQ_MAX];
+	uint32_t random_sequence_nr;
+	uint32_t random_sequence_stride;
 	uint32_t exitall_error;
 
 	uint32_t sync_file_range;

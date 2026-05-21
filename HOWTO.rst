@@ -1572,6 +1572,9 @@ I/O type
 		**zoned_abs**
 				Zone absolute random distribution
 
+		**sequence**
+				Fixed deterministic sequence of block indices
+
 	When using a **zipf** or **pareto** distribution, an input value is also
 	needed to define the access pattern. For **zipf**, this is the `Zipf
 	theta`. For **pareto**, it's the `Pareto power`. Fio includes a test
@@ -1624,6 +1627,24 @@ I/O type
 	specify separate zones for reads, writes, and trims. If just one set
 	is given, it'll apply to all of them. This goes for both **zoned**
 	**zoned_abs** distributions.
+
+	For a **sequence** distribution, fio supports specifying a fixed deterministic
+	sequence of block indices to be accessed. For example, to access block indices
+	2, 0, and 1 in that exact order, the user would do::
+
+		random_distribution=sequence:2,0,1
+
+	This repeats the block access pattern indefinitely. Up to 64 sequence
+	elements are supported.
+
+.. option:: random_sequence_stride=bool
+
+	Controls the progression behavior of the ``sequence`` random distribution mode.
+	If set to false (0, default), the sequence is interpreted as fixed, absolute block
+	indices and repeated exactly. If set to true (1), the sequence is interpreted as a
+	relative pattern within a moving block group. After completing each full cycle of
+	the sequence, the base block index automatically advances by the sequence length,
+	creating a progressing "Strided Block Group" pattern across the file.
 
 .. option:: percentage_random=int[,int][,int]
 

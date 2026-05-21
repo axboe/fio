@@ -56,6 +56,10 @@ static void free_thread_options_to_cpu(struct thread_options *o)
 		free(o->bssplit[i]);
 		free(o->zone_split[i]);
 	}
+	if (o->random_sequence) {
+		free(o->random_sequence);
+		o->random_sequence = NULL;
+	}
 }
 
 size_t thread_options_pack_size(struct thread_options *o)
@@ -239,6 +243,13 @@ int convert_thread_options_to_cpu(struct thread_options *o,
 	o->fsync_on_close = le32_to_cpu(top->fsync_on_close);
 	o->bs_is_seq_rand = le32_to_cpu(top->bs_is_seq_rand);
 	o->random_distribution = le32_to_cpu(top->random_distribution);
+	o->random_sequence_nr = le32_to_cpu(top->random_sequence_nr);
+	if (o->random_sequence_nr) {
+		o->random_sequence = malloc(o->random_sequence_nr * sizeof(unsigned int));
+		for (j = 0; j < o->random_sequence_nr; j++)
+			o->random_sequence[j] = le32_to_cpu(top->random_sequence[j]);
+	}
+	o->random_sequence_stride = le32_to_cpu(top->random_sequence_stride);
 	o->exitall_error = le32_to_cpu(top->exitall_error);
 	o->zipf_theta.u.f = fio_uint64_to_double(le64_to_cpu(top->zipf_theta.u.i));
 	o->pareto_h.u.f = fio_uint64_to_double(le64_to_cpu(top->pareto_h.u.i));
@@ -495,6 +506,17 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->fsync_on_close = cpu_to_le32(o->fsync_on_close);
 	top->bs_is_seq_rand = cpu_to_le32(o->bs_is_seq_rand);
 	top->random_distribution = cpu_to_le32(o->random_distribution);
+	top->random_sequence_nr = cpu_to_le32(o->random_sequence_nr);
+	if (o->random_sequence_nr) {
+		unsigned int seq_nr = o->random_sequence_nr;
+		if (seq_nr > FIO_SEQ_MAX) {
+			log_err("fio: FIO_SEQ_MAX is too small\n");
+			seq_nr = FIO_SEQ_MAX;
+		}
+		for (j = 0; j < seq_nr; j++)
+			top->random_sequence[j] = cpu_to_le32(o->random_sequence[j]);
+	}
+	top->random_sequence_stride = cpu_to_le32(o->random_sequence_stride);
 	top->exitall_error = cpu_to_le32(o->exitall_error);
 	top->zipf_theta.u.i = __cpu_to_le64(fio_double_to_uint64(o->zipf_theta.u.f));
 	top->pareto_h.u.i = __cpu_to_le64(fio_double_to_uint64(o->pareto_h.u.f));
