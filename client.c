@@ -2054,12 +2054,12 @@ static void request_client_etas(struct client_ops const *ops)
 					(uintptr_t) eta, &client->cmd_list);
 	}
 
+	dprint(FD_NET, "client: requested eta tag %p\n", eta);
+
 	while (skipped--) {
 		if (!fio_client_dec_jobs_eta(eta, ops->eta))
 			break;
 	}
-
-	dprint(FD_NET, "client: requested eta tag %p\n", eta);
 }
 
 /*
