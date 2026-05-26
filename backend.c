@@ -32,7 +32,6 @@
 #include <pthread.h>
 
 #ifdef CONFIG_LINUX
-#include <linux/prctl.h>
 #include <sys/prctl.h>
 #endif
 
