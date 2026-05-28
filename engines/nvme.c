@@ -390,12 +390,22 @@ int fio_nvme_uring_cmd_prep(struct nvme_uring_cmd *cmd, struct io_u *io_u,
 		cmd->addr = (__u64)(uintptr_t)iov;
 		cmd->data_len = 1;
 	} else {
-		/* no buffer for write zeroes */
-		if (cmd->opcode != nvme_cmd_write_zeroes)
+		/* use buffer only for data transfer commands */
+		switch (cmd->opcode) {
+		case nvme_cmd_read:
+		case nvme_cmd_write:
+		case nvme_cmd_compare:
 			cmd->addr = (__u64)(uintptr_t)io_u->xfer_buf;
-		else
-			cmd->addr = (__u64)(uintptr_t)NULL;
-		cmd->data_len = io_u->xfer_buflen;
+			cmd->data_len = io_u->xfer_buflen;
+			break;
+		case nvme_cmd_write_zeroes:
+		case nvme_cmd_write_uncor:
+		case nvme_cmd_verify:
+			/* since cmd->addr and cmd->data_len is set to 0 by memset */
+			break;
+		default:
+			return -ENOTSUP;
+		}
 	}
 	if (data->lba_shift && data->ms) {
 		cmd->metadata = (__u64)(uintptr_t)io_u->mmap_data;
