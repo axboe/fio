@@ -664,7 +664,7 @@ static int read_trace(struct thread_data *td, struct blktrace_cursor *bc)
 
 read_skip:
 	/* read an io trace */
-	ret = fread(&t, 1, sizeof(t), bc->f);
+	ret = fread(t, 1, sizeof(*t), bc->f);
 	if (ferror(bc->f)) {
 		td_verror(td, errno, "read blktrace file");
 		return ret;
@@ -790,7 +790,9 @@ int merge_blktrace_iologs(struct thread_data *td)
 	}
 
 	/* set iolog file to read from the newly merged file */
+	free(td->o.read_iolog_file);
 	td->o.read_iolog_file = td->o.merge_blktrace_file;
+	td->o.merge_blktrace_file = NULL;
 	ret = 0;
 
 err_file:
@@ -799,10 +801,10 @@ err_file:
 		fclose(bcs[i].f);
 	}
 err_merge_buf:
-	free(merge_buf);
-err_out_file:
 	fflush(merge_fp);
 	fclose(merge_fp);
+err_out_file:
+	free(merge_buf);
 err_param:
 	free(bcs);
 
