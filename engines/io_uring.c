@@ -2192,6 +2192,12 @@ static int fio_ioring_cmd_reset_wp(struct thread_data *td, struct fio_file *f,
 	return -EINVAL;
 }
 
+static int fio_ioring_cmd_finish_zone(struct thread_data *td, struct fio_file *f,
+				      uint64_t offset, uint64_t length)
+{
+	return fio_nvme_finish_zone(td, f, offset, length);
+}
+
 static int fio_ioring_cmd_get_max_open_zones(struct thread_data *td,
 					     struct fio_file *f,
 					     unsigned int *max_open_zones)
@@ -2290,6 +2296,7 @@ static struct ioengine_ops ioengine_uring_cmd = {
 	.get_zoned_model	= fio_ioring_cmd_get_zoned_model,
 	.report_zones		= fio_ioring_cmd_report_zones,
 	.reset_wp		= fio_ioring_cmd_reset_wp,
+	.finish_zone		= fio_ioring_cmd_finish_zone,
 	.get_max_open_zones	= fio_ioring_cmd_get_max_open_zones,
 	.options		= options,
 	.option_struct_size	= sizeof(struct ioring_options),

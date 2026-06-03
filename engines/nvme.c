@@ -852,6 +852,47 @@ int fio_nvme_reset_wp(struct thread_data *td, struct fio_file *f,
 	return -ret;
 }
 
+int fio_nvme_finish_zone(struct thread_data *td, struct fio_file *f,
+		       uint64_t offset, uint64_t length)
+{
+	struct nvme_data *data = FILE_ENG_DATA(f);
+	unsigned int nr_zones;
+	unsigned long long zslba;
+	int i, fd, ret = 0;
+
+	/* If the file is not yet opened, open it for this function. */
+	fd = f->fd;
+	if (fd < 0) {
+		fd = open(f->file_name, O_RDWR | O_LARGEFILE);
+		if (fd < 0)
+			return -errno;
+	}
+
+	zslba = offset >> data->lba_shift;
+	nr_zones = (length + td->o.zone_size - 1) / td->o.zone_size;
+
+	for (i = 0; i < nr_zones; i++, zslba += (td->o.zone_size >> data->lba_shift)) {
+		struct nvme_passthru_cmd cmd = {
+			.opcode		= nvme_zns_cmd_mgmt_send,
+			.nsid		= data->nsid,
+			.cdw10		= zslba & 0xffffffff,
+			.cdw11		= zslba >> 32,
+			.cdw13		= NVME_ZNS_ZSA_FINISH,
+			.addr		= (__u64)(uintptr_t)NULL,
+			.data_len	= 0,
+			.timeout_ms	= NVME_DEFAULT_IOCTL_TIMEOUT,
+		};
+
+		ret = ioctl(fd, NVME_IOCTL_IO_CMD, &cmd);
+		if (ret)
+			break;
+	}
+
+	if (f->fd < 0)
+		close(fd);
+	return -ret;
+}
+
 int fio_nvme_get_max_open_zones(struct thread_data *td, struct fio_file *f,
 				unsigned int *max_open_zones)
 {
