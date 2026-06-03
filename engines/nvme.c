@@ -7,6 +7,7 @@
 #include "nvme.h"
 #include "../crc/crc-t10dif.h"
 #include "../crc/crc64.h"
+#include "zbd.h"
 
 static void fio_nvme_generate_pi_16b_guard(struct nvme_data *data,
 					   struct io_u *io_u,
@@ -352,6 +353,8 @@ int fio_nvme_uring_cmd_prep(struct nvme_uring_cmd *cmd, struct io_u *io_u,
 {
 	struct nvme_data *data = FILE_ENG_DATA(io_u->file);
 	__u64 slba;
+	__u64 offset;
+	__u64 zone_size;
 	__u32 nlb;
 
 	memset(cmd, 0, sizeof(struct nvme_uring_cmd));
@@ -375,7 +378,14 @@ int fio_nvme_uring_cmd_prep(struct nvme_uring_cmd *cmd, struct io_u *io_u,
 		return -ENOTSUP;
 	}
 
-	slba = get_slba(data, io_u->offset);
+	/* Zone appends must be issued to the start of the target zone */
+	if (cmd->opcode == nvme_zns_cmd_append && io_u->file->zbd_info) {
+		zone_size = io_u->file->zbd_info->zone_size;
+		offset = io_u->offset & (~(zone_size - 1));
+	} else {
+		offset = io_u->offset;
+	}
+	slba = get_slba(data, offset);
 	nlb = get_nlb(data, io_u->xfer_buflen);
 
 	/* cdw10 and cdw11 represent starting lba */
@@ -395,6 +405,7 @@ int fio_nvme_uring_cmd_prep(struct nvme_uring_cmd *cmd, struct io_u *io_u,
 		case nvme_cmd_read:
 		case nvme_cmd_write:
 		case nvme_cmd_compare:
+		case nvme_zns_cmd_append:
 			cmd->addr = (__u64)(uintptr_t)io_u->xfer_buf;
 			cmd->data_len = io_u->xfer_buflen;
 			break;

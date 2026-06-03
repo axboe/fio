@@ -85,6 +85,7 @@ enum nvme_io_opcode {
 	nvme_cmd_io_mgmt_recv		= 0x12,
 	nvme_zns_cmd_mgmt_send		= 0x79,
 	nvme_zns_cmd_mgmt_recv		= 0x7a,
+	nvme_zns_cmd_append		= 0x7d,
 };
 
 enum nvme_zns_zs {

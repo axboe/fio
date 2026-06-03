@@ -1,0 +1,36 @@
+# io_uring_cmd I/O engine for nvme-ns generic zoned character device
+# with zone appends
+#
+# NOTE:
+# Unlike regular writes, zone appends in a zone can be issued at 
+# a QD higher than 1.
+
+[global]
+filename=/dev/ng1n1
+ioengine=io_uring_cmd
+cmd_type=nvme
+zonemode=zbd
+write_mode=zone_append
+size=1z
+bs=8K
+verify=crc32c
+stonewall=1
+
+[rand-write]
+iodepth=1
+rw=randwrite
+
+[write-opts]
+iodepth=4
+rw=write
+registerfiles=1
+sqthread_poll=1
+sqthread_poll_cpu=0
+
+[randwrite-opts]
+iodepth=4
+rw=randwrite
+sqthread_poll=1
+sqthread_poll_cpu=0
+nonvectored=1
+registerfiles=1

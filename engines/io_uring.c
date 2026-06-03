@@ -100,13 +100,15 @@ enum uring_cmd_type {
 };
 
 enum uring_cmd_write_mode {
-	FIO_URING_CMD_WMODE_WRITE = 1,
+	FIO_URING_CMD_WMODE_WRITE = 0,
 	FIO_URING_CMD_WMODE_UNCOR,
 	FIO_URING_CMD_WMODE_ZEROES,
 	FIO_URING_CMD_WMODE_VERIFY,
+	FIO_URING_CMD_WMODE_ZONE_APPEND,
+	FIO_URING_CMD_WMODE_LAST
 };
 
-#define WMODE_SPLIT_MAX	4
+#define WMODE_SPLIT_MAX	FIO_URING_CMD_WMODE_LAST
 
 struct wmode_split_entry {
 	uint8_t		opcode;
@@ -236,6 +238,8 @@ static uint8_t wmode_str_to_opcode(const char *mode)
 		return nvme_cmd_write_zeroes;
 	if (!strcmp(mode, "verify"))
 		return nvme_cmd_verify;
+	if (!strcmp(mode, "zone_append"))
+		return nvme_zns_cmd_append;
 	return 0xff;
 }
 
@@ -261,6 +265,8 @@ static int str_write_mode_cb(void *data, const char *str)
 			o->write_mode = FIO_URING_CMD_WMODE_ZEROES;
 		else if (op == nvme_cmd_verify)
 			o->write_mode = FIO_URING_CMD_WMODE_VERIFY;
+		else if (op == nvme_zns_cmd_append)
+			o->write_mode = FIO_URING_CMD_WMODE_ZONE_APPEND;
 		else
 			o->write_mode = FIO_URING_CMD_WMODE_WRITE;
 		o->wmode_split_nr = 0;
@@ -402,7 +408,7 @@ static struct fio_option options[] = {
 		.lname	= "Write command type(s) with optional mix ratios",
 		.type	= FIO_OPT_STR,
 		.cb	= str_write_mode_cb,
-		.help	= "Single: write|uncor|zeroes|verify. "
+		.help	= "Single: write|uncor|zeroes|verify|zone_append. "
 			  "Mixed: mode/pct:mode/pct:... (e.g. write/60:zeroes/40). "
 			  "Blank pct evenly splits the remainder (e.g. write/50:zeroes/:uncor/)",
 		.def	= "write",
@@ -1554,6 +1560,17 @@ static void parse_prchk_flags(struct ioring_options *o)
 static int fio_ioring_cmd_init(struct thread_data *td, struct ioring_data *ld)
 {
 	struct ioring_options *o = td->eo;
+	int append, i;
+
+	append = o->write_mode == FIO_URING_CMD_WMODE_ZONE_APPEND;
+	for (i = 0; i < (int)o->wmode_split_nr; i++)
+		append |= o->wmode_split[i].opcode == nvme_zns_cmd_append;
+
+	if (append && td->o.zone_mode != ZONE_MODE_ZBD) {
+		log_err("fio: io_uring_cmd with write_mode=zone_append "
+			"requires zonemode=zbd\n");
+		return 1;
+	}
 
 	if (o->cmd_type == FIO_URING_CMD_NVME) {
 		if (td_write(td)) {
@@ -1584,6 +1601,9 @@ static int fio_ioring_cmd_init(struct thread_data *td, struct ioring_data *ld)
 					break;
 				case FIO_URING_CMD_WMODE_VERIFY:
 					ld->write_opcode = nvme_cmd_verify;
+					break;
+				case FIO_URING_CMD_WMODE_ZONE_APPEND:
+					ld->write_opcode = nvme_zns_cmd_append;
 					break;
 				default:
 					ld->write_opcode = nvme_cmd_write;
