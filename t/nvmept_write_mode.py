@@ -261,7 +261,7 @@ def main():
     if args.fio:
         fio_path = str(Path(args.fio).absolute())
     else:
-        fio_root = str(Path(__file__).absolute().parent.parent)
+        fio_path = os.path.join(str(Path(__file__).absolute().parent.parent), "fio")
     print(f"fio path is {fio_path}")
 
     for test in TEST_LIST:
