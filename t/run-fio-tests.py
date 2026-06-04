@@ -1155,6 +1155,14 @@ TEST_LIST = [
         'success':          SUCCESS_DEFAULT,
         'requirements':     [Requirements.linux, Requirements.nvmecdev],
     },
+    {
+        'test_id':          1023,
+        'test_class':       FioExeTest,
+        'exe':              't/verify_state_save.py',
+        'parameters':       ['-f', '{fio_path}'],
+        'success':          SUCCESS_DEFAULT,
+        'requirements':     [],
+    },
 ]
 
 
