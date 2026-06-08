@@ -3861,6 +3861,29 @@ Recreate an instance of the \fBverify_pattern\fR every
 up the process of writing each block on a device with its offset. Default:
 0 (disabled).
 .TP
+.BI verify_policy \fR=\fPstr
+Controls which writes are included during offline verification. Only
+takes effect when \fBverify_state_save\fR is used to save state
+during the write phase and a separate job later verifies with
+\fBverify_state_load\fR.
+.RS
+.RS
+.TP
+.B completed
+Verify all completed writes (default).
+.TP
+.B fsynced
+Only verify writes that were completed before the last fsync
+submission which goes to successfully complete. Writes issued
+after the most recent fsync submission are excluded, because
+they may not be persistent after a crash or power loss.
+The safe threshold is captured at fsync submission time (not
+completion time) to avoid counting writes submitted after the
+fsync submission in async engines. At state-save time the
+threshold and the in-flight write list are recorded.
+.RE
+.RE
+.TP
 .BI verify_fatal \fR=\fPbool
 Normally fio will keep checking the entire contents before quitting on a
 block verification failure. If this option is set, fio will exit the job on
