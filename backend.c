@@ -1574,7 +1574,26 @@ int init_io_u_buffers(struct thread_data *td)
 	char *p;
 
 	max_units = td->o.iodepth;
-	if (td->trim_verify && td->o.trim_zero)
+
+	/*
+	 * Trim operations do not involve data transfer. So we typically do not
+	 * have to account for trim sizes when allocating buffers. However,
+	 * there are exceptions:
+	 *
+	 * - if we are in trim verify mode we need a data buffer the same size
+	 *   as the trimmed range in order to confirm that the trimmed offset
+	 *   is all zeroes when we read it back
+	 * - if we are in [rand]trimwrite mode we need a data buffer the same
+	 *   size as the trimmed range in order to write data at the trimmed
+	 *   offset
+	 * - however, fio can mistakenly believe it is in [rand]trimwrite mode
+	 *   if it encounters trim and write operations when reading an iolog.
+	 *   So when replaying an iolog we do not need to account for trim
+	 *   sizes when allocating buffers even if the [rand]trimwrite check
+	 *   returns true because this is a false positive.
+	 */
+	if ((td->trim_verify && td->o.trim_zero) ||
+			(!(td->flags & TD_F_READ_IOLOG) && td_trimwrite(td)))
 		max_bs = td_max_bs(td);
 	else
 		max_bs = td_max_rw_bs(td);
