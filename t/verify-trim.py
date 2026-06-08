@@ -47,6 +47,7 @@ VERIFY_OPT_LIST = [
     'trim_backlog_batch',
     'trim_verify_zero',
     'number_ios',
+    'do_verify',
 ]
 
 class VerifyTrimTest(FioJobCmdTest):
@@ -208,7 +209,58 @@ TEST_LIST = [
             },
         "test_class": VerifyTrimTest,
     },
-
+    {
+        # do_verify=0: trim must still be issued when trim_percentage=100
+        "test_id": 200,
+        "fio_opts": {
+            "rw": "write",
+            "do_verify": 0,
+            "trim_percentage": 100,
+            "trim_backlog": 1,
+            "number_ios": 64,
+            "output-format": "json",
+            },
+        "test_class": VerifyTrimTest,
+    },
+    {
+        # do_verify=0: trim must still be issued when trim_percentage=100
+        "test_id": 201,
+        "fio_opts": {
+            "rw": "randwrite",
+            "do_verify": 0,
+            "trim_percentage": 100,
+            "trim_backlog": 1,
+            "number_ios": 64,
+            "output-format": "json",
+            },
+        "test_class": VerifyTrimTest,
+    },
+    {
+        # do_verify=0: trim must still be issued when trim_percentage=50
+        "test_id": 202,
+        "fio_opts": {
+            "rw": "write",
+            "do_verify": 0,
+            "trim_percentage": 50,
+            "trim_backlog": 1,
+            "number_ios": 64,
+            "output-format": "json",
+            },
+        "test_class": VerifyTrimTest,
+    },
+    {
+        # do_verify=0: trim must still be issued when trim_percentage=50
+        "test_id": 203,
+        "fio_opts": {
+            "rw": "randwrite",
+            "do_verify": 0,
+            "trim_percentage": 50,
+            "trim_backlog": 1,
+            "number_ios": 64,
+            "output-format": "json",
+            },
+        "test_class": VerifyTrimTest,
+    },
 ]
 
 

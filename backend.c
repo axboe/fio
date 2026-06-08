@@ -1273,9 +1273,14 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 		 * Always log IO before it's issued, so we know the specific
 		 * order of it. The logged unit will track when the IO has
 		 * completed.
+		 *
+		 * Trim command is determined by @io_u loggged in the @io_hist
+		 * based on the percentage of the given value to
+		 * --trim_percentage=<%>.  Log @io_u for trim command even in
+		 * --do_verify=0 case.
 		 */
 		if (td_write(td) && io_u->ddir == DDIR_WRITE &&
-		    td->o.do_verify &&
+		    (td->o.do_verify || td->trim_verify) &&
 		    td->o.verify != VERIFY_NONE &&
 		    !td->o.experimental_verify)
 			log_io_piece(td, io_u);
@@ -1826,8 +1831,14 @@ static uint64_t do_dry_run(struct thread_data *td)
 			td->ts.total_io_u[io_u->ddir]++;
 		}
 
+		/*
+		 * Trim command is determined by @io_u loggged in the @io_hist
+		 * based on the percentage of the given value to
+		 * --trim_percentage=<%>.  Log @io_u for trim command even in
+		 * --do_verify=0 case.
+		 */
 		if (td_write(td) && io_u->ddir == DDIR_WRITE &&
-		    td->o.do_verify &&
+		    (td->o.do_verify || td->trim_verify) &&
 		    td->o.verify != VERIFY_NONE &&
 		    !td->o.experimental_verify) {
 			if (!verify_state_should_skip(td, io_u->numberio))
