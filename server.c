@@ -443,20 +443,16 @@ struct fio_net_cmd *fio_net_recv_cmd(int sk, bool wait)
 		free(cmdret);
 		cmdret = NULL;
 	} else if (cmdret) {
-		/* zero-terminate text input */
+		/*
+		 * zero-terminate text input at the trailing byte reserved by
+		 * the allocation above, not at the length supplied by the peer
+		 */
 		if (cmdret->pdu_len) {
-			if (cmdret->opcode == FIO_NET_CMD_TEXT) {
-				struct cmd_text_pdu *__pdu = (struct cmd_text_pdu *) cmdret->payload;
-				char *buf = (char *) __pdu->buf;
-				int len = le32_to_cpu(__pdu->buf_len);
+			if (cmdret->opcode == FIO_NET_CMD_TEXT ||
+			    cmdret->opcode == FIO_NET_CMD_JOB) {
+				char *buf = (char *) cmdret->payload;
 
-				buf[len] = '\0';
-			} else if (cmdret->opcode == FIO_NET_CMD_JOB) {
-				struct cmd_job_pdu *__pdu = (struct cmd_job_pdu *) cmdret->payload;
-				char *buf = (char *) __pdu->buf;
-				int len = le32_to_cpu(__pdu->buf_len);
-
-				buf[len] = '\0';
+				buf[cmdret->pdu_len] = '\0';
 			}
 		}
 
@@ -1108,8 +1104,8 @@ static int handle_trigger_cmd(struct fio_net_cmd *cmd, struct flist_head *job_li
 	struct all_io_list *rep;
 	size_t sz;
 
-	pdu->len = le16_to_cpu(pdu->len);
-	buf[pdu->len] = '\0';
+	/* terminate at the trailing byte reserved by fio_net_recv_cmd() */
+	((char *) cmd->payload)[cmd->pdu_len] = '\0';
 
 	rep = get_all_io_list(IO_LIST_ALL, &sz);
 	if (!rep) {
