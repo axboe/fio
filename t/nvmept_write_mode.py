@@ -54,7 +54,7 @@ class WriteModeTest(FioJobCmdTest):
                     'iodepth', 'iodepth_batch', 'iodepth_batch_complete',
                     'size', 'rate', 'bs', 'bssplit', 'bsrange', 'randrepeat',
                     'buffer_pattern', 'verify_pattern', 'verify', 'offset',
-                    'filesize', 'write_mode', ]:
+                    'filesize', 'write_mode', 'debug', ]:
             if opt in self.fio_opts:
                 option = f"--{opt}={self.fio_opts[opt]}"
                 fio_args.append(option)
@@ -89,6 +89,86 @@ class WriteModeTest(FioJobCmdTest):
         else:
             logging.error("Unhandled rw value %s", self.fio_opts['rw'])
             self.passed = False
+
+nvme_cmd_write = 1
+nvme_cmd_write_uncor = 4
+nvme_cmd_write_zeroes = 8
+nvme_cmd_verify = 12
+
+class WriteModeSplit(WriteModeTest):
+    """
+    Make sure that the expected fraction of write, write uncorrectable, write
+    zeroes, and verify commands are actually submitted.
+    """
+
+    def check_result(self):
+
+        super().check_result()
+
+        if not self.passed:
+            return
+
+        split = {'write': 0, 'uncor': 0, 'verify': 0, 'zeroes': 0}
+        wm = self.fio_opts['write_mode']
+        for s in wm.split(':'):
+            sp = s.split('/')
+            split[sp[0]] = sp[1]
+
+        total = 0
+        blanks = 0
+        for v in split.values():
+            if v == '':
+                blanks += 1
+            else:
+                total += int(v)
+
+        if blanks:
+            fill = int((100 - total) / blanks)
+        for k in split.keys():
+            if split[k] == '':
+                split[k] = fill
+            else:
+                split[k] = int(split[k])
+
+        logging.debug(split)
+
+        actual = {'write': 0, 'uncor': 0, 'verify': 0, 'zeroes': 0}
+        with open(self.filenames['output'], 'r') as file:
+            for line in file:
+                if "op selected" in line:
+                    op = int(line.split(" op selected ")[1])
+                    if op == nvme_cmd_write:
+                        actual['write'] += 1
+                    elif op == nvme_cmd_write_uncor:
+                        actual['uncor'] += 1
+                    elif op == nvme_cmd_write_zeroes:
+                        actual['zeroes'] += 1
+                    elif op == nvme_cmd_verify:
+                        actual['verify'] += 1
+                    else:
+                        raise ValueError(f"Unknown opcode {op}")
+
+        logging.debug(actual)
+        total = sum(actual.values())
+        if total == 0:
+            self.passed = False
+            self.failure_reason += \
+                    "No write/uncor/zeroes/verify commands detected"
+            return
+
+        for key, value in actual.items():
+            expected = int(split[key] / 100 * total)
+            logging.debug("mode %s: expected %d, actual %d", key, expected, value)
+            if expected != 0:
+                if abs(value - expected) / expected > 0.1:
+                    self.passed = False
+                    self.failure_reason += \
+                        f"large discrepancy for write mode {key}: expected {expected}, actual {value};"
+            elif value != 0:
+                self.passed = False
+                self.failure_reason += \
+                    f"discrepancy for write mode {key}: expected {expected}, actual {value};"
+
 
 TEST_SIZE="16M"
 
@@ -239,9 +319,9 @@ TEST_LIST = [
             "filesize": TEST_SIZE,
             "write_mode": "write/30:zeroes/20:uncor/50",
             "randrepeat": 0,
-            "output-format": "json",
+            "debug": "io",
             },
-        "test_class": WriteModeTest,
+        "test_class": WriteModeSplit,
     },
     {
         # All percentages explicit with verify; write/50 + zeroes/50
@@ -251,9 +331,9 @@ TEST_LIST = [
             "filesize": TEST_SIZE,
             "write_mode": "write/50:zeroes/50",
             "randrepeat": 0,
-            "output-format": "json",
+            "debug": "io",
             },
-        "test_class": WriteModeTest,
+        "test_class": WriteModeSplit,
     },
 
     {
@@ -265,9 +345,9 @@ TEST_LIST = [
             "filesize": TEST_SIZE,
             "write_mode": "write/50:zeroes/:uncor/",
             "randrepeat": 0,
-            "output-format": "json",
+            "debug": "io",
             },
-        "test_class": WriteModeTest,
+        "test_class": WriteModeSplit,
     },
     {
         # All blanks: write, zeroes, uncor each get 33% (integer division)
@@ -277,9 +357,9 @@ TEST_LIST = [
             "filesize": TEST_SIZE,
             "write_mode": "write/:zeroes/:uncor/",
             "randrepeat": 0,
-            "output-format": "json",
+            "debug": "io",
             },
-        "test_class": WriteModeTest,
+        "test_class": WriteModeSplit,
     },
     {
         # Two entries, one blank: write/60 + zeroes blank gets remaining 40%
@@ -289,9 +369,9 @@ TEST_LIST = [
             "filesize": TEST_SIZE,
             "write_mode": "write/60:zeroes/",
             "randrepeat": 0,
-            "output-format": "json",
+            "debug": "io",
             },
-        "test_class": WriteModeTest,
+        "test_class": WriteModeSplit,
     },
     {
         # Three entries, one blank: write/30 + zeroes/40 + uncor blank gets
@@ -302,9 +382,9 @@ TEST_LIST = [
             "filesize": TEST_SIZE,
             "write_mode": "write/30:zeroes/40:uncor/",
             "randrepeat": 0,
-            "output-format": "json",
+            "debug": "io",
             },
-        "test_class": WriteModeTest,
+        "test_class": WriteModeSplit,
     },
     {
         # Invalid: percentages exceed 100
