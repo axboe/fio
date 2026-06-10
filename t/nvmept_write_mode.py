@@ -101,6 +101,10 @@ class WriteModeSplit(WriteModeTest):
     zeroes, and verify commands are actually submitted.
     """
 
+    def __init__(self, fio_path, success, testnum, artifact_root, fio_opts, basename=None):
+        super().__init__(fio_path, success, testnum, artifact_root, fio_opts, basename)
+        self.actual = None
+
     def check_result(self):
 
         super().check_result()
@@ -132,31 +136,31 @@ class WriteModeSplit(WriteModeTest):
 
         logging.debug(split)
 
-        actual = {'write': 0, 'uncor': 0, 'verify': 0, 'zeroes': 0}
+        self.actual = {'write': 0, 'uncor': 0, 'verify': 0, 'zeroes': 0}
         with open(self.filenames['output'], 'r') as file:
             for line in file:
                 if "op selected" in line:
                     op = int(line.split(" op selected ")[1])
                     if op == nvme_cmd_write:
-                        actual['write'] += 1
+                        self.actual['write'] += 1
                     elif op == nvme_cmd_write_uncor:
-                        actual['uncor'] += 1
+                        self.actual['uncor'] += 1
                     elif op == nvme_cmd_write_zeroes:
-                        actual['zeroes'] += 1
+                        self.actual['zeroes'] += 1
                     elif op == nvme_cmd_verify:
-                        actual['verify'] += 1
+                        self.actual['verify'] += 1
                     else:
                         raise ValueError(f"Unknown opcode {op}")
 
-        logging.debug(actual)
-        total = sum(actual.values())
+        logging.debug(self.actual)
+        total = sum(self.actual.values())
         if total == 0:
             self.passed = False
             self.failure_reason += \
                     "No write/uncor/zeroes/verify commands detected"
             return
 
-        for key, value in actual.items():
+        for key, value in self.actual.items():
             expected = int(split[key] / 100 * total)
             logging.debug("mode %s: expected %d, actual %d", key, expected, value)
             if expected != 0:
@@ -168,6 +172,49 @@ class WriteModeSplit(WriteModeTest):
                 self.passed = False
                 self.failure_reason += \
                     f"discrepancy for write mode {key}: expected {expected}, actual {value};"
+
+
+class WriteModeVerify(WriteModeSplit):
+    """
+    Make sure that offsets that are the target of write uncorrectable commands
+    and offsets that are the target of write zeroes commands are appropriately
+    verified.
+
+    This only checks that the number of write zeroes commands matches the
+    number of write zero verify debug messages and that the number of write
+    uncorrectable commands matches the number of uncorrectable verify debug
+    messages.
+
+    No checking is done to make sure that the offsets where write zeroes
+    (uncorrectables) were originally targeted are the offsets where write zero
+    (uncorrectable) verification is carried out.
+
+    No overlap checking is carried out, so write offsets cannot be repeated.
+
+    Jobs must be run with --debug=verify,io in order to detect errored IOs and
+    write zeroes verification.
+    """
+
+    def check_result(self):
+
+        super().check_result()
+        if not self.passed:
+            return
+
+        verify = {'uncor': 0, 'zeroes': 0}
+        with open(self.filenames['output'], 'r') as file:
+            for line in file:
+                if "errored io_u" in line:
+                    verify['uncor'] += 1
+                elif "verifying write zeroes" in line:
+                    verify['zeroes'] += 1
+
+        logging.debug("verify: %s", str(verify))
+        for cmd in ['zeroes', 'uncor']:
+            if verify[cmd] != self.actual[cmd]:
+                self.passed = False
+                self.failure_reason += \
+                    f"{cmd}: writes {self.actual[cmd]} and verifies {verify[cmd]} do not match; "
 
 
 TEST_SIZE="16M"
@@ -429,6 +476,37 @@ TEST_LIST = [
             },
         "test_class": WriteModeTest,
         "success": SUCCESS_NONZERO,
+    },
+
+    #
+    # Make sure verify handles write zeroes and write uncorrectable opcodes
+    # correctly
+    #
+    {
+        # All percentages explicit, sum == 100
+        "test_id": 70,
+        "fio_opts": {
+            "rw": 'randwrite',
+            "filesize": TEST_SIZE,
+            "write_mode": "write/30:zeroes/20:uncor/50",
+            "verify": "crc32c",
+            "randrepeat": 0,
+            "debug": "io,verify",
+            },
+        "test_class": WriteModeVerify,
+    },
+    {
+        # All percentages explicit with verify; write/50 + zeroes/50
+        "test_id": 71,
+        "fio_opts": {
+            "rw": 'randwrite',
+            "filesize": TEST_SIZE,
+            "write_mode": "write/50:zeroes/50",
+            "verify": "crc32c",
+            "randrepeat": 0,
+            "debug": "io,verify",
+            },
+        "test_class": WriteModeVerify,
     },
 ]
 
