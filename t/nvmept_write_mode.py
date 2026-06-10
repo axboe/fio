@@ -217,7 +217,7 @@ class WriteModeVerify(WriteModeSplit):
                     f"{cmd}: writes {self.actual[cmd]} and verifies {verify[cmd]} do not match; "
 
 
-TEST_SIZE="16M"
+TEST_SIZE = "16M"
 
 TEST_LIST = [
     {
@@ -553,11 +553,11 @@ def main():
         test['fio_opts']['filename'] = args.dut
 
     test_env = {
-              'fio_path': fio_path,
-              'fio_root': str(Path(__file__).absolute().parent.parent),
-              'artifact_root': artifact_root,
-              'basename': 'nvmept-write-mode',
-              }
+        'fio_path': fio_path,
+        'fio_root': str(Path(__file__).absolute().parent.parent),
+        'artifact_root': artifact_root,
+        'basename': 'nvmept-write-mode',
+        }
 
     _, failed, _ = run_fio_tests(TEST_LIST, test_env, args)
     sys.exit(failed)
