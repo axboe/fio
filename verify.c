@@ -1017,6 +1017,7 @@ int verify_io_u(struct thread_data *td, struct io_u **io_u_ptr)
 		ret = verify_trimmed_io_u(td, io_u);
 		goto done;
 	} else if (io_u->flags & IO_U_F_ZEROED) {
+		dprint(FD_VERIFY, "verifying write zeroes command\n");
 		ret = verify_zero(io_u);
 		goto done;
 	}
