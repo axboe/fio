@@ -794,6 +794,7 @@ static int fio_ioring_cmd_prep(struct thread_data *td, struct io_u *io_u)
 					io_u_set(td, io_u, IO_U_F_ERRORED);
 				}
 
+				dprint(FD_IO, "op selected %u\n", op);
 				return fio_nvme_uring_cmd_prep(cmd, io_u,
 					o->nonvectored ? NULL : &ld->iovecs[io_u->index],
 					dsm, read_opcode, op,
