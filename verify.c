@@ -1416,15 +1416,23 @@ int get_next_verify(struct thread_data *td, struct io_u *io_u)
 	if (!RB_EMPTY_ROOT(&td->io_hist_tree)) {
 		struct fio_rb_node *n = rb_first(&td->io_hist_tree);
 
-		ipo = rb_entry(n, struct io_piece, rb_node);
-
 		/*
-		 * Ensure that the associated IO has completed
+		 * Walk the tree to find the first entry whose IO has
+		 * completed. The tree is sorted by offset, so the first
+		 * entry may still be in-flight while later entries are
+		 * already done.
 		 */
-		if (atomic_load_acquire(&ipo->flags) & IP_F_IN_FLIGHT)
+		while (n) {
+			ipo = rb_entry(n, struct io_piece, rb_node);
+			if (!(atomic_load_acquire(&ipo->flags) & IP_F_IN_FLIGHT))
+				break;
+			n = rb_next(n);
+		}
+
+		if (!n)
 			goto nothing;
 
-		rb_erase(n, &td->io_hist_tree);
+		rb_erase(&ipo->rb_node, &td->io_hist_tree);
 		assert(ipo->flags & IP_F_ONRB);
 		ipo->flags &= ~IP_F_ONRB;
 	} else if (!flist_empty(&td->io_hist_list)) {
