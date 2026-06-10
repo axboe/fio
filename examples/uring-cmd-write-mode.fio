@@ -1,0 +1,21 @@
+# io_uring_cmd mixed write_mode example
+#
+# Issues write, zeroes, uncor, and verify commands in a single job
+# using the ratio-based write_mode syntax:
+#
+#   write_mode=write/40:zeroes/30:uncor/20:verify/10
+#
+# Replace /dev/ng0n1 with the target nvme-ns generic character device.
+
+[global]
+filename=/dev/ng0n1
+ioengine=io_uring_cmd
+cmd_type=nvme
+size=1G
+iodepth=32
+bs=4K
+thread=1
+
+[mixed-write-modes]
+rw=write
+write_mode=write/40:zeroes/30:uncor/20:verify/10

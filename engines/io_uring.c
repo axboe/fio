@@ -104,6 +104,14 @@ enum uring_cmd_write_mode {
 	FIO_URING_CMD_WMODE_VERIFY,
 };
 
+#define WMODE_SPLIT_MAX	4
+
+struct wmode_split_entry {
+	uint8_t		opcode;
+	uint32_t	cdw12_flag;
+	unsigned int	perc;
+};
+
 enum uring_cmd_verify_mode {
 	FIO_URING_CMD_VMODE_READ = 1,
 	FIO_URING_CMD_VMODE_COMPARE,
@@ -161,6 +169,7 @@ struct ioring_data {
 	struct nvme_dsm *dsm;
 	uint32_t cdw12_flags[DDIR_RWDIR_CNT];
 	uint8_t write_opcode;
+	struct frand_state wmode_state;
 
 	bool is_uring_cmd_eng;
 
@@ -174,6 +183,8 @@ struct ioring_options {
 	unsigned int writefua;
 	unsigned int deac;
 	unsigned int write_mode;
+	struct wmode_split_entry wmode_split[WMODE_SPLIT_MAX];
+	unsigned int wmode_split_nr;
 	unsigned int verify_mode;
 	struct cmdprio_options cmdprio_options;
 	unsigned int fixedbufs;
@@ -205,6 +216,138 @@ static const int fixed_ddir_to_op[2] = {
 	IORING_OP_READ_FIXED,
 	IORING_OP_WRITE_FIXED
 };
+
+static uint8_t wmode_str_to_opcode(const char *mode)
+{
+	if (!strcmp(mode, "write"))
+		return nvme_cmd_write;
+	if (!strcmp(mode, "uncor"))
+		return nvme_cmd_write_uncor;
+	if (!strcmp(mode, "zeroes"))
+		return nvme_cmd_write_zeroes;
+	if (!strcmp(mode, "verify"))
+		return nvme_cmd_verify;
+	return 0xff;
+}
+
+static int str_write_mode_cb(void *data, const char *str)
+{
+	struct ioring_options *o = data;
+	char *s, *p, *tok;
+	unsigned int total_perc = 0, perc_missing;
+	int i = 0, j;
+
+	/* Single-value: no ':' means single mode name */
+	if (!strchr(str, ':')) {
+		uint8_t op = wmode_str_to_opcode(str);
+
+		if (op == 0xff) {
+			log_err("fio: invalid write_mode value: %s\n", str);
+			return 1;
+		}
+
+		if (op == nvme_cmd_write_uncor)
+			o->write_mode = FIO_URING_CMD_WMODE_UNCOR;
+		else if (op == nvme_cmd_write_zeroes)
+			o->write_mode = FIO_URING_CMD_WMODE_ZEROES;
+		else if (op == nvme_cmd_verify)
+			o->write_mode = FIO_URING_CMD_WMODE_VERIFY;
+		else
+			o->write_mode = FIO_URING_CMD_WMODE_WRITE;
+		o->wmode_split_nr = 0;
+		return 0;
+	}
+
+	/* Multi-value: e.g., --write_mode=write/60:zeroes/30:uncor/10 */
+	s = strdup(str);
+	p = s;
+	while ((tok = strsep(&p, ":")) != NULL) {
+		char *perc_str = strchr(tok, '/');
+		unsigned int perc;
+		uint8_t op;
+
+		if (i >= WMODE_SPLIT_MAX) {
+			log_err("fio: write_mode: too many entries (max %d)\n",
+				WMODE_SPLIT_MAX);
+			free(s);
+			return 1;
+		}
+
+		if (!perc_str) {
+			log_err("fio: write_mode: missing '/' in entry: %s\n", tok);
+			free(s);
+			return 1;
+		}
+
+		*perc_str++ = '\0';
+		op = wmode_str_to_opcode(tok);
+		if (op == 0xff) {
+			log_err("fio: invalid write_mode value: %s\n", tok);
+			free(s);
+			return 1;
+		}
+
+		if (*perc_str) {
+			int tmp = atoi(perc_str);
+
+			if (tmp < 0) {
+				log_err("fio: write_mode: percentage must not be negative: %s\n",
+					perc_str);
+				free(s);
+				return 1;
+			}
+
+			perc = (unsigned int)tmp;
+			total_perc += perc;
+		} else {
+			/* blank percentage: fill in evenly later */
+			perc = -1U;
+		}
+
+		o->wmode_split[i].opcode = op;
+		o->wmode_split[i].cdw12_flag = 0;
+		o->wmode_split[i].perc = perc;
+		i++;
+	}
+	free(s);
+
+	if (i < 2) {
+		log_err("fio: write_mode needs at least 2 entries\n");
+		return 1;
+	}
+
+	if (total_perc > 100) {
+		log_err("fio: write_mode percentages exceed 100%%\n");
+		return 1;
+	}
+
+	/*
+	 * Distribute the remaining percentage evenly among blank entries,
+	 * matching bssplit behavior (e.g. write/50:zeroes/:uncor/ gives 25%
+	 * each to zeroes and uncor).
+	 */
+	perc_missing = 0;
+	for (j = 0; j < i; j++) {
+		if (o->wmode_split[j].perc == -1U)
+			perc_missing++;
+	}
+
+	if (perc_missing) {
+		unsigned int fill = (100 - total_perc) / perc_missing;
+
+		for (j = 0; j < i; j++) {
+			if (o->wmode_split[j].perc == -1U)
+				o->wmode_split[j].perc = fill;
+		}
+	} else if (total_perc != 100) {
+		log_err("fio: write_mode percentages should add up to 100%%\n");
+		return 1;
+	}
+
+	o->wmode_split_nr = i;
+	o->write_mode = FIO_URING_CMD_WMODE_WRITE;
+	return 0;
+}
 
 static int fio_ioring_sqpoll_cb(void *data, unsigned long long *val)
 {
@@ -247,29 +390,13 @@ static struct fio_option options[] = {
 	},
 	{
 		.name	= "write_mode",
-		.lname	= "Additional Write commands support (Write Uncorrectable, Write Zeores)",
+		.lname	= "Write command type(s) with optional mix ratios",
 		.type	= FIO_OPT_STR,
-		.off1	= offsetof(struct ioring_options, write_mode),
-		.help	= "Issue Write Uncorrectable or Zeroes command instead of Write command",
+		.cb	= str_write_mode_cb,
+		.help	= "Single: write|uncor|zeroes|verify. "
+			  "Mixed: mode/pct:mode/pct:... (e.g. write/60:zeroes/40). "
+			  "Blank pct evenly splits the remainder (e.g. write/50:zeroes/:uncor/)",
 		.def	= "write",
-		.posval = {
-			  { .ival = "write",
-			    .oval = FIO_URING_CMD_WMODE_WRITE,
-			    .help = "Issue Write commands for write operations"
-			  },
-			  { .ival = "uncor",
-			    .oval = FIO_URING_CMD_WMODE_UNCOR,
-			    .help = "Issue Write Uncorrectable commands for write operations"
-			  },
-			  { .ival = "zeroes",
-			    .oval = FIO_URING_CMD_WMODE_ZEROES,
-			    .help = "Issue Write Zeroes commands for write operations"
-			  },
-			  { .ival = "verify",
-			    .oval = FIO_URING_CMD_WMODE_VERIFY,
-			    .help = "Issue Verify commands for write operations"
-			  },
-		},
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_IOURING,
 	},
@@ -645,6 +772,34 @@ static int fio_ioring_cmd_prep(struct thread_data *td, struct io_u *io_u)
 		populate_verify_io_u(td, io_u);
 		read_opcode = nvme_cmd_compare;
 		io_u_set(td, io_u, IO_U_F_VER_IN_DEV);
+	}
+
+	if (o->wmode_split_nr > 1 && io_u->ddir == DDIR_WRITE) {
+		unsigned int rand = rand_between(&ld->wmode_state, 0, 99);
+		unsigned int perc = 0;
+		int i;
+
+		for (i = 0; i < (int)o->wmode_split_nr; i++) {
+			perc += o->wmode_split[i].perc;
+			if (rand < perc) {
+				uint8_t op = o->wmode_split[i].opcode;
+
+				io_u_clear(td, io_u, IO_U_F_TRIMMED | IO_U_F_ZEROED | IO_U_F_ERRORED);
+				if (op == nvme_cmd_write_zeroes) {
+					if (o->deac)
+						io_u_set(td, io_u, IO_U_F_TRIMMED);
+					else
+						io_u_set(td, io_u, IO_U_F_ZEROED);
+				} else if (op == nvme_cmd_write_uncor) {
+					io_u_set(td, io_u, IO_U_F_ERRORED);
+				}
+
+				return fio_nvme_uring_cmd_prep(cmd, io_u,
+					o->nonvectored ? NULL : &ld->iovecs[io_u->index],
+					dsm, read_opcode, op,
+					o->wmode_split[i].cdw12_flag);
+			}
+		}
 	}
 
 	return fio_nvme_uring_cmd_prep(cmd, io_u,
@@ -1459,27 +1614,44 @@ static int fio_ioring_cmd_init(struct thread_data *td, struct ioring_data *ld)
 	struct ioring_options *o = td->eo;
 
 	if (td_write(td)) {
-		switch (o->write_mode) {
-		case FIO_URING_CMD_WMODE_UNCOR:
-			ld->write_opcode = nvme_cmd_write_uncor;
-			break;
-		case FIO_URING_CMD_WMODE_ZEROES:
-			ld->write_opcode = nvme_cmd_write_zeroes;
-			if (o->deac)
-				ld->cdw12_flags[DDIR_WRITE] = 1 << 25;
-			break;
-		case FIO_URING_CMD_WMODE_VERIFY:
-			ld->write_opcode = nvme_cmd_verify;
-			break;
-		default:
-			ld->write_opcode = nvme_cmd_write;
-			break;
+		if (o->wmode_split_nr > 1) {
+			int i;
+
+			init_rand_seed(&ld->wmode_state,
+				       td->rand_seeds[FIO_RAND_WMODE_OFF],
+				       false);
+			for (i = 0; i < (int)o->wmode_split_nr; i++) {
+				struct wmode_split_entry *e = &o->wmode_split[i];
+
+				e->cdw12_flag = 0;
+				if (e->opcode == nvme_cmd_write_zeroes && o->deac)
+					e->cdw12_flag = 1 << 25;
+				else if (e->opcode == nvme_cmd_write && o->writefua)
+					e->cdw12_flag = 1 << 30;
+			}
+		} else {
+			switch (o->write_mode) {
+			case FIO_URING_CMD_WMODE_UNCOR:
+				ld->write_opcode = nvme_cmd_write_uncor;
+				break;
+			case FIO_URING_CMD_WMODE_ZEROES:
+				ld->write_opcode = nvme_cmd_write_zeroes;
+				if (o->deac)
+					ld->cdw12_flags[DDIR_WRITE] = 1 << 25;
+				break;
+			case FIO_URING_CMD_WMODE_VERIFY:
+				ld->write_opcode = nvme_cmd_verify;
+				break;
+			default:
+				ld->write_opcode = nvme_cmd_write;
+				break;
+			}
 		}
 	}
 
 	if (o->readfua)
 		ld->cdw12_flags[DDIR_READ] = 1 << 30;
-	if (o->writefua)
+	if (o->writefua && o->wmode_split_nr <= 1)
 		ld->cdw12_flags[DDIR_WRITE] = 1 << 30;
 
 	return 0;
@@ -1647,6 +1819,17 @@ static int fio_ioring_io_u_init(struct thread_data *td, struct io_u *io_u)
 		pi_data->apptag_mask = o->apptag_mask;
 		pi_data->apptag = o->apptag;
 		io_u->engine_data = pi_data;
+	}
+
+	if (ld->is_uring_cmd_eng && o->wmode_split_nr <= 1) {
+		if (ld->write_opcode == nvme_cmd_write_zeroes) {
+			if (o->deac)
+				io_u_set(td, io_u, IO_U_F_TRIMMED);
+			else
+				io_u_set(td, io_u, IO_U_F_ZEROED);
+		} else if (ld->write_opcode == nvme_cmd_write_uncor) {
+			io_u_set(td, io_u, IO_U_F_ERRORED);
+		}
 	}
 
 	return 0;
@@ -1840,7 +2023,8 @@ static int fio_ioring_open_nvme(struct thread_data *td, struct fio_file *f)
 		return 1;
 	}
 
-	if (o->write_mode != FIO_URING_CMD_WMODE_WRITE && !td_write(td)) {
+	if ((o->write_mode != FIO_URING_CMD_WMODE_WRITE || o->wmode_split_nr > 1) &&
+	    !td_write(td)) {
 		log_err("%s: 'readwrite=|rw=' has no write\n", f->file_name);
 		td_verror(td, EINVAL, "fio_ioring_cmd_open_file");
 		return 1;

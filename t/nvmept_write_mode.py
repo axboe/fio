@@ -46,7 +46,7 @@ class WriteModeTest(FioJobCmdTest):
             f"--filename={self.fio_opts['filename']}",
             f"--rw={self.fio_opts['rw']}",
             f"--output={self.filenames['output']}",
-            f"--output-format={self.fio_opts['output-format']}",
+            f"--output-format={self.fio_opts.get('output-format', 'normal')}",
         ]
         for opt in ['fixedbufs', 'nonvectored', 'force_async', 'registerfiles',
                     'sqthread_poll', 'sqthread_poll_cpu', 'hipri', 'nowait',
@@ -68,7 +68,7 @@ class WriteModeTest(FioJobCmdTest):
 
         if 'rw' not in self.fio_opts or \
                 not self.passed or \
-                'json' not in self.fio_opts['output-format']:
+                'json' not in self.fio_opts.get('output-format', ''):
             return
 
         job = self.json_data['jobs'][0]
@@ -219,6 +219,133 @@ TEST_LIST = [
             "filesize": TEST_SIZE,
             "output-format": "json",
             "randrepeat": 0,
+            },
+        "test_class": WriteModeTest,
+        "success": SUCCESS_NONZERO,
+    },
+
+    #
+    # Mixed write_mode tests
+    #
+    # test_id 40-41: valid mixed modes, all percentages explicit
+    # test_id 50-53: valid mixed modes, blank percentages (evenly split)
+    # test_id 60-63: invalid mixed modes (parsing should fail)
+    #
+    {
+        # All percentages explicit, sum == 100
+        "test_id": 40,
+        "fio_opts": {
+            "rw": 'randwrite',
+            "filesize": TEST_SIZE,
+            "write_mode": "write/30:zeroes/20:uncor/50",
+            "randrepeat": 0,
+            "output-format": "json",
+            },
+        "test_class": WriteModeTest,
+    },
+    {
+        # All percentages explicit with verify; write/50 + zeroes/50
+        "test_id": 41,
+        "fio_opts": {
+            "rw": 'randwrite',
+            "filesize": TEST_SIZE,
+            "write_mode": "write/50:zeroes/50",
+            "randrepeat": 0,
+            "output-format": "json",
+            },
+        "test_class": WriteModeTest,
+    },
+
+    {
+        # Blank percentages: write/50 takes half, zeroes and uncor split the
+        # remainder evenly (25% each)
+        "test_id": 50,
+        "fio_opts": {
+            "rw": 'randwrite',
+            "filesize": TEST_SIZE,
+            "write_mode": "write/50:zeroes/:uncor/",
+            "randrepeat": 0,
+            "output-format": "json",
+            },
+        "test_class": WriteModeTest,
+    },
+    {
+        # All blanks: write, zeroes, uncor each get 33% (integer division)
+        "test_id": 51,
+        "fio_opts": {
+            "rw": 'randwrite',
+            "filesize": TEST_SIZE,
+            "write_mode": "write/:zeroes/:uncor/",
+            "randrepeat": 0,
+            "output-format": "json",
+            },
+        "test_class": WriteModeTest,
+    },
+    {
+        # Two entries, one blank: write/60 + zeroes blank gets remaining 40%
+        "test_id": 52,
+        "fio_opts": {
+            "rw": 'randwrite',
+            "filesize": TEST_SIZE,
+            "write_mode": "write/60:zeroes/",
+            "randrepeat": 0,
+            "output-format": "json",
+            },
+        "test_class": WriteModeTest,
+    },
+    {
+        # Three entries, one blank: write/30 + zeroes/40 + uncor blank gets
+        # remaining 30%
+        "test_id": 53,
+        "fio_opts": {
+            "rw": 'randwrite',
+            "filesize": TEST_SIZE,
+            "write_mode": "write/30:zeroes/40:uncor/",
+            "randrepeat": 0,
+            "output-format": "json",
+            },
+        "test_class": WriteModeTest,
+    },
+    {
+        # Invalid: percentages exceed 100
+        "test_id": 60,
+        "fio_opts": {
+            "rw": 'randwrite',
+            "filesize": TEST_SIZE,
+            "write_mode": "write/60:zeroes/60",
+            },
+        "test_class": WriteModeTest,
+        "success": SUCCESS_NONZERO,
+    },
+    {
+        # Invalid: only one entry (needs at least 2)
+        "test_id": 61,
+        "fio_opts": {
+            "rw": 'randwrite',
+            "filesize": TEST_SIZE,
+            "write_mode": "write/100",
+            },
+        "test_class": WriteModeTest,
+        "success": SUCCESS_NONZERO,
+    },
+    {
+        # Invalid: explicit percentages don't add up to 100, no blanks
+        "test_id": 62,
+        "fio_opts": {
+            "rw": 'randwrite',
+            "filesize": TEST_SIZE,
+            "write_mode": "write/30:zeroes/30",
+            },
+        "test_class": WriteModeTest,
+        "success": SUCCESS_NONZERO,
+    },
+    {
+        # Invalid: unknown mode name
+        "test_id": 63,
+        "fio_opts": {
+            "rw": 'randwrite',
+            "filesize": TEST_SIZE,
+            "write_mode": "write/50:bogus/50",
             },
         "test_class": WriteModeTest,
         "success": SUCCESS_NONZERO,
