@@ -348,6 +348,7 @@ restart:
 				ipo->offset, ipo->len);
 			td->io_hist_len--;
 			rb_erase(parent, &td->io_hist_tree);
+			__ipo->flags &= ~IP_F_ONRB;
 			remove_trim_entry(td, __ipo);
 			if (!(__ipo->flags & IP_F_IN_FLIGHT))
 				free(__ipo);
