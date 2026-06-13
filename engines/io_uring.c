@@ -1329,6 +1329,9 @@ static int fio_ioring_queue_init(struct thread_data *td)
 		 */
 		td->o.disable_slat = 1;
 	}
+	if (ld->is_uring_cmd_eng) {
+		p.flags |= IORING_SETUP_SQE128 | IORING_SETUP_CQE32;
+	}
 
 	/*
 	 * Clamp CQ ring size at our SQ ring size, we don't need more entries
@@ -1370,90 +1373,6 @@ retry:
 
 	if (p.features & IORING_FEAT_NO_IOWAIT)
 		enter_flags |= IORING_ENTER_NO_IOWAIT;
-	ld->ring_fd = ret;
-
-	fio_ioring_probe(td);
-
-	if (o->fixedbufs) {
-		ret = syscall(__NR_io_uring_register, ld->ring_fd,
-				IORING_REGISTER_BUFFERS, ld->iovecs, depth);
-		if (ret < 0)
-			return ret;
-	}
-
-	return fio_ioring_mmap(ld, &p);
-}
-
-static int fio_ioring_cmd_queue_init(struct thread_data *td)
-{
-	struct ioring_data *ld = td->io_ops_data;
-	struct ioring_options *o = td->eo;
-	int depth = ld->iodepth;
-	struct io_uring_params p;
-	int ret;
-
-	memset(&p, 0, sizeof(p));
-
-	if (o->hipri)
-		p.flags |= IORING_SETUP_IOPOLL;
-	if (o->sqpoll_thread) {
-		p.flags |= IORING_SETUP_SQPOLL;
-		if (o->sqpoll_set) {
-			p.flags |= IORING_SETUP_SQ_AFF;
-			p.sq_thread_cpu = o->sqpoll_cpu;
-		}
-
-		/*
-		 * Submission latency for sqpoll_thread is just the time it
-		 * takes to fill in the SQ ring entries, and any syscall if
-		 * IORING_SQ_NEED_WAKEUP is set, we don't need to log that time
-		 * separately.
-		 */
-		td->o.disable_slat = 1;
-	}
-	if (o->cmd_type == FIO_URING_CMD_NVME) {
-		p.flags |= IORING_SETUP_SQE128;
-		p.flags |= IORING_SETUP_CQE32;
-	}
-
-	/*
-	 * Clamp CQ ring size at our SQ ring size, we don't need more entries
-	 * than that.
-	 */
-	p.flags |= IORING_SETUP_CQSIZE;
-	p.cq_entries = depth;
-
-	/*
-	 * Setup COOP_TASKRUN as we don't need to get IPI interrupted for
-	 * completing IO operations.
-	 */
-	p.flags |= IORING_SETUP_COOP_TASKRUN;
-
-	/*
-	 * io_uring is always a single issuer, and we can defer task_work
-	 * runs until we reap events.
-	 */
-	p.flags |= IORING_SETUP_SINGLE_ISSUER | IORING_SETUP_DEFER_TASKRUN;
-
-retry:
-	ret = syscall(__NR_io_uring_setup, depth, &p);
-	if (ret < 0) {
-		if (errno == EINVAL && p.flags & IORING_SETUP_DEFER_TASKRUN) {
-			p.flags &= ~IORING_SETUP_DEFER_TASKRUN;
-			p.flags &= ~IORING_SETUP_SINGLE_ISSUER;
-			goto retry;
-		}
-		if (errno == EINVAL && p.flags & IORING_SETUP_COOP_TASKRUN) {
-			p.flags &= ~IORING_SETUP_COOP_TASKRUN;
-			goto retry;
-		}
-		if (errno == EINVAL && p.flags & IORING_SETUP_CQSIZE) {
-			p.flags &= ~IORING_SETUP_CQSIZE;
-			goto retry;
-		}
-		return ret;
-	}
-
 	ld->ring_fd = ret;
 
 	fio_ioring_probe(td);
@@ -1566,7 +1485,7 @@ static int fio_ioring_cmd_post_init(struct thread_data *td)
 		iov->iov_len = td_max_bs(td);
 	}
 
-	err = fio_ioring_cmd_queue_init(td);
+	err = fio_ioring_queue_init(td);
 	if (err) {
 		int init_err = errno;
 
