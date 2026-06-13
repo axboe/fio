@@ -1452,58 +1452,7 @@ static int fio_ioring_post_init(struct thread_data *td)
 		return 1;
 	}
 
-	for (i = 0; i < ld->iodepth; i++) {
-		struct io_uring_sqe *sqe;
-
-		sqe = &ld->sqes[i];
-		memset(sqe, 0, sizeof(*sqe));
-	}
-
-	if (o->registerfiles) {
-		err = fio_ioring_register_files(td);
-		if (err) {
-			td_verror(td, errno, "ioring_register_files");
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
-static int fio_ioring_cmd_post_init(struct thread_data *td)
-{
-	struct ioring_data *ld = td->io_ops_data;
-	struct ioring_options *o = td->eo;
-	struct io_u *io_u;
-	int err, i;
-
-	for (i = 0; i < td->o.iodepth; i++) {
-		struct iovec *iov = &ld->iovecs[i];
-
-		io_u = ld->io_u_index[i];
-		iov->iov_base = io_u->buf;
-		iov->iov_len = td_max_bs(td);
-	}
-
-	err = fio_ioring_queue_init(td);
-	if (err) {
-		int init_err = errno;
-
-		td_verror(td, init_err, "io_queue_init");
-		return 1;
-	}
-
-	for (i = 0; i < ld->iodepth; i++) {
-		struct io_uring_sqe *sqe;
-
-		if (o->cmd_type == FIO_URING_CMD_NVME) {
-			sqe = &ld->sqes[i << 1];
-			memset(sqe, 0, 2 * sizeof(*sqe));
-		} else {
-			sqe = &ld->sqes[i];
-			memset(sqe, 0, sizeof(*sqe));
-		}
-	}
+	memset(ld->sqes, 0, ld->iodepth * sizeof(*ld->sqes) << ld->is_uring_cmd_eng);
 
 	if (o->registerfiles) {
 		err = fio_ioring_register_files(td);
@@ -2157,7 +2106,7 @@ static struct ioengine_ops ioengine_uring_cmd = {
 					FIO_MULTI_RANGE_TRIM |
 					FIO_ASYNCIO_SYNC_SYNCFS,
 	.init			= fio_ioring_init,
-	.post_init		= fio_ioring_cmd_post_init,
+	.post_init		= fio_ioring_post_init,
 	.io_u_init		= fio_ioring_io_u_init,
 	.io_u_free		= fio_ioring_io_u_free,
 	.prep			= fio_ioring_cmd_prep,
