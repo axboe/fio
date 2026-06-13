@@ -141,6 +141,8 @@ struct ioring_mmap {
 
 struct ioring_data {
 	int ring_fd;
+	int enter_ring_fd;
+	unsigned enter_extra_flags;
 
 	struct io_u **io_u_index;
 	char *md_buf;
@@ -578,11 +580,12 @@ static struct fio_option options[] = {
 static int io_uring_enter(struct ioring_data *ld, unsigned int to_submit,
 			 unsigned int min_complete, unsigned int flags)
 {
+	flags |= ld->enter_extra_flags;
 #ifdef FIO_ARCH_HAS_SYSCALL
-	return __do_syscall6(__NR_io_uring_enter, ld->ring_fd, to_submit,
+	return __do_syscall6(__NR_io_uring_enter, ld->enter_ring_fd, to_submit,
 				min_complete, flags, NULL, 0);
 #else
-	return syscall(__NR_io_uring_enter, ld->ring_fd, to_submit,
+	return syscall(__NR_io_uring_enter, ld->enter_ring_fd, to_submit,
 			min_complete, flags, NULL, 0);
 #endif
 }
@@ -1306,6 +1309,7 @@ static int fio_ioring_queue_init(struct thread_data *td)
 {
 	struct ioring_data *ld = td->io_ops_data;
 	struct ioring_options *o = td->eo;
+	struct io_uring_rsrc_update reg_ring_fd = {.offset = -1};
 	int depth = ld->iodepth;
 	struct io_uring_params p;
 	int ret;
@@ -1328,6 +1332,9 @@ static int fio_ioring_queue_init(struct thread_data *td)
 		 * separately.
 		 */
 		td->o.disable_slat = 1;
+	}
+	if (ld->is_uring_cmd_eng) {
+		p.flags |= IORING_SETUP_SQE128 | IORING_SETUP_CQE32;
 	}
 
 	/*
@@ -1370,91 +1377,14 @@ retry:
 
 	if (p.features & IORING_FEAT_NO_IOWAIT)
 		enter_flags |= IORING_ENTER_NO_IOWAIT;
-	ld->ring_fd = ret;
-
-	fio_ioring_probe(td);
-
-	if (o->fixedbufs) {
-		ret = syscall(__NR_io_uring_register, ld->ring_fd,
-				IORING_REGISTER_BUFFERS, ld->iovecs, depth);
-		if (ret < 0)
-			return ret;
+	ld->ring_fd = ld->enter_ring_fd = reg_ring_fd.data = ret;
+	ld->enter_extra_flags = 0;
+	ret = syscall(__NR_io_uring_register, ld->ring_fd,
+		      IORING_REGISTER_RING_FDS, &reg_ring_fd, 1);
+	if (ret > 0) {
+		ld->enter_ring_fd = reg_ring_fd.offset;
+		ld->enter_extra_flags = IORING_ENTER_REGISTERED_RING;
 	}
-
-	return fio_ioring_mmap(ld, &p);
-}
-
-static int fio_ioring_cmd_queue_init(struct thread_data *td)
-{
-	struct ioring_data *ld = td->io_ops_data;
-	struct ioring_options *o = td->eo;
-	int depth = ld->iodepth;
-	struct io_uring_params p;
-	int ret;
-
-	memset(&p, 0, sizeof(p));
-
-	if (o->hipri)
-		p.flags |= IORING_SETUP_IOPOLL;
-	if (o->sqpoll_thread) {
-		p.flags |= IORING_SETUP_SQPOLL;
-		if (o->sqpoll_set) {
-			p.flags |= IORING_SETUP_SQ_AFF;
-			p.sq_thread_cpu = o->sqpoll_cpu;
-		}
-
-		/*
-		 * Submission latency for sqpoll_thread is just the time it
-		 * takes to fill in the SQ ring entries, and any syscall if
-		 * IORING_SQ_NEED_WAKEUP is set, we don't need to log that time
-		 * separately.
-		 */
-		td->o.disable_slat = 1;
-	}
-	if (o->cmd_type == FIO_URING_CMD_NVME) {
-		p.flags |= IORING_SETUP_SQE128;
-		p.flags |= IORING_SETUP_CQE32;
-	}
-
-	/*
-	 * Clamp CQ ring size at our SQ ring size, we don't need more entries
-	 * than that.
-	 */
-	p.flags |= IORING_SETUP_CQSIZE;
-	p.cq_entries = depth;
-
-	/*
-	 * Setup COOP_TASKRUN as we don't need to get IPI interrupted for
-	 * completing IO operations.
-	 */
-	p.flags |= IORING_SETUP_COOP_TASKRUN;
-
-	/*
-	 * io_uring is always a single issuer, and we can defer task_work
-	 * runs until we reap events.
-	 */
-	p.flags |= IORING_SETUP_SINGLE_ISSUER | IORING_SETUP_DEFER_TASKRUN;
-
-retry:
-	ret = syscall(__NR_io_uring_setup, depth, &p);
-	if (ret < 0) {
-		if (errno == EINVAL && p.flags & IORING_SETUP_DEFER_TASKRUN) {
-			p.flags &= ~IORING_SETUP_DEFER_TASKRUN;
-			p.flags &= ~IORING_SETUP_SINGLE_ISSUER;
-			goto retry;
-		}
-		if (errno == EINVAL && p.flags & IORING_SETUP_COOP_TASKRUN) {
-			p.flags &= ~IORING_SETUP_COOP_TASKRUN;
-			goto retry;
-		}
-		if (errno == EINVAL && p.flags & IORING_SETUP_CQSIZE) {
-			p.flags &= ~IORING_SETUP_CQSIZE;
-			goto retry;
-		}
-		return ret;
-	}
-
-	ld->ring_fd = ret;
 
 	fio_ioring_probe(td);
 
@@ -1533,58 +1463,7 @@ static int fio_ioring_post_init(struct thread_data *td)
 		return 1;
 	}
 
-	for (i = 0; i < ld->iodepth; i++) {
-		struct io_uring_sqe *sqe;
-
-		sqe = &ld->sqes[i];
-		memset(sqe, 0, sizeof(*sqe));
-	}
-
-	if (o->registerfiles) {
-		err = fio_ioring_register_files(td);
-		if (err) {
-			td_verror(td, errno, "ioring_register_files");
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
-static int fio_ioring_cmd_post_init(struct thread_data *td)
-{
-	struct ioring_data *ld = td->io_ops_data;
-	struct ioring_options *o = td->eo;
-	struct io_u *io_u;
-	int err, i;
-
-	for (i = 0; i < td->o.iodepth; i++) {
-		struct iovec *iov = &ld->iovecs[i];
-
-		io_u = ld->io_u_index[i];
-		iov->iov_base = io_u->buf;
-		iov->iov_len = td_max_bs(td);
-	}
-
-	err = fio_ioring_cmd_queue_init(td);
-	if (err) {
-		int init_err = errno;
-
-		td_verror(td, init_err, "io_queue_init");
-		return 1;
-	}
-
-	for (i = 0; i < ld->iodepth; i++) {
-		struct io_uring_sqe *sqe;
-
-		if (o->cmd_type == FIO_URING_CMD_NVME) {
-			sqe = &ld->sqes[i << 1];
-			memset(sqe, 0, 2 * sizeof(*sqe));
-		} else {
-			sqe = &ld->sqes[i];
-			memset(sqe, 0, sizeof(*sqe));
-		}
-	}
+	memset(ld->sqes, 0, ld->iodepth * sizeof(*ld->sqes) << ld->is_uring_cmd_eng);
 
 	if (o->registerfiles) {
 		err = fio_ioring_register_files(td);
@@ -2238,7 +2117,7 @@ static struct ioengine_ops ioengine_uring_cmd = {
 					FIO_MULTI_RANGE_TRIM |
 					FIO_ASYNCIO_SYNC_SYNCFS,
 	.init			= fio_ioring_init,
-	.post_init		= fio_ioring_cmd_post_init,
+	.post_init		= fio_ioring_post_init,
 	.io_u_init		= fio_ioring_io_u_init,
 	.io_u_free		= fio_ioring_io_u_free,
 	.prep			= fio_ioring_cmd_prep,
