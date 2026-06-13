@@ -1333,9 +1333,8 @@ static int fio_ioring_queue_init(struct thread_data *td)
 		 */
 		td->o.disable_slat = 1;
 	}
-	if (ld->is_uring_cmd_eng) {
+	if (ld->is_uring_cmd_eng)
 		p.flags |= IORING_SETUP_SQE128 | IORING_SETUP_CQE32;
-	}
 
 	/*
 	 * Clamp CQ ring size at our SQ ring size, we don't need more entries
