@@ -141,6 +141,8 @@ struct ioring_mmap {
 
 struct ioring_data {
 	int ring_fd;
+	int enter_ring_fd;
+	unsigned enter_extra_flags;
 
 	struct io_u **io_u_index;
 	char *md_buf;
@@ -578,11 +580,12 @@ static struct fio_option options[] = {
 static int io_uring_enter(struct ioring_data *ld, unsigned int to_submit,
 			 unsigned int min_complete, unsigned int flags)
 {
+	flags |= ld->enter_extra_flags;
 #ifdef FIO_ARCH_HAS_SYSCALL
-	return __do_syscall6(__NR_io_uring_enter, ld->ring_fd, to_submit,
+	return __do_syscall6(__NR_io_uring_enter, ld->enter_ring_fd, to_submit,
 				min_complete, flags, NULL, 0);
 #else
-	return syscall(__NR_io_uring_enter, ld->ring_fd, to_submit,
+	return syscall(__NR_io_uring_enter, ld->enter_ring_fd, to_submit,
 			min_complete, flags, NULL, 0);
 #endif
 }
@@ -1306,6 +1309,7 @@ static int fio_ioring_queue_init(struct thread_data *td)
 {
 	struct ioring_data *ld = td->io_ops_data;
 	struct ioring_options *o = td->eo;
+	struct io_uring_rsrc_update reg_ring_fd = {.offset = -1};
 	int depth = ld->iodepth;
 	struct io_uring_params p;
 	int ret;
@@ -1373,7 +1377,14 @@ retry:
 
 	if (p.features & IORING_FEAT_NO_IOWAIT)
 		enter_flags |= IORING_ENTER_NO_IOWAIT;
-	ld->ring_fd = ret;
+	ld->ring_fd = ld->enter_ring_fd = reg_ring_fd.data = ret;
+	ld->enter_extra_flags = 0;
+	ret = syscall(__NR_io_uring_register, ld->ring_fd,
+		      IORING_REGISTER_RING_FDS, &reg_ring_fd, 1);
+	if (ret > 0) {
+		ld->enter_ring_fd = reg_ring_fd.offset;
+		ld->enter_extra_flags = IORING_ENTER_REGISTERED_RING;
+	}
 
 	fio_ioring_probe(td);
 
