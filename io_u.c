@@ -2167,11 +2167,23 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 		/*
 		 * Remove errored entry from the verification list
 		 */
-		if (io_u->error)
+		if (io_u->error) {
 			unlog_io_piece(td, io_u);
-		else {
-			atomic_store_release(&io_u->ipo->flags,
-					io_u->ipo->flags & ~IP_F_IN_FLIGHT);
+		} else {
+			unsigned int flags = io_u->ipo->flags & ~IP_F_IN_FLIGHT;
+
+			/*
+			 * If the io_piece was evicted from the verification
+			 * tree due to an overlapping write while in-flight,
+			 * it is no longer reachable for verification. Free
+			 * it here to avoid a memory leak.
+			 */
+			if (!(flags & (IP_F_ONRB | IP_F_ONLIST))) {
+				free(io_u->ipo);
+				io_u->ipo = NULL;
+			} else {
+				atomic_store_release(&io_u->ipo->flags, flags);
+			}
 		}
 	}
 
