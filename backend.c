@@ -2035,11 +2035,32 @@ static uint64_t do_dry_run(struct thread_data *td)
 				log_io_piece(td, io_u);
 		}
 
+		if (td_write(td) && io_u->ddir == DDIR_WRITE &&
+		    td->o.experimental_verify)
+			ev_map_mark(td, io_u);
+
 		ret = io_u_sync_complete(td, io_u);
 		(void) ret;
 	}
 
 	return td->bytes_done[DDIR_WRITE] + td->bytes_done[DDIR_TRIM];
+}
+
+static void reset_experimental_verify_state(struct thread_data *td)
+{
+	struct fio_file *f;
+	unsigned int i;
+
+	memset(td->io_issues, 0, sizeof(td->io_issues));
+	memset(td->io_issue_bytes, 0, sizeof(td->io_issue_bytes));
+	td->verify_read_issues = 0;
+	td->bytes_verified = 0;
+	td->ddir_seq_nr = 1;
+	td->last_ddir_issued = DDIR_INVAL;
+	td->last_ddir_completed = DDIR_INVAL;
+
+	for_each_file(td, f, i)
+		fio_file_reset(td, f);
 }
 
 struct fork_data {
@@ -2391,6 +2412,16 @@ static void *thread_main(void *data)
 			continue;
 
 		clear_io_state(td, 0);
+		/*
+		 * Only verify_only runs replay the write workload via
+		 * do_dry_run() before the verify pass, so only they need the
+		 * replay-sensitive counters and file state reset here. Doing
+		 * this for ordinary write+verify runs would zero
+		 * verify_read_issues mid-stream and break numberio accounting
+		 * across loops/time_based jobs.
+		 */
+		if (o->experimental_verify && o->verify_only)
+			reset_experimental_verify_state(td);
 
 		fio_gettime(&td->start, NULL);
 
