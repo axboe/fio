@@ -933,6 +933,10 @@ static int fixup_options(struct thread_data *td)
 				o->verify_write_sequence = 0;
 		}
 
+		if (o->experimental_verify && fio_offset_overlap_risk(td) &&
+		    !fio_option_is_set(o, verify_write_sequence))
+			o->verify_write_sequence = 0;
+
 		/*
 		 * Verify header should not be offset beyond the verify
 		 * interval.
