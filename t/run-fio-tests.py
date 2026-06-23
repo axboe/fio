@@ -1086,7 +1086,7 @@ TEST_LIST = [
     {
         'test_id':          1014,
         'test_class':       FioExeTest,
-        'exe':              't/nvmept.py',
+        'exe':              't/io_uring_cmd.py',
         'parameters':       ['-f', '{fio_path}', '--dut', '{nvmecdev}'],
         'success':          SUCCESS_DEFAULT,
         'requirements':     [Requirements.linux, Requirements.nvmecdev],

@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-# nvmept.py
+# io_uring_cmd.py
 #
 # Test fio's io_uring_cmd ioengine with NVMe pass-through commands.
 #
 # USAGE
-# see python3 nvmept.py --help
+# see python3 io_uring_cmd.py --help
 #
 # EXAMPLES
-# python3 t/nvmept.py --dut /dev/ng0n1
-# python3 t/nvmept.py --dut /dev/ng1n1 -f ./fio
+# python3 t/io_uring_cmd.py --dut /dev/ng0n1
+# python3 t/io_uring_cmd.py --dut /dev/ng1n1 -f ./fio
 #
 # REQUIREMENTS
 # Python 3.6
@@ -33,7 +33,7 @@ class PassThruTest(FioJobCmdTest):
         """Setup a test."""
 
         fio_args = [
-            "--name=nvmept",
+            "--name=io_uring_cmd",
             "--ioengine=io_uring_cmd",
             "--cmd_type=nvme",
             "--iodepth=8",
@@ -90,7 +90,7 @@ class PassThruTest(FioJobCmdTest):
 class FlushTest(FioJobCmdTest):
     def setup(self, parameters):
         fio_args = [
-            "--name=nvmept-flush",
+            "--name=io_uring_cmd-flush",
             "--ioengine=io_uring_cmd",
             "--cmd_type=nvme",
             "--randrepeat=0",
@@ -371,7 +371,7 @@ def main():
     args = parse_args()
 
     artifact_root = args.artifact_root if args.artifact_root else \
-        f"nvmept-test-{time.strftime('%Y%m%d-%H%M%S')}"
+        f"io_uring_cmd-test-{time.strftime('%Y%m%d-%H%M%S')}"
     os.mkdir(artifact_root)
     print(f"Artifact directory is {artifact_root}")
 
@@ -388,7 +388,7 @@ def main():
               'fio_path': fio_path,
               'fio_root': str(Path(__file__).absolute().parent.parent),
               'artifact_root': artifact_root,
-              'basename': 'nvmept',
+              'basename': 'io_uring_cmd',
               }
 
     _, failed, _ = run_fio_tests(TEST_LIST, test_env, args)
