@@ -2,8 +2,8 @@ name: QEMU
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "50 3 * * *"  # daily at 4:50 UTC (00:50 EST)
+  push:
+  pull_request:
 
 jobs:
   qemu-guest:
