@@ -35,10 +35,10 @@ class PassThruTest(FioJobCmdTest):
         fio_args = [
             "--name=io_uring_cmd",
             "--ioengine=io_uring_cmd",
-            "--cmd_type=nvme",
             "--iodepth=8",
             "--iodepth_batch=4",
             "--iodepth_batch_complete=4",
+            f"--cmd_type={self.fio_opts['cmd_type']}",
             f"--filename={self.fio_opts['filename']}",
             f"--rw={self.fio_opts['rw']}",
             f"--output={self.filenames['output']}",
@@ -92,8 +92,8 @@ class FlushTest(FioJobCmdTest):
         fio_args = [
             "--name=io_uring_cmd-flush",
             "--ioengine=io_uring_cmd",
-            "--cmd_type=nvme",
             "--randrepeat=0",
+            f"--cmd_type={self.fio_opts['cmd_type']}",
             f"--filename={self.fio_opts['filename']}",
             f"--rw={self.fio_opts['rw']}",
             f"--output={self.filenames['output']}",
@@ -360,6 +360,8 @@ def parse_args():
                         help='list of test(s) to run, skipping all others')
     parser.add_argument('--dut', help='target NVMe character device to test '
                         '(e.g., /dev/ng0n1). WARNING: THIS IS A DESTRUCTIVE TEST', required=True)
+    parser.add_argument('-c', '--cmd_type', help='cmd_type for io_uring_cmd',
+                        default='nvme')
     args = parser.parse_args()
 
     return args
@@ -383,6 +385,7 @@ def main():
 
     for test in TEST_LIST:
         test['fio_opts']['filename'] = args.dut
+        test['fio_opts']['cmd_type'] = args.cmd_type
 
     test_env = {
               'fio_path': fio_path,
