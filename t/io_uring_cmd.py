@@ -46,7 +46,8 @@ class PassThruTest(FioJobCmdTest):
         ]
         for opt in ['fixedbufs', 'nonvectored', 'force_async', 'registerfiles',
                     'sqthread_poll', 'sqthread_poll_cpu', 'hipri', 'nowait',
-                    'time_based', 'runtime', 'verify', 'io_size']:
+                    'time_based', 'runtime', 'verify', 'io_size', 'readfua',
+                    'writefua', ]:
             if opt in self.fio_opts:
                 option = f"--{opt}={self.fio_opts[opt]}"
                 fio_args.append(option)
@@ -345,6 +346,21 @@ TEST_LIST = [
             "output-format": "json",
             },
         "test_class": FlushTest,
+    },
+    #
+    # Run a test with writefua and readfua
+    #
+    {
+        "test_id": 20,
+        "fio_opts": {
+            "rw": 'randrw',
+            "writefua": 1,
+            "readfua": 1,
+            "timebased": 1,
+            "runtime": 3,
+            "output-format": "json",
+            },
+        "test_class": PassThruTest,
     },
 ]
 
