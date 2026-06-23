@@ -902,7 +902,7 @@ def main():
     if args.fio:
         fio_path = str(Path(args.fio).absolute())
     else:
-        fio_path = 'fio'
+        fio_path = os.path.join(str(Path(__file__).absolute().parent.parent), "fio")
     print(f"fio path is {fio_path}")
 
     lbaf_list = get_lbafs(args)
