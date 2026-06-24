@@ -1041,8 +1041,15 @@ static int handle_option(const struct fio_option *o, const char *__ptr,
 			if (o->type != FIO_OPT_STR_MULTI && o->type != FIO_OPT_RANGE) {
 				if (!ptr2)
 					ptr2 = strchr(ptr, ':');
-				if (!ptr2)
+				if (!ptr2) {
 					ptr2 = strchr(ptr, '-');
+					/*
+					 * If the first character is a minus sign, it's
+					 * likely a negative number, not a delimiter.
+					 */
+					if (ptr2 == ptr)
+						ptr2 = strchr(ptr + 1, '-');
+				}
 			}
 		} else if (ptr && o->type == FIO_OPT_FLOAT_LIST) {
 			ptr2 = strchr(ptr, ':');
