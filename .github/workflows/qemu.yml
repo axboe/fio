@@ -20,12 +20,19 @@ jobs:
               -device nvme-ns,id=nvm-0,drive=nvm-0,bus=nvme0,nsid=1
             test_cmd: "python3 t/run-fio-tests.py --nvmecdev /dev/ng0n1 --run-only 1014 1015 1022 -p '1022:--skip 30 31 32 33 34 40 50 51 53 70'"
             extra_pkgs: "nvme-cli"
-          - config: 16-bit Guard PI tests (long)
+          - config: 512 16-bit Guard PI tests (long)
             device: >-
               -device nvme,id=nvme0,serial=deadbeef
               -drive id=nvm-0,file=nvme0.img,format=raw,if=none,discard=unmap,media=disk
               -device nvme-ns,id=nvm-0,drive=nvm-0,bus=nvme0,nsid=1
-            test_cmd: "python3 t/nvmept_pi.py --fio ./fio --dut /dev/ng0n1"
+            test_cmd: "python3 t/nvmept_pi.py --fio ./fio --dut /dev/ng0n1 --lbaf 1 2 3"
+            extra_pkgs: "nvme-cli"
+          - config: 4K 16-bit Guard PI tests (long)
+            device: >-
+              -device nvme,id=nvme0,serial=deadbeef
+              -drive id=nvm-0,file=nvme0.img,format=raw,if=none,discard=unmap,media=disk
+              -device nvme-ns,id=nvm-0,drive=nvm-0,bus=nvme0,nsid=1
+            test_cmd: "python3 t/nvmept_pi.py --fio ./fio --dut /dev/ng0n1 --lbaf 5 6 7"
             extra_pkgs: "nvme-cli"
           - config: 4K+16 w/64-bit Guard PI
             device: >- # 4K+16 w/64-bit Guard PI
