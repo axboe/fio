@@ -50,6 +50,7 @@ struct nvme_uring_cmd {
 
 #define NVME_ZNS_ZRA_REPORT_ZONES 0
 #define NVME_ZNS_ZRAS_FEAT_ERZ (1 << 16)
+#define NVME_ZNS_ZSA_FINISH 0x2
 #define NVME_ZNS_ZSA_RESET 0x4
 #define NVME_ZONE_TYPE_SEQWRITE_REQ 0x2
 
@@ -84,6 +85,7 @@ enum nvme_io_opcode {
 	nvme_cmd_io_mgmt_recv		= 0x12,
 	nvme_zns_cmd_mgmt_send		= 0x79,
 	nvme_zns_cmd_mgmt_recv		= 0x7a,
+	nvme_zns_cmd_append		= 0x7d,
 };
 
 enum nvme_zns_zs {
@@ -444,6 +446,9 @@ int fio_nvme_pi_verify(struct nvme_data *data, struct io_u *io_u);
 
 int fio_nvme_get_zoned_model(struct thread_data *td, struct fio_file *f,
 			     enum zbd_zoned_model *model);
+
+int fio_nvme_finish_zone(struct thread_data *td, struct fio_file *f,
+			 uint64_t offset, uint64_t length);
 
 int fio_nvme_report_zones(struct thread_data *td, struct fio_file *f,
 			  uint64_t offset, struct zbd_zone *zbdz,

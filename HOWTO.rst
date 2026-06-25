@@ -3049,6 +3049,9 @@ with the caveat that when used on the command line, they must come after the
                 **verify**
                         Use Verify commands for write operations
 
+                **zone_append**
+                        Use zone append commands for write operations. Requires zonemode=zbd
+
         Multiple modes with mix ratios can be specified using the format
         ``mode/pct:mode/pct:...``.  Percentages must sum to 100.  If a
         percentage is omitted, the remaining percentage is split evenly among

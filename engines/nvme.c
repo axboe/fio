@@ -7,6 +7,7 @@
 #include "nvme.h"
 #include "../crc/crc-t10dif.h"
 #include "../crc/crc64.h"
+#include "zbd.h"
 
 static void fio_nvme_generate_pi_16b_guard(struct nvme_data *data,
 					   struct io_u *io_u,
@@ -352,6 +353,8 @@ int fio_nvme_uring_cmd_prep(struct nvme_uring_cmd *cmd, struct io_u *io_u,
 {
 	struct nvme_data *data = FILE_ENG_DATA(io_u->file);
 	__u64 slba;
+	__u64 offset;
+	__u64 zone_size;
 	__u32 nlb;
 
 	memset(cmd, 0, sizeof(struct nvme_uring_cmd));
@@ -375,7 +378,14 @@ int fio_nvme_uring_cmd_prep(struct nvme_uring_cmd *cmd, struct io_u *io_u,
 		return -ENOTSUP;
 	}
 
-	slba = get_slba(data, io_u->offset);
+	/* Zone appends must be issued to the start of the target zone */
+	if (cmd->opcode == nvme_zns_cmd_append && io_u->file->zbd_info) {
+		zone_size = io_u->file->zbd_info->zone_size;
+		offset = io_u->offset & (~(zone_size - 1));
+	} else {
+		offset = io_u->offset;
+	}
+	slba = get_slba(data, offset);
 	nlb = get_nlb(data, io_u->xfer_buflen);
 
 	/* cdw10 and cdw11 represent starting lba */
@@ -395,6 +405,7 @@ int fio_nvme_uring_cmd_prep(struct nvme_uring_cmd *cmd, struct io_u *io_u,
 		case nvme_cmd_read:
 		case nvme_cmd_write:
 		case nvme_cmd_compare:
+		case nvme_zns_cmd_append:
 			cmd->addr = (__u64)(uintptr_t)io_u->xfer_buf;
 			cmd->data_len = io_u->xfer_buflen;
 			break;
@@ -845,6 +856,47 @@ int fio_nvme_reset_wp(struct thread_data *td, struct fio_file *f,
 		};
 
 		ret = ioctl(fd, NVME_IOCTL_IO_CMD, &cmd);
+	}
+
+	if (f->fd < 0)
+		close(fd);
+	return -ret;
+}
+
+int fio_nvme_finish_zone(struct thread_data *td, struct fio_file *f,
+		       uint64_t offset, uint64_t length)
+{
+	struct nvme_data *data = FILE_ENG_DATA(f);
+	unsigned int nr_zones;
+	unsigned long long zslba;
+	int i, fd, ret = 0;
+
+	/* If the file is not yet opened, open it for this function. */
+	fd = f->fd;
+	if (fd < 0) {
+		fd = open(f->file_name, O_RDWR | O_LARGEFILE);
+		if (fd < 0)
+			return -errno;
+	}
+
+	zslba = offset >> data->lba_shift;
+	nr_zones = (length + td->o.zone_size - 1) / td->o.zone_size;
+
+	for (i = 0; i < nr_zones; i++, zslba += (td->o.zone_size >> data->lba_shift)) {
+		struct nvme_passthru_cmd cmd = {
+			.opcode		= nvme_zns_cmd_mgmt_send,
+			.nsid		= data->nsid,
+			.cdw10		= zslba & 0xffffffff,
+			.cdw11		= zslba >> 32,
+			.cdw13		= NVME_ZNS_ZSA_FINISH,
+			.addr		= (__u64)(uintptr_t)NULL,
+			.data_len	= 0,
+			.timeout_ms	= NVME_DEFAULT_IOCTL_TIMEOUT,
+		};
+
+		ret = ioctl(fd, NVME_IOCTL_IO_CMD, &cmd);
+		if (ret)
+			break;
 	}
 
 	if (f->fd < 0)
