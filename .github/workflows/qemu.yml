@@ -60,9 +60,25 @@ jobs:
             device:
             test_cmd: "python3 t/verify-trim.py"
             extra_pkgs: sg3-utils
-          - config: ZBD
+          - config: ZBD1-5
             device:
-            test_cmd: "./t/zbd/run-tests-against-nullb"
+            test_cmd: "./t/zbd/run-tests-against-nullb -s 1 -s 2 -s 3 -s 4 -s 5"
+            extra_pkgs: sg3-utils
+          - config: ZBD6-10
+            device:
+            test_cmd: "./t/zbd/run-tests-against-nullb -s 6 -s 7 -s 8 -s 9 -s 10"
+            extra_pkgs: sg3-utils
+          - config: ZBD11-15
+            device:
+            test_cmd: "./t/zbd/run-tests-against-nullb -s 11 -s 12 -s 13 -s 14 -s 15"
+            extra_pkgs: sg3-utils
+          - config: ZBD16-20
+            device:
+            test_cmd: "./t/zbd/run-tests-against-nullb -s 16 -s 17 -s 18 -s 19 -s 20"
+            extra_pkgs: sg3-utils
+          - config: ZBD21-25
+            device:
+            test_cmd: "./t/zbd/run-tests-against-nullb -s 21 -s 22 -s 23 -s 24 -s 25"
             extra_pkgs: sg3-utils
 
     env:
