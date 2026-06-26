@@ -822,6 +822,30 @@ static void fio_server_fork_item_done(struct fio_fork_item *ffi, bool stop)
 	free(ffi);
 }
 
+static void fio_server_terminate_fork_items(struct flist_head *list, bool stop)
+{
+	struct flist_head *entry, *tmp;
+	struct fio_fork_item *ffi;
+
+	flist_for_each_safe(entry, tmp, list) {
+		ffi = flist_entry(entry, struct fio_fork_item, list);
+#ifdef WIN32
+		if (!ffi->element.is_thread) {
+			TerminateProcess(ffi->element.hProcess, 0);
+			CloseHandle(ffi->element.hProcess);
+		}
+#else
+		kill(ffi->pid, SIGTERM);
+		do {
+			int ret = waitpid(ffi->pid, NULL, 0);
+			if (ret != -1 || errno != EINTR)
+				break;
+		} while (1);
+#endif
+		fio_server_fork_item_done(ffi, stop);
+	}
+}
+
 static void fio_server_check_fork_items(struct flist_head *list, bool stop)
 {
 	struct flist_head *entry, *tmp;
@@ -1402,6 +1426,8 @@ static int handle_connection(struct sk_out *sk_out)
 
 	handle_xmits(sk_out);
 
+	fio_server_terminate_fork_items(&job_list, false);
+
 	close(sk_out->sk);
 	sk_out->sk = -1;
 	__sk_out_drop(sk_out);
@@ -1616,6 +1642,8 @@ static int accept_loop(int listen_sk)
 		handle_connection(sk_out);
 #endif
 	}
+
+	fio_server_terminate_fork_items(&conn_list, false);
 
 	return exitval;
 }
@@ -2759,6 +2787,7 @@ static void set_sig_handlers(void)
 	};
 
 	sigaction(SIGINT, &act, NULL);
+	sigaction(SIGTERM, &act, NULL);
 
 	/* Windows uses SIGBREAK as a quit signal from other applications */
 #ifdef WIN32
