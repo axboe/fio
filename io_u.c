@@ -291,6 +291,40 @@ bail:
 	return 0;
 }
 
+static int __get_next_rand_offset_sequence(struct thread_data *td,
+					   struct fio_file *f, enum fio_ddir ddir,
+					   uint64_t *b)
+{
+	uint64_t io_count;
+	unsigned int idx;
+
+	if (!td->o.random_sequence_nr)
+		return 1;
+
+	io_count = td->io_issues[ddir];
+	idx = io_count % td->o.random_sequence_nr;
+
+	if (td->o.random_sequence_stride) {
+		uint64_t group_idx = io_count / td->o.random_sequence_nr;
+		*b = group_idx * td->o.random_sequence_nr + td->o.random_sequence[idx];
+	} else {
+		*b = td->o.random_sequence[idx];
+	}
+
+	if (f->io_size) {
+		uint64_t max_blocks = f->io_size / td->o.min_bs[ddir];
+		if (*b >= max_blocks) {
+			if (td->o.random_sequence[idx] >= max_blocks) {
+				log_err("fio: sequence access block %u in base pattern out of bounds (max %llu) for file %s\n",
+					td->o.random_sequence[idx], (unsigned long long) max_blocks, f->file_name);
+				td_verror(td, EINVAL, "sequence block out of bounds");
+			}
+			return 1;
+		}
+	}
+	return 0;
+}
+
 static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 				enum fio_ddir ddir, uint64_t *b)
 {
@@ -314,6 +348,8 @@ static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 		return __get_next_rand_offset_zoned(td, f, ddir, b);
 	else if (td->o.random_distribution == FIO_RAND_DIST_ZONED_ABS)
 		return __get_next_rand_offset_zoned_abs(td, f, ddir, b);
+	else if (td->o.random_distribution == FIO_RAND_DIST_SEQUENCE)
+		return __get_next_rand_offset_sequence(td, f, ddir, b);
 
 	log_err("fio: unknown random distribution: %d\n", td->o.random_distribution);
 	return 1;

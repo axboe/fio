@@ -1350,8 +1350,12 @@ Normal (Gaussian) distribution
 .TP
 .B zoned
 Zoned random distribution
+.TP
 .B zoned_abs
 Zoned absolute random distribution
+.TP
+.B sequence
+Fixed deterministic sequence of block indices
 .RE
 .P
 When using a \fBzipf\fR or \fBpareto\fR distribution, an input value is also
@@ -1422,7 +1426,26 @@ Similarly to how \fBbssplit\fR works for setting ranges and percentages
 of block sizes. Like \fBbssplit\fR, it's possible to specify separate
 zones for reads, writes, and trims. If just one set is given, it'll apply to
 all of them.
+.P
+For a \fBsequence\fR distribution, fio supports specifying a fixed deterministic
+sequence of block indices to be accessed. For example, to access block indices
+2, 0, and 1 in that exact order, the user would do:
+.RS
+.P
+random_distribution=sequence:2,0,1
 .RE
+.P
+This repeats the block access pattern indefinitely. Up to 64 sequence
+elements are supported.
+.RE
+.TP
+.BI random_sequence_stride \fR=\fPbool
+Controls the progression behavior of the \fBsequence\fR random distribution mode.
+If set to false (0, default), the sequence is interpreted as fixed, absolute block
+indices and repeated exactly. If set to true (1), the sequence is interpreted as a
+relative pattern within a moving block group. After completing each full cycle of
+the sequence, the base block index automatically advances by the sequence length,
+creating a progressing "Strided Block Group" pattern across the file.
 .TP
 .BI percentage_random \fR=\fPint[,int][,int]
 For a random workload, set how big a percentage should be random. This
