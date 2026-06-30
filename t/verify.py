@@ -301,6 +301,19 @@ TEST_LIST_HEADER = [
         "test_class": VerifyTest,
         "success": SUCCESS_DEFAULT,
     },
+    {
+        # Basic test using experimental verify replay
+        "test_id": 2004,
+        "fio_opts": {
+            "ioengine": "libaio",
+            "filesize": "1M",
+            "bs": 4096,
+            "experimental_verify": 1,
+            "output-format": "json",
+            },
+        "test_class": VerifyTest,
+        "success": SUCCESS_DEFAULT,
+    },
 ]
 
 #
@@ -541,12 +554,7 @@ def verify_test_header(test_env, args, csum, mode, sequence):
         {sequential, random w/randommap, random w/norandommap, sequence modifiers}
     """
     for test in TEST_LIST_HEADER:
-        # experimental_verify does not work in verify_only=1 mode
-        if "_vo" in mode and 'experimental_verify' in test['fio_opts'] and \
-        test['fio_opts']['experimental_verify']:
-            test['force_skip'] = True
-        else:
-            test['force_skip'] = False
+        test['force_skip'] = False
 
         test['fio_opts']['verify'] = csum
         if csum in ('pattern', 'pattern_hdr'):

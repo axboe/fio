@@ -54,6 +54,7 @@
 #include "pshared.h"
 #include "zone-dist.h"
 #include "fio_time.h"
+#include "lib/axmap.h"
 
 static struct fio_sem *startup_sem;
 static struct flist_head *cgroup_list;
@@ -614,6 +615,68 @@ static enum fio_q_status io_u_submit(struct thread_data *td, struct io_u *io_u)
 	return td_io_queue(td, io_u);
 }
 
+static struct axmap *ev_map_for_io_u(struct thread_data *td, struct io_u *io_u)
+{
+	if (!td->ev_maps || !io_u->file)
+		return NULL;
+
+	return td->ev_maps[io_u->file->fileno];
+}
+
+static uint64_t ev_map_block(struct thread_data *td, struct io_u *io_u)
+{
+	struct fio_file *f = io_u->file;
+
+	return (io_u->offset - f->file_offset) / (uint64_t) td->o.rw_min_bs;
+}
+
+static uint64_t ev_map_nr_blocks(struct thread_data *td, unsigned long long len)
+{
+	return (len + td->o.rw_min_bs - 1) / (uint64_t) td->o.rw_min_bs;
+}
+
+static void ev_map_mark(struct thread_data *td, struct io_u *io_u)
+{
+	struct axmap *map = ev_map_for_io_u(td, io_u);
+	uint64_t block, nr_blocks;
+
+	if (!map)
+		return;
+
+	block = ev_map_block(td, io_u);
+	nr_blocks = ev_map_nr_blocks(td, io_u->buflen);
+	axmap_set_nr(map, block, nr_blocks);
+}
+
+static bool ev_map_init(struct thread_data *td)
+{
+	struct fio_file *f;
+	unsigned int i;
+
+	if (td->ev_maps)
+		return true;
+
+	td->ev_maps = calloc(td->files_index, sizeof(*td->ev_maps));
+	if (!td->ev_maps) {
+		td_verror(td, ENOMEM, "experimental verify bitmap array");
+		return false;
+	}
+
+	for_each_file(td, f, i) {
+		uint64_t fsize = min(f->real_file_size, f->io_size);
+		uint64_t blocks = (fsize + td->o.rw_min_bs - 1) /
+					  (uint64_t) td->o.rw_min_bs;
+
+		td->ev_maps[i] = axmap_new(blocks);
+		if (!td->ev_maps[i]) {
+			td_verror(td, ENOMEM, "experimental verify bitmap");
+			return false;
+		}
+	}
+
+	return true;
+}
+
 /*
  * The main verify engine. Runs over the writes we previously submitted,
  * reads the blocks back in, and checks the crc/md5 of the data.
@@ -720,6 +783,9 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 					goto reap;
 				}
 
+				if (io_u->end_io)
+					break;
+
 				/*
 				 * We are only interested in the places where
 				 * we wrote or trimmed IOs. Turn those into
@@ -742,9 +808,33 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 					}
 					break;
 				} else if (io_u->ddir == DDIR_WRITE) {
+					struct axmap *map = ev_map_for_io_u(td, io_u);
+					uint64_t block;
+
 					io_u->ddir = DDIR_READ;
 					io_u->numberio = td->verify_read_issues;
 					td->verify_read_issues++;
+
+					if (map) {
+						uint64_t nr_blocks = ev_map_nr_blocks(td, io_u->buflen);
+						bool written = true;
+						uint64_t b;
+
+						block = ev_map_block(td, io_u);
+						for (b = 0; b < nr_blocks; b++) {
+							if (!axmap_isset(map, block + b)) {
+								written = false;
+								break;
+							}
+						}
+
+						if (!written) {
+							td->bytes_verified += io_u->buflen;
+							put_io_u(td, io_u);
+							continue;
+						}
+					}
+
 					populate_verify_io_u(td, io_u);
 					if (td_io_prep(td, io_u)) {
 						put_io_u(td, io_u);
@@ -1334,6 +1424,16 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 			if (td->error)
 				break;
 
+			/*
+			 * Mark written blocks before handing the io_u to the
+			 * submission workqueue. Once enqueued, the io_u is owned
+			 * by the offload worker thread and may be submitted,
+			 * completed, and recycled before this point is reached.
+			 */
+			if (td_write(td) && ddir == DDIR_WRITE &&
+			    td->o.experimental_verify)
+				ev_map_mark(td, io_u);
+
 			workqueue_enqueue(&td->io_wq, &io_u->work);
 			ret = FIO_Q_QUEUED;
 
@@ -1350,6 +1450,11 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 
 		} else {
 			ret = io_u_submit(td, io_u);
+			if (td_write(td) && ddir == DDIR_WRITE &&
+			    td->o.experimental_verify &&
+			    (ret == FIO_Q_QUEUED ||
+			     (ret == FIO_Q_COMPLETED && !io_u->error)))
+				ev_map_mark(td, io_u);
 
 			if (ddir_rw(ddir) && should_check_rate(td))
 				td->rate_next_io_time[ddir] = usec_for_io(td, ddir);
@@ -1930,11 +2035,32 @@ static uint64_t do_dry_run(struct thread_data *td)
 				log_io_piece(td, io_u);
 		}
 
+		if (td_write(td) && io_u->ddir == DDIR_WRITE &&
+		    td->o.experimental_verify)
+			ev_map_mark(td, io_u);
+
 		ret = io_u_sync_complete(td, io_u);
 		(void) ret;
 	}
 
 	return td->bytes_done[DDIR_WRITE] + td->bytes_done[DDIR_TRIM];
+}
+
+static void reset_experimental_verify_state(struct thread_data *td)
+{
+	struct fio_file *f;
+	unsigned int i;
+
+	memset(td->io_issues, 0, sizeof(td->io_issues));
+	memset(td->io_issue_bytes, 0, sizeof(td->io_issue_bytes));
+	td->verify_read_issues = 0;
+	td->bytes_verified = 0;
+	td->ddir_seq_nr = 1;
+	td->last_ddir_issued = DDIR_INVAL;
+	td->last_ddir_completed = DDIR_INVAL;
+
+	for_each_file(td, f, i)
+		fio_file_reset(td, f);
 }
 
 struct fork_data {
@@ -2213,6 +2339,10 @@ static void *thread_main(void *data)
 
 		prune_io_piece_log(td);
 
+		if (o->experimental_verify && o->norandommap && o->do_verify &&
+		    o->verify != VERIFY_NONE && !ev_map_init(td))
+			break;
+
 		if (td->o.verify_only && td_write(td)) {
 			verify_bytes = do_dry_run(td);
 			if (!verify_bytes)
@@ -2282,6 +2412,16 @@ static void *thread_main(void *data)
 			continue;
 
 		clear_io_state(td, 0);
+		/*
+		 * Only verify_only runs replay the write workload via
+		 * do_dry_run() before the verify pass, so only they need the
+		 * replay-sensitive counters and file state reset here. Doing
+		 * this for ordinary write+verify runs would zero
+		 * verify_read_issues mid-stream and break numberio accounting
+		 * across loops/time_based jobs.
+		 */
+		if (o->experimental_verify && o->verify_only)
+			reset_experimental_verify_state(td);
 
 		fio_gettime(&td->start, NULL);
 
@@ -2364,6 +2504,17 @@ err:
 	cgroup_shutdown(td, cgroup_mnt);
 	verify_free_state(td);
 	td_zone_free_index(td);
+
+	if (td->ev_maps) {
+		unsigned int i;
+
+		for (i = 0; i < td->files_index; i++) {
+			if (td->ev_maps[i])
+				axmap_free(td->ev_maps[i]);
+		}
+		free(td->ev_maps);
+		td->ev_maps = NULL;
+	}
 
 	if (fio_option_is_set(o, cpumask)) {
 		ret = fio_cpuset_exit(&o->cpumask);
