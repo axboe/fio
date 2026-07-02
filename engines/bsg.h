@@ -40,19 +40,35 @@ struct bsg_uring_cmd {
 #endif /* CONFIG_BSG_URING_CMD */
 
 #define MAX_SB 64
+#define MAX_CDB_LEN 32
+
 #define MAX_10CDB_LBA  0xFFFFFFFFULL
 #define MAX_10CDB_NLB  0xFFFFU
+#define MAX_16CDB_LBA  0xFFFFFFFFFFFFFFFFULL
+#define MAX_16CDB_NLB  0xFFFFFFFFU
+#define MAX_32CDB_LBA  MAX_16CDB_LBA
+#define MAX_32CDB_NLB  MAX_16CDB_NLB
+
+/* Variable-length CDB (opcode 0x7F) service actions for 32-byte CDBs */
+#define BSG_VARLEN_CDB_OPCODE		0x7F
+#define BSG_VARLEN_CDB_ADDITIONAL_LEN	0x18	/* 24 -> total 32 bytes */
+#define BSG_SA_READ_32			0x0009
+#define BSG_SA_WRITE_32			0x000B
 
 enum bsg_io_opcode {
 	bsg_cmd_read_10			= 0x28,
+	bsg_cmd_read_16			= 0x88,
 	bsg_cmd_read_capacity_10	= 0x25,
 	bsg_cmd_sync_cache_10		= 0x35,
+	bsg_cmd_sync_cache_16		= 0x91,
 	bsg_cmd_unmap			= 0x42,
 	bsg_cmd_write_10		= 0x2A,
+	bsg_cmd_write_16		= 0x8A,
+	bsg_cmd_varlen			= BSG_VARLEN_CDB_OPCODE,
 };
 
 struct bsg_cmd {
-	unsigned char cdb[16];
+	unsigned char cdb[MAX_CDB_LEN];
 	unsigned char sb[MAX_SB];
 	uint8_t unmap_param[24];
 };
@@ -67,6 +83,6 @@ int fio_bsg_uring_cmd_read_capacity(struct thread_data *td, unsigned int *bs,
 int fio_bsg_uring_cmd_get_file_size(struct thread_data *td, struct fio_file *f);
 
 int fio_bsg_uring_cmd_prep(struct bsg_uring_cmd *cmd, struct io_u *io_u,
-			   struct bsg_cmd *bc, bool fua);
+			   struct bsg_cmd *bc, bool fua, unsigned int cdb_len);
 
 #endif /* FIO_BSG_H */

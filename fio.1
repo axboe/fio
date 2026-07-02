@@ -2381,6 +2381,15 @@ should be used for the polling thread.
 Specifies the type of uring passthrough command to be used. Supported
 values are nvme and bsg. Default is nvme.
 .TP
+.BI (io_uring_cmd)cdb_len \fR=\fPint
+SCSI CDB length used for bsg \fBcmd_type\fR. Supported values are 0, 10, 16,
+and 32. Default is 0 (auto): the smallest CDB whose LBA and
+transfer-length fields fit the request is chosen, escalating from
+READ(10)/WRITE(10) to READ(16)/WRITE(16) as needed, mirroring the sg
+engine. Ignored when cmd_type=nvme. When an explicit length is set, a
+request whose LBA or transfer length exceeds the field capacity of the
+chosen CDB fails with -EINVAL rather than falling back to a larger CDB.
+.TP
 .BI (libaio)userspace_reap
 Normally, with the libaio engine in use, fio will use the
 \fBio_getevents\fR\|(3) system call to reap newly returned events. With

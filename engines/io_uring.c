@@ -214,6 +214,7 @@ struct ioring_options {
 	unsigned int prchk;
 	char *pi_chk;
 	enum uring_cmd_type cmd_type;
+	unsigned int cdb_len;
 };
 
 static unsigned int enter_flags = IORING_ENTER_GETEVENTS;
@@ -523,6 +524,36 @@ static struct fio_option options[] = {
 			  { .ival = "bsg",
 			    .oval = FIO_URING_CMD_BSG,
 			    .help = "Issue bsg-uring-cmd",
+			  },
+		},
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_IOURING,
+	},
+	{
+		.name	= "cdb_len",
+		.lname	= "SCSI CDB length",
+		.type	= FIO_OPT_STR,
+		.off1	= offsetof(struct ioring_options, cdb_len),
+		.help	= "SCSI CDB length for bsg cmd_type (10, 16, or 32). "
+			  "0 (default) auto-escalates to the smallest CDB that "
+			  "fits the request's LBA and transfer length.",
+		.def	= "0",
+		.posval = {
+			  { .ival = "0",
+			    .oval = 0,
+			    .help = "auto-escalates to the smallest CDB",
+			  },
+			  { .ival = "10",
+			    .oval = 10,
+			    .help = "CDB length 10",
+			  },
+			  { .ival = "16",
+			    .oval = 16,
+			    .help = "CDB length 16",
+			  },
+			  { .ival = "32",
+			    .oval = 32,
+			    .help = "CDB length 32",
 			  },
 		},
 		.category = FIO_OPT_C_ENGINE,
@@ -845,7 +876,8 @@ static int fio_ioring_cmd_prep(struct thread_data *td, struct io_u *io_u)
 		sqe->len = io_u->xfer_buflen;
 		cmd = (struct bsg_uring_cmd *)sqe->cmd;
 
-		return fio_bsg_uring_cmd_prep(cmd, io_u, &ld->bc[io_u->index], ld->fua[io_u->ddir]);
+		return fio_bsg_uring_cmd_prep(cmd, io_u, &ld->bc[io_u->index],
+					      ld->fua[io_u->ddir], o->cdb_len);
 	}
 }
 

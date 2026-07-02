@@ -2598,6 +2598,16 @@ with the caveat that when used on the command line, they must come after the
 	Specifies the type of uring passthrough command to be used. Supported
 	values are nvme and bsg. Default is nvme.
 
+.. option:: cdb_len=int : [io_uring_cmd]
+
+	SCSI CDB length used for bsg :option:`cmd_type`. Supported values are
+	0, 10, 16, and 32. Default is 0 (auto): the smallest CDB whose LBA and
+	transfer-length fields fit the request is chosen, escalating from
+	READ(10)/WRITE(10) to READ(16)/WRITE(16) as needed, mirroring the sg
+	engine. Ignored when cmd_type=nvme. When an explicit length is set, a
+	request whose LBA or transfer length exceeds the field capacity of the
+	chosen CDB fails with -EINVAL rather than falling back to a larger CDB.
+
 .. option:: hipri
 
    [io_uring] [io_uring_cmd] [xnvme]
