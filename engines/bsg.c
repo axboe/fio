@@ -104,7 +104,7 @@ void fio_bsg_uring_cmd_init(struct bsg_uring_cmd *cmd, struct bsg_cmd *bc,
 	if (dxfer_dir == SG_DXFER_TO_DEV) {
 		cmd->dout_xferp = (uint64_t)(uintptr_t) io_u->xfer_buf;
 		cmd->dout_xfer_len = io_u->xfer_buflen;
-	} else {
+	} else if (dxfer_dir == SG_DXFER_FROM_DEV) {
 		cmd->din_xferp = (uint64_t)(uintptr_t) io_u->xfer_buf;
 		cmd->din_xfer_len = io_u->xfer_buflen;
 	}
@@ -155,8 +155,24 @@ static void fio_bsg_varlen_cdb_header(struct bsg_cmd *bc, uint16_t sa)
 	bc->cdb[7] = BSG_VARLEN_CDB_ADDITIONAL_LEN;
 }
 
+static void fio_bsg_set_verify_bytchk(struct bsg_cmd *bc, unsigned int cdb_len,
+				      unsigned int verify_bytchk)
+{
+	/*
+	 * BYTCHK occupies bits 2-1 of byte 1 for VERIFY(10)/(16) and byte 10
+	 * for the 32-byte variable-length VERIFY. BYTCHK=0 leaves the field
+	 * cleared (medium verification only).
+	 */
+	if (cdb_len == 32)
+		bc->cdb[10] |= verify_bytchk << 1;
+	else
+		bc->cdb[1] |= verify_bytchk << 1;
+}
+
 int fio_bsg_uring_cmd_prep(struct bsg_uring_cmd *cmd, struct io_u *io_u,
-			   struct bsg_cmd *bc, bool fua, unsigned int cdb_len)
+			   struct bsg_cmd *bc, bool fua, unsigned int cdb_len,
+			   enum bsg_write_mode wmode,
+			   unsigned int verify_bytchk)
 {
 	struct bsg_data *data = FILE_ENG_DATA(io_u->file);
 	unsigned long long offset, nlb;
@@ -207,6 +223,39 @@ int fio_bsg_uring_cmd_prep(struct bsg_uring_cmd *cmd, struct io_u *io_u,
 		}
 		break;
 	case DDIR_WRITE:
+		if (wmode == BSG_WRITE_MODE_VERIFY) {
+			/*
+			 * VERIFY data direction depends on BYTCHK:
+			 *   0  medium verification only, no host data transfer
+			 *   1  compare the whole transfer against the medium
+			 *   3  compare a single block against the whole range
+			 * BYTCHK 1 and 3 send data to the device.
+			 */
+			int dxfer = verify_bytchk ? SG_DXFER_TO_DEV :
+						    SG_DXFER_NONE;
+
+			fio_bsg_uring_cmd_init(cmd, bc, io_u, dxfer, cdb_len);
+			switch (cdb_len) {
+			case 10:
+				bc->cdb[0] = bsg_cmd_verify_10;
+				break;
+			case 16:
+				bc->cdb[0] = bsg_cmd_verify_16;
+				break;
+			case 32:
+				fio_bsg_varlen_cdb_header(bc, BSG_SA_VERIFY_32);
+				break;
+			}
+			fio_bsg_set_verify_bytchk(bc, cdb_len, verify_bytchk);
+			/*
+			 * BYTCHK=3 compares one block against the entire
+			 * range, so only a single block is transferred while
+			 * the CDB still carries the full block count.
+			 */
+			if (verify_bytchk == 3)
+				cmd->dout_xfer_len = data->bs;
+			break;
+		}
 		fio_bsg_uring_cmd_init(cmd, bc, io_u, SG_DXFER_TO_DEV, cdb_len);
 		switch (cdb_len) {
 		case 10:

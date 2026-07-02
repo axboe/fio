@@ -54,6 +54,7 @@ struct bsg_uring_cmd {
 #define BSG_VARLEN_CDB_ADDITIONAL_LEN	0x18	/* 24 -> total 32 bytes */
 #define BSG_SA_READ_32			0x0009
 #define BSG_SA_WRITE_32			0x000B
+#define BSG_SA_VERIFY_32		0x000A
 
 enum bsg_io_opcode {
 	bsg_cmd_read_10			= 0x28,
@@ -64,7 +65,15 @@ enum bsg_io_opcode {
 	bsg_cmd_unmap			= 0x42,
 	bsg_cmd_write_10		= 0x2A,
 	bsg_cmd_write_16		= 0x8A,
+	bsg_cmd_verify_10		= 0x2F,
+	bsg_cmd_verify_16		= 0x8F,
 	bsg_cmd_varlen			= BSG_VARLEN_CDB_OPCODE,
+};
+
+/* Which command mode to issue for DDIR_WRITE ddir. */
+enum bsg_write_mode {
+	BSG_WRITE_MODE_WRITE = 0,
+	BSG_WRITE_MODE_VERIFY,
 };
 
 struct bsg_cmd {
@@ -83,6 +92,8 @@ int fio_bsg_uring_cmd_read_capacity(struct thread_data *td, unsigned int *bs,
 int fio_bsg_uring_cmd_get_file_size(struct thread_data *td, struct fio_file *f);
 
 int fio_bsg_uring_cmd_prep(struct bsg_uring_cmd *cmd, struct io_u *io_u,
-			   struct bsg_cmd *bc, bool fua, unsigned int cdb_len);
+			   struct bsg_cmd *bc, bool fua, unsigned int cdb_len,
+			   enum bsg_write_mode wmode,
+			   unsigned int verify_bytchk);
 
 #endif /* FIO_BSG_H */

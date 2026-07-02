@@ -185,6 +185,7 @@ struct ioring_data {
 	/* BSG */
 	struct bsg_cmd *bc;
 	bool fua[DDIR_RWDIR_CNT];
+	enum bsg_write_mode wmode;
 };
 
 struct ioring_options {
@@ -215,6 +216,7 @@ struct ioring_options {
 	char *pi_chk;
 	enum uring_cmd_type cmd_type;
 	unsigned int cdb_len;
+	unsigned int verify_bytchk;
 };
 
 static unsigned int enter_flags = IORING_ENTER_GETEVENTS;
@@ -559,6 +561,30 @@ static struct fio_option options[] = {
 		.category = FIO_OPT_C_ENGINE,
 		.group	= FIO_OPT_G_IOURING,
 	},
+	{
+		.name	= "verify_bytchk",
+		.lname	= "SCSI VERIFY BYTCHK field",
+		.type	= FIO_OPT_STR,
+		.off1	= offsetof(struct ioring_options, verify_bytchk),
+		.help	= "BYTCHK field for write_mode=verify (bsg cmd_type only)",
+		.def	= "0",
+		.posval = {
+			  { .ival = "0",
+			    .oval = 0,
+			    .help = "Medium verify",
+			  },
+			  { .ival = "1",
+			    .oval = 1,
+			    .help = "Full compare",
+			  },
+			  { .ival = "3",
+			    .oval = 3,
+			    .help = "Single-block compare",
+			  },
+		},
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_IOURING,
+	},
 	CMDPRIO_OPTIONS(struct ioring_options, FIO_OPT_G_IOURING),
 	{
 		.name	= "md_per_io_size",
@@ -877,7 +903,8 @@ static int fio_ioring_cmd_prep(struct thread_data *td, struct io_u *io_u)
 		cmd = (struct bsg_uring_cmd *)sqe->cmd;
 
 		return fio_bsg_uring_cmd_prep(cmd, io_u, &ld->bc[io_u->index],
-					      ld->fua[io_u->ddir], o->cdb_len);
+					      ld->fua[io_u->ddir], o->cdb_len,
+					      ld->wmode, o->verify_bytchk);
 	}
 }
 
@@ -1646,10 +1673,31 @@ static int fio_ioring_cmd_init(struct thread_data *td, struct ioring_data *ld)
 	} else if (o->cmd_type == FIO_URING_CMD_BSG) {
 		ld->bc = calloc(td->o.iodepth, sizeof(struct bsg_cmd));
 
-		if (td_write(td) && o->write_mode != FIO_URING_CMD_WMODE_WRITE) {
-			log_err("Not Support Write mode in BSG io_uring_cmd\n");
-			td_verror(td, EINVAL, "fio_ioring_cmd_init");
-			return 1;
+		if (td_write(td)) {
+			if (o->write_mode != FIO_URING_CMD_WMODE_WRITE &&
+			    o->write_mode != FIO_URING_CMD_WMODE_VERIFY) {
+				log_err("Not Support Write mode in BSG io_uring_cmd\n");
+				td_verror(td, EINVAL, "fio_ioring_cmd_init");
+				return 1;
+			}
+			if (o->write_mode == FIO_URING_CMD_WMODE_VERIFY &&
+			    o->writefua) {
+				log_err("writefua is not supported "
+					"with write_mode=verify for bsg\n");
+				td_verror(td, EINVAL, "fio_ioring_cmd_init");
+				return 1;
+			}
+			if (o->write_mode != FIO_URING_CMD_WMODE_VERIFY &&
+			    o->verify_bytchk != 0) {
+				log_err("verify_bytchk is only supported "
+					"with write_mode=verify for bsg\n");
+				td_verror(td, EINVAL, "fio_ioring_cmd_init");
+				return 1;
+			}
+			if (o->write_mode == FIO_URING_CMD_WMODE_VERIFY)
+				ld->wmode = BSG_WRITE_MODE_VERIFY;
+			else
+				ld->wmode = BSG_WRITE_MODE_WRITE;
 		}
 
 		if (o->readfua)

@@ -2874,7 +2874,10 @@ Use Write Uncorrectable commands for write operations
 Use Write Zeroes commands for write operations
 .TP
 .B verify
-Use Verify commands for write operations
+Use Verify commands for write operations. Supported for both nvme and bsg
+cmd_type. For bsg, the SCSI VERIFY(10)/(16)/(32) opcode is selected by
+\fBcdb_len\fR and the data comparison behavior by \fBverify_bytchk\fR;
+\fBwritefua\fR is not supported in this mode.
 .TP
 .B zone_append
 Use Zone Append commands for write operations. Requires zonemode=zbd
@@ -2885,6 +2888,26 @@ Multiple modes with mix ratios can be specified using the format
 is omitted, the remaining percentage is split evenly among entries with no
 percentage specified.
 Example: \fBwrite/60:zeroes/30:uncor/10\fR or \fBwrite/50:zeroes/:uncor/\fR
+.RE
+.TP
+.BI (io_uring_cmd)verify_bytchk \fR=\fPint
+BYTCHK field for the SCSI VERIFY command issued when \fBwrite_mode\fR is
+verify and \fBcmd_type\fR is bsg. Only valid with write_mode=verify.
+Defaults to 0.
+.RS
+.RS
+.TP
+.B 0
+Medium verification only; no data is transferred to the device.
+.TP
+.B 1
+The device compares the full transfer against the data stored on the medium,
+byte by byte.
+.TP
+.B 3
+The device compares a single block against every block in the range. Only one
+block is transferred.
+.RE
 .RE
 .TP
 .BI (io_uring_cmd)verify_mode \fR=\fPstr
