@@ -1621,14 +1621,10 @@ static int fio_ioring_cmd_init(struct thread_data *td, struct ioring_data *ld)
 	} else if (o->cmd_type == FIO_URING_CMD_BSG) {
 		ld->bc = calloc(td->o.iodepth, sizeof(struct bsg_cmd));
 
-		if (td_write(td)) {
-			if (o->write_mode == FIO_URING_CMD_WMODE_WRITE) {
-				ld->write_opcode = bsg_cmd_write_10;
-			} else {
-				log_err("Not Support Write mode in BSG io_uring_cmd\n");
-				td_verror(td, EINVAL, "fio_ioring_cmd_init");
-				return 1;
-			}
+		if (td_write(td) && o->write_mode != FIO_URING_CMD_WMODE_WRITE) {
+			log_err("Not Support Write mode in BSG io_uring_cmd\n");
+			td_verror(td, EINVAL, "fio_ioring_cmd_init");
+			return 1;
 		}
 
 		if (o->readfua)
