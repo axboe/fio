@@ -172,7 +172,8 @@ static void fio_bsg_set_verify_bytchk(struct bsg_cmd *bc, unsigned int cdb_len,
 int fio_bsg_uring_cmd_prep(struct bsg_uring_cmd *cmd, struct io_u *io_u,
 			   struct bsg_cmd *bc, bool fua, unsigned int cdb_len,
 			   enum bsg_write_mode wmode,
-			   unsigned int verify_bytchk)
+			   unsigned int verify_bytchk,
+			   enum bsg_read_mode rmode)
 {
 	struct bsg_data *data = FILE_ENG_DATA(io_u->file);
 	unsigned long long offset, nlb;
@@ -203,6 +204,23 @@ int fio_bsg_uring_cmd_prep(struct bsg_uring_cmd *cmd, struct io_u *io_u,
 
 	switch (io_u->ddir) {
 	case DDIR_READ:
+		if (rmode == BSG_READ_MODE_PREFETCH) {
+			/*
+			 * PREFETCH pulls the requested blocks from the medium
+			 * into the device read cache. No host data transfer.
+			 */
+			fio_bsg_uring_cmd_init(cmd, bc, io_u, SG_DXFER_NONE,
+					       cdb_len);
+			switch (cdb_len) {
+			case 10:
+				bc->cdb[0] = bsg_cmd_prefetch_10;
+				break;
+			case 16:
+				bc->cdb[0] = bsg_cmd_prefetch_16;
+				break;
+			}
+			break;
+		}
 		fio_bsg_uring_cmd_init(cmd, bc, io_u, SG_DXFER_FROM_DEV, cdb_len);
 		switch (cdb_len) {
 		case 10:

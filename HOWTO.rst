@@ -3122,6 +3122,22 @@ with the caveat that when used on the command line, they must come after the
                         The device compares a single block against every block
                         in the range. Only one block is transferred.
 
+.. option:: read_mode=str : [io_uring_cmd]
+
+        Specifies the type of read operation. Only supported with
+        cmd_type=bsg. Defaults to 'read'.
+
+                **read**
+                        Use Read commands for read operations
+
+                **prefetch**
+                        Use SCSI Pre-Fetch commands, which pull the requested
+                        blocks from the medium into the device read cache
+                        without transferring data to the host. Useful for
+                        cache-warming and prefetch-overhead benchmarks. The
+                        Pre-Fetch(10)/(16) opcode is selected by :option:`cdb_len`.
+                        :option:`readfua` is not supported in this mode.
+
 .. option:: verify_mode=str : [io_uring_cmd]
 
         Specifies the type of command to be used in the verification phase.  Defaults to 'read'.

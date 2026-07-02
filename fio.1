@@ -2910,6 +2910,23 @@ block is transferred.
 .RE
 .RE
 .TP
+.BI (io_uring_cmd)read_mode \fR=\fPstr
+Specifies the type of read operation. Only supported with cmd_type=bsg.
+Defaults to 'read'.
+.RS
+.RS
+.TP
+.B read
+Use Read commands for read operations
+.TP
+.B prefetch
+Use SCSI Pre-Fetch commands, which pull the requested blocks from the medium
+into the device read cache without transferring data to the host. Useful for
+cache-warming and prefetch-overhead benchmarks. The Pre-Fetch(10)/(16) opcode
+is selected by \fBcdb_len\fR. \fBreadfua\fR is not supported in this mode.
+.RE
+.RE
+.TP
 .BI (io_uring_cmd)verify_mode \fR=\fPstr
 Specifies the type of command to be used in the verification phase. Defaults to 'read'.
 .RS
