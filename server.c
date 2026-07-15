@@ -1714,7 +1714,7 @@ static void convert_gs(struct group_run_stats *dst, struct group_run_stats *src)
  */
 void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 {
-	struct cmd_ts_pdu p;
+	struct cmd_ts_pdu *p;
 	int i, j, k;
 	size_t clat_prio_stats_extra_size = 0;
 	size_t ss_extra_size = 0;
@@ -1724,119 +1724,128 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 
 	dprint(FD_NET, "server sending end stats\n");
 
-	memset(&p, 0, sizeof(p));
+	/*
+	 * The pdu is ~180kB, too big for the stack of a thread created with
+	 * the default stack size on some platforms (e.g. musl's 128kB), and
+	 * the periodic --status-interval send runs on the helper thread.
+	 */
+	p = calloc(1, sizeof(*p));
+	if (!p) {
+		log_err("fio: failed to allocate FIO_NET_CMD_TS pdu\n");
+		return;
+	}
 
-	snprintf(p.ts.name, sizeof(p.ts.name), "%s", ts->name);
-	snprintf(p.ts.verror, sizeof(p.ts.verror), "%s", ts->verror);
-	snprintf(p.ts.description, sizeof(p.ts.description), "%s",
+	snprintf(p->ts.name, sizeof(p->ts.name), "%s", ts->name);
+	snprintf(p->ts.verror, sizeof(p->ts.verror), "%s", ts->verror);
+	snprintf(p->ts.description, sizeof(p->ts.description), "%s",
 		 ts->description);
 
-	p.ts.error		= cpu_to_le32(ts->error);
-	p.ts.thread_number	= cpu_to_le32(ts->thread_number);
-	p.ts.groupid		= cpu_to_le32(ts->groupid);
-	p.ts.job_start		= cpu_to_le64(ts->job_start);
-	p.ts.pid		= cpu_to_le32(ts->pid);
-	p.ts.members		= cpu_to_le32(ts->members);
-	p.ts.unified_rw_rep	= cpu_to_le32(ts->unified_rw_rep);
-	p.ts.ioprio		= cpu_to_le32(ts->ioprio);
-	p.ts.disable_prio_stat	= cpu_to_le32(ts->disable_prio_stat);
+	p->ts.error		= cpu_to_le32(ts->error);
+	p->ts.thread_number	= cpu_to_le32(ts->thread_number);
+	p->ts.groupid		= cpu_to_le32(ts->groupid);
+	p->ts.job_start		= cpu_to_le64(ts->job_start);
+	p->ts.pid		= cpu_to_le32(ts->pid);
+	p->ts.members		= cpu_to_le32(ts->members);
+	p->ts.unified_rw_rep	= cpu_to_le32(ts->unified_rw_rep);
+	p->ts.ioprio		= cpu_to_le32(ts->ioprio);
+	p->ts.disable_prio_stat	= cpu_to_le32(ts->disable_prio_stat);
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
-		convert_io_stat(&p.ts.clat_stat[i], &ts->clat_stat[i]);
-		convert_io_stat(&p.ts.slat_stat[i], &ts->slat_stat[i]);
-		convert_io_stat(&p.ts.lat_stat[i], &ts->lat_stat[i]);
-		convert_io_stat(&p.ts.bw_stat[i], &ts->bw_stat[i]);
-		convert_io_stat(&p.ts.iops_stat[i], &ts->iops_stat[i]);
+		convert_io_stat(&p->ts.clat_stat[i], &ts->clat_stat[i]);
+		convert_io_stat(&p->ts.slat_stat[i], &ts->slat_stat[i]);
+		convert_io_stat(&p->ts.lat_stat[i], &ts->lat_stat[i]);
+		convert_io_stat(&p->ts.bw_stat[i], &ts->bw_stat[i]);
+		convert_io_stat(&p->ts.iops_stat[i], &ts->iops_stat[i]);
 	}
-	convert_io_stat(&p.ts.sync_stat, &ts->sync_stat);
+	convert_io_stat(&p->ts.sync_stat, &ts->sync_stat);
 
-	p.ts.usr_time		= cpu_to_le64(ts->usr_time);
-	p.ts.sys_time		= cpu_to_le64(ts->sys_time);
-	p.ts.ctx		= cpu_to_le64(ts->ctx);
-	p.ts.minf		= cpu_to_le64(ts->minf);
-	p.ts.majf		= cpu_to_le64(ts->majf);
-	p.ts.clat_percentiles	= cpu_to_le32(ts->clat_percentiles);
-	p.ts.lat_percentiles	= cpu_to_le32(ts->lat_percentiles);
-	p.ts.slat_percentiles	= cpu_to_le32(ts->slat_percentiles);
-	p.ts.percentile_precision = cpu_to_le64(ts->percentile_precision);
+	p->ts.usr_time		= cpu_to_le64(ts->usr_time);
+	p->ts.sys_time		= cpu_to_le64(ts->sys_time);
+	p->ts.ctx		= cpu_to_le64(ts->ctx);
+	p->ts.minf		= cpu_to_le64(ts->minf);
+	p->ts.majf		= cpu_to_le64(ts->majf);
+	p->ts.clat_percentiles	= cpu_to_le32(ts->clat_percentiles);
+	p->ts.lat_percentiles	= cpu_to_le32(ts->lat_percentiles);
+	p->ts.slat_percentiles	= cpu_to_le32(ts->slat_percentiles);
+	p->ts.percentile_precision = cpu_to_le64(ts->percentile_precision);
 
 	for (i = 0; i < FIO_IO_U_LIST_MAX_LEN; i++) {
 		fio_fp64_t *src = &ts->percentile_list[i];
-		fio_fp64_t *dst = &p.ts.percentile_list[i];
+		fio_fp64_t *dst = &p->ts.percentile_list[i];
 
 		dst->u.i = cpu_to_le64(fio_double_to_uint64(src->u.f));
 	}
 
 	for (i = 0; i < FIO_IO_U_MAP_NR; i++) {
-		p.ts.io_u_map[i]	= cpu_to_le64(ts->io_u_map[i]);
-		p.ts.io_u_submit[i]	= cpu_to_le64(ts->io_u_submit[i]);
-		p.ts.io_u_complete[i]	= cpu_to_le64(ts->io_u_complete[i]);
+		p->ts.io_u_map[i]	= cpu_to_le64(ts->io_u_map[i]);
+		p->ts.io_u_submit[i]	= cpu_to_le64(ts->io_u_submit[i]);
+		p->ts.io_u_complete[i]	= cpu_to_le64(ts->io_u_complete[i]);
 	}
 
 	for (i = 0; i < FIO_IO_U_LAT_N_NR; i++)
-		p.ts.io_u_lat_n[i]	= cpu_to_le64(ts->io_u_lat_n[i]);
+		p->ts.io_u_lat_n[i]	= cpu_to_le64(ts->io_u_lat_n[i]);
 	for (i = 0; i < FIO_IO_U_LAT_U_NR; i++)
-		p.ts.io_u_lat_u[i]	= cpu_to_le64(ts->io_u_lat_u[i]);
+		p->ts.io_u_lat_u[i]	= cpu_to_le64(ts->io_u_lat_u[i]);
 	for (i = 0; i < FIO_IO_U_LAT_M_NR; i++)
-		p.ts.io_u_lat_m[i]	= cpu_to_le64(ts->io_u_lat_m[i]);
+		p->ts.io_u_lat_m[i]	= cpu_to_le64(ts->io_u_lat_m[i]);
 
 	for (i = 0; i < FIO_LAT_CNT; i++)
 		for (j = 0; j < DDIR_RWDIR_CNT; j++)
 			for (k = 0; k < FIO_IO_U_PLAT_NR; k++)
-				p.ts.io_u_plat[i][j][k] = cpu_to_le64(ts->io_u_plat[i][j][k]);
+				p->ts.io_u_plat[i][j][k] = cpu_to_le64(ts->io_u_plat[i][j][k]);
 
 	for (j = 0; j < FIO_IO_U_PLAT_NR; j++)
-		p.ts.io_u_sync_plat[j] = cpu_to_le64(ts->io_u_sync_plat[j]);
+		p->ts.io_u_sync_plat[j] = cpu_to_le64(ts->io_u_sync_plat[j]);
 
 	for (i = 0; i < DDIR_RWDIR_SYNC_CNT; i++)
-		p.ts.total_io_u[i]	= cpu_to_le64(ts->total_io_u[i]);
+		p->ts.total_io_u[i]	= cpu_to_le64(ts->total_io_u[i]);
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
-		p.ts.short_io_u[i]	= cpu_to_le64(ts->short_io_u[i]);
-		p.ts.drop_io_u[i]	= cpu_to_le64(ts->drop_io_u[i]);
+		p->ts.short_io_u[i]	= cpu_to_le64(ts->short_io_u[i]);
+		p->ts.drop_io_u[i]	= cpu_to_le64(ts->drop_io_u[i]);
 	}
 
-	p.ts.total_submit	= cpu_to_le64(ts->total_submit);
-	p.ts.total_complete	= cpu_to_le64(ts->total_complete);
+	p->ts.total_submit	= cpu_to_le64(ts->total_submit);
+	p->ts.total_complete	= cpu_to_le64(ts->total_complete);
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
-		p.ts.io_bytes[i]	= cpu_to_le64(ts->io_bytes[i]);
-		p.ts.runtime[i]		= cpu_to_le64(ts->runtime[i]);
+		p->ts.io_bytes[i]	= cpu_to_le64(ts->io_bytes[i]);
+		p->ts.runtime[i]		= cpu_to_le64(ts->runtime[i]);
 	}
 
-	p.ts.total_run_time	= cpu_to_le64(ts->total_run_time);
-	p.ts.continue_on_error	= cpu_to_le16(ts->continue_on_error);
-	p.ts.total_err_count	= cpu_to_le64(ts->total_err_count);
-	p.ts.first_error	= cpu_to_le32(ts->first_error);
-	p.ts.kb_base		= cpu_to_le32(ts->kb_base);
-	p.ts.unit_base		= cpu_to_le32(ts->unit_base);
+	p->ts.total_run_time	= cpu_to_le64(ts->total_run_time);
+	p->ts.continue_on_error	= cpu_to_le16(ts->continue_on_error);
+	p->ts.total_err_count	= cpu_to_le64(ts->total_err_count);
+	p->ts.first_error	= cpu_to_le32(ts->first_error);
+	p->ts.kb_base		= cpu_to_le32(ts->kb_base);
+	p->ts.unit_base		= cpu_to_le32(ts->unit_base);
 
-	p.ts.nr_zone_resets	= cpu_to_le64(ts->nr_zone_resets);
-	p.ts.count_zone_resets	= cpu_to_le16(ts->count_zone_resets);
+	p->ts.nr_zone_resets	= cpu_to_le64(ts->nr_zone_resets);
+	p->ts.count_zone_resets	= cpu_to_le16(ts->count_zone_resets);
 
-	p.ts.latency_depth	= cpu_to_le32(ts->latency_depth);
-	p.ts.latency_target	= cpu_to_le64(ts->latency_target);
-	p.ts.latency_window	= cpu_to_le64(ts->latency_window);
-	p.ts.latency_percentile.u.i = cpu_to_le64(fio_double_to_uint64(ts->latency_percentile.u.f));
+	p->ts.latency_depth	= cpu_to_le32(ts->latency_depth);
+	p->ts.latency_target	= cpu_to_le64(ts->latency_target);
+	p->ts.latency_window	= cpu_to_le64(ts->latency_window);
+	p->ts.latency_percentile.u.i = cpu_to_le64(fio_double_to_uint64(ts->latency_percentile.u.f));
 
-	p.ts.sig_figs		= cpu_to_le32(ts->sig_figs);
+	p->ts.sig_figs		= cpu_to_le32(ts->sig_figs);
 
-	p.ts.nr_block_infos	= cpu_to_le64(ts->nr_block_infos);
-	for (i = 0; i < p.ts.nr_block_infos; i++)
-		p.ts.block_infos[i] = cpu_to_le32(ts->block_infos[i]);
+	p->ts.nr_block_infos	= cpu_to_le64(ts->nr_block_infos);
+	for (i = 0; i < p->ts.nr_block_infos; i++)
+		p->ts.block_infos[i] = cpu_to_le32(ts->block_infos[i]);
 
-	p.ts.ss_dur		= cpu_to_le64(ts->ss_dur);
-	p.ts.ss_state		= cpu_to_le32(ts->ss_state);
-	p.ts.ss_head		= cpu_to_le32(ts->ss_head);
-	p.ts.ss_limit.u.i	= cpu_to_le64(fio_double_to_uint64(ts->ss_limit.u.f));
-	p.ts.ss_slope.u.i	= cpu_to_le64(fio_double_to_uint64(ts->ss_slope.u.f));
-	p.ts.ss_deviation.u.i	= cpu_to_le64(fio_double_to_uint64(ts->ss_deviation.u.f));
-	p.ts.ss_criterion.u.i	= cpu_to_le64(fio_double_to_uint64(ts->ss_criterion.u.f));
+	p->ts.ss_dur		= cpu_to_le64(ts->ss_dur);
+	p->ts.ss_state		= cpu_to_le32(ts->ss_state);
+	p->ts.ss_head		= cpu_to_le32(ts->ss_head);
+	p->ts.ss_limit.u.i	= cpu_to_le64(fio_double_to_uint64(ts->ss_limit.u.f));
+	p->ts.ss_slope.u.i	= cpu_to_le64(fio_double_to_uint64(ts->ss_slope.u.f));
+	p->ts.ss_deviation.u.i	= cpu_to_le64(fio_double_to_uint64(ts->ss_deviation.u.f));
+	p->ts.ss_criterion.u.i	= cpu_to_le64(fio_double_to_uint64(ts->ss_criterion.u.f));
 
-	p.ts.cachehit		= cpu_to_le64(ts->cachehit);
-	p.ts.cachemiss		= cpu_to_le64(ts->cachemiss);
+	p->ts.cachehit		= cpu_to_le64(ts->cachehit);
+	p->ts.cachemiss		= cpu_to_le64(ts->cachemiss);
 
-	convert_gs(&p.rs, rs);
+	convert_gs(&p->rs, rs);
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		if (ts->nr_clat_prio[i])
@@ -1850,18 +1859,20 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 
 	extended_buf_size += ss_extra_size;
 	if (!extended_buf_size) {
-		fio_net_queue_cmd(FIO_NET_CMD_TS, &p, sizeof(p), NULL, SK_F_COPY);
+		fio_net_queue_cmd(FIO_NET_CMD_TS, p, sizeof(*p), NULL, SK_F_COPY);
+		free(p);
 		return;
 	}
 
-	extended_buf_size += sizeof(p);
+	extended_buf_size += sizeof(*p);
 	extended_buf = calloc(1, extended_buf_size);
 	if (!extended_buf) {
 		log_err("fio: failed to allocate FIO_NET_CMD_TS buffer\n");
+		free(p);
 		return;
 	}
 
-	memcpy(extended_buf, &p, sizeof(p));
+	memcpy(extended_buf, p, sizeof(*p));
 	extended_buf_wp = (struct cmd_ts_pdu *)extended_buf + 1;
 
 	if (clat_prio_stats_extra_size) {
@@ -1926,6 +1937,7 @@ void fio_server_send_ts(struct thread_stat *ts, struct group_run_stats *rs)
 
 	fio_net_queue_cmd(FIO_NET_CMD_TS, extended_buf, extended_buf_size, NULL, SK_F_COPY);
 	free(extended_buf);
+	free(p);
 }
 
 void fio_server_send_gs(struct group_run_stats *rs)

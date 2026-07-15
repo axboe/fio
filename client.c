@@ -22,6 +22,7 @@
 #include "flist.h"
 #include "hash.h"
 #include "verify-state.h"
+#include "csv_report.h"
 
 static void handle_du(struct fio_client *client, struct fio_net_cmd *cmd);
 static void handle_ts(struct fio_client *client, struct fio_net_cmd *cmd);
@@ -1134,6 +1135,8 @@ static void handle_ts(struct fio_client *client, struct fio_net_cmd *cmd)
 	}
 	client->did_stat = true;
 
+	fio_client_csv_add(client, &p->ts);
+
 	if (sum_stat_clients <= 1)
 		return;
 
@@ -2244,6 +2247,9 @@ int fio_handle_clients(struct client_ops const *ops)
 
 	free_clat_prio_stats(&client_ts);
 	free(pfds);
+
+	fio_client_csv_write_and_free();
+
 	return retval || error_clients;
 }
 

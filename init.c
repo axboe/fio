@@ -25,6 +25,7 @@
 #include "smalloc.h"
 #include "filehash.h"
 #include "verify.h"
+#include "csv_report.h"
 #include "profile.h"
 #include "server.h"
 #include "idletime.h"
@@ -300,6 +301,11 @@ static struct option l_opts[FIO_NR_OPTIONS] = {
 		.name		= (char *) "merge-blktrace-only",
 		.has_arg	= no_argument,
 		.val		= 'A' | FIO_CLIENT_FLAG,
+	},
+	{
+		.name		= (char *) "client-csv",
+		.has_arg	= required_argument,
+		.val		= 'Y',
 	},
 	{
 		.name		= NULL,
@@ -2452,6 +2458,9 @@ static void usage(const char *name)
 	printf("  --daemonize=pidfile\tBackground fio server, write pid to file\n");
 	printf("  --client=hostname\tTalk to remote backend(s) fio server at hostname\n");
 	printf("  --remote-config=file\tTell fio server to load this local job file\n");
+	printf("  --client-csv=file\tWrite consolidated per-client stats plus a summed/\n"
+		"\t\t\tweighted-average totals row to this CSV file\n"
+		"\t\t\t(with --status-interval, also per-interval rows)\n");
 	printf("  --idle-prof=option\tReport cpu idleness on a system or percpu basis\n"
 		"\t\t\t(option=system,percpu) or run unit work\n"
 		"\t\t\tcalibration only (option=calibrate)\n");
@@ -2729,6 +2738,14 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 
 	while ((c = getopt_long_only(argc, argv, ostr, l_opts, &lidx)) != -1) {
 		if ((c & FIO_CLIENT_FLAG) || client_flag_set(c)) {
+			/*
+			 * For "--opt arg" (as opposed to "--opt=arg") the
+			 * option and its argument are separate argv entries,
+			 * with optarg pointing at the latter. Forward both,
+			 * or the server would only see the bare argument.
+			 */
+			if (optarg && optarg == argv[optind - 1])
+				parse_cmd_client(cur_client, argv[optind - 2]);
 			parse_cmd_client(cur_client, argv[optind - 1]);
 			c &= ~FIO_CLIENT_FLAG;
 		}
@@ -3090,6 +3107,10 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 				do_exit++;
 				exit_val = 1;
 			}
+			break;
+		case 'Y':
+			did_arg = true;
+			fio_client_csv_set_file(optarg);
 			break;
 		case 'T':
 			did_arg = true;

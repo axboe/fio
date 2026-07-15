@@ -264,6 +264,15 @@ Command line options
 
 	Tell fio server to load this local `file`.
 
+.. option:: --client-csv=file
+
+	When running against one or more remote servers with :option:`--client`,
+	write a consolidated CSV report to `file`: one ``final`` row per client
+	plus an ``ALL`` row with summed IOPS/bandwidth and weighted-average
+	latency across clients. Combine with :option:`--status-interval` to also
+	collect per-interval rows for every client, each followed by a
+	per-interval ``ALL`` summary row. See `Client/Server`_ section.
+
 .. option:: --idle-prof=option
 
 	Report CPU idleness. `option` is one of the following:
@@ -5667,6 +5676,41 @@ The fio command would then be::
 
 In this mode, you cannot input server-specific parameters or job files -- all
 servers receive the same job file.
+
+When running against multiple servers, :option:`--client-csv` writes a single
+consolidated CSV report::
+
+    fio --client=host.list --client-csv=/path/to/report.csv <job file(s)>
+
+Each row carries a ``type`` column (``interval`` or ``final``), the elapsed
+job time in milliseconds, the client hostname, job name, group ID, error
+status, per read/write/trim IOPS, bandwidth, mean completion latency and
+p95/p99/p99.9 completion latency, plus CPU usr/sys percentages. Once every
+client has finished, the report ends with one ``final`` row per client
+followed by a ``final`` ``ALL`` row summarizing the whole run.
+
+To also sample stats on a user-defined interval, add
+:option:`--status-interval` (fio forwards it to the servers, which then
+stream cumulative stats snapshots back each period)::
+
+    fio --client=host.list --status-interval=10s \
+        --client-csv=/path/to/report.csv <job file(s)>
+
+Every period this emits one ``interval`` row per client covering just that
+period (computed as the delta between consecutive cumulative snapshots),
+and once all clients have reported the period, an ``interval`` ``ALL`` row
+summarizing it across clients. Interval rows are written to the file as the
+run progresses, so the report can be followed live with e.g. :command:`tail
+-f`. Note that :option:`--status-interval` also prints fio's regular full
+status dumps each period, independently of the CSV report.
+
+On the ``ALL`` rows (interval and final), IOPS and bandwidth are the literal
+sum across clients, while latency (mean and percentiles) and CPU are
+combined from a merged histogram/weighted-mean across clients rather than
+simply averaged, so they remain statistically meaningful even when clients
+report different I/O counts. If a job's :option:`percentile_list` doesn't
+include 95, 99, or 99.9, the corresponding percentile cell is left blank
+rather than interpolated.
 
 In order to let ``fio --client`` runs use a shared filesystem from multiple
 hosts, ``fio --client`` now prepends the IP address of the server to the
