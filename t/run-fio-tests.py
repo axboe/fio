@@ -626,6 +626,16 @@ class FioJobFileTest_iops_rate(FioJobFileTest):
             self.failure_reason = f"{self.failure_reason} iops ratio mismatch,"
             self.passed = False
 
+class FioJobFileTest_t0038(FioJobFileTest):
+    """
+    Make sure t0034 can find the iolog by copying it to the test directory.
+    """
+    def setup(self, *args, **kws):
+        super().setup(*args, **kws)
+
+        src = os.path.join(os.path.dirname(self.fio_job), 't0038.iolog')
+        shutil.copy(src, self.paths['test_dir'])
+
 
 TEST_LIST = [
     {
@@ -968,6 +978,15 @@ TEST_LIST = [
         'pre_job':          't0037-pre.fio',
         'pre_success':      SUCCESS_DEFAULT,
         'requirements':     [Requirements.linux, Requirements.libaio],
+    },
+    {
+        'test_id':          38,
+        'test_class':       FioJobFileTest_t0038,
+        'job':              't0038-397f1338.fio',
+        'success':          SUCCESS_DEFAULT,
+        'pre_job':          None,
+        'pre_success':      None,
+        'requirements':     [],
     },
     {
         'test_id':          1000,

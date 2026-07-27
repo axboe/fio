@@ -1,0 +1,24 @@
+fio version 3 iolog
+30 /dev/null add
+10731 /dev/null open
+10736 /dev/null trim 0 2147483648
+10752 /dev/null write 0 4096
+10780 /dev/null trim 4096 2147483648
+10782 /dev/null write 4096 4096
+10784 /dev/null trim 8192 2147483648
+10785 /dev/null write 8192 4096
+10787 /dev/null trim 12288 2147483648
+10788 /dev/null write 12288 4096
+10791 /dev/null trim 16384 2147483648
+10793 /dev/null write 16384 4096
+10795 /dev/null trim 20480 2147483648
+10797 /dev/null write 20480 4096
+10798 /dev/null trim 24576 2147483648
+10799 /dev/null write 24576 4096
+10801 /dev/null trim 28672 2147483648
+10802 /dev/null write 28672 4096
+10804 /dev/null trim 32768 2147483648
+10806 /dev/null write 32768 4096
+10808 /dev/null trim 36864 2147483648
+10809 /dev/null write 36864 4096
+10892 /dev/null close

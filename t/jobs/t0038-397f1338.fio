@@ -1,0 +1,16 @@
+#
+# Make sure that Fio appropriately ignores the sizes of trim commands when
+# determining how much memory to allocate when reading an iolog.
+#
+# The iolog issues large trim and small write commands. Since trim is a
+# metadata-only command in this context Fio does not need to size the data
+# buffer to accommodate the sizes of the trims.
+#
+# Expected result: Job completes without issue
+# Buggy result: Job fails with out-of-memory error
+#
+
+[test]
+read_iolog=t0038.iolog
+ioengine=null
+iodepth=128
