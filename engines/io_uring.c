@@ -930,16 +930,9 @@ static struct io_u *fio_ioring_cmd_event(struct thread_data *td, int event)
 				io_u->error = ret;
 		}
 	} else if (o->cmd_type == FIO_URING_CMD_BSG) {
-		/*
-		 * For bsg uring cmd, the big_cqe[0] in cqe contains the packed
-		 * SCSI status, where bits 0-7 hold the device status and bits 16-23
-		 * contaion the host status
-		 */
-		ret = (cqe->big_cqe[0] >> 16) & 0xff;
+		ret = cqe->big_cqe[0];
 		if (ret)
-			io_u->error = -ret;
-		else
-			io_u->error = cqe->big_cqe[0] & 0xff;
+			io_u->error = ret;
 	}
 
 ret:
