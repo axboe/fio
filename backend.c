@@ -2449,9 +2449,12 @@ static void reap_threads(unsigned int *nr_running, uint64_t *t_rate,
 			if (WIFSIGNALED(status)) {
 				int sig = WTERMSIG(status);
 
-				if (sig != SIGTERM && sig != SIGUSR2)
+				if (sig != SIGTERM && sig != SIGUSR2) {
 					log_err("fio: pid=%d, got signal=%d\n",
 							(int) td->pid, sig);
+					if (!td->error)
+						td->error = EINTR;
+				}
 				td->sig = sig;
 				td_set_runstate(td, TD_REAPED);
 				goto reaped;
