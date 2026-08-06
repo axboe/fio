@@ -1150,6 +1150,17 @@ void on_fsync_completed(struct thread_data *td, struct io_u *io_u)
  *
  * Returns number of bytes written and trimmed.
  */
+static bool trimwrite_mid_pair(struct thread_data *td)
+{
+	struct fio_file *f;
+
+	if (!td_trimwrite(td) || td->o.nr_files != 1)
+		return false;
+
+	f = td->files[0];
+	return f->last_start[DDIR_WRITE] != f->last_start[DDIR_TRIM];
+}
+
 static void do_io(struct thread_data *td, uint64_t *bytes_done)
 {
 	unsigned int i;
@@ -1211,7 +1222,8 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 
 		if (runtime_exceeded(td, &td->ts_cache)) {
 			__update_ts_cache(td);
-			if (runtime_exceeded(td, &td->ts_cache)) {
+			if (runtime_exceeded(td, &td->ts_cache) &&
+			    !trimwrite_mid_pair(td)) {
 				fio_mark_td_terminate(td);
 				break;
 			}
@@ -1228,6 +1240,7 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 		 */
 		if (bytes_issued >= total_bytes &&
 		    !td->o.read_iolog_file &&
+		    !trimwrite_mid_pair(td) &&
 		    (!td->o.time_based ||
 		     (td->o.time_based && td->o.verify != VERIFY_NONE)))
 			break;
