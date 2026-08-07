@@ -1,6 +1,11 @@
 /*
  * bsg structure declarations and helper functions for the
  * io_uring_cmd engine.
+ *
+ * Copyright 2026 Samsung Electronics Co., Ltd All Rights Reserved
+ *
+ * For conditions of distribution and use, see the accompanying COPYING file.
+ *
  */
 
 #ifndef FIO_BSG_H

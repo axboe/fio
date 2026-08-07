@@ -1,3 +1,9 @@
+/*
+ * Copyright 2026 Samsung Electronics Co., Ltd All Rights Reserved
+ *
+ * For conditions of distribution and use, see the accompanying COPYING file.
+ *
+ */
 #include "bsg.h"
 
 int fio_bsg_uring_cmd_read_capacity(struct thread_data *td, unsigned int *bs,
