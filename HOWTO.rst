@@ -2559,6 +2559,22 @@ with the caveat that when used on the command line, they must come after the
 	map and release for each IO. This is more efficient, and reduces the
 	IO latency as well.
 
+.. option:: dmabuf=str : [io_uring]
+
+	Select the DMA-BUF exporter for the IO buffers. Allowed values are:
+
+		**none**
+			Do not use DMA-BUF-backed buffers. This is the default.
+
+		**udmabuf**
+			Allocate the IO buffers from a udmabuf (``/dev/udmabuf``)
+			region and register them with io_uring as DMA-BUF-backed
+			fixed buffers, so that the device DMAs directly to/from the
+			DMA-BUF. Requires :option:`direct` =1; buffered IO is not
+			supported. Requires a kernel that supports the extended
+			buffer registration update. Not supported io_uring_cmd mode
+			as kernel lacks support for passthrough.
+
 .. option:: nonvectored=int : [io_uring] [io_uring_cmd]
 
 	With this option, fio will use non-vectored read/write commands, where

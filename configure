@@ -2709,6 +2709,38 @@ else
   nvme_uring_cmd="no"
 fi
 print_config "NVMe uring command support" "$nvme_uring_cmd"
+
+##########################################
+# Check udmabuf allocation support
+cat > $TMPC << EOF
+#define _GNU_SOURCE
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/ioctl.h>
+#include <linux/udmabuf.h>
+int main(void)
+{
+  struct udmabuf_create create = {
+    .memfd = 0,
+    .flags = 0,
+    .offset = 0,
+    .size = 4096,
+  };
+  int (*create_memfd)(const char *, unsigned int) = memfd_create;
+  int fd = create_memfd("fio-udmabuf", MFD_ALLOW_SEALING);
+
+  if (fcntl(fd, F_ADD_SEALS, F_SEAL_SHRINK) < 0)
+    return 1;
+  return ioctl(fd, UDMABUF_CREATE, &create);
+}
+EOF
+if compile_prog "" "" "udmabuf"; then
+  output_sym "CONFIG_UDMABUF"
+  udmabuf="yes"
+else
+  udmabuf="no"
+fi
+print_config "udmabuf allocation support" "$udmabuf"
 fi
 
 ##########################################
