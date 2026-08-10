@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""
+r"""
 # io_uring_cmd.py
 #
-# Test fio's io_uring_cmd ioengine with NVMe pass-through commands.
+# Test fio's io_uring_cmd ioengine.
 #
 # USAGE
 # see python3 io_uring_cmd.py --help
 #
 # EXAMPLES
 # python3 t/io_uring_cmd.py --dut /dev/ng0n1
-# python3 t/io_uring_cmd.py --dut /dev/ng1n1 -f ./fio
+# python3 t/io_uring_cmd.py --cmd_type=bsg --dut "/dev/bsg/6\:0\:0\:0"
 #
 # REQUIREMENTS
 # Python 3.6
@@ -21,12 +21,14 @@ import time
 import argparse
 from pathlib import Path
 from fiotestlib import FioJobCmdTest, run_fio_tests
+from fiotestcommon import SUCCESS_NONZERO, SUCCESS_DEFAULT
 
 
 class PassThruTest(FioJobCmdTest):
     """
-    NVMe pass-through test class. Check to make sure output for selected data
-    direction(s) is non-zero and that zero data appears for other directions.
+    io_uring_cmd pass-through test class. Check to make sure output for
+    selected data direction(s) is non-zero and that zero data appears for other
+    directions.
     """
 
     def setup(self, parameters):
@@ -47,7 +49,8 @@ class PassThruTest(FioJobCmdTest):
         for opt in ['fixedbufs', 'nonvectored', 'force_async', 'registerfiles',
                     'sqthread_poll', 'sqthread_poll_cpu', 'hipri', 'nowait',
                     'time_based', 'runtime', 'verify', 'io_size', 'readfua',
-                    'writefua', ]:
+                    'writefua', "cdb_len", "write_mode", "read_mode",
+                    "verify_bytchk", "buffer_pattern", "bs", "filesize", ]:
             if opt in self.fio_opts:
                 option = f"--{opt}={self.fio_opts[opt]}"
                 fio_args.append(option)
@@ -62,6 +65,12 @@ class PassThruTest(FioJobCmdTest):
             return
 
         if not self.passed:
+            return
+
+        if 'json' not in self.fio_opts['output-format']:
+            return
+
+        if self.success == SUCCESS_NONZERO:
             return
 
         job = self.json_data['jobs'][0]
@@ -362,6 +371,236 @@ TEST_LIST = [
             },
         "test_class": PassThruTest,
     },
+
+#
+# These tests only work for cmd_type=bsg
+#
+
+    # cdb_len tests
+    {
+        "test_id": 100,
+        "cmd_types": ['bsg',],
+        "fio_opts": {
+            "rw": 'randrw',
+            "cdb_len": 0,
+            "timebased": 1,
+            "runtime": 3,
+            "output-format": "json",
+            },
+        "test_class": PassThruTest,
+    },
+    {
+        "test_id": 101,
+        "cmd_types": ['bsg',],
+        "fio_opts": {
+            "rw": 'randrw',
+            "cdb_len": 10,
+            "timebased": 1,
+            "runtime": 3,
+            "output-format": "json",
+            },
+        "test_class": PassThruTest,
+    },
+    {
+        "test_id": 102,
+        "cmd_types": ['bsg',],
+        "fio_opts": {
+            "rw": 'randrw',
+            "cdb_len": 16,
+            "timebased": 1,
+            "runtime": 3,
+            "output-format": "json",
+            },
+        "test_class": PassThruTest,
+    },
+    {
+        "test_id": 103,
+        "cmd_types": ['bsg',],
+        "fio_opts": {
+            "rw": 'randrw',
+            "cdb_len": 32,
+            "timebased": 1,
+            "runtime": 3,
+            "output-format": "json",
+            },
+        "test_class": PassThruTest,
+    },
+    {
+        "test_id": 104,
+        "cmd_types": ['bsg',],
+        "fio_opts": {
+            "rw": 'randrw',
+            "cdb_len": 99,
+            "timebased": 1,
+            "runtime": 3,
+            "output-format": "normal",
+            },
+        "success": SUCCESS_NONZERO,
+        "test_class": PassThruTest,
+    },
+
+    # write_mode=verify tests
+    # first precondition with a known pattern
+    # and then try to verify it
+    {
+        "test_id": 105,
+        "cmd_types": ['bsg',],
+        "fio_opts": {
+            "rw": 'write',
+            "filesize": "8M",
+            "buffer_pattern": '"98765432"',
+            "output-format": "json",
+            },
+        "test_class": PassThruTest,
+    },
+    {
+        "test_id": 106,
+        "cmd_types": ['bsg',],
+        "fio_opts": {
+            "rw": 'randwrite',
+            "filesize": "8M",
+            "write_mode": "verify",
+            "buffer_pattern": '"98765432"',
+            "verify_bytchk": 0,
+            "output-format": "json",
+            },
+        "test_class": PassThruTest,
+    },
+    {
+        "test_id": 107,
+        "cmd_types": ['bsg',],
+        "fio_opts": {
+            "rw": 'randwrite',
+            "filesize": "8M",
+            "write_mode": "verify",
+            "buffer_pattern": '"98765432"',
+            "verify_bytchk": 1,
+            "output-format": "json",
+            },
+        "test_class": PassThruTest,
+    },
+    {
+        "test_id": 108,
+        "cmd_types": ['bsg',],
+        "fio_opts": {
+            "rw": 'randwrite',
+            "bs": "8k",
+            "filesize": "8M",
+            "write_mode": "verify",
+            "buffer_pattern": '"98765432"',
+            "verify_bytchk": 3,
+            "output-format": "json",
+            },
+        "test_class": PassThruTest,
+    },
+    # The following two tests should fail because we are trying to verify
+    # device contents against randomly generated data
+    {
+        "test_id": 109,
+        "cmd_types": ['bsg',],
+        "fio_opts": {
+            "rw": 'write',
+            "filesize": "8M",
+            "write_mode": "verify",
+            "verify_bytchk": 1,
+            "output-format": "json",
+            },
+        "success": SUCCESS_NONZERO,
+        "test_class": PassThruTest,
+    },
+    {
+        "test_id": 110,
+        "cmd_types": ['bsg',],
+        "fio_opts": {
+            "rw": 'write',
+            "bs": "8k",
+            "filesize": "8M",
+            "write_mode": "verify",
+            "verify_bytchk": 3,
+            "output-format": "json",
+            },
+        "success": SUCCESS_NONZERO,
+        "test_class": PassThruTest,
+    },
+    # This test should because because we are specifying verify_bytchk with
+    # write_mode=write
+    {
+        "test_id": 111,
+        "cmd_types": ['bsg',],
+        "fio_opts": {
+            "rw": 'write',
+            "verify_bytchk": 1,
+            "filesize": "8M",
+            "buffer_pattern": '"98765432"',
+            "output-format": "json",
+            },
+        "success": SUCCESS_NONZERO,
+        "test_class": PassThruTest,
+    },
+    # This test should because because we are specifying writefua with
+    # write_mode=verify
+    {
+        "test_id": 112,
+        "cmd_types": ['bsg',],
+        "fio_opts": {
+            "rw": 'write',
+            "write_mode": "verify",
+            "verify_bytchk": 1,
+            "writefua": 1,
+            "filesize": "8M",
+            "buffer_pattern": '"98765432"',
+            "output-format": "json",
+            },
+        "success": SUCCESS_NONZERO,
+        "test_class": PassThruTest,
+    },
+
+    # read_mode=prefetch tests
+    {
+        "test_id": 113,
+        "cmd_types": ['bsg',],
+        "fio_opts": {
+            "rw": 'read',
+            "timebased": 1,
+            "runtime": 3,
+            "read_mode": "prefetch",
+            "output-format": "json",
+            },
+        "test_class": PassThruTest,
+    },
+    # This should fail because readfua does not work with with
+    # read_mode=prefetch
+    {
+        "test_id": 114,
+        "cmd_types": ['bsg',],
+        "fio_opts": {
+            "rw": 'read',
+            "timebased": 1,
+            "runtime": 3,
+            "read_mode": "prefetch",
+            "readfua": 1,
+            "output-format": "json",
+            },
+        "success": SUCCESS_NONZERO,
+        "test_class": PassThruTest,
+    },
+    # This should fail because cdb_len=32 does not work with with
+    # read_mode=prefetch
+    {
+        "test_id": 115,
+        "cmd_types": ['bsg',],
+        "fio_opts": {
+            "rw": 'read',
+            "timebased": 1,
+            "runtime": 3,
+            "read_mode": "prefetch",
+            "cdb_len": 32,
+            "output-format": "json",
+            },
+        "success": SUCCESS_NONZERO,
+        "test_class": PassThruTest,
+    },
+
 ]
 
 def parse_args():
@@ -374,8 +613,9 @@ def parse_args():
                         help='list of test(s) to skip')
     parser.add_argument('-o', '--run-only', nargs='+', type=int,
                         help='list of test(s) to run, skipping all others')
-    parser.add_argument('--dut', help='target NVMe character device to test '
-                        '(e.g., /dev/ng0n1). WARNING: THIS IS A DESTRUCTIVE TEST', required=True)
+    parser.add_argument('--dut', help='target device to test '
+                        r'(e.g., /dev/ng0n1, "/dev/bsg/6\:0\:0\:0"). '
+                        'WARNING: THIS IS A DESTRUCTIVE TEST', required=True)
     parser.add_argument('-c', '--cmd_type', help='cmd_type for io_uring_cmd',
                         default='nvme')
     args = parser.parse_args()
@@ -384,7 +624,7 @@ def parse_args():
 
 
 def main():
-    """Run tests using fio's io_uring_cmd ioengine to send NVMe pass through commands."""
+    """Run tests using fio's io_uring_cmd ioengine to send pass through commands."""
 
     args = parse_args()
 
@@ -402,6 +642,8 @@ def main():
     for test in TEST_LIST:
         test['fio_opts']['filename'] = args.dut
         test['fio_opts']['cmd_type'] = args.cmd_type
+        if 'cmd_types' in test and args.cmd_type not in test['cmd_types']:
+            test['force_skip'] = True
 
     test_env = {
               'fio_path': fio_path,
