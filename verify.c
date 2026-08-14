@@ -912,7 +912,13 @@ static int verify_trimmed_io_u(struct thread_data *td, struct io_u *io_u)
 	if (!td->o.trim_zero)
 		return 0;
 
-	return verify_zero(io_u);
+	int r = verify_zero(io_u)
+	
+	if (!r)
+		dump_buf(io_u->buf, io_u->buflen, io_u->verify_offset,
+			"received", io_u->file);
+
+	return r;
 }
 
 static int verify_header(struct io_u *io_u, struct thread_data *td,
