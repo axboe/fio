@@ -120,6 +120,14 @@ ifdef CONFIG_LINUX_EXT4_MOVE_EXTENT
 endif
 ifdef CONFIG_LIBCUFILE
   SOURCE += engines/libcufile.c
+  SHARED_GPUACCEL_SOURCE = 1
+endif
+ifdef CONFIG_LIBHIPFILE
+  SOURCE += engines/libhipfile.c
+  SHARED_GPUACCEL_SOURCE = 1
+endif
+ifdef SHARED_GPUACCEL_SOURCE
+  SOURCE += engines/gpuaccel.c
 endif
 ifdef CONFIG_LINUX_SPLICE
   SOURCE += engines/splice.c
