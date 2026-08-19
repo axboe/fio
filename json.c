@@ -20,6 +20,10 @@ static struct json_pair *json_create_pair(const char *name, struct json_value *v
 	struct json_pair *pair = malloc(sizeof(struct json_pair));
 	if (pair) {
 		pair->name = strdup(name);
+		if (!pair->name) {
+			free(pair);
+			return NULL;
+		}
 		pair->value = value;
 
 		value->parent_type = JSON_PARENT_TYPE_PAIR;
@@ -63,6 +67,8 @@ static char *strdup_escape(const char *str)
 	}
 
 	p = ret = malloc(strlen(str) + escapes + 1);
+	if (!ret)
+		return NULL;
 	while (*str) {
 		if (*str == '\\' || *str == '\"')
 			*p++ = '\\';
