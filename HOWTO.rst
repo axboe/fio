@@ -2598,6 +2598,16 @@ with the caveat that when used on the command line, they must come after the
 	Specifies the type of uring passthrough command to be used. Supported
 	values are nvme and bsg. Default is nvme.
 
+.. option:: cdb_len=int : [io_uring_cmd]
+
+	SCSI CDB length used for bsg :option:`cmd_type`. Supported values are
+	0, 10, 16, and 32. Default is 0 (auto): the smallest CDB whose LBA and
+	transfer-length fields fit the request is chosen, escalating from
+	READ(10)/WRITE(10) to READ(16)/WRITE(16) as needed, mirroring the sg
+	engine. Ignored when cmd_type=nvme. When an explicit length is set, a
+	request whose LBA or transfer length exceeds the field capacity of the
+	chosen CDB fails with -EINVAL rather than falling back to a larger CDB.
+
 .. option:: hipri
 
    [io_uring] [io_uring_cmd] [xnvme]
@@ -3079,7 +3089,11 @@ with the caveat that when used on the command line, they must come after the
                         Use Write Zeroes commands for write operations
 
                 **verify**
-                        Use Verify commands for write operations
+                        Use Verify commands for write operations. Supported for
+                        both nvme and bsg cmd_type. For bsg, the SCSI VERIFY(10)/
+                        (16)/(32) opcode is selected by :option:`cdb_len` and the
+                        data comparison behavior by :option:`verify_bytchk`;
+                        :option:`writefua` is not supported in this mode.
 
                 **zone_append**
                         Use zone append commands for write operations. Requires zonemode=zbd
@@ -3089,6 +3103,40 @@ with the caveat that when used on the command line, they must come after the
         percentage is omitted, the remaining percentage is split evenly among
         entries with no percentage specified.
         Example: ``write/60:zeroes/30:uncor/10`` or ``write/50:zeroes/:uncor/``
+
+.. option:: verify_bytchk=int : [io_uring_cmd]
+
+        BYTCHK field for the SCSI VERIFY command issued when
+        :option:`write_mode` is ``verify`` and :option:`cmd_type` is ``bsg``.
+        Only valid with write_mode=verify. Defaults to 0.
+
+                **0**
+                        Medium verification only; no data is transferred to
+                        the device.
+
+                **1**
+                        The device compares the full transfer against the data
+                        stored on the medium, byte by byte.
+
+                **3**
+                        The device compares a single block against every block
+                        in the range. Only one block is transferred.
+
+.. option:: read_mode=str : [io_uring_cmd]
+
+        Specifies the type of read operation. Only supported with
+        cmd_type=bsg. Defaults to 'read'.
+
+                **read**
+                        Use Read commands for read operations
+
+                **prefetch**
+                        Use SCSI Pre-Fetch commands, which pull the requested
+                        blocks from the medium into the device read cache
+                        without transferring data to the host. Useful for
+                        cache-warming and prefetch-overhead benchmarks. The
+                        Pre-Fetch(10)/(16) opcode is selected by :option:`cdb_len`.
+                        :option:`readfua` is not supported in this mode.
 
 .. option:: verify_mode=str : [io_uring_cmd]
 

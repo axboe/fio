@@ -2381,6 +2381,15 @@ should be used for the polling thread.
 Specifies the type of uring passthrough command to be used. Supported
 values are nvme and bsg. Default is nvme.
 .TP
+.BI (io_uring_cmd)cdb_len \fR=\fPint
+SCSI CDB length used for bsg \fBcmd_type\fR. Supported values are 0, 10, 16,
+and 32. Default is 0 (auto): the smallest CDB whose LBA and
+transfer-length fields fit the request is chosen, escalating from
+READ(10)/WRITE(10) to READ(16)/WRITE(16) as needed, mirroring the sg
+engine. Ignored when cmd_type=nvme. When an explicit length is set, a
+request whose LBA or transfer length exceeds the field capacity of the
+chosen CDB fails with -EINVAL rather than falling back to a larger CDB.
+.TP
 .BI (libaio)userspace_reap
 Normally, with the libaio engine in use, fio will use the
 \fBio_getevents\fR\|(3) system call to reap newly returned events. With
@@ -2865,7 +2874,10 @@ Use Write Uncorrectable commands for write operations
 Use Write Zeroes commands for write operations
 .TP
 .B verify
-Use Verify commands for write operations
+Use Verify commands for write operations. Supported for both nvme and bsg
+cmd_type. For bsg, the SCSI VERIFY(10)/(16)/(32) opcode is selected by
+\fBcdb_len\fR and the data comparison behavior by \fBverify_bytchk\fR;
+\fBwritefua\fR is not supported in this mode.
 .TP
 .B zone_append
 Use Zone Append commands for write operations. Requires zonemode=zbd
@@ -2876,6 +2888,43 @@ Multiple modes with mix ratios can be specified using the format
 is omitted, the remaining percentage is split evenly among entries with no
 percentage specified.
 Example: \fBwrite/60:zeroes/30:uncor/10\fR or \fBwrite/50:zeroes/:uncor/\fR
+.RE
+.TP
+.BI (io_uring_cmd)verify_bytchk \fR=\fPint
+BYTCHK field for the SCSI VERIFY command issued when \fBwrite_mode\fR is
+verify and \fBcmd_type\fR is bsg. Only valid with write_mode=verify.
+Defaults to 0.
+.RS
+.RS
+.TP
+.B 0
+Medium verification only; no data is transferred to the device.
+.TP
+.B 1
+The device compares the full transfer against the data stored on the medium,
+byte by byte.
+.TP
+.B 3
+The device compares a single block against every block in the range. Only one
+block is transferred.
+.RE
+.RE
+.TP
+.BI (io_uring_cmd)read_mode \fR=\fPstr
+Specifies the type of read operation. Only supported with cmd_type=bsg.
+Defaults to 'read'.
+.RS
+.RS
+.TP
+.B read
+Use Read commands for read operations
+.TP
+.B prefetch
+Use SCSI Pre-Fetch commands, which pull the requested blocks from the medium
+into the device read cache without transferring data to the host. Useful for
+cache-warming and prefetch-overhead benchmarks. The Pre-Fetch(10)/(16) opcode
+is selected by \fBcdb_len\fR. \fBreadfua\fR is not supported in this mode.
+.RE
 .RE
 .TP
 .BI (io_uring_cmd)verify_mode \fR=\fPstr

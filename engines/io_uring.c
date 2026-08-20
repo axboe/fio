@@ -121,6 +121,11 @@ enum uring_cmd_verify_mode {
 	FIO_URING_CMD_VMODE_COMPARE,
 };
 
+enum uring_cmd_read_mode {
+	FIO_URING_CMD_RMODE_READ = 0,
+	FIO_URING_CMD_RMODE_PREFETCH,
+};
+
 struct io_sq_ring {
 	unsigned *head;
 	unsigned *tail;
@@ -185,6 +190,8 @@ struct ioring_data {
 	/* BSG */
 	struct bsg_cmd *bc;
 	bool fua[DDIR_RWDIR_CNT];
+	enum bsg_write_mode wmode;
+	enum bsg_read_mode rmode;
 };
 
 struct ioring_options {
@@ -214,6 +221,9 @@ struct ioring_options {
 	unsigned int prchk;
 	char *pi_chk;
 	enum uring_cmd_type cmd_type;
+	unsigned int cdb_len;
+	unsigned int verify_bytchk;
+	unsigned int read_mode;
 };
 
 static unsigned int enter_flags = IORING_ENTER_GETEVENTS;
@@ -523,6 +533,80 @@ static struct fio_option options[] = {
 			  { .ival = "bsg",
 			    .oval = FIO_URING_CMD_BSG,
 			    .help = "Issue bsg-uring-cmd",
+			  },
+		},
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_IOURING,
+	},
+	{
+		.name	= "cdb_len",
+		.lname	= "SCSI CDB length",
+		.type	= FIO_OPT_STR,
+		.off1	= offsetof(struct ioring_options, cdb_len),
+		.help	= "SCSI CDB length for bsg cmd_type (10, 16, or 32). "
+			  "0 (default) auto-escalates to the smallest CDB that "
+			  "fits the request's LBA and transfer length.",
+		.def	= "0",
+		.posval = {
+			  { .ival = "0",
+			    .oval = 0,
+			    .help = "auto-escalates to the smallest CDB",
+			  },
+			  { .ival = "10",
+			    .oval = 10,
+			    .help = "CDB length 10",
+			  },
+			  { .ival = "16",
+			    .oval = 16,
+			    .help = "CDB length 16",
+			  },
+			  { .ival = "32",
+			    .oval = 32,
+			    .help = "CDB length 32",
+			  },
+		},
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_IOURING,
+	},
+	{
+		.name	= "verify_bytchk",
+		.lname	= "SCSI VERIFY BYTCHK field",
+		.type	= FIO_OPT_STR,
+		.off1	= offsetof(struct ioring_options, verify_bytchk),
+		.help	= "BYTCHK field for write_mode=verify (bsg cmd_type only)",
+		.def	= "0",
+		.posval = {
+			  { .ival = "0",
+			    .oval = 0,
+			    .help = "Medium verify",
+			  },
+			  { .ival = "1",
+			    .oval = 1,
+			    .help = "Full compare",
+			  },
+			  { .ival = "3",
+			    .oval = 3,
+			    .help = "Single-block compare",
+			  },
+		},
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_IOURING,
+	},
+	{
+		.name	= "read_mode",
+		.lname	= "Read command type",
+		.type	= FIO_OPT_STR,
+		.off1	= offsetof(struct ioring_options, read_mode),
+		.help	= "Specify the read operation type (bsg cmd_type only)",
+		.def	= "read",
+		.posval = {
+			  { .ival = "read",
+			    .oval = FIO_URING_CMD_RMODE_READ,
+			    .help = "Use Read commands for read operations",
+			  },
+			  { .ival = "prefetch",
+			    .oval = FIO_URING_CMD_RMODE_PREFETCH,
+			    .help = "Use Pre-Fetch commands for read operations",
 			  },
 		},
 		.category = FIO_OPT_C_ENGINE,
@@ -845,7 +929,10 @@ static int fio_ioring_cmd_prep(struct thread_data *td, struct io_u *io_u)
 		sqe->len = io_u->xfer_buflen;
 		cmd = (struct bsg_uring_cmd *)sqe->cmd;
 
-		return fio_bsg_uring_cmd_prep(cmd, io_u, &ld->bc[io_u->index], ld->fua[io_u->ddir]);
+		return fio_bsg_uring_cmd_prep(cmd, io_u, &ld->bc[io_u->index],
+					      ld->fua[io_u->ddir], o->cdb_len,
+					      ld->wmode, o->verify_bytchk,
+					      ld->rmode);
 	}
 }
 
@@ -930,16 +1017,18 @@ static struct io_u *fio_ioring_cmd_event(struct thread_data *td, int event)
 				io_u->error = ret;
 		}
 	} else if (o->cmd_type == FIO_URING_CMD_BSG) {
-		/*
-		 * For bsg uring cmd, the big_cqe[0] in cqe contains the packed
-		 * SCSI status, where bits 0-7 hold the device status and bits 16-23
-		 * contaion the host status
-		 */
-		ret = (cqe->big_cqe[0] >> 16) & 0xff;
-		if (ret)
-			io_u->error = -ret;
-		else
-			io_u->error = cqe->big_cqe[0] & 0xff;
+		ret = cqe->big_cqe[0];
+		if (ret) {
+			/*
+			* PRE-FETCH completes successfully with SCSI status
+			* CONDITION_MET rather than GOOD; don't treat it as an error.
+			*/
+			if (ld->rmode == BSG_READ_MODE_PREFETCH &&
+				io_u->ddir == DDIR_READ &&
+				(ret & 0xff) == BSG_STAT_CONDITION_MET)
+				ret &= ~0xff;
+			io_u->error = ret;
+		}
 	}
 
 ret:
@@ -1575,6 +1664,11 @@ static int fio_ioring_cmd_init(struct thread_data *td, struct ioring_data *ld)
 	}
 
 	if (o->cmd_type == FIO_URING_CMD_NVME) {
+		if (o->read_mode != FIO_URING_CMD_RMODE_READ) {
+			log_err("fio: read_mode is only supported with "
+				"cmd_type=bsg\n");
+			return 1;
+		}
 		if (td_write(td)) {
 			if (o->wmode_split_nr > 1) {
 				int i;
@@ -1622,13 +1716,50 @@ static int fio_ioring_cmd_init(struct thread_data *td, struct ioring_data *ld)
 		ld->bc = calloc(td->o.iodepth, sizeof(struct bsg_cmd));
 
 		if (td_write(td)) {
-			if (o->write_mode == FIO_URING_CMD_WMODE_WRITE) {
-				ld->write_opcode = bsg_cmd_write_10;
-			} else {
+			if (o->write_mode != FIO_URING_CMD_WMODE_WRITE &&
+			    o->write_mode != FIO_URING_CMD_WMODE_VERIFY) {
 				log_err("Not Support Write mode in BSG io_uring_cmd\n");
 				td_verror(td, EINVAL, "fio_ioring_cmd_init");
 				return 1;
 			}
+			if (o->write_mode == FIO_URING_CMD_WMODE_VERIFY &&
+			    o->writefua) {
+				log_err("writefua is not supported "
+					"with write_mode=verify for bsg\n");
+				td_verror(td, EINVAL, "fio_ioring_cmd_init");
+				return 1;
+			}
+			if (o->write_mode != FIO_URING_CMD_WMODE_VERIFY &&
+			    o->verify_bytchk != 0) {
+				log_err("verify_bytchk is only supported "
+					"with write_mode=verify for bsg\n");
+				td_verror(td, EINVAL, "fio_ioring_cmd_init");
+				return 1;
+			}
+			if (o->write_mode == FIO_URING_CMD_WMODE_VERIFY)
+				ld->wmode = BSG_WRITE_MODE_VERIFY;
+			else
+				ld->wmode = BSG_WRITE_MODE_WRITE;
+		}
+		if (td_read(td)) {
+			if (o->read_mode == FIO_URING_CMD_RMODE_PREFETCH &&
+			    o->readfua) {
+				log_err("readfua is not supported "
+					"with read_mode=prefetch for bsg\n");
+				td_verror(td, EINVAL, "fio_ioring_cmd_init");
+				return 1;
+			}
+			if (o->read_mode == FIO_URING_CMD_RMODE_PREFETCH &&
+			    o->cdb_len == 32) {
+				log_err("cdb_len=32 is not supported "
+					"with read_mode=prefetch for bsg\n");
+				td_verror(td, EINVAL, "fio_ioring_cmd_init");
+				return 1;
+			}
+			if (o->read_mode == FIO_URING_CMD_RMODE_PREFETCH)
+				ld->rmode = BSG_READ_MODE_PREFETCH;
+			else
+				ld->rmode = BSG_READ_MODE_READ;
 		}
 
 		if (o->readfua)
