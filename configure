@@ -2400,9 +2400,9 @@ if test "$libnfs" != "no" ; then
     libnfs_cflags=$(pkg-config --cflags libnfs)
     libnfs_libs=$(pkg-config --libs libnfs)
 
-    # libnfs >= 6.0.0 requires gnutls for TLS support
+    # libnfs >= 6.0.0 on Linux requires gnutls for TLS support
     libnfs_version=$(pkg-config --modversion libnfs 2>/dev/null)
-    if test -n "$libnfs_version" ; then
+    if test -n "$libnfs_version" -a "$targetos" = "Linux" ; then
       libnfs_major=$(echo $libnfs_version | cut -d. -f1)
       if test "$libnfs_major" -ge 6 ; then
         if $(pkg-config gnutls > /dev/null 2>&1); then
