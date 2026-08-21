@@ -317,8 +317,26 @@ static bool queue_trace(struct thread_data *td, struct blk_io_trace *t,
 	unsigned long long *last_ttime = &td->io_log_last_ttime;
 	unsigned long long delay = 0;
 
-	if ((t->action & 0xffff) != __BLK_TA_QUEUE)
+	/* Ignore PC requests */
+	if ( t->action & BLK_TC_ACT(BLK_TC_PC)) 
 		return false;
+
+	/* Replay FLUSH/DISCARD/NOTIFY from Q(QUEUE) action,
+	 * replay all other commands from D(ISSUE) action.
+	*/
+
+	if (t->action & (BLK_TC_ACT(BLK_TC_NOTIFY) |
+			BLK_TC_ACT(BLK_TC_DISCARD) |
+			BLK_TC_ACT(BLK_TC_FLUSH))) {
+
+        	if ( (t->action & 0xffff) != __BLK_TA_QUEUE)
+                	return false;
+        	/* special cmd processing */
+	} else {
+        	if ( (t->action & 0xffff) != __BLK_TA_ISSUE)
+                	return false;
+        	/* normal IO processing */
+	}
 
 	if (!(t->action & BLK_TC_ACT(BLK_TC_NOTIFY))) {
 		delay = delay_since_ttime(td, t->time);
@@ -332,6 +350,7 @@ static bool queue_trace(struct thread_data *td, struct blk_io_trace *t,
 	else if (t->action & BLK_TC_ACT(BLK_TC_DISCARD))
 		return handle_trace_discard(td, t, delay, ios, bs, cache);
 	else if (t->action & BLK_TC_ACT(BLK_TC_FLUSH))
+		/*Replay Flush with F category in Q(QUEUE) action*/
 		return handle_trace_flush(td, t, delay, ios, cache);
 	else
 		return handle_trace_fs(td, t, delay, ios, bs, cache);
@@ -376,15 +395,6 @@ static void depth_inc(struct blk_io_trace *t, int *depth)
 	ddir = t_get_ddir(t);
 	if (ddir != DDIR_INVAL)
 		depth[ddir]++;
-}
-
-static void depth_dec(struct blk_io_trace *t, int *depth)
-{
-	enum fio_ddir ddir;
-
-	ddir = t_get_ddir(t);
-	if (ddir != DDIR_INVAL)
-		depth[ddir]--;
 }
 
 static void depth_end(struct blk_io_trace *t, int *this_depth, int *depth)
@@ -496,11 +506,11 @@ bool read_blktrace(struct thread_data* td)
 			goto err;
 		}
 		if ((t.action & BLK_TC_ACT(BLK_TC_NOTIFY)) == 0) {
-			if ((t.action & 0xffff) == __BLK_TA_QUEUE)
+
+			/* Increase queue depth at the action of __BLK_TA_ISSUE "D" instead of __BLK_TA_QUEUE as the queued IO
+			 * may be merged to send to the driver.*/
+			if ( ((t.action & 0xffff) == __BLK_TA_ISSUE) && ( (t.action & BLK_TC_ACT(BLK_TC_READ)) || (t.action & BLK_TC_ACT(BLK_TC_WRITE)) ) )
 				depth_inc(&t, this_depth);
-			else if (((t.action & 0xffff) == __BLK_TA_BACKMERGE) ||
-				((t.action & 0xffff) == __BLK_TA_FRONTMERGE))
-				depth_dec(&t, this_depth);
 			else if ((t.action & 0xffff) == __BLK_TA_COMPLETE)
 				depth_end(&t, this_depth, depth);
 
