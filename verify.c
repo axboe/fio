@@ -891,7 +891,7 @@ static int mem_is_zero_slow(const void *data, size_t length, size_t *offset)
 	return !length;
 }
 
-static int verify_zero(struct io_u *io_u)
+static int verify_zero(struct thread_data *td, struct io_u *io_u)
 {
 	size_t offset;
 
@@ -904,6 +904,15 @@ static int verify_zero(struct io_u *io_u)
 		", block offset %lu\n",
 			io_u->file->file_name, io_u->verify_offset, io_u->buflen,
 			(unsigned long) offset);
+
+	/*
+	 * Only the received data is worth dumping here, the expected
+	 * contents are all zeroes.
+	 */
+	if (td->o.verify_dump)
+		dump_buf(io_u->buf, io_u->buflen, io_u->verify_offset,
+				"received", io_u->file);
+
 	return EILSEQ;
 }
 
@@ -912,7 +921,7 @@ static int verify_trimmed_io_u(struct thread_data *td, struct io_u *io_u)
 	if (!td->o.trim_zero)
 		return 0;
 
-	return verify_zero(io_u);
+	return verify_zero(td, io_u);
 }
 
 static int verify_header(struct io_u *io_u, struct thread_data *td,
@@ -1018,7 +1027,7 @@ int verify_io_u(struct thread_data *td, struct io_u **io_u_ptr)
 		goto done;
 	} else if (io_u->flags & IO_U_F_ZEROED) {
 		dprint(FD_VERIFY, "verifying write zeroes command\n");
-		ret = verify_zero(io_u);
+		ret = verify_zero(td, io_u);
 		goto done;
 	}
 
