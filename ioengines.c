@@ -304,8 +304,7 @@ int td_io_getevents(struct thread_data *td, unsigned int min, unsigned int max,
 		return 0;
 
 	if (min > 0 && td->io_ops->commit) {
-		r = td->io_ops->commit(td);
-		if (r < 0)
+		if (!td_io_commit(td))
 			goto out;
 	}
 	if (max > td->cur_depth)
@@ -502,21 +501,24 @@ int td_io_init(struct thread_data *td)
 	return ret;
 }
 
-void td_io_commit(struct thread_data *td)
+bool td_io_commit(struct thread_data *td)
 {
 	int ret;
+	bool commit_success = true;
 
 	dprint(FD_IO, "calling ->commit(), depth %d\n", td->cur_depth);
 
 	if (!td->cur_depth || !td->io_u_queued)
-		return;
+		return true;
 
 	io_u_mark_depth(td, td->io_u_queued);
 
 	if (td->io_ops->commit) {
 		ret = td->io_ops->commit(td);
-		if (ret)
+		if (ret) {
 			td_verror(td, -ret, "io commit");
+			commit_success = false;
+		}
 	}
 
 	/*
@@ -524,6 +526,7 @@ void td_io_commit(struct thread_data *td)
 	 */
 	td->io_u_in_flight += td->io_u_queued;
 	td->io_u_queued = 0;
+	return commit_success;
 }
 
 int td_io_open_file(struct thread_data *td, struct fio_file *f)
