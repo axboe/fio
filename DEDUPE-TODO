@@ -14,3 +14,22 @@
   The storage subsystem usually identifies the similar buffers using
   locality-sensitive hashing or other methods.
 
+- Varying compression ratios on a single job
+  We could accept a list of 2d tuples in form of
+  [(probability,compression_ratio), ...] such that the compression ratios
+  are generated according to their set probability
+
+- Rework verification with dedupe and compression.
+
+- Reduce memory required to manage to dedupe_working_set.
+  Currently we require to maintain a seed (12-16 bytes) per page in
+  the working set. With large files we waste a lot of memory.
+  Either leverage disk space for that, or recalculate the seeds during
+  buffer generation phase
+
+- Dedupe hot spots.
+  Maintain different probabilities within the dedupe_working_set such that when
+  generating dedupe buffers we choose the seeds non uniformly in motivation to
+  simulate real-world use-cases better.
+
+- Add examples of fio jobs utilizing deduplication and/or compression.
