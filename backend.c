@@ -2353,7 +2353,7 @@ static void *thread_main(void *data)
 
 err:
 	if (td->error)
-		log_info("fio: pid=%d, err=%d/%s\n", (int) td->pid, td->error,
+		log_err("fio: pid=%d, err=%d/%s\n", (int) td->pid, td->error,
 							td->verror);
 
 	if (o->verify_async)

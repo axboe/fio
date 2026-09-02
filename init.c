@@ -2768,7 +2768,13 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 				do_exit++;
 				break;
 			}
-			f_err = f_out = tmp;
+			/*
+			 * Keep the error channel on stderr: routing it into the
+			 * output file mixes plain-text error lines with the
+			 * requested --output-format (JSON etc.) and makes the
+			 * file unparseable (GH issue #731).
+			 */
+			f_out = tmp;
 			break;
 			}
 		case 'm':
