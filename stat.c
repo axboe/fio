@@ -515,7 +515,7 @@ static struct thread_stat *gen_mixed_ddir_stats_from_ts(const struct thread_stat
 }
 
 static double convert_agg_kbytes_percent(const struct group_run_stats *rs,
-					 enum fio_ddir ddir, int mean)
+					 enum fio_ddir ddir, double mean)
 {
 	double p_of_agg = 100.0;
 	if (rs && rs->agg[ddir] > 1024) {
