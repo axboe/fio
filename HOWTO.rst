@@ -3811,6 +3811,14 @@ I/O replay
 	a device that doesn't support them. This option takes a comma
 	separated list of read, write, trim, sync.
 
+.. option:: replay_issue=bool
+
+	When replaying I/O with :option:`read_iolog` the default behavior is to
+        replay the blktrace files from queue action. IO requests may be merged, causing
+        replayed I/O to differ from the actual I/O issued to the driver. By setting
+        this variable fio will replay from issue action which can more accurately
+        reflects device traffic but preserve the original behavior of DISCARD, NOTIFY, 
+        and FLUSH requests from queue action.
 
 Threads, processes and job synchronization
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

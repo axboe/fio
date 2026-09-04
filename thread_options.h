@@ -291,6 +291,7 @@ struct thread_options {
 	unsigned int job_start_clock_id;
 	enum fio_cs clocksource;
 	unsigned int no_stall;
+	unsigned int replay_ta_issue;
 	unsigned int trim_percentage;
 	unsigned int trim_batch;
 	unsigned int trim_zero;
@@ -318,7 +319,6 @@ struct thread_options {
 	char *iops_log_file;
 	char *hist_log_file;
 	char *replay_redirect;
-
 	/*
 	 * Pre-run and post-run shell
 	 */
@@ -633,6 +633,7 @@ struct thread_options_pack {
 	uint32_t job_start_clock_id;
 	uint32_t clocksource;
 	uint32_t no_stall;
+	uint32_t replay_ta_issue;
 	uint32_t trim_percentage;
 	uint32_t trim_batch;
 	uint32_t trim_zero;
@@ -641,7 +642,6 @@ struct thread_options_pack {
 	uint32_t lat_percentiles;
 	uint32_t slat_percentiles;
 	uint32_t percentile_precision;
-	uint32_t pad2;
 	fio_fp64_t percentile_list[FIO_IO_U_LIST_MAX_LEN];
 
 	uint8_t read_iolog_file[FIO_TOP_STR_MAX];
