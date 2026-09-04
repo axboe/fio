@@ -2003,6 +2003,14 @@ static void *thread_main(void *data)
 	fio_sem_up(startup_sem);
 	dprint(FD_MUTEX, "wait on td->sem\n");
 	fio_sem_down(td->sem);
+
+	/*
+	 * If we were woken up during an abort (e.g. job startup timeout),
+	 * bail out immediately instead of continuing with setup which may
+	 * block on a hung device/filesystem.
+	 */
+	if (td->terminate)
+		goto err;
 	dprint(FD_MUTEX, "done waiting on td->sem\n");
 
 	/*
@@ -2883,12 +2891,29 @@ reap:
 		if (left) {
 			log_err("fio: %d job%s failed to start\n", left,
 					left > 1 ? "s" : "");
+
+			/*
+			 * Kill threads that have not reached TD_INITIALIZED yet.
+			 */
 			for (i = 0; i < this_jobs; i++) {
 				td = map[i];
 				if (!td)
 					continue;
 				kill(td->pid, SIGTERM);
 			}
+
+			/*
+			 * Wake up threads that already reached TD_INITIALIZED and
+			 * are blocked in fio_sem_down(td->sem) (the startup barrier).
+			 * Without this they hang forever because the normal
+			 * fio_sem_up(td->sem) signal loop is skipped on abort.
+			 * They see td->terminate (set by fio_terminate_threads) and
+			 * exit cleanly via the err path.
+			 */
+			for_each_td(td) {
+				if (td->runstate == TD_INITIALIZED)
+					fio_sem_up(td->sem);
+			} end_for_each();
 			break;
 		}
 
