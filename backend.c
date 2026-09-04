@@ -2625,6 +2625,77 @@ mounted:
 	return true;
 }
 
+/*
+ * Warn before writing to block devices that hold data fio is about to
+ * endanger: a partition table, an LVM physical volume, a file system,
+ * or other recognizable content. Prompts for confirmation when running
+ * interactively; a non-interactive run only warns and continues.
+ * Returns true if the user declined, in which case fio should abort
+ * before any file is opened or created.
+ */
+static bool check_block_dev_safety(void)
+{
+	struct fio_file *f;
+	unsigned int i;
+	char buf[16];
+	bool hit = false;
+
+	for_each_td(td) {
+		if (!td_write(td) || td->o.allow_mounted_write)
+			continue;
+
+		/*
+		 * numjobs clones duplicate the files of the first job,
+		 * skip them so each device is only warned about once.
+		 */
+		if (td->subjob_number)
+			continue;
+
+		for_each_file(td, f, i) {
+			const char *content;
+
+			if (f->filetype != FIO_TYPE_BLOCK)
+				continue;
+
+			content = blkdev_probe_content(f->file_name);
+			if (content) {
+				log_err("fio: %s contains %s, writing may damage it\n",
+					f->file_name, content);
+				hit = true;
+			}
+		}
+	} end_for_each();
+
+	if (!hit)
+		return false;
+
+	if (!isatty(STDIN_FILENO)) {
+		log_err("fio: non-interactive run, continuing anyway\n");
+		return false;
+	}
+
+	/*
+	 * Suspend the periodic status line while waiting, so its redraw
+	 * does not clobber the prompt.
+	 */
+	eta_suspend();
+
+	log_err("fio: continue anyway? (y/N): ");
+	fflush(f_err);
+
+	if (!fgets(buf, sizeof(buf), stdin)) {
+		eta_resume();
+		return true;
+	}
+
+	/* newline so the status line resumes on a fresh line */
+	log_err("\n");
+	eta_resume();
+
+	/* abort unless the user explicitly confirmed with y/Y */
+	return !(buf[0] == '\n' || buf[0] == 'y' || buf[0] == 'Y');
+}
+
 static bool waitee_running(struct thread_data *me)
 {
 	const char *waitee = me->o.wait_for;
@@ -2675,6 +2746,9 @@ static void run_threads(struct sk_out *sk_out)
 		else
 			nr_process++;
 	} end_for_each();
+
+	if (check_block_dev_safety())
+		return;
 
 	if (output_format & FIO_OUTPUT_NORMAL) {
 		struct buf_output out;

@@ -709,6 +709,8 @@ extern void deinitialize_fio(void);
  * ETA/status stuff
  */
 extern void print_thread_status(void);
+extern void eta_suspend(void);
+extern void eta_resume(void);
 extern void print_status_init(int);
 extern char *fio_uint_to_kmg(unsigned int val);
 
