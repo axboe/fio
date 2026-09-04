@@ -719,10 +719,29 @@ struct jobs_eta *get_jobs_eta(bool force, size_t *size)
 	return je;
 }
 
+/*
+ * Suspend/resume the periodic status line, used while fio waits for
+ * user input so the redrawn status line does not clobber the prompt.
+ */
+static int eta_suppress;
+
+void eta_suspend(void)
+{
+	eta_suppress++;
+}
+
+void eta_resume(void)
+{
+	eta_suppress--;
+}
+
 void print_thread_status(void)
 {
 	struct jobs_eta *je;
 	size_t size;
+
+	if (eta_suppress)
+		return;
 
 	je = get_jobs_eta(false, &size);
 	if (je) {
