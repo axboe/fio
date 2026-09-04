@@ -26,6 +26,12 @@ runs:
     - name: Download cloud image
       run: wget -q ${{ inputs.image_link }} -O debian.qcow2
       shell: bash
+    - name: Expand partition
+      run: |
+        qemu-img create -f qcow2 debian-expanded.qcow2 8G
+        virt-resize --expand /dev/sda1 debian.qcow2 debian-expanded.qcow2
+        mv debian-expanded.qcow2 debian.qcow2
+      shell: bash
     - name: Customize Debian image
       run: |
         virt-customize -a debian.qcow2 \
