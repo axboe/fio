@@ -312,13 +312,32 @@ static bool handle_trace_flush(struct thread_data *td, struct blk_io_trace *t,
  */
 static bool queue_trace(struct thread_data *td, struct blk_io_trace *t,
 			 unsigned long *ios, unsigned long long *bs,
-			 struct file_cache *cache)
+			 struct file_cache *cache, int replay_ac_issue)
 {
 	unsigned long long *last_ttime = &td->io_log_last_ttime;
 	unsigned long long delay = 0;
 
-	if ((t->action & 0xffff) != __BLK_TA_QUEUE)
-		return false;
+	if (replay_ac_issue) {
+		/* Replay FLUSH/DISCARD/NOTIFY from Q(QUEUE) action,
+		 * replay all other commands from D(ISSUE) action.
+		*/
+		if (t->action & (BLK_TC_ACT(BLK_TC_NOTIFY) |
+				BLK_TC_ACT(BLK_TC_DISCARD) |
+				BLK_TC_ACT(BLK_TC_FLUSH))) {
+
+	        	if ( (t->action & 0xffff) != __BLK_TA_QUEUE)
+	                	return false;
+	        	/* special cmd processing */
+		} else {
+	        	if ( (t->action & 0xffff) != __BLK_TA_ISSUE)
+	                	return false;
+	        	/* normal IO processing */
+		}
+	}
+	else {
+		if ((t->action & 0xffff) != __BLK_TA_QUEUE)		
+			return false;
+	}
 
 	if (!(t->action & BLK_TC_ACT(BLK_TC_NOTIFY))) {
 		delay = delay_since_ttime(td, t->time);
@@ -456,6 +475,7 @@ bool read_blktrace(struct thread_data* td)
 	int this_depth[DDIR_RWDIR_CNT] = { };
 	int depth[DDIR_RWDIR_CNT] = { };
 	int64_t items_to_fetch = 0;
+	int replay_ac_issue = strcmp(td->o.replay_action, "issue" ) == 0 ? 1 : 0;
 
 	if (td->o.read_iolog_chunked) {
 		items_to_fetch = iolog_items_to_fetch(td);
@@ -496,13 +516,24 @@ bool read_blktrace(struct thread_data* td)
 			goto err;
 		}
 		if ((t.action & BLK_TC_ACT(BLK_TC_NOTIFY)) == 0) {
-			if ((t.action & 0xffff) == __BLK_TA_QUEUE)
-				depth_inc(&t, this_depth);
-			else if (((t.action & 0xffff) == __BLK_TA_BACKMERGE) ||
-				((t.action & 0xffff) == __BLK_TA_FRONTMERGE))
-				depth_dec(&t, this_depth);
-			else if ((t.action & 0xffff) == __BLK_TA_COMPLETE)
-				depth_end(&t, this_depth, depth);
+
+			if (replay_ac_issue) {
+
+				/* Increase queue depth at the action of __BLK_TA_ISSUE "D" as the queued IO
+				 * may be merged to send to the driver. Replay from __BLK_TA_ISSUE action. */
+				if ( ((t.action & 0xffff) == __BLK_TA_ISSUE) && ( (t.action & BLK_TC_ACT(BLK_TC_READ)) || (t.action & BLK_TC_ACT(BLK_TC_WRITE)) ) )
+					depth_inc(&t, this_depth);
+			}
+			else { /* Replay the blktrace file from __BLK_TA_QUEUE action */
+				if ((t.action & 0xffff) == __BLK_TA_QUEUE)
+					depth_inc(&t, this_depth);
+				else if (((t.action & 0xffff) == __BLK_TA_BACKMERGE) ||
+					((t.action & 0xffff) == __BLK_TA_FRONTMERGE))
+					depth_dec(&t, this_depth);						
+			}
+
+			if ((t.action & 0xffff) == __BLK_TA_COMPLETE)
+				depth_end(&t, this_depth, depth);											
 
 			if (t_is_write(&t) && read_only) {
 				skipped_writes++;
@@ -510,7 +541,7 @@ bool read_blktrace(struct thread_data* td)
 			}
 		}
 
-		if (!queue_trace(td, &t, ios, rw_bs, &cache))
+		if (!queue_trace(td, &t, ios, rw_bs, &cache, replay_ac_issue))
 			continue;
 
 		if (td->o.read_iolog_chunked) {

@@ -318,6 +318,7 @@ struct thread_options {
 	char *iops_log_file;
 	char *hist_log_file;
 	char *replay_redirect;
+	char *replay_action;
 
 	/*
 	 * Pre-run and post-run shell
@@ -660,6 +661,7 @@ struct thread_options_pack {
 	uint8_t iops_log_file[FIO_TOP_STR_MAX];
 	uint8_t hist_log_file[FIO_TOP_STR_MAX];
 	uint8_t replay_redirect[FIO_TOP_STR_MAX];
+	uint8_t replay_action[FIO_TOP_STR_MAX];
 
 	/*
 	 * Pre-run and post-run shell

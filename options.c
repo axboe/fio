@@ -1986,6 +1986,14 @@ static int str_write_hist_log_cb(void *data, const char *str)
 	return 0;
 }
 
+static int str_replay_action_cb(void *data, const char *str)	{
+	if (!strcmp(str, "issue") || !strcmp(str, "queue")) 
+		return 0;
+	log_err("fio: valid inputs for the option replay_action are issue or queue\n");
+	return 1;
+}
+
+
 /*
  * str is supposed to be a substring of the strdup'd original string,
  * and is valid only if it's a regular file path.
@@ -3890,6 +3898,18 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_IOLOG,
 	},
+	{
+		.name   = "replay_action",
+		.lname  = "Replay Action",
+		.parent	= "read_iolog",
+		.type   = FIO_OPT_STR_STORE,
+		.off1   = offsetof(struct thread_options, replay_action),
+		.cb	= str_replay_action_cb,
+		.help   = "Replay the blktrace file by the actions of queue or issue",
+		.def    = "queue",
+		.category = FIO_OPT_C_IO,
+		.group  = FIO_OPT_G_IOLOG,
+	},			
 	{
 		.name	= "exec_prerun",
 		.lname	= "Pre-execute runnable",
