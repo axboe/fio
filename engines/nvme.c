@@ -394,33 +394,34 @@ int fio_nvme_uring_cmd_prep(struct nvme_uring_cmd *cmd, struct io_u *io_u,
 	/* cdw12 represent number of lba's for read/write */
 	cmd->cdw12 = nlb | (io_u->dtype << 20) | cdw12_flags;
 	cmd->cdw13 = io_u->dspec << 16;
-	if (iov) {
-		iov->iov_base = io_u->xfer_buf;
-		iov->iov_len = io_u->xfer_buflen;
-		cmd->addr = (__u64)(uintptr_t)iov;
-		cmd->data_len = 1;
-	} else {
-		/* use buffer only for data transfer commands */
-		switch (cmd->opcode) {
+
+	/* use buffer only for data transfer commands */
+	switch (cmd->opcode) {
 		case nvme_cmd_read:
 		case nvme_cmd_write:
 		case nvme_cmd_compare:
 		case nvme_zns_cmd_append:
-			cmd->addr = (__u64)(uintptr_t)io_u->xfer_buf;
-			cmd->data_len = io_u->xfer_buflen;
+			if (iov) {
+				iov->iov_base = io_u->xfer_buf;
+				iov->iov_len = io_u->xfer_buflen;
+				cmd->addr = (__u64)(uintptr_t)iov;
+				cmd->data_len = 1;
+			} else {
+				cmd->addr = (__u64)(uintptr_t)io_u->xfer_buf;
+				cmd->data_len = io_u->xfer_buflen;
+			}
+			if (data->lba_shift && data->ms) {
+				cmd->metadata = (__u64)(uintptr_t)io_u->mmap_data;
+				cmd->metadata_len = (nlb + 1) * data->ms;
+			}
 			break;
 		case nvme_cmd_write_zeroes:
 		case nvme_cmd_write_uncor:
 		case nvme_cmd_verify:
-			/* since cmd->addr and cmd->data_len is set to 0 by memset */
+			/* since data, metadata is set to 0 by memset */
 			break;
 		default:
 			return -ENOTSUP;
-		}
-	}
-	if (data->lba_shift && data->ms) {
-		cmd->metadata = (__u64)(uintptr_t)io_u->mmap_data;
-		cmd->metadata_len = (nlb + 1) * data->ms;
 	}
 	cmd->nsid = data->nsid;
 	return 0;
