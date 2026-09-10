@@ -253,9 +253,18 @@ static unsigned long thread_eta(struct thread_data *td)
 			eta_sec = (unsigned long) (elapsed * (1.0 / perc)) - elapsed;
 		}
 
-		if (td->o.timeout &&
-		    eta_sec > (timeout + done_secs - elapsed))
-			eta_sec = timeout + done_secs - elapsed;
+		/*
+		 * A job never runs for longer than its own timeout, which is
+		 * measured from its own epoch. Cap the estimate at whatever
+		 * time this job has left.
+		 */
+		if (td->o.timeout) {
+			unsigned long timeout_left;
+
+			timeout_left = timeout > elapsed ? timeout - elapsed : 0;
+			if (eta_sec > timeout_left)
+				eta_sec = timeout_left;
+		}
 	} else if (td->runstate == TD_NOT_CREATED || td->runstate == TD_CREATED
 			|| td->runstate == TD_INITIALIZED
 			|| td->runstate == TD_SETTING_UP
