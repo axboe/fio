@@ -271,7 +271,8 @@ void fio_terminate_threads(unsigned int group_id, unsigned int terminate)
 	for_each_td(td) {
 		if ((terminate == TERMINATE_GROUP && group_id == TERMINATE_ALL) ||
 		    (terminate == TERMINATE_GROUP && group_id == td->groupid) ||
-		    (terminate == TERMINATE_STONEWALL && td->runstate >= TD_RUNNING) ||
+		    (terminate == TERMINATE_STONEWALL &&
+		     td->runstate >= TD_SETTING_UP) ||
 		    (terminate == TERMINATE_ALL)) {
 			dprint(FD_PROCESS, "setting terminate on %s/%d\n",
 						td->o.name, (int) td->pid);

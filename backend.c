@@ -2180,6 +2180,17 @@ static void *thread_main(void *data)
 		goto err;
 
 	set_epoch_time(td, o->log_alternate_epoch_clock_id, o->job_start_clock_id);
+
+	/*
+	 * Setup is done and the job now has an epoch to measure itself
+	 * against, so it is finally safe to call it running. Everything
+	 * above this point ran as TD_SETTING_UP.
+	 */
+	if (in_ramp_period(td))
+		td_set_runstate(td, TD_RAMP);
+	else
+		td_set_runstate(td, TD_RUNNING);
+
 	fio_getrusage(&td->ru_start);
 	memcpy(&td->bw_sample_time, &td->epoch, sizeof(td->epoch));
 	memcpy(&td->iops_sample_time, &td->epoch, sizeof(td->epoch));
@@ -2893,16 +2904,16 @@ reap:
 		}
 
 		/*
-		 * start created threads (TD_INITIALIZED -> TD_RUNNING).
+		 * start created threads (TD_INITIALIZED -> TD_SETTING_UP).
+		 * The job has plenty of setup left to do before it issues any
+		 * IO, so it promotes itself to TD_RAMP or TD_RUNNING once that
+		 * is done and it has recorded its epoch.
 		 */
 		for_each_td(td) {
 			if (td->runstate != TD_INITIALIZED)
 				continue;
 
-			if (in_ramp_period(td))
-				td_set_runstate(td, TD_RAMP);
-			else
-				td_set_runstate(td, TD_RUNNING);
+			td_set_runstate(td, TD_SETTING_UP);
 			nr_running++;
 			nr_started--;
 			m_rate += ddir_rw_sum(td->o.ratemin);
