@@ -598,7 +598,6 @@ extern bool read_only;
 extern int eta_print;
 extern int eta_new_line;
 extern unsigned int eta_interval_msec;
-extern unsigned long done_secs;
 extern int fio_gtod_offload;
 extern int fio_gtod_cpu;
 extern enum fio_cs fio_clock_source;

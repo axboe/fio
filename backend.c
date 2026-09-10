@@ -71,7 +71,6 @@ unsigned int nr_segments = 0;
 unsigned int cur_segment = 0;
 unsigned int stat_number = 0;
 int temp_stall_ts;
-unsigned long done_secs = 0;
 #ifdef PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP
 pthread_mutex_t overlap_check = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
 #else
@@ -2510,7 +2509,6 @@ reaped:
 		if (td->error)
 			exit_value++;
 
-		done_secs += mtime_since_now(&td->epoch) / 1000;
 		profile_td_exit(td);
 		flow_exit_job(td);
 	} end_for_each();

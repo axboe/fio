@@ -188,7 +188,6 @@ void reset_fio_state(void)
 	for (i = 0; i < nr_segments; i++)
 		segments[i].nr_threads = 0;
 	stat_number = 0;
-	done_secs = 0;
 }
 
 const char *fio_get_os_string(int nr)
