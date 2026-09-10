@@ -685,7 +685,14 @@ void display_thread_status(struct jobs_eta *je)
 	}
 	sprintf(p, "\r");
 
-	printf("%s", output);
+	/*
+	 * With json output on stdout the status display must not be
+	 * written there, or it would break the json document.
+	 */
+	if (fio_output_json() && f_out == stdout)
+		fprintf(stderr, "%s", output);
+	else
+		printf("%s", output);
 
 	if (!eta_new_line_init) {
 		fio_gettime(&disp_eta_new_line, NULL);
@@ -695,7 +702,10 @@ void display_thread_status(struct jobs_eta *je)
 		eta_new_line_pending = 1;
 	}
 
-	fflush(stdout);
+	if (fio_output_json() && f_out == stdout)
+		fflush(stderr);
+	else
+		fflush(stdout);
 }
 
 struct jobs_eta *get_jobs_eta(bool force, size_t *size)
