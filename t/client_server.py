@@ -29,6 +29,7 @@ import tempfile
 import subprocess
 import configparser
 from pathlib import Path
+from fiotestcommon import SUCCESS_IGNORE_STDERR
 from fiotestlib import FioJobCmdTest, run_fio_tests
 
 
@@ -488,6 +489,14 @@ def main():
         for server in opts['servers']:
             server['client'] = SERVER_LIST[server['client']]
             server['jobfile'] = os.path.join(job_path, server['jobfile'])
+
+    #
+    # These tests all run with json output, which is delivered separately
+    # from any informational output: server text messages now land on
+    # stderr, so a non-empty stderr capture is expected
+    #
+    for test in TEST_LIST:
+        test['success'] = SUCCESS_IGNORE_STDERR
 
     test_env = {
               'fio_path': fio_path,
