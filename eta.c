@@ -466,9 +466,10 @@ static bool calc_thread_status(struct jobs_eta *je, int force)
 		} else if (td->runstate == TD_RAMP) {
 			je->nr_running++;
 			je->nr_ramp++;
-		} else if (td->runstate == TD_SETTING_UP)
+		} else if (td->runstate == TD_SETTING_UP) {
+			je->nr_running++;
 			je->nr_setting_up++;
-		else if (td->runstate < TD_RUNNING)
+		} else if (td->runstate < TD_RUNNING)
 			je->nr_pending++;
 
 		if (je->elapsed_sec >= 3)
