@@ -3891,6 +3891,17 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_IOLOG,
 	},
 	{
+		.name   = "replay_issue",
+		.lname  = "Replay from trace action by queue or issue",
+		.type   = FIO_OPT_BOOL,
+		.off1   = offsetof(struct thread_options, replay_ta_issue),
+		.def    = "0",
+		.parent = "read_iolog",
+		.help   = "Replay the blktrace files from the trace actions of queue or issue",
+		.category = FIO_OPT_C_IO,
+		.group  = FIO_OPT_G_IOLOG,
+	},	
+	{
 		.name	= "exec_prerun",
 		.lname	= "Pre-execute runnable",
 		.type	= FIO_OPT_STR_STORE,

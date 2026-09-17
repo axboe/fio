@@ -330,6 +330,7 @@ int convert_thread_options_to_cpu(struct thread_options *o,
 	o->gtod_cpu = le32_to_cpu(top->gtod_cpu);
 	o->clocksource = le32_to_cpu(top->clocksource);
 	o->no_stall = le32_to_cpu(top->no_stall);
+	o->replay_ta_issue = le32_to_cpu(top->replay_ta_issue);
 	o->trim_percentage = le32_to_cpu(top->trim_percentage);
 	o->trim_batch = le32_to_cpu(top->trim_batch);
 	o->trim_zero = le32_to_cpu(top->trim_zero);
@@ -573,6 +574,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->gtod_cpu = cpu_to_le32(o->gtod_cpu);
 	top->clocksource = cpu_to_le32(o->clocksource);
 	top->no_stall = cpu_to_le32(o->no_stall);
+	top->replay_ta_issue = cpu_to_le32(o->replay_ta_issue);
 	top->trim_percentage = cpu_to_le32(o->trim_percentage);
 	top->trim_batch = cpu_to_le32(o->trim_batch);
 	top->trim_zero = cpu_to_le32(o->trim_zero);
