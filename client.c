@@ -1807,7 +1807,7 @@ static int fio_send_file(struct fio_client *client, struct cmd_sendfile *pdu,
 	int fd;
 
 	size = sizeof(*rep);
-	rep = malloc(size);
+	rep = calloc(1, size);
 
 	if (stat((char *)pdu->path, &sb) < 0) {
 fail:
@@ -1817,13 +1817,13 @@ fail:
 		return 1;
 	}
 
-	size += sb.st_size;
-	rep = realloc(rep, size);
-	rep->size = cpu_to_le32((uint32_t) sb.st_size);
-
 	fd = open((char *)pdu->path, O_RDONLY);
 	if (fd == -1 )
 		goto fail;
+
+	size += sb.st_size;
+	rep = realloc(rep, size);
+	rep->size = cpu_to_le32((uint32_t) sb.st_size);
 
 	rep->error = read_data(fd, &rep->data, sb.st_size);
 	sendfile_reply(client->fd, rep, size, tag);
