@@ -83,7 +83,7 @@ Jens Axboe <axboe@kernel.dk> 20060905
 Maintainers
 -----------
 
-Fio is maintained by Jens Axboe <axboe@kernel.dk and
+Fio is maintained by Jens Axboe <axboe@kernel.dk> and
 Vincent Fu <vincentfu@gmail.com> - however, for reporting bugs please use
 the fio reflector or the GitHub page rather than email any of them
 directly. By using the public resources, others will be able to learn from
