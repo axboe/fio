@@ -1847,6 +1847,26 @@ Block size
 	that option.  Comma-separated values may be specified for reads, writes, and
 	trims as described in :option:`blocksize`.
 
+.. option:: rcio_bs
+
+	Region size for region-constrained I/O (RCIO).  A non-zero value enables
+	tracking that directs random reads and trims to written regions and random
+	writes to unwritten regions.  Must be a multiple of the block alignment.
+	Default: 0 (disabled).  See `Region-constrained I/O`_ for setup, examples,
+	and restrictions.
+
+.. option:: rcio_state_file
+
+	Path to a file used to save and reload RCIO region state across fio runs.
+	Use with :option:`rcio_precondition` to reuse preconditioning.  See
+	`Region-constrained I/O`_ for the snapshot lifecycle and restrictions.
+
+.. option:: rcio_precondition
+
+	Mark this job as an RCIO precondition step that can be skipped when
+	:option:`rcio_state_file` restores its region state.  Default: false.
+	See `Region-constrained I/O`_ for the preconditioning workflow.
+
 
 Buffers and memory
 ~~~~~~~~~~~~~~~~~~
@@ -5798,3 +5818,182 @@ aggregate summary report assumes that options affecting reporting like
 :option:`unified_rw_reporting` and :option:`percentile_list` are identical
 across all the jobs summarized. Having different values for these options is an
 unsupported configuration.
+
+
+Region-constrained I/O
+---------------------
+
+Region-constrained I/O (RCIO) generates workloads in which random reads and
+trims target only written space, and random writes target only unwritten space.
+This is useful for testing flash devices whose performance depends on occupancy:
+the percentage of the tested address range that contains valid, written data.
+Ordinary random I/O can overwrite existing data or read unwritten space; RCIO
+instead tracks which parts of the target are available for each operation.
+
+RCIO divides each file or device's tested range into fixed-size regions, set by
+:option:`rcio_bs`.  A region starts unwritten, becomes written after a complete
+region write, and becomes unwritten again after a complete region trim.
+Reading does not change its state.  Only complete regions fitting after the
+file offset are tracked.  This is fio's workload state, not a query of the
+device's existing contents: pre-existing data is not automatically discovered.
+
+For random I/O, fio chooses a region in the required state and replaces the
+normally generated block number.  Sequential I/O is not redirected: it proceeds
+in order and updates region state as I/O completes.  Jobs operating on the same
+file share a tracker through fio's shared memory, whether they run as threads
+or separate processes.  RCIO is not supported on Windows.
+
+Preparing and running a workload
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+First precondition the target by writing enough regions to reach the desired
+occupancy.  Preconditioning normally uses ``rw=randwrite`` so writes select
+unwritten regions throughout the tested range.  Set :option:`size` to the full
+range being tested and :option:`io_size` to the amount to write.  For example,
+writing 512 MiB of a 1 GiB range establishes 50% occupancy in the tracker.
+
+Then run read, write, and trim jobs on the same target, using the same region
+size and range.  Use :option:`stonewall` to separate preconditioning from the
+measurement phase.
+The following example writes to a regular file; its contents will be changed::
+
+	[global]
+	filename=rcio-test.dat
+	size=1G
+	ioengine=psync
+	rcio_bs=1M
+
+	[precondition]
+	rw=randwrite
+	bs=1M
+	io_size=512M
+
+	[read]
+	stonewall
+	rw=randread
+	bs=4k
+
+The read phase selects only the regions written by the precondition phase.
+Reads may be smaller than a region.  Writes and trims must cover a whole region,
+either in one request or in a sequential run as described below.
+
+For concurrent read, write, and trim jobs, use a shared :option:`flow_id` and
+:option:`flow` weights to control the ratio of operations.  Balance the amount
+written against the amount trimmed to maintain occupancy; the initial
+precondition alone does not maintain it.
+Without flow control, writes may fill all regions, leaving no further write
+targets, or trims may free too many regions, leaving too few read targets.
+Exhausting a region partition ends file service even with a nonuniform
+file-service distribution.
+
+Reusing preconditioning across runs
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Preconditioning a large device can take hours or days.  Set
+:option:`rcio_state_file` to save the tracker state and reload it on a later
+run, rather than repeating that work.  For example, add the following settings
+to the corresponding sections of the job file above::
+
+	[global]
+	rcio_state_file=/tmp/rcio-state.bin
+
+	[precondition]
+	rcio_precondition=1
+
+On startup, if the state file exists and its geometry (region size, region
+count, and file offset) matches the target, fio loads it.  Jobs marked with
+``rcio_precondition=1`` are skipped, before any I/O, only if all their files
+have loaded trackers.  A precondition job mixing loaded and fresh trackers is
+rejected; use separate jobs for those files.  Without restored state, the
+precondition phase runs normally.  Do not modify the target outside the tracked
+workload and then reuse its snapshot: the saved state would no longer describe
+which regions contain valid data.
+
+The snapshot is removed and its removal synced to disk during
+initialization, before the job can issue I/O. A successful save atomically
+publishes a new snapshot. If the run crashes or saving fails, the old
+snapshot cannot be reused and preconditioning is required again.
+Failure to invalidate the snapshot prevents the job from running;
+failure to save state makes fio exit with an error.
+Snapshots are not published after execution errors, handled termination
+signals, incomplete write/trim region runs, or unfinished preconditioning.
+Snapshots are also withheld if any sharing job uses :option:`unlink`
+to delete its regular-file target.
+The snapshot must be configured by the first job to use a tracker;
+attaching a state file to an already-used tracker is rejected.
+Persistent trackers are shared by thread and process jobs alike, including
+jobs that do not themselves specify :option:`rcio_state_file`.
+Write and trim jobs sharing a persistent tracker must successfully flush
+the target through the I/O engine before a snapshot can be published,
+even when :option:`end_fsync` and :option:`fsync_on_close` are disabled.
+
+A state-file path holds one tracker's state, not a separate snapshot per file.
+Consequently, :option:`rcio_state_file` is not supported with :option:`nrfiles`
+greater than 1: the files would overwrite each other's saved state.
+
+Tracker storage uses fio's shared memory pool.  Large targets with small
+regions may require increasing :option:`--alloc-size`; the two region-index
+arrays require approximately eight bytes per tracked region.
+
+Block sizes and sequential runs
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Because a region is transitioned as a whole, the following block-size
+constraints apply to all RCIO read, write, and trim jobs, sequential as
+well as random.  A read's block size times its sequential run length
+(see the ``:<nr>`` suffix on :option:`rw`) must not exceed ``rcio_bs``,
+and a write or trim must use a fixed block size whose size times its
+sequential run length exactly equals ``rcio_bs``, so each write/trim
+fully covers the region it marks.  A sequential precondition therefore
+uses ``bs`` equal to ``rcio_bs``.  The region size must be a multiple of
+the block alignment.
+
+For example, ``rcio_bs=1M``, ``bs=4k``, and ``rw=randwrite:256`` write each
+selected region as 256 consecutive 4 KiB requests.  Using
+:option:`rw_sequencer`\=identical with a sequential run length greater than 1
+is not supported for writes/trims, since it would repeat the same sub-block
+instead of covering the whole region.
+
+Random runs longer than one I/O are not supported for mixed read/write
+workloads or jobs with more than one file.  The run counter is shared across
+directions and files, while each direction and file has its own offset sequence.
+For sequential writes or trims, any skip specified using the ``:<skip>`` suffix
+on :option:`rw` must be a multiple of ``rcio_bs`` so each operation remains
+aligned to region boundaries.  Reverse sequential writes and trims also
+require the file offset and wrap endpoint (the smaller of the file length and
+I/O range length) to be multiples of ``rcio_bs``.  Forward sequential skips
+also require a region-aligned file offset, because wrapping must preserve
+whole-region coverage.
+
+On normal runtime expiry, an active random write/trim region run is finished
+before stopping, including retries of busy or short requests, so the job may
+exceed its requested runtime.
+
+Interactions with other options
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Because fio overrides the generated block number, the random map's "block is
+free" guarantee no longer applies.  RCIO sets :option:`norandommap`\=1 when
+it is not specified and rejects an explicit ``norandommap=0``.
+The following combinations are not supported:
+
+* Multi-range trim (:option:`num_range` greater than 1), because a single
+  multi-range trim command does not map to one contiguous region.
+* :option:`zonemode`\=zbd or :option:`zonemode`\=strided, because these modes
+  also steer I/O placement and conflict with RCIO's region-based selection.
+* ``trimwrite`` and ``randtrimwrite``, because the paired write reuses the
+  trim's region directly rather than picking its own.
+* :option:`bs_is_seq_rand`, because its effective block sizes depend on
+  whether an I/O is random or sequential.
+* :option:`percentage_random` other than 100 for any active direction in a
+  random job, because sequential requests within random jobs bypass tracking.
+* :option:`experimental_verify` or :option:`verify_only` with random writes,
+  because these modes cannot replay RCIO offsets.
+* :option:`read_iolog`, because replayed offsets and lengths bypass RCIO
+  region selection and coverage validation.
+* :option:`trim_backlog`, because backlog trims bypass region selection and
+  would leave discarded regions marked as written.
+
+Fio rejects incompatible job options during option validation, before starting
+the workload.  Checks that depend on the target's actual size, offset, or saved
+tracker state are performed when setting up the files.
