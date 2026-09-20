@@ -394,6 +394,8 @@ int convert_thread_options_to_cpu(struct thread_options *o,
 	uint8_t log_gz_cpumask[FIO_TOP_STR_MAX];
 #endif
 
+	o->rcio_bs = le64_to_cpu(top->rcio_bs);
+
 	return 0;
 }
 
@@ -720,6 +722,8 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	uint8_t verify_cpumask[FIO_TOP_STR_MAX];
 	uint8_t log_gz_cpumask[FIO_TOP_STR_MAX];
 #endif
+
+	top->rcio_bs = cpu_to_le64(o->rcio_bs);
 }
 
 /*
