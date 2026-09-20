@@ -23,6 +23,7 @@
 #include "lib/rand.h"
 #include "smalloc.h"
 #include "pshared.h"
+#include "minmax.h"
 
 static struct {
 	struct flist_head list;
@@ -31,6 +32,17 @@ static struct {
 
 int init_shared_rcio(void)
 {
+	bool needed = false;
+
+	for_each_td(td) {
+		if (td->o.rcio_bs) {
+			needed = true;
+			break;
+		}
+	} end_for_each();
+	if (!needed)
+		return 0;
+
 	shared_rcio = scalloc(1, sizeof(*shared_rcio));
 	if (!shared_rcio) {
 		log_err("fio: failed to allocate shared RCIO registry\n");
@@ -345,4 +357,55 @@ void rcio_mark_region(struct shared_rcio_entry *entry,
 	}
 
 	pthread_mutex_unlock(&entry->mutex);
+}
+
+/*
+ * Validate the file's usable range for RCIO, then
+ * attach its shared tracker. Returns false on invalid geometry or setup failure.
+ */
+static bool setup_rcio_file(struct thread_data *td, struct fio_file *f)
+{
+	uint64_t fsize = min(f->real_file_size, f->io_size);
+	struct shared_rcio_entry *rcio;
+	uint64_t rcio_bs = td->o.rcio_bs;
+	uint64_t rcio_blocks = fsize / rcio_bs;
+
+	if (!rcio_blocks) {
+		log_err("fio: rcio_bs=%llu is "
+			"larger than the usable file size %llu\n",
+			(unsigned long long)rcio_bs,
+			(unsigned long long)fsize);
+		return false;
+	}
+
+	rcio = get_shared_rcio(f->file_name, f->file_offset, rcio_bs,
+			       rcio_blocks);
+	if (!rcio) {
+		log_err("fio: failed to allocate RCIO region tracker "
+			"for %s\n", f->file_name);
+		return false;
+	}
+	f->rcio_shared = rcio;
+
+	return true;
+}
+
+/*
+ * Set up RCIO region tracking for all files.  RCIO applies
+ * to both random and sequential jobs (sequential preconditioning marks
+ * regions valid at completion), so this is independent of the random map.
+ */
+int init_rcio(struct thread_data *td)
+{
+	struct fio_file *f;
+	unsigned int i;
+
+	if (!td->o.rcio_bs)
+		return 0;
+
+	for_each_file(td, f, i)
+		if (!setup_rcio_file(td, f))
+			return 1;
+
+	return 0;
 }

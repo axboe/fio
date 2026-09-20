@@ -13,6 +13,7 @@
 /* Forward declarations */
 struct zoned_block_device_info;
 struct fdp_ruh_info;
+struct shared_rcio_entry;
 
 /*
  * The type of object we are working on
@@ -163,6 +164,8 @@ struct fio_file {
 
 	int references;
 	enum fio_file_flags flags;
+
+	struct shared_rcio_entry *rcio_shared;
 
 	struct disk_util *du;
 };
