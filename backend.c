@@ -54,6 +54,7 @@
 #include "pshared.h"
 #include "zone-dist.h"
 #include "fio_time.h"
+#include "rcio.h"
 
 static struct fio_sem *startup_sem;
 static struct flist_head *cgroup_list;
@@ -2180,6 +2181,11 @@ static void *thread_main(void *data)
 	if (!init_random_map(td))
 		goto err;
 
+	if (init_rcio(td)) {
+		td_verror(td, EIO, "init_rcio");
+		goto err;
+	}
+
 	if (o->exec_prerun && exec_string(o, o->exec_prerun, "prerun"))
 		goto err;
 
@@ -2987,11 +2993,16 @@ int fio_backend(struct sk_out *sk_out)
 		return 1;
 	}
 
+	if (init_shared_rcio())
+		return 1;
+
 	startup_sem = fio_sem_init(FIO_SEM_LOCKED);
 	if (!sk_out)
 		is_local_backend = true;
-	if (startup_sem == NULL)
+	if (startup_sem == NULL) {
+		free_all_shared_rcio();
 		return 1;
+	}
 
 	set_genesis_time();
 	stat_init();
@@ -3034,6 +3045,7 @@ int fio_backend(struct sk_out *sk_out)
 	} end_for_each();
 
 	fio_idle_prof_cleanup();
+	free_all_shared_rcio();
 	free_disk_util();
 	if (cgroup_list) {
 		cgroup_kill(cgroup_list);
