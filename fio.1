@@ -5654,8 +5654,8 @@ Consequently, \fBrcio_state_file\fR is not supported with \fBnrfiles\fR
 greater than 1: the files would overwrite each other's saved state.
 .P
 Tracker storage uses fio's shared memory pool. Large targets with small
-regions may require increasing \fB\-\-alloc-size\fR; the two region-index
-arrays require approximately eight bytes per tracked region.
+regions may require increasing \fB\-\-alloc-size\fR; the region-index and
+pending-I/O arrays require approximately twelve bytes per tracked region.
 .SS "Block sizes and sequential runs"
 Because a region is transitioned as a whole, the following block-size
 constraints apply to all RCIO read, write, and trim jobs, sequential as

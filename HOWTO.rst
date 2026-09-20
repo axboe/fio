@@ -5940,8 +5940,8 @@ Consequently, :option:`rcio_state_file` is not supported with :option:`nrfiles`
 greater than 1: the files would overwrite each other's saved state.
 
 Tracker storage uses fio's shared memory pool.  Large targets with small
-regions may require increasing :option:`--alloc-size`; the two region-index
-arrays require approximately eight bytes per tracked region.
+regions may require increasing :option:`--alloc-size`; the region-index and
+pending-I/O arrays require approximately twelve bytes per tracked region.
 
 Block sizes and sequential runs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
