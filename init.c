@@ -648,6 +648,11 @@ static int fixup_options(struct thread_data *td)
 		ret |= 1;
 	}
 
+	if (o->rcio_bs && td_trim(td) && o->num_range > 1) {
+		log_err("fio: rcio_bs does not support multi-range trim (num_range > 1).\n");
+		ret |= 1;
+	}
+
 #ifndef CONFIG_PSHARED
 	if (!o->use_thread) {
 		log_info("fio: this platform does not support process shared"
@@ -1240,6 +1245,7 @@ void td_fill_rand_seeds(struct thread_data *td)
 
 	init_rand_seed(&td->fdp_state, td->rand_seeds[FIO_RAND_FDP_OFF], false);
 	init_rand_seed(&td->sprandom_state, td->rand_seeds[FIO_RAND_SPRANDOM_OFF], false);
+	init_rand_seed(&td->rcio_state, td->rand_seeds[FIO_RAND_RCIO_OFF], true);
 }
 
 static int setup_random_seeds(struct thread_data *td)

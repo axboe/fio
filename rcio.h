@@ -14,6 +14,7 @@
 #include "flist.h"
 
 struct frand_state;
+struct thread_data;
 
 /**
  * struct shared_rcio_entry - dual-list region tracker for region-constrained I/O
@@ -87,5 +88,11 @@ uint64_t rcio_pick_region(struct shared_rcio_entry *entry,
  */
 void rcio_mark_region(struct shared_rcio_entry *entry,
 		      uint64_t offset, uint64_t buflen, int ddir);
+
+/*
+ * Set up RCIO region tracking for all files of the job.  Returns true on
+ * success, false on configuration error.
+ */
+bool init_rcio(struct thread_data *td);
 
 #endif

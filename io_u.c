@@ -12,6 +12,7 @@
 #include "minmax.h"
 #include "zbd.h"
 #include "sprandom.h"
+#include "rcio.h"
 
 struct io_completion_data {
 	int nr;				/* input */
@@ -386,18 +387,54 @@ static void loop_cache_invalidate(struct thread_data *td, struct fio_file *f)
 	}
 }
 
+/*
+ * For random I/O with RCIO, pick a target region directly from the
+ * dual-list and override the block number.  Write/trim also move
+ * the region between valid/invalid lists atomically at pick time.
+ *
+ * Returns true if the I/O should proceed.  Returns false if the
+ * applicable list is empty; the caller (get_next_rand_block()) treats
+ * this as an offset-generation failure, so the file is marked done.
+ */
+static bool check_rcio(struct thread_data *td, struct fio_file *f,
+		       enum fio_ddir ddir, uint64_t *b)
+{
+	uint64_t region;
+
+	if (!f->rcio_shared)
+		return true;
+
+	region = rcio_pick_region(f->rcio_shared, ddir, &td->rcio_state);
+	if (region == (uint64_t)-1ULL) {
+		dprint(FD_IO, "rcio: %s list empty for %s\n",
+		       ddir == DDIR_WRITE ? "write" :
+		       ddir == DDIR_TRIM ? "trim" : "read",
+		       f->file_name);
+		return false;
+	}
+
+	*b = (region * f->rcio_shared->region_size) / td->o.ba[ddir];
+	return true;
+}
+
 static int get_next_rand_block(struct thread_data *td, struct fio_file *f,
 			       enum fio_ddir ddir, uint64_t *b)
 {
-	if (!get_next_rand_offset(td, f, ddir, b))
+	if (!get_next_rand_offset(td, f, ddir, b)) {
+		if (!check_rcio(td, f, ddir, b))
+			return 1;
 		return 0;
+	}
 
 	if (td->o.time_based ||
 	    (td->o.file_service_type & __FIO_FSERVICE_NONUNIFORM)) {
 		fio_file_reset(td, f);
 		loop_cache_invalidate(td, f);
-		if (!get_next_rand_offset(td, f, ddir, b))
+		if (!get_next_rand_offset(td, f, ddir, b)) {
+			if (!check_rcio(td, f, ddir, b))
+				return 1;
 			return 0;
+		}
 	}
 
 	dprint(FD_IO, "%s: rand offset failed, last=%llu, size=%llu\n",
@@ -2249,6 +2286,26 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 	if (!io_u->error && ddir_rw(ddir)) {
 		unsigned long long bytes = io_u->xfer_buflen - io_u->resid;
 		int ret;
+
+		/*
+		 * Mark the RCIO region(s) covered by this extent only once
+		 * it has fully completed -- a short completion (to be
+		 * requeued below) must not mark a region valid/free before
+		 * the rest of it has actually been written/trimmed.
+		 * verify_offset/buflen are the original request's start and
+		 * length and, unlike offset/xfer_buflen, are not touched by
+		 * the short-IO requeue below, so they stay valid across the
+		 * whole requeue chain.
+		 *
+		 * Random I/O is already transitioned by rcio_pick_region() at
+		 * pick time; this only handles sequential completions (e.g.
+		 * preconditioning), which never go through check_rcio().
+		 */
+		if (bytes && f && f->rcio_shared && !td_random(td) &&
+		    io_u->offset + bytes - io_u->verify_offset >= io_u->buflen)
+			rcio_mark_region(f->rcio_shared,
+					 io_u->verify_offset - f->file_offset,
+					 io_u->buflen, ddir);
 
 		/*
 		 * Make sure we notice short IO from here, and requeue them

@@ -20,6 +20,8 @@
 #include "io_ddir.h"
 #include "log.h"
 #include "lib/rand.h"
+#include "fio.h"
+#include "minmax.h"
 
 static FLIST_HEAD(shared_rcio_list);
 static pthread_mutex_t shared_rcio_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -319,4 +321,145 @@ void rcio_mark_region(struct shared_rcio_entry *entry,
 	}
 
 	pthread_mutex_unlock(&entry->mutex);
+}
+
+/*
+ * Validate the file's usable range, alignment, and I/O sizes for RCIO, then
+ * attach its shared tracker. Returns false on invalid geometry or setup failure.
+ */
+static bool setup_rcio_file(struct thread_data *td, struct fio_file *f)
+{
+	uint64_t fsize = min(f->real_file_size, f->io_size);
+	struct shared_rcio_entry *rcio;
+	uint64_t rcio_bs = td->o.rcio_bs;
+	uint64_t rcio_blocks = fsize / rcio_bs;
+	unsigned int seq_nr = td->o.ddir_seq_nr ? td->o.ddir_seq_nr : 1;
+
+	if (!rcio_blocks) {
+		log_err("fio: rcio_bs=%llu is "
+			"larger than the usable file size %llu\n",
+			(unsigned long long)rcio_bs,
+			(unsigned long long)fsize);
+		return false;
+	}
+
+	if (rcio_bs % td->o.ba[DDIR_WRITE] ||
+	    rcio_bs % td->o.ba[DDIR_READ] ||
+	    rcio_bs % td->o.ba[DDIR_TRIM]) {
+		log_err("fio: rcio_bs=%llu must "
+			"be a multiple of block alignment\n",
+			(unsigned long long)rcio_bs);
+		return false;
+	}
+
+	/*
+	 * Reads only need to stay within one region; they don't
+	 * transition tracker state.
+	 */
+	if (td_read(td) && td->o.max_bs[DDIR_READ] > rcio_bs / seq_nr) {
+		log_err("fio: rcio_bs=%llu must be at least the "
+			"maximum read block size times the "
+			"sequential run length (%u), so a run "
+			"started by one RCIO pick cannot cross into "
+			"another region\n",
+			(unsigned long long)rcio_bs, seq_nr);
+		return false;
+	}
+
+	/*
+	 * rcio_pick_region() transitions an entire region at once for
+	 * writes and trims, so a write/trim (and its full sequential
+	 * run) must exactly cover the region: a fixed block size that
+	 * fully tiles rcio_bs.  Otherwise a region marked valid by a
+	 * partial write can expose uninitialized data, and a region
+	 * marked invalid by a partial trim can leave stale data
+	 * behind.
+	 */
+	if (td_write(td) &&
+	    (td->o.min_bs[DDIR_WRITE] != td->o.max_bs[DDIR_WRITE] ||
+	     (uint64_t)td->o.max_bs[DDIR_WRITE] * seq_nr != rcio_bs)) {
+		log_err("fio: rcio_bs=%llu requires a fixed write "
+			"block size whose size times the sequential "
+			"run length (%u) exactly equals rcio_bs, so "
+			"each write fully covers the region it marks "
+			"valid\n",
+			(unsigned long long)rcio_bs, seq_nr);
+		return false;
+	}
+
+	if (td_trim(td) &&
+	    (td->o.min_bs[DDIR_TRIM] != td->o.max_bs[DDIR_TRIM] ||
+	     (uint64_t)td->o.max_bs[DDIR_TRIM] * seq_nr != rcio_bs)) {
+		log_err("fio: rcio_bs=%llu requires a fixed trim "
+			"block size whose size times the sequential "
+			"run length (%u) exactly equals rcio_bs, so "
+			"each trim fully covers the region it marks "
+			"invalid\n",
+			(unsigned long long)rcio_bs, seq_nr);
+		return false;
+	}
+
+	rcio = get_shared_rcio(f->file_name, f->file_offset, rcio_bs,
+			       rcio_blocks);
+	if (!rcio) {
+		log_err("fio: failed to allocate RCIO region tracker "
+			"for %s\n", f->file_name);
+		return false;
+	}
+	f->rcio_shared = rcio;
+
+	return true;
+}
+
+/*
+ * Set up RCIO region tracking for all files.  RCIO applies
+ * to both random and sequential jobs (sequential preconditioning marks
+ * regions valid at completion), so this is independent of the random map.
+ */
+bool init_rcio(struct thread_data *td)
+{
+	struct fio_file *f;
+	unsigned int i;
+
+	if (!td->o.rcio_bs)
+		return true;
+
+	if (td->o.zone_mode == ZONE_MODE_ZBD ||
+	    td->o.zone_mode == ZONE_MODE_STRIDED) {
+		log_err("fio: rcio_bs is not supported with zonemode=zbd or "
+			"zonemode=strided\n");
+		return false;
+	}
+
+	if (td_trimwrite(td)) {
+		log_err("fio: rcio_bs is not supported with "
+			"trimwrite/randtrimwrite: its paired write reuses "
+			"the trim's region directly rather than picking from "
+			"the (disjoint) invalid partition\n");
+		return false;
+	}
+
+	if (td->o.rw_seq == RW_SEQ_IDENT &&
+	    (td_write(td) || td_trim(td)) && td->o.ddir_seq_nr > 1) {
+		log_err("fio: rcio_bs is not supported with "
+			"rw_sequencer=identical and a sequential run length "
+			"greater than 1 for writes/trims: the region is "
+			"picked once per run but only its first sub-block "
+			"would actually be covered\n");
+		return false;
+	}
+
+	if (td->o.trim_backlog) {
+		log_err("fio: rcio_bs is not supported with trim_backlog: "
+			"backlog trims bypass region selection, so a trimmed "
+			"region would stay marked valid and later reads could "
+			"target discarded data\n");
+		return false;
+	}
+
+	for_each_file(td, f, i)
+		if (!setup_rcio_file(td, f))
+			return false;
+
+	return true;
 }
