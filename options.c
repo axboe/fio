@@ -5395,7 +5395,17 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.category = FIO_OPT_C_STAT,
 		.group	= FIO_OPT_G_INVALID,
 	},
-
+	{
+		.name	= "rcio_bs",
+		.lname	= "RCIO region size",
+		.type	= FIO_OPT_STR_VAL,
+		.off1	= offsetof(struct thread_options, rcio_bs),
+		.help	= "Region size for region-constrained I/O tracking (0=disabled)",
+		.def	= "0",
+		.interval = 4096,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IO_BASIC,
+	},
 #ifdef FIO_HAVE_DISK_UTIL
 	{
 		.name	= "disk_util",
