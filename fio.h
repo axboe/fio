@@ -157,6 +157,7 @@ enum {
 	FIO_RAND_FDP_OFF,
 	FIO_RAND_SPRANDOM_OFF,
 	FIO_RAND_WMODE_OFF,
+	FIO_RAND_RCIO_OFF,
 	FIO_RAND_NR_OFFS,
 };
 
@@ -288,6 +289,7 @@ struct thread_data {
 	struct frand_state dedupe_working_set_index_state;
 	struct frand_state *dedupe_working_set_states;
 	struct frand_state sprandom_state;
+	struct frand_state rcio_state;
 
 	unsigned long long num_unique_pages;
 
@@ -449,6 +451,10 @@ struct thread_data {
 	unsigned long rwmix_issues;
 	enum fio_ddir rwmix_ddir;
 	unsigned int ddir_seq_nr;
+	struct shared_rcio_entry *rcio_run_entry;
+	uint64_t rcio_run_region;
+	uint32_t rcio_run_remaining;
+	enum fio_ddir rcio_run_ddir;
 
 	/*
 	 * rand/seq mixed workload state

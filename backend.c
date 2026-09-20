@@ -54,6 +54,7 @@
 #include "pshared.h"
 #include "zone-dist.h"
 #include "fio_time.h"
+#include "rcio.h"
 
 static struct fio_sem *startup_sem;
 static struct flist_head *cgroup_list;
@@ -532,6 +533,8 @@ sync_done:
 	default:
 		assert(*ret < 0);
 		td_verror(td, -(*ret), "td_io_queue");
+		if (io_u->flags & IO_U_F_RCIO)
+			clear_io_u(td, io_u);
 		break;
 	}
 
@@ -1251,6 +1254,17 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 			io_u = NULL;
 			ddir = DDIR_INVAL;
 			if (err == -EBUSY) {
+				if (td->o.rcio_size) {
+					if (td->o.io_submit_mode == IO_MODE_OFFLOAD)
+						workqueue_flush(&td->io_wq);
+					else if (td->cur_depth)
+						ret = wait_for_completions(td, NULL);
+					else
+						usec_sleep(td, 1000);
+					if (ret < 0 || td->error)
+						break;
+					continue;
+				}
 				ret = FIO_Q_BUSY;
 				goto reap;
 			}
@@ -1345,8 +1359,10 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 			const unsigned long long blen = io_u->xfer_buflen;
 			const enum fio_ddir __ddir = acct_ddir(io_u);
 
-			if (td->error)
+			if (td->error) {
+				put_io_u(td, io_u);
 				break;
+			}
 
 			workqueue_enqueue(&td->io_wq, &io_u->work);
 			ret = FIO_Q_QUEUED;
@@ -1432,7 +1448,8 @@ reap:
 				td->error = 0;
 		}
 
-		if (should_fsync(td) &&
+		rcio_finish_io_run(td);
+		if (!td->error && should_fsync(td) &&
 		    (td->o.end_fsync || td->o.end_syncfs ||
 		     td->o.fsync_on_close)) {
 			td_set_runstate(td, TD_FSYNCING);
@@ -1453,6 +1470,7 @@ reap:
 		if (td->o.io_submit_mode == IO_MODE_OFFLOAD)
 			workqueue_flush(&td->io_wq);
 		ret = io_u_queued_complete(td, td->cur_depth);
+		rcio_finish_io_run(td);
 	}
 
 	/*
@@ -2179,6 +2197,11 @@ static void *thread_main(void *data)
 
 	if (!init_random_map(td))
 		goto err;
+
+	if (init_rcio(td)) {
+		td_verror(td, EIO, "init_rcio");
+		goto err;
+	}
 
 	if (o->exec_prerun && exec_string(o, o->exec_prerun, "prerun"))
 		goto err;
@@ -2987,11 +3010,16 @@ int fio_backend(struct sk_out *sk_out)
 		return 1;
 	}
 
+	if (init_shared_rcio())
+		return 1;
+
 	startup_sem = fio_sem_init(FIO_SEM_LOCKED);
 	if (!sk_out)
 		is_local_backend = true;
-	if (startup_sem == NULL)
+	if (startup_sem == NULL) {
+		free_all_shared_rcio();
 		return 1;
+	}
 
 	set_genesis_time();
 	stat_init();
@@ -3034,6 +3062,7 @@ int fio_backend(struct sk_out *sk_out)
 	} end_for_each();
 
 	fio_idle_prof_cleanup();
+	free_all_shared_rcio();
 	free_disk_util();
 	if (cgroup_list) {
 		cgroup_kill(cgroup_list);

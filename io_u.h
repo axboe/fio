@@ -26,6 +26,7 @@ enum {
 	IO_U_F_VER_IN_DEV	= 1 << 10, /* Verify data in device */
 	IO_U_F_ZEROED		= 1 << 11, /* Zeroed data */
 	IO_U_F_ERRORED		= 1 << 12, /* Errored offset */
+	IO_U_F_RCIO		= 1 << 13,
 };
 
 /*
@@ -164,6 +165,7 @@ extern int __must_check io_u_sync_complete(struct thread_data *, struct io_u *);
 extern int __must_check io_u_queued_complete(struct thread_data *, int);
 extern void io_u_queued(struct thread_data *, struct io_u *);
 extern int io_u_quiesce(struct thread_data *);
+extern void rcio_finish_io_run(struct thread_data *);
 extern void io_u_log_error(struct thread_data *, struct io_u *);
 extern void io_u_mark_depth(struct thread_data *, unsigned int);
 extern void fill_io_buffer(struct thread_data *, void *, unsigned long long, unsigned long long);
