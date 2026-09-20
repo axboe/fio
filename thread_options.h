@@ -239,6 +239,8 @@ struct thread_options {
 	enum fio_memtype mem_type;
 	unsigned int mem_align;
 
+	uint64_t rcio_size;
+
 	unsigned long long max_latency[DDIR_RWDIR_CNT];
 
 	unsigned int exit_what;
@@ -582,6 +584,8 @@ struct thread_options_pack {
 	uint32_t zone_skip_nz;
 	uint32_t mem_type;
 	uint32_t mem_align;
+
+	uint64_t rcio_size;
 
 	uint32_t exit_what;
 	uint32_t stonewall;
