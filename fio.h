@@ -646,14 +646,6 @@ static inline void fio_ro_check(const struct thread_data *td, struct io_u *io_u)
 	 */
 }
 
-static inline bool multi_range_trim(struct thread_data *td, struct io_u *io_u)
-{
-	if (io_u->ddir == DDIR_TRIM && td->o.num_range > 1)
-		return true;
-
-	return false;
-}
-
 static inline bool should_fsync(struct thread_data *td)
 {
 	if (ddir_sync(td->last_ddir_issued))
