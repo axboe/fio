@@ -161,6 +161,8 @@ extern void put_io_u(struct thread_data *, struct io_u *);
 extern void clear_io_u(struct thread_data *, struct io_u *);
 extern void requeue_io_u(struct thread_data *, struct io_u **);
 extern int __must_check io_u_sync_complete(struct thread_data *, struct io_u *);
+extern void io_u_sync_complete_partial(struct thread_data *, struct io_u *,
+				      unsigned long long);
 extern int __must_check io_u_queued_complete(struct thread_data *, int);
 extern void io_u_queued(struct thread_data *, struct io_u *);
 extern int io_u_quiesce(struct thread_data *);

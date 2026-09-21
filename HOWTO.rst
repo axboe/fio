@@ -1912,6 +1912,8 @@ Block size
 	:option:`verify_only`, because these modes cannot replay RCIO offsets.
 	:option:`read_iolog` is not supported with RCIO, because replayed offsets
 	and lengths bypass RCIO region selection and coverage validation.
+	:option:`unlink_each_loop` is not supported for RCIO regular files,
+	because recreating a target would leave its tracked regions stale.
 	On normal runtime expiry, an active random write/trim region run is
 	finished before stopping, including retries of busy or short requests,
 	so the job may exceed its requested runtime. Exhausting a region partition
@@ -1951,6 +1953,8 @@ Block size
 	attaching a state file to an already-used tracker is rejected.
 	Every job sharing a persistent tracker must use :option:`thread`\=1,
 	even if it does not itself specify :option:`rcio_state_file`.
+	Before launching any jobs, fio rejects process-mode RCIO jobs naming
+	the same target as a persistent RCIO job, regardless of job order.
 	Write and trim jobs sharing a persistent tracker must successfully flush
 	the target through the I/O engine before a snapshot can be published,
 	even when :option:`end_fsync` and :option:`fsync_on_close` are disabled.
