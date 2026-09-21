@@ -836,7 +836,8 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 	if (td->o.io_submit_mode == IO_MODE_INLINE)
 		io_u_quiesce(td);
 
-	if (td->o.timeout && ((usec + now) > td->o.timeout)) {
+	if (td->o.timeout && ((usec + now) > td->o.timeout) &&
+	    !rcio_run_pending(td)) {
 		/*
 		 * check if the usec is capable of taking negative values
 		 */
@@ -849,7 +850,8 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 	usec_sleep(td, usec);
 
 	now = utime_since_now(&td->epoch);
-	if ((td->o.timeout && (now > td->o.timeout)) || td->terminate)
+	if ((td->o.timeout && now > td->o.timeout &&
+	     !rcio_run_pending(td)) || td->terminate)
 		ddir = DDIR_TIMEOUT;
 
 	return ddir;
@@ -1619,7 +1621,8 @@ static long set_io_u_file(struct thread_data *td, struct io_u *io_u)
 		if (io_u->ddir == DDIR_TIMEOUT)
 			return 1;
 
-		if (td->o.file_service_type & __FIO_FSERVICE_NONUNIFORM)
+		if ((td->o.file_service_type & __FIO_FSERVICE_NONUNIFORM) &&
+		    !f->rcio_shared)
 			fio_file_reset(td, f);
 		else {
 			fio_file_set_done(f);
@@ -2204,6 +2207,18 @@ static void file_log_write_comp(const struct thread_data *td, struct fio_file *f
 		f->last_write = offset + bytes;
 }
 
+static void io_u_account_bytes(struct thread_data *td, struct io_u *io_u,
+			       unsigned long long bytes)
+{
+	enum fio_ddir ddir = io_u->ddir;
+
+	td->io_bytes[ddir] += bytes;
+	if (!(io_u->flags & IO_U_F_VER_LIST))
+		td->this_io_bytes[ddir] += bytes;
+	if (ddir == DDIR_WRITE)
+		file_log_write_comp(td, io_u->file, io_u->offset, bytes);
+}
+
 static bool should_account(struct thread_data *td)
 {
 	return ramp_period_over(td) && (td->runstate == TD_RUNNING ||
@@ -2297,6 +2312,10 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 		unsigned long long bytes = io_u->xfer_buflen - io_u->resid;
 		int ret;
 
+		if (bytes && f && f->rcio_shared && td_random(td) &&
+		    (ddir == DDIR_WRITE || ddir == DDIR_TRIM))
+			rcio_complete_io(f->rcio_shared, bytes);
+
 		/*
 		 * Mark the RCIO region(s) covered by this extent only once
 		 * it has fully completed -- a short completion (to be
@@ -2317,6 +2336,9 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 					 io_u->verify_offset - f->file_offset,
 					 io_u->buflen, ddir);
 
+		io_u_account_bytes(td, io_u, bytes);
+		icd->bytes_done[ddir] += bytes;
+
 		/*
 		 * Make sure we notice short IO from here, and requeue them
 		 * appropriately!
@@ -2333,20 +2355,12 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 		}
 
 		td->io_blocks[ddir]++;
-		td->io_bytes[ddir] += bytes;
 
-		if (!(io_u->flags & IO_U_F_VER_LIST)) {
+		if (!(io_u->flags & IO_U_F_VER_LIST))
 			td->this_io_blocks[ddir]++;
-			td->this_io_bytes[ddir] += bytes;
-		}
-
-		if (ddir == DDIR_WRITE)
-			file_log_write_comp(td, f, io_u->offset, bytes);
 
 		if (should_account(td))
 			account_io_completion(td, io_u, icd, ddir, bytes);
-
-		icd->bytes_done[ddir] += bytes;
 
 		if (io_u->end_io) {
 			ret = io_u->end_io(td, io_u_ptr);
@@ -2428,6 +2442,16 @@ static void io_u_update_bytes_done(struct thread_data *td,
 
 	for (ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++)
 		td->bytes_done[ddir] += icd->bytes_done[ddir];
+}
+
+void io_u_sync_complete_partial(struct thread_data *td, struct io_u *io_u,
+				unsigned long long bytes)
+{
+	struct io_completion_data icd = { 0 };
+
+	io_u_account_bytes(td, io_u, bytes);
+	icd.bytes_done[io_u->ddir] = bytes;
+	io_u_update_bytes_done(td, &icd);
 }
 
 /*

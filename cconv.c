@@ -43,6 +43,7 @@ static void free_thread_options_to_cpu(struct thread_options *o)
 	free(o->iops_log_file);
 	free(o->hist_log_file);
 	free(o->replay_redirect);
+	free(o->rcio_state_file);
 	free(o->exec_prerun);
 	free(o->exec_postrun);
 	free(o->ioscheduler);
@@ -395,6 +396,8 @@ int convert_thread_options_to_cpu(struct thread_options *o,
 #endif
 
 	o->rcio_bs = le64_to_cpu(top->rcio_bs);
+	string_to_cpu(&o->rcio_state_file, top->rcio_state_file);
+	o->rcio_precondition = le32_to_cpu(top->rcio_precondition);
 
 	return 0;
 }
@@ -724,6 +727,9 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 #endif
 
 	top->rcio_bs = cpu_to_le64(o->rcio_bs);
+	string_to_net(top->rcio_state_file, o->rcio_state_file);
+	top->rcio_precondition = cpu_to_le32(o->rcio_precondition);
+	top->pad_rcio = 0;
 }
 
 /*

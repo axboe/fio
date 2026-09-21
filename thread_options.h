@@ -240,6 +240,8 @@ struct thread_options {
 	unsigned int mem_align;
 
 	uint64_t rcio_bs;
+	char *rcio_state_file;
+	unsigned int rcio_precondition;
 
 	unsigned long long max_latency[DDIR_RWDIR_CNT];
 
@@ -586,6 +588,9 @@ struct thread_options_pack {
 	uint32_t mem_align;
 
 	uint64_t rcio_bs;
+	uint32_t rcio_precondition;
+	uint32_t pad_rcio;
+	uint8_t rcio_state_file[FIO_TOP_STR_MAX];
 
 	uint32_t exit_what;
 	uint32_t stonewall;
