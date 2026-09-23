@@ -2797,10 +2797,17 @@ void __show_run_stats(void)
 		show_idle_prof_stats(FIO_OUTPUT_NORMAL, NULL, &output[__FIO_OUTPUT_NORMAL]);
 	}
 
+	/*
+	 * Only output[__FIO_OUTPUT_JSON] ever holds the json document,
+	 * including for json+ which funnels into it above.
+	 */
 	for (i = 0; i < FIO_OUTPUT_NR; i++) {
 		struct buf_output *out = &output[i];
 
-		log_info_buf(out->buf, out->buflen);
+		if (i == __FIO_OUTPUT_JSON)
+			log_json_buf(out->buf, out->buflen);
+		else
+			log_human_buf(out->buf, out->buflen);
 		buf_output_free(out);
 	}
 

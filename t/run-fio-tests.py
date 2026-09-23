@@ -1200,6 +1200,15 @@ TEST_LIST = [
     },
 ]
 
+#
+# Tests that request json output get fio's informational output on
+# stderr instead of mixed into the --output file, so drop the stderr
+# emptiness assertion for them
+#
+TEST_LIST = [dict(test, success=SUCCESS_IGNORE_STDERR)
+             if test.get('output_format') == 'json' else test
+             for test in TEST_LIST]
+
 
 def parse_args():
     """Parse command-line arguments."""

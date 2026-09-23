@@ -213,22 +213,31 @@ class FioLatTest():
     def get_terse(self):
         """Read fio output and return terse format data."""
 
-        filename = os.path.join(self.test_dir, "{0}.out".format(self.filename))
-        with open(filename, 'r') as file:
-            file_data = file.read()
+        #
+        # terse output shares the --output file with json output on older
+        # fio, but goes to stdout when json owns the output file on newer
+        # fio: check both streams
+        #
+        filenames = [os.path.join(self.test_dir, "{0}.out".format(self.filename)),
+                     os.path.join(self.test_dir, "{0}.stdout".format(self.filename))]
+        for filename in filenames:
+            try:
+                with open(filename, 'r') as file:
+                    file_data = file.read()
+            except FileNotFoundError:
+                continue
 
-        #
-        # Read the first few lines and see if any of them begin with '3;'
-        # If so, the line is probably terse output. Obviously, this only
-        # works for fio terse version 3 and it does not work for
-        # multi-line terse output
-        #
-        lines = file_data.splitlines()
-        for i in range(8):
-            file_data = lines[i]
-            if file_data.startswith('3;'):
-                self.terse_data = file_data.split(';')
-                return True
+            #
+            # Read the first few lines and see if any of them begin with '3;'
+            # If so, the line is probably terse output. Obviously, this only
+            # works for fio terse version 3 and it does not work for
+            # multi-line terse output
+            #
+            lines = file_data.splitlines()
+            for line in lines[:8]:
+                if line.startswith('3;'):
+                    self.terse_data = line.split(';')
+                    return True
 
         return False
 

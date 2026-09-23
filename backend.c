@@ -2363,8 +2363,8 @@ static void *thread_main(void *data)
 
 err:
 	if (td->error)
-		log_info("fio: pid=%d, err=%d/%s\n", (int) td->pid, td->error,
-							td->verror);
+		log_err("fio: pid=%d, err=%d/%s\n", (int) td->pid, td->error,
+				td->verror);
 
 	if (o->verify_async)
 		verify_async_exit(td);
@@ -2700,7 +2700,7 @@ static void run_threads(struct sk_out *sk_out)
 						nr_process > 1 ? "es" : "");
 		}
 		__log_buf(&out, "\n");
-		log_info_buf(out.buf, out.buflen);
+		log_human_buf(out.buf, out.buflen);
 		buf_output_free(&out);
 	}
 

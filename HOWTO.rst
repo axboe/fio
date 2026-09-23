@@ -121,6 +121,16 @@ Command line options
 	format.  `json+` is like `json`, except it adds a full dump of the latency
 	buckets.
 
+	When `json` or `json+` is among the selected formats, the JSON document is
+	the only thing ever written to the stream carrying it -- the
+	:option:`--output` file, or standard output when no output file was given --
+	so that stream always stays parseable.  Informational and error messages go
+	to standard error instead.  If other formats were selected as well, they are
+	written to standard output, unless standard output already carries the JSON
+	output, in which case they go to standard error.  For example with
+	``--output-format=json,normal --output=file`` the file holds the JSON
+	document and the human readable output appears on standard output.
+
 .. option:: --bandwidth-log=filename
 
         Generate aggregate bandwidth logs. `filename` is an optional argument.
@@ -5345,7 +5355,10 @@ JSON output
 The `json` output format is intended to be both human readable and convenient
 for automated parsing. For the most part its sections mirror those of the
 `normal` output. The `runtime` value is reported in msec and the `bw` value is
-reported in 1024 bytes per second units.
+reported in 1024 bytes per second units. A stream carrying json output contains
+nothing but the json document, so it can always be fed to a json parser
+directly; see :option:`--output-format` for where other requested output is
+routed in that case.
 
 
 JSON+ output
