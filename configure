@@ -711,6 +711,28 @@ fi
 print_config "zlib" "$zlib"
 
 ##########################################
+# libblkid probe, for the block device write safety check
+if test "$libblkid" != "yes" ; then
+  libblkid="no"
+fi
+if test "$esx" != "yes" ; then
+  cat > $TMPC <<EOF
+#include <blkid/blkid.h>
+int main(void)
+{
+  blkid_probe pr = blkid_new_probe();
+  blkid_free_probe(pr);
+  return 0;
+}
+EOF
+  if compile_prog "" "-lblkid" "libblkid" ; then
+    libblkid=yes
+    LIBS="-lblkid $LIBS"
+  fi
+fi
+print_config "libblkid device probing" "$libblkid"
+
+##########################################
 # fcntl(F_FULLFSYNC) support
 if test "$fcntl_sync" != "yes" ; then
   fcntl_sync="no"
@@ -3388,6 +3410,9 @@ if test "$getmntinfo" = "yes" ; then
 fi
 if test "$getmntinfo_statvfs" = "yes" ; then
   output_sym "CONFIG_GETMNTINFO_STATVFS"
+fi
+if test "$libblkid" = "yes" ; then
+  output_sym "CONFIG_BLKID"
 fi
 if test "$static_assert" = "yes" ; then
   output_sym "CONFIG_STATIC_ASSERT"

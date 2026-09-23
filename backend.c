@@ -2634,6 +2634,149 @@ mounted:
 	return true;
 }
 
+/*
+ * Devices the user declined to overwrite at an earlier job's prompt,
+ * so later jobs and numjobs clones writing them are skipped without
+ * asking again. Only devices that actually triggered a prompt are
+ * recorded; clean devices of a declined job are not blacklisted.
+ */
+#define MAX_DECLINED_DEVS 256
+static const char *declined_devs[MAX_DECLINED_DEVS];
+static unsigned int nr_declined_devs;
+static bool non_interactive_warned;
+
+static bool dev_was_declined(const char *dev)
+{
+	unsigned int i;
+
+	for (i = 0; i < nr_declined_devs; i++)
+		if (!strcmp(declined_devs[i], dev))
+			return true;
+
+	return false;
+}
+
+static void dev_decline(const char *dev)
+{
+	if (dev_was_declined(dev))
+		return;
+
+	if (nr_declined_devs < MAX_DECLINED_DEVS)
+		declined_devs[nr_declined_devs++] = dev;
+}
+
+/*
+ * Warn before writing to block devices that hold data fio is about to
+ * endanger: a partition table, an LVM physical volume, a file system,
+ * or other recognizable content. Each job is prompted separately when
+ * running interactively; a non-interactive run only warns and continues.
+ * Returns true if this job must be skipped: either the user declined
+ * its prompt, or it writes a device declined at an earlier prompt.
+ */
+static bool check_block_dev_safety(struct thread_data *td)
+{
+	struct fio_file *f;
+	unsigned int i;
+	char buf[16];
+	bool hit = false;
+
+	if (!td->o.pre_write_safety_check)
+		return false;
+
+	if (!td_write(td) || td->o.allow_mounted_write)
+		return false;
+
+	/*
+	 * A device declined at an earlier job's prompt must not be
+	 * written by this job either, so skip it without asking again.
+	 * This also covers the numjobs clones of a declined job.
+	 */
+	for_each_file(td, f, i) {
+		if (f->filetype != FIO_TYPE_BLOCK)
+			continue;
+		if (dev_was_declined(f->file_name)) {
+			log_err("fio: job %s skipped, %s was declined earlier\n",
+				td->o.name, f->file_name);
+			return true;
+		}
+	}
+
+	/*
+	 * numjobs clones duplicate the files of the first job, their
+	 * devices were covered by its prompt (or are caught above).
+	 */
+	if (td->subjob_number)
+		return false;
+
+	for_each_file(td, f, i) {
+		const char *content;
+
+		if (f->filetype != FIO_TYPE_BLOCK)
+			continue;
+
+		content = blkdev_probe_content(f->file_name);
+		if (content) {
+			log_err("fio: job %s: %s contains %s, writing may damage it\n",
+				td->o.name, f->file_name, content);
+			hit = true;
+		}
+	}
+
+	if (!hit)
+		return false;
+
+	if (!isatty(STDIN_FILENO)) {
+		if (!non_interactive_warned) {
+			log_err("fio: non-interactive run, continuing anyway\n");
+			non_interactive_warned = true;
+		}
+		return false;
+	}
+
+	/*
+	 * Suspend the periodic status line while waiting, so its redraw
+	 * does not clobber the prompt.
+	 */
+	eta_suspend();
+
+	log_err("fio: job %s: continue anyway? (y/N): ", td->o.name);
+	fflush(f_err);
+
+	if (!fgets(buf, sizeof(buf), stdin)) {
+		eta_resume();
+		return true;
+	}
+
+	/*
+	 * Drain the rest of the line, so leftovers cannot leak into
+	 * the next job's prompt.
+	 */
+	if (!strchr(buf, '\n')) {
+		int c;
+
+		while ((c = fgetc(stdin)) != '\n' && c != EOF)
+			;
+	}
+
+	/* newline so the status line resumes on a fresh line */
+	log_err("\n");
+	eta_resume();
+
+	if (buf[0] == '\n' || buf[0] == 'y' || buf[0] == 'Y')
+		return false;
+
+	/* remember the endangered devices, so no later job writes them */
+	for_each_file(td, f, i) {
+		if (f->filetype != FIO_TYPE_BLOCK)
+			continue;
+		if (blkdev_probe_content(f->file_name))
+			dev_decline(f->file_name);
+	}
+
+	log_err("fio: job %s skipped\n", td->o.name);
+	return true;
+}
+
 static bool waitee_running(struct thread_data *me)
 {
 	const char *waitee = me->o.wait_for;
@@ -2664,7 +2807,7 @@ static bool waitee_running(struct thread_data *me)
 static void run_threads(struct sk_out *sk_out)
 {
 	struct thread_data *td;
-	unsigned int i, todo, nr_running, nr_started;
+	unsigned int i, todo, nr_running, nr_started, nr_skipped;
 	uint64_t m_rate, t_rate;
 	uint64_t spent;
 
@@ -2683,6 +2826,23 @@ static void run_threads(struct sk_out *sk_out)
 			nr_thread++;
 		else
 			nr_process++;
+	} end_for_each();
+
+	/*
+	 * Interact with the user per job before anything starts: a job
+	 * whose prompt is declined is skipped, the remaining jobs run.
+	 */
+	nr_skipped = 0;
+	for_each_td(td) {
+		if (check_block_dev_safety(td)) {
+			exit_value++;
+			td_set_runstate(td, TD_REAPED);
+			nr_skipped++;
+			if (td->o.use_thread)
+				nr_thread--;
+			else
+				nr_process--;
+		}
 	} end_for_each();
 
 	if (output_format & FIO_OUTPUT_NORMAL) {
@@ -2704,13 +2864,17 @@ static void run_threads(struct sk_out *sk_out)
 		buf_output_free(&out);
 	}
 
-	todo = thread_number;
+	todo = thread_number - nr_skipped;
 	nr_running = 0;
 	nr_started = 0;
 	m_rate = t_rate = 0;
 
 	for_each_td(td) {
 		print_status_init(td->thread_number - 1);
+
+		/* declined at the block device safety prompt */
+		if (td->runstate == TD_REAPED)
+			continue;
 
 		if (!td->o.create_serialize)
 			continue;
