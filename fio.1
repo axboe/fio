@@ -2342,6 +2342,11 @@ release them when IO is done. If this option is set, the pages are pre-mapped
 before IO is started. This eliminates the need to map and release for each IO.
 This is more efficient, and reduces the IO latency as well.
 .TP
+.BI (io_uring,io_uring_cmd)dmabuf
+Allocate the IO buffers from a udmabuf (\fB/dev/udmabuf\fR) region and register
+them with io_uring as dmabuf backed fixed buffers, so that the device DMAs
+directly to/from the dmabuf.
+.TP
 .BI (io_uring,io_uring_cmd)nonvectored \fR=\fPint
 With this option, fio will use non-vectored read/write commands, where address
 must contain the address directly. Default is -1.
