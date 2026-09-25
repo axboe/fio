@@ -522,11 +522,15 @@ bool read_blktrace(struct thread_data* td)
 		if ((t.action & BLK_TC_ACT(BLK_TC_NOTIFY)) == 0) {
 			if (td->o.replay_ta_issue) {
 				/* Increase queue depth at the action of __BLK_TA_ISSUE "D"
-				 * as the queued IO may be merged to send to the driver. Replay
-				 * from __BLK_TA_ISSUE action. */
-				if ((t.action & 0xffff) == __BLK_TA_ISSUE &&
-					((t.action & BLK_TC_ACT(BLK_TC_READ)) ||
-					(t.action & BLK_TC_ACT(BLK_TC_WRITE))))
+				 * as the queued READ/WRITE may be merged to send to the driver.
+				 * However, still keep increasing queue depth for DISCARD/FLUSH
+				 * from __BLK_TA_QUEUE "Q". */
+				if (((t.action & 0xffff) == __BLK_TA_ISSUE &&
+					 t.action & (BLK_TC_ACT(BLK_TC_READ) |
+								 BLK_TC_ACT(BLK_TC_WRITE))) ||
+					((t.action & 0xffff) == __BLK_TA_QUEUE &&
+					 t.action & (BLK_TC_ACT(BLK_TC_DISCARD) |
+								 BLK_TC_ACT(BLK_TC_FLUSH))))
 					depth_inc(&t, this_depth);
 			} else { /* Replay the blktrace file from __BLK_TA_QUEUE action */
 				if ((t.action & 0xffff) == __BLK_TA_QUEUE)
