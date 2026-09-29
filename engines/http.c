@@ -445,7 +445,7 @@ static int _curl_trace(CURL *handle, curl_infotype type,
 /* https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html
  * https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-authenticating-requests.html#signing-request-intro
  */
-static void _add_aws_auth_header(CURL *curl, struct curl_slist *slist, struct http_options *o,
+static struct curl_slist* _add_aws_auth_header(CURL *curl, struct curl_slist *slist, struct http_options *o,
 		int op, const char *uri, char *buf, size_t len)
 {
 	char date_short[16];
@@ -610,9 +610,10 @@ static void _add_aws_auth_header(CURL *curl, struct curl_slist *slist, struct ht
 		free(sse_key_base64);
 		free(sse_key_md5_base64);
 	}
+	return slist;
 }
 
-static void _add_swift_header(CURL *curl, struct curl_slist *slist, struct http_options *o,
+static struct curl_slist* _add_swift_header(CURL *curl, struct curl_slist *slist, struct http_options *o,
 		int op, const char *uri, char *buf, size_t len)
 {
 	char *dsha = NULL;
@@ -633,6 +634,7 @@ static void _add_swift_header(CURL *curl, struct curl_slist *slist, struct http_
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
 
 	free(dsha);
+	return slist;
 }
 
 static struct curl_slist* _append_range_header(struct curl_slist *slist, unsigned long long offset, unsigned long long length, unsigned long long file_size)
@@ -740,10 +742,10 @@ static enum fio_q_status fio_http_queue(struct thread_data *td,
 		slist = _append_range_header(slist, io_u->offset, io_u->xfer_buflen, io_u->file->real_file_size);
 
 	if (o->mode == FIO_HTTP_S3)
-		_add_aws_auth_header(http->curl, slist, o, io_u->ddir, object_path,
+		slist = _add_aws_auth_header(http->curl, slist, o, io_u->ddir, object_path,
 			io_u->xfer_buf, io_u->xfer_buflen);
 	else if (o->mode == FIO_HTTP_SWIFT)
-		_add_swift_header(http->curl, slist, o, io_u->ddir, object_path,
+		slist = _add_swift_header(http->curl, slist, o, io_u->ddir, object_path,
 			io_u->xfer_buf, io_u->xfer_buflen);
 
 	if (io_u->ddir == DDIR_WRITE) {
