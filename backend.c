@@ -2891,6 +2891,10 @@ reap:
 
 			/*
 			 * Kill threads that have not reached TD_INITIALIZED yet.
+			 * fio_terminate_threads() (called on the startup timeout
+			 * above) also releases any job parked at the startup
+			 * barrier in TD_INITIALIZED, so those can observe the
+			 * terminate flag and exit on their own.
 			 */
 			for (i = 0; i < this_jobs; i++) {
 				td = map[i];
@@ -2898,19 +2902,6 @@ reap:
 					continue;
 				kill(td->pid, SIGTERM);
 			}
-
-			/*
-			 * Wake up threads that already reached TD_INITIALIZED and
-			 * are blocked in fio_sem_down(td->sem) (the startup barrier).
-			 * Without this they hang forever because the normal
-			 * fio_sem_up(td->sem) signal loop is skipped on abort.
-			 * They see td->terminate (set by fio_terminate_threads) and
-			 * exit cleanly via the err path.
-			 */
-			for_each_td(td) {
-				if (td->runstate == TD_INITIALIZED)
-					fio_sem_up(td->sem);
-			} end_for_each();
 			break;
 		}
 
