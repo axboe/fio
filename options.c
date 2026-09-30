@@ -4658,6 +4658,16 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_FILENAME,
 	},
 	{
+		.name	= "pre_write_safety_check",
+		.alias	= "pre-write-safety-check",
+		.lname	= "Pre-write safety check",
+		.type	= FIO_OPT_STR_SET,
+		.off1	= offsetof(struct thread_options, pre_write_safety_check),
+		.help	= "Check block devices for recognizable content before writing and prompt for confirmation per job",
+		.category = FIO_OPT_C_FILE,
+		.group	= FIO_OPT_G_FILENAME,
+	},
+	{
 		.name	= "pre_read",
 		.lname	= "Pre-read files",
 		.type	= FIO_OPT_BOOL,
