@@ -2005,6 +2005,14 @@ static void *thread_main(void *data)
 	dprint(FD_MUTEX, "done waiting on td->sem\n");
 
 	/*
+	 * If the main thread gave up during startup it releases this gate
+	 * after marking us for termination. Bail out through the normal
+	 * error path instead of running a job fio no longer wants.
+	 */
+	if (td->terminate)
+		goto err;
+
+	/*
 	 * A new gid requires privilege, so we need to do this before setting
 	 * the uid.
 	 */
@@ -2435,69 +2443,80 @@ static void reap_threads(unsigned int *nr_running, uint64_t *t_rate,
 				td_set_runstate(td, TD_REAPED);
 				goto reaped;
 			}
-			continue;
-		}
+			/*
+			 * Threaded jobs share our address space, so there is
+			 * no waitpid() to reap them. Fall through to the
+			 * forceful-timeout check below: without it a job thread
+			 * that never reaches TD_EXITED (for example one that
+			 * failed during startup) would keep fio alive forever.
+			 */
+		} else {
+			flags = WNOHANG;
+			if (td->runstate == TD_EXITED)
+				flags = 0;
 
-		flags = WNOHANG;
-		if (td->runstate == TD_EXITED)
-			flags = 0;
-
-		/*
-		 * check if someone quit or got killed in an unusual way
-		 */
-		ret = waitpid(td->pid, &status, flags);
-		if (ret < 0) {
-			if (errno == ECHILD) {
-				log_err("fio: pid=%d disappeared %d\n",
-						(int) td->pid, td->runstate);
-				td->sig = ECHILD;
-				td_set_runstate(td, TD_REAPED);
-				goto reaped;
-			}
-			perror("waitpid");
-		} else if (ret == td->pid) {
-			if (WIFSIGNALED(status)) {
-				int sig = WTERMSIG(status);
-
-				if (sig != SIGTERM && sig != SIGUSR2) {
-					log_err("fio: pid=%d, got signal=%d\n",
-							(int) td->pid, sig);
-					if (!td->error)
-						td->error = EINTR;
+			/*
+			 * check if someone quit or got killed in an unusual way
+			 */
+			ret = waitpid(td->pid, &status, flags);
+			if (ret < 0) {
+				if (errno == ECHILD) {
+					log_err("fio: pid=%d disappeared %d\n",
+							(int) td->pid, td->runstate);
+					td->sig = ECHILD;
+					td_set_runstate(td, TD_REAPED);
+					goto reaped;
 				}
-				td->sig = sig;
-				td_set_runstate(td, TD_REAPED);
-				goto reaped;
-			}
-			if (WIFEXITED(status)) {
-				if (WEXITSTATUS(status) && !td->error)
-					td->error = WEXITSTATUS(status);
+				perror("waitpid");
+			} else if (ret == td->pid) {
+				if (WIFSIGNALED(status)) {
+					int sig = WTERMSIG(status);
 
-				td_set_runstate(td, TD_REAPED);
-				goto reaped;
+					if (sig != SIGTERM && sig != SIGUSR2) {
+						log_err("fio: pid=%d, got signal=%d\n",
+								(int) td->pid, sig);
+						if (!td->error)
+							td->error = EINTR;
+					}
+					td->sig = sig;
+					td_set_runstate(td, TD_REAPED);
+					goto reaped;
+				}
+				if (WIFEXITED(status)) {
+					if (WEXITSTATUS(status) && !td->error)
+						td->error = WEXITSTATUS(status);
+
+					td_set_runstate(td, TD_REAPED);
+					goto reaped;
+				}
 			}
 		}
 
 		/*
 		 * If the job is stuck, do a forceful timeout of it and
-		 * move on.
+		 * move on. Applies to both forked and threaded jobs.
 		 */
 		if (td->terminate &&
-		    td->runstate < TD_FSYNCING &&
-		    time_since_now(&td->terminate_time) >= FIO_REAP_TIMEOUT) {
-			log_err("fio: job '%s' (state=%d) hasn't exited in "
-				"%lu seconds, it appears to be stuck. Doing "
-				"forceful exit of this job.\n",
-				td->o.name, td->runstate,
-				(unsigned long) time_since_now(&td->terminate_time));
-			td_set_runstate(td, TD_REAPED);
-			goto reaped;
+		    td->runstate < TD_FSYNCING) {
+			unsigned int reap_timeout = td->startup_failed ?
+				FIO_STARTUP_REAP_TIMEOUT : FIO_REAP_TIMEOUT;
+
+			if (time_since_now(&td->terminate_time) >= reap_timeout) {
+				log_err("fio: job '%s' (state=%d) hasn't exited in "
+					"%lu seconds, it appears to be stuck. Doing "
+					"forceful exit of this job.\n",
+					td->o.name, td->runstate,
+					(unsigned long) time_since_now(&td->terminate_time));
+				td_set_runstate(td, TD_REAPED);
+				goto reaped;
+			}
 		}
 
 		/*
 		 * thread is not dead, continue
 		 */
-		pending++;
+		if (!td->o.use_thread)
+			pending++;
 		continue;
 reaped:
 		(*nr_running)--;
@@ -2852,7 +2871,22 @@ reap:
 			dprint(FD_MUTEX, "wait on startup_sem\n");
 			if (fio_sem_down_timeout(startup_sem, 10000)) {
 				log_err("fio: job startup hung? exiting.\n");
+				/*
+				 * This also releases every worker parked at the
+				 * startup barrier (TD_INITIALIZED) before the
+				 * SIGTERM, including this timing-out job.
+				 */
 				fio_terminate_threads(TERMINATE_ALL, TERMINATE_ALL);
+				/*
+				 * None of these jobs has issued IO yet; mark
+				 * them so reap_threads force-reaps them after
+				 * the short startup timeout instead of after
+				 * the regular FIO_REAP_TIMEOUT.
+				 */
+				for_each_td(t) {
+					if (t->runstate < TD_RUNNING)
+						t->startup_failed = true;
+				} end_for_each();
 				fio_abort = true;
 				nr_started--;
 				free(fd);
@@ -2892,12 +2926,24 @@ reap:
 		if (left) {
 			log_err("fio: %d job%s failed to start\n", left,
 					left > 1 ? "s" : "");
-			for (i = 0; i < this_jobs; i++) {
-				td = map[i];
-				if (!td)
-					continue;
-				kill(td->pid, SIGTERM);
-			}
+
+			/*
+			 * Terminate the jobs. This also releases every worker
+			 * parked at the startup barrier (TD_INITIALIZED) before
+			 * the SIGTERM - including jobs that reached
+			 * TD_INITIALIZED and were removed from map[] above,
+			 * which a map-only loop would otherwise miss.
+			 */
+			fio_terminate_threads(TERMINATE_ALL, TERMINATE_ALL);
+			/*
+			 * None of these jobs has issued IO; mark them so
+			 * reap_threads force-reaps them after the short startup
+			 * timeout instead of the regular FIO_REAP_TIMEOUT.
+			 */
+			for_each_td(t) {
+				if (t->runstate < TD_RUNNING)
+					t->startup_failed = true;
+			} end_for_each();
 			break;
 		}
 
