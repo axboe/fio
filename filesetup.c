@@ -747,7 +747,11 @@ int generic_open_file(struct thread_data *td, struct fio_file *f)
 
 open_again:
 	if (td_write(td)) {
-		if (!read_only)
+		/*
+		 * For rw jobs, use O_RDWR only if the job has a non-zero
+		 * write percentage.
+		 */
+		if (!read_only && !(td_rw(td) && td->o.rwmix[DDIR_READ] == 100))
 			flags |= O_RDWR;
 
 		if (td->o.verify_only) {
