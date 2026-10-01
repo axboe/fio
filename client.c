@@ -215,7 +215,7 @@ static void fio_client_json_fini(void)
 	__log_buf(&out, "\n");
 	json_print_object(root, &out);
 	__log_buf(&out, "\n");
-	log_info_buf(out.buf, out.buflen);
+	log_json_buf(out.buf, out.buflen);
 
 	buf_output_free(&out);
 
@@ -250,7 +250,7 @@ void fio_put_client(struct fio_client *client)
 	if (--client->refs)
 		return;
 
-	log_info_buf(client->buf.buf, client->buf.buflen);
+	log_human_buf(client->buf.buf, client->buf.buflen);
 	buf_output_free(&client->buf);
 
 	free(client->hostname);
@@ -1575,7 +1575,7 @@ static void handle_probe(struct fio_client *client, struct fio_net_cmd *cmd)
 	probe->flags = le64_to_cpu(probe->flags);
 
 	if (output_format & FIO_OUTPUT_NORMAL) {
-		log_info("hostname=%s, be=%u, %s, os=%s, arch=%s, fio=%s, flags=%lx\n",
+		log_human("hostname=%s, be=%u, %s, os=%s, arch=%s, fio=%s, flags=%lx\n",
 			probe->hostname, probe->bigendian, bit, os, arch,
 			probe->fio_version, (unsigned long) probe->flags);
 	}
@@ -2237,7 +2237,7 @@ int fio_handle_clients(struct client_ops const *ops)
 		}
 	}
 
-	log_info_buf(allclients.buf, allclients.buflen);
+	log_human_buf(allclients.buf, allclients.buflen);
 	buf_output_free(&allclients);
 
 	fio_client_json_fini();

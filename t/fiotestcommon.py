@@ -35,6 +35,12 @@ SUCCESS_STDERR = {
     'timeout': 600,
     }
 
+# No stderr assertions: fio may write informational output there
+SUCCESS_IGNORE_STDERR = {
+    'zero_return': True,
+    'timeout': 600,
+    }
+
 
 def get_file(filename):
     """Safely read a file."""

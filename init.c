@@ -1937,7 +1937,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 
 				__log_buf(&out, "ioengine=%s, iodepth=%u\n",
 						td->io_ops->name, o->iodepth);
-				log_info_buf(out.buf, out.buflen);
+				log_human_buf(out.buf, out.buflen);
 				buf_output_free(&out);
 
 				free(c1);
@@ -1948,7 +1948,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 				free(c6);
 			}
 		} else if (job_add_num == 1)
-			log_info("...\n");
+			log_human("...\n");
 	}
 
 	if (td_steadystate_init(td))
@@ -3275,7 +3275,7 @@ int parse_options(int argc, char *argv[])
 	}
 
 	if (output_format & FIO_OUTPUT_NORMAL)
-		log_info("%s\n", fio_version_string);
+		log_human("%s\n", fio_version_string);
 
 	return 0;
 }
