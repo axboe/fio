@@ -307,8 +307,9 @@ static bool handle_trace_flush(struct thread_data *td, struct blk_io_trace *t,
 }
 
 /*
- * We only care for queue traces, most of the others are side effects
- * due to internal workings of the block layer.
+ * We only care for queue traces by default, most of the others are side effects
+ * due to internal workings of the block layer. However, issue traces can capture
+ * the actual I/O issued to the device.
  */
 static bool queue_trace(struct thread_data *td, struct blk_io_trace *t,
 			 unsigned long *ios, unsigned long long *bs,
@@ -317,8 +318,31 @@ static bool queue_trace(struct thread_data *td, struct blk_io_trace *t,
 	unsigned long long *last_ttime = &td->io_log_last_ttime;
 	unsigned long long delay = 0;
 
-	if ((t->action & 0xffff) != __BLK_TA_QUEUE)
-		return false;
+	if (td->o.replay_ta_issue) {
+		/* Replay FLUSH/DISCARD/NOTIFY from Q(QUEUE) action,
+		 * replay all other commands from D(ISSUE) action.
+		 * The FLUSH and write commands will be replayed respectively 
+		 * for the request of write I/O with FLUSH. 
+		 */
+		if (t->action & (BLK_TC_ACT(BLK_TC_NOTIFY) |
+			BLK_TC_ACT(BLK_TC_DISCARD) |
+			BLK_TC_ACT(BLK_TC_FLUSH))) {
+			if ((t->action & 0xffff) != __BLK_TA_QUEUE)
+				return false;
+				/* special cmd processing */
+		} else {
+			if ((t->action & 0xffff) != __BLK_TA_ISSUE)
+				return false;
+			/* Ignore PC requests as they're not user read and write IOs, 
+			 * otherwise, replay from issue will fail due to wrong t->bytes */
+			if (t->action & BLK_TC_ACT(BLK_TC_PC))
+				return false;
+			/* normal IO processing */
+		}
+	} else {
+		if ((t->action & 0xffff) != __BLK_TA_QUEUE)
+			return false;
+	}
 
 	if (!(t->action & BLK_TC_ACT(BLK_TC_NOTIFY))) {
 		delay = delay_since_ttime(td, t->time);
@@ -496,12 +520,27 @@ bool read_blktrace(struct thread_data* td)
 			goto err;
 		}
 		if ((t.action & BLK_TC_ACT(BLK_TC_NOTIFY)) == 0) {
-			if ((t.action & 0xffff) == __BLK_TA_QUEUE)
-				depth_inc(&t, this_depth);
-			else if (((t.action & 0xffff) == __BLK_TA_BACKMERGE) ||
-				((t.action & 0xffff) == __BLK_TA_FRONTMERGE))
-				depth_dec(&t, this_depth);
-			else if ((t.action & 0xffff) == __BLK_TA_COMPLETE)
+			if (td->o.replay_ta_issue) {
+				/* Increase queue depth at the action of __BLK_TA_ISSUE "D"
+				 * as the queued READ/WRITE may be merged to send to the driver.
+				 * However, still keep increasing queue depth for DISCARD/FLUSH
+				 * from __BLK_TA_QUEUE "Q". */
+				if (((t.action & 0xffff) == __BLK_TA_ISSUE &&
+					 t.action & (BLK_TC_ACT(BLK_TC_READ) |
+								 BLK_TC_ACT(BLK_TC_WRITE))) ||
+					((t.action & 0xffff) == __BLK_TA_QUEUE &&
+					 t.action & (BLK_TC_ACT(BLK_TC_DISCARD) |
+								 BLK_TC_ACT(BLK_TC_FLUSH))))
+					depth_inc(&t, this_depth);
+			} else { /* Replay the blktrace file from __BLK_TA_QUEUE action */
+				if ((t.action & 0xffff) == __BLK_TA_QUEUE)
+					depth_inc(&t, this_depth);
+				else if (((t.action & 0xffff) == __BLK_TA_BACKMERGE) ||
+					((t.action & 0xffff) == __BLK_TA_FRONTMERGE))
+					depth_dec(&t, this_depth);
+			}
+
+			if ((t.action & 0xffff) == __BLK_TA_COMPLETE)
 				depth_end(&t, this_depth, depth);
 
 			if (t_is_write(&t) && read_only) {
