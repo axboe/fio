@@ -261,6 +261,7 @@ struct thread_data {
 	size_t orig_buffer_size;
 	volatile int runstate;
 	volatile bool terminate;
+	bool startup_failed;	/* died before it ever ran IO; reap faster */
 
 	enum fio_ddir last_ddir_completed;
 	enum fio_ddir last_ddir_issued;
@@ -759,6 +760,11 @@ extern const char *runstate_to_name(int runstate);
  * a vengeance.
  */
 #define FIO_REAP_TIMEOUT	300
+/*
+ * A job that never made it past startup (never issued IO) gets a shorter
+ * grace period before it is force-reaped.
+ */
+#define FIO_STARTUP_REAP_TIMEOUT	30
 
 enum {
 	TERMINATE_NONE = 0,
