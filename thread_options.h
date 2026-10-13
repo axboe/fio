@@ -398,6 +398,7 @@ struct thread_options {
 
 	unsigned int allow_create;
 	unsigned int allow_mounted_write;
+	unsigned int pre_write_safety_check;
 
 	/* Parameters that affect zonemode=zbd */
 	unsigned int read_beyond_wp;
@@ -737,6 +738,7 @@ struct thread_options_pack {
 
 	uint32_t allow_create;
 	uint32_t allow_mounted_write;
+	uint32_t pre_write_safety_check;
 
 	uint32_t zone_mode;
 	int32_t max_open_zones;
