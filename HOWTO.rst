@@ -1357,6 +1357,10 @@ I/O type
 			Pre-allocate via :manpage:`fallocate(2)` with
 			FALLOC_FL_KEEP_SIZE set.
 
+		**write_zeroes**
+			Pre-allocate via :manpage:`fallocate(2)` with
+			FALLOC_FL_WRITE_ZEROES set.
+
 		**truncate**
 			Extend file to final size via :manpage:`ftruncate(2)`
 			instead of allocating.
@@ -1367,8 +1371,8 @@ I/O type
 		**1**
 			Backward-compatible alias for **posix**.
 
-	May not be available on all supported platforms. **keep** is only available
-	on Linux. If using ZFS on Solaris this cannot be set to **posix**
+	May not be available on all supported platforms. **keep** and
+	**write_zeroes** are only available on Linux. If using ZFS on Solaris this cannot be set to **posix**
 	because ZFS doesn't support pre-allocation. Default: **native** if any
 	pre-allocation methods except **truncate** are available, **none** if not.
 

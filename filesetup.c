@@ -95,6 +95,21 @@ static void fallocate_file(struct thread_data *td, struct fio_file *f)
 
 		break;
 		}
+#ifdef CONFIG_LINUX_FALLOCATE_WRITE_ZEROES
+	case FIO_FALLOCATE_WRITE_ZEROES: {
+		int r;
+
+		dprint(FD_FILE, "fallocate(FALLOC_FL_WRITE_ZEROES) "
+				"file %s size %llu\n", f->file_name,
+				(unsigned long long) f->real_file_size);
+
+		r = fallocate(f->fd, FALLOC_FL_WRITE_ZEROES, 0, f->real_file_size);
+		if (r != 0)
+			td_verror(td, errno, "fallocate");
+
+		break;
+		}
+#endif /* CONFIG_LINUX_FALLOCATE_WRITE_ZEROES */
 #endif /* CONFIG_LINUX_FALLOCATE */
 	case FIO_FALLOCATE_TRUNCATE: {
 		int r;

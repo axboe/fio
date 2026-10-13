@@ -63,7 +63,7 @@ enum {
 
 /*
  * No pre-allocation when laying down files, or call posix_fallocate(), or
- * call fallocate() with FALLOC_FL_KEEP_SIZE set.
+ * call fallocate() with FALLOC_FL_KEEP_SIZE or FALLOC_FL_WRITE_ZEROES set.
  */
 enum fio_fallocate_mode {
 	FIO_FALLOCATE_NONE	= 1,
@@ -71,6 +71,7 @@ enum fio_fallocate_mode {
 	FIO_FALLOCATE_KEEP_SIZE	= 3,
 	FIO_FALLOCATE_NATIVE	= 4,
 	FIO_FALLOCATE_TRUNCATE	= 5,
+	FIO_FALLOCATE_WRITE_ZEROES = 6,
 };
 
 /*

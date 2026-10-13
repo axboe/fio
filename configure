@@ -1099,6 +1099,26 @@ fi
 print_config "Linux fallocate" "$linux_fallocate"
 
 ##########################################
+# Linux fallocate FALLOC_FL_WRITE_ZEROES probe
+if test "$linux_fallocate_write_zeroes" != "yes" ; then
+  linux_fallocate_write_zeroes="no"
+fi
+cat > $TMPC << EOF
+#include <stdio.h>
+#include <fcntl.h>
+#include <linux/falloc.h>
+int main(int argc, char **argv)
+{
+  int r = fallocate(0, FALLOC_FL_WRITE_ZEROES, 0, 1024);
+  return r;
+}
+EOF
+if compile_prog "" "" "linux_fallocate_write_zeroes"; then
+    linux_fallocate_write_zeroes="yes"
+fi
+print_config "Linux fallocate write zeroes" "$linux_fallocate_write_zeroes"
+
+##########################################
 # POSIX fadvise probe
 if test "$posix_fadvise" != "yes" ; then
   posix_fadvise="no"
@@ -3220,6 +3240,9 @@ if test "$have_vasprintf" = "yes" ; then
 fi
 if test "$linux_fallocate" = "yes" ; then
   output_sym "CONFIG_LINUX_FALLOCATE"
+fi
+if test "$linux_fallocate_write_zeroes" = "yes" ; then
+  output_sym "CONFIG_LINUX_FALLOCATE_WRITE_ZEROES"
 fi
 if test "$posix_fallocate" = "yes" ; then
   output_sym "CONFIG_POSIX_FALLOCATE"
