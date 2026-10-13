@@ -270,11 +270,113 @@ static void fio_libnfs_cleanup(struct thread_data *td)
 	free(o->events);
 }
 
+/*
+ * fio skips its generic file layout (extend_file() in filesetup.c) for
+ * FIO_DISKLESSIO engines, and that code uses local syscalls which cannot
+ * reach a file on an NFS server anyway. Lay the file out over libnfs here
+ * so read jobs have something to read back.
+ */
+static int nfs_layout_file(struct thread_data *td, struct fio_file *f,
+			   struct nfs_data *nfs_data)
+{
+	struct fio_libnfs_options *o = nfs_data->options;
+	uint64_t size = f->io_size + f->file_offset;
+	unsigned long long left, bs;
+	struct nfs_stat_64 st;
+	char *buf;
+	int ret;
+
+	if (!size || size == -1ULL)
+		return 0;
+
+	ret = nfs_fstat64(o->context, nfs_data->nfsfh, &st);
+	if (ret) {
+		log_err("nfs: failed to stat %s: %s\n", f->file_name,
+			nfs_get_error(o->context));
+		return ret;
+	}
+
+	/* Nothing to do if the file is already large enough */
+	if (st.nfs_size >= size)
+		return 0;
+
+	if (read_only) {
+		log_err("nfs: refusing to lay out %s due to read-only\n",
+			f->file_name);
+		return 1;
+	}
+
+	log_info("%s: laying out IO file %s (%lluMiB)\n", td->o.name,
+		 f->file_name, (unsigned long long) (size >> 20));
+
+	ret = nfs_ftruncate(o->context, nfs_data->nfsfh, size);
+	if (ret) {
+		log_err("nfs: failed to extend %s: %s\n", f->file_name,
+			nfs_get_error(o->context));
+		return ret;
+	}
+
+	left = size;
+	bs = td->o.max_bs[DDIR_WRITE];
+	if (bs > left)
+		bs = left;
+
+	buf = malloc(bs);
+	if (!buf) {
+		td_verror(td, errno, "malloc");
+		return 1;
+	}
+
+	while (left && !td->terminate) {
+		if (bs > left)
+			bs = left;
+
+		fill_io_buffer(td, buf, bs, bs);
+
+#ifdef LIBNFS_API_V2
+		ret = nfs_pwrite(o->context, nfs_data->nfsfh, buf, bs,
+				 size - left);
+#else
+		ret = nfs_pwrite(o->context, nfs_data->nfsfh, size - left, bs,
+				 buf);
+#endif
+		if (ret <= 0) {
+			log_err("nfs: failed to lay out %s: %s\n", f->file_name,
+				nfs_get_error(o->context));
+			free(buf);
+			return 1;
+		}
+
+		left -= ret;
+	}
+
+	free(buf);
+
+	/*
+	 * Remove a correctly sized but partly written file for later run.
+	 */
+	if (td->terminate) {
+		nfs_unlink(o->context, f->file_name);
+		return 0;
+	}
+
+	if (td->o.create_fsync) {
+		ret = nfs_fsync(o->context, nfs_data->nfsfh);
+		if (ret) {
+			log_err("nfs: failed to fsync %s: %s\n", f->file_name,
+				nfs_get_error(o->context));
+			return ret;
+		}
+	}
+
+	return 0;
+}
+
 static int fio_libnfs_open(struct thread_data *td, struct fio_file *f)
 {
 	struct fio_libnfs_options *options = td->eo;
 	struct nfs_data *nfs_data = NULL;
-	int flags = 0;
+	int flags = O_RDWR;
 	int ret;
 
 	if (!options->nfs_url) {
@@ -292,17 +394,35 @@ static int fio_libnfs_open(struct thread_data *td, struct fio_file *f)
 	nfs_data = calloc(1, sizeof(struct nfs_data));
 	nfs_data->options = options;
 
-	if (td_write(td))
-		flags |= O_CREAT | O_RDWR;
-	else
-		flags |= O_RDWR;
+	/*
+	 * Honour allow_file_create for every data direction rather than
+	 * creating only for writes.
+	 */
+	if (td->o.allow_create)
+		flags |= O_CREAT;
 
 	ret = nfs_open(options->context, f->file_name, flags, &nfs_data->nfsfh);
-
-	if (ret)
+	if (ret) {
 		log_err("Failed to open %s: %s\n", f->file_name,
 					nfs_get_error(options->context));
+		goto err;
+	}
+
+	if (td_read(td)) {
+		ret = nfs_layout_file(td, f, nfs_data);
+		if (ret)
+			goto err_close;
+	}
+
 	f->engine_data = nfs_data;
+	return 0;
+
+err_close:
+	if (nfs_close(options->context, nfs_data->nfsfh))
+		log_err("nfs: failed to close %s: %s\n", f->file_name,
+			nfs_get_error(options->context));
+err:
+	free(nfs_data);
 	return ret;
 }
 
