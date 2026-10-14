@@ -539,7 +539,7 @@ static int fio_sgio_prep(struct thread_data *td, struct io_u *io_u)
 	unsigned long long nr_blocks, lba;
 	int offset;
 
-	if (io_u->xfer_buflen & (sd->bs - 1)) {
+	if (io_u->xfer_buflen % sd->bs) {
 		log_err("read/write not sector aligned\n");
 		return EINVAL;
 	}
