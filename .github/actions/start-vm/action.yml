@@ -23,9 +23,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: install wait-for-it
-      shell: bash
-      run: sudo apt update && sudo apt-get -qq install wait-for-it
     - name: Enable KVM group perms
       shell: bash
       run: |
@@ -47,11 +44,22 @@ runs:
           -nic user,model=virtio-net-pci,hostfwd=tcp::${{ inputs.ssh_fwd_port }}-:22 \
           ${{ inputs.options }} \
           &
-    - name: Wait for VM to boot
+    - name: Wait for SSH to become available
       shell: bash
       run: |
-        wait-for-it localhost:${{ inputs.ssh_fwd_port }} -t 15
-        sleep 3
+        for attempt in {1..60}; do
+          if ssh -q root@localhost -p ${{ inputs.ssh_fwd_port }} \
+              -o BatchMode=yes \
+              -o ConnectTimeout=2 \
+              -o StrictHostKeyChecking=no \
+              -o UserKnownHostsFile=/dev/null true
+          then
+            exit 0
+          fi
+          sleep 1
+        done
+        echo "Timed out waiting for SSH on localhost:${{ inputs.ssh_fwd_port }}" >&2
+        exit 1
     - name: Add guest host key to known_hosts
       shell: bash
       run: |
