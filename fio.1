@@ -1139,6 +1139,10 @@ Pre-allocate via \fBposix_fallocate\fR\|(3).
 Pre-allocate via \fBfallocate\fR\|(2) with
 FALLOC_FL_KEEP_SIZE set.
 .TP
+.B write_zeroes
+Pre-allocate via \fBfallocate\fR\|(2) with
+FALLOC_FL_WRITE_ZEROES set.
+.TP
 .B truncate
 Extend file to final size using \fBftruncate\fR|(2)
 instead of allocating.
@@ -1150,8 +1154,8 @@ Backward-compatible alias for \fBnone\fR.
 Backward-compatible alias for \fBposix\fR.
 .RE
 .P
-May not be available on all supported platforms. \fBkeep\fR is only available
-on Linux. If using ZFS on Solaris this cannot be set to \fBposix\fR
+May not be available on all supported platforms. \fBkeep\fR and
+\fBwrite_zeroes\fR are only available on Linux. If using ZFS on Solaris this cannot be set to \fBposix\fR
 because ZFS doesn't support pre-allocation. Default: \fBnative\fR if any
 pre-allocation methods except \fBtruncate\fR are available, \fBnone\fR if not.
 .P

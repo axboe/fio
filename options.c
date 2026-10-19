@@ -3011,6 +3011,12 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .oval = FIO_FALLOCATE_KEEP_SIZE,
 			    .help = "Use fallocate(..., FALLOC_FL_KEEP_SIZE, ...)",
 			  },
+#ifdef CONFIG_LINUX_FALLOCATE_WRITE_ZEROES
+			  { .ival = "write_zeroes",
+			    .oval = FIO_FALLOCATE_WRITE_ZEROES,
+			    .help = "Use fallocate(..., FALLOC_FL_WRITE_ZEROES, ...)",
+			  },
+#endif
 #endif
 			  { .ival = "truncate",
 			    .oval = FIO_FALLOCATE_TRUNCATE,
