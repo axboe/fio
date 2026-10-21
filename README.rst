@@ -44,6 +44,39 @@ reason, either one of these is safe to use as a backup:
 	https://github.com/axboe/fio.git
 
 
+Style checks
+------------
+
+Before sending a patch, check your changes for style issues.
+This does not build fio and needs only Python 3 and Git::
+
+	$ make style
+	$ make style FORMAT=1
+	$ make style STYLE_FLAGS="--staged"
+	$ make style STYLE_FLAGS="--base HEAD~3"
+
+By default, commits and uncommitted changes to tracked files are compared
+with the merge-base of ``HEAD`` and ``origin/master`` (or ``master``). Use
+``--staged`` to check only the index, or ``--base <commit>`` to compare with
+another commit. Untracked files are skipped, so ``git add`` new files first.
+
+On added or modified lines in C, header, Makefile, ``.rst``, ``.md``,
+``.fio``, ``.py`` and ``.sh`` files:
+
+* Errors: trailing whitespace, a missing final newline added by the change.
+* Warnings (C/headers only): lines over 80 columns, indentation using spaces
+  instead of tabs.
+
+``FORMAT=1`` also runs ``git clang-format --diff`` on changed C/header lines
+using the repository's ``.clang-format``, and reports suggested changes as
+warnings. It requires clang-format and git-clang-format; set ``CLANG_FORMAT``
+to choose the binary::
+
+	$ make style FORMAT=1 CLANG_FORMAT=clang-format-18 VERBOSE=1
+
+Use ``VERBOSE=1`` to show all findings. Exit status: 0 = pass (warnings
+allowed), 1 = style errors, 2 = tool or Git error.
+
 Mailing list
 ------------
 
