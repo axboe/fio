@@ -667,6 +667,29 @@ if ! compile_prog "" "" "C11 atomics"; then
   fatal "C11 atomics support not found"
 fi
 
+##########################################
+# check if 64-bit atomics need libatomic
+# The variable is global and the stored value depends on argc so that the
+# compiler cannot optimize the atomic operations away.
+cat > $TMPC <<EOF
+#include <stdatomic.h>
+#include <stdint.h>
+_Atomic uint64_t v;
+int main(int argc, char **argv)
+{
+  atomic_store_explicit(&v, (uint64_t)argc, memory_order_release);
+  return (int)atomic_load_explicit(&v, memory_order_acquire);
+}
+EOF
+libatomic="no"
+if ! compile_prog "" "" "64-bit atomics"; then
+  if compile_prog "" "-latomic" "64-bit atomics with libatomic"; then
+    libatomic="yes"
+    LIBS="-latomic $LIBS"
+  fi
+fi
+print_config "libatomic for 64-bit atomics" "$libatomic"
+
 
 ##########################################
 # check for wordsize
