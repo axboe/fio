@@ -1623,6 +1623,13 @@ bool init_random_map(struct thread_data *td)
 	if (!td_random(td))
 		return true;
 
+	/*
+	 * RCIO overrides the generated block number, so the random map's
+	 * "block is free" guarantee no longer holds.  Disable it to avoid
+	 * mark_random_map() assertions / premature termination.
+	 */
+	td->o.norandommap |= (td->o.rcio_bs > 0);
+
 	for_each_file(td, f, i) {
 		uint64_t fsize = min(f->real_file_size, f->io_size);
 
