@@ -31,6 +31,7 @@ VERIFY_OPT_LIST = [
     'direct',
     'iodepth',
     'filesize',
+    'size',
     'bs',
     'time_based',
     'runtime',
@@ -205,6 +206,34 @@ TEST_LIST = [
             "trim_backlog": 16,
             "trim_verify_zero": 1,
             "number_ios": 64,
+            "output-format": "json",
+            },
+        "test_class": VerifyTrimTest,
+    },
+    {
+        # seq write, trim_backlog larger than the number of writes:
+        # the queued trims must still be issued at the end
+        "test_id": 106,
+        "fio_opts": {
+            "rw": "write",
+            "trim_percentage": 50,
+            "trim_backlog": 1000,
+            "trim_verify_zero": 1,
+            "size": "1M",
+            "output-format": "json",
+            },
+        "test_class": VerifyTrimTest,
+    },
+    {
+        # rand write, trim_backlog larger than the number of writes:
+        # the queued trims must still be issued at the end
+        "test_id": 107,
+        "fio_opts": {
+            "rw": "randwrite",
+            "trim_percentage": 50,
+            "trim_backlog": 1000,
+            "trim_verify_zero": 1,
+            "size": "1M",
             "output-format": "json",
             },
         "test_class": VerifyTrimTest,
