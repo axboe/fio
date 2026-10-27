@@ -406,6 +406,22 @@ static int get_next_rand_block(struct thread_data *td, struct fio_file *f,
 	return 1;
 }
 
+/*
+ * f->io_size can be -1ULL (fill_device). Guard against unsigned
+ * overflow when adding the start offset in that case, or whenever
+ * the sum would otherwise wrap past f->io_size.
+ */
+static uint64_t get_io_end(struct thread_data *td, struct fio_file *f)
+{
+	uint64_t start_off = get_start_offset(td, f);
+	uint64_t io_end = f->io_size + start_off;
+
+	if (f->io_size == -1ULL || io_end < f->io_size)
+		return f->real_file_size;
+
+	return io_end;
+}
+
 static int get_next_seq_offset(struct thread_data *td, struct fio_file *f,
 			       enum fio_ddir ddir, uint64_t *offset)
 {
@@ -417,7 +433,7 @@ static int get_next_seq_offset(struct thread_data *td, struct fio_file *f,
 	 * If we reach the end for a time based run, reset us back to 0
 	 * and invalidate the cache, if we need to.
 	 */
-	if (f->last_pos[ddir] >= f->io_size + get_start_offset(td, f) &&
+	if (f->last_pos[ddir] >= get_io_end(td, f) &&
 	    o->time_based && o->nr_files == 1) {
 		f->last_pos[ddir] = f->file_offset;
 		loop_cache_invalidate(td, f);
@@ -431,7 +447,7 @@ static int get_next_seq_offset(struct thread_data *td, struct fio_file *f,
 	 * should get back to 0 offset to verify overlapped offsets.
 	 */
 	if (td_write(td) && o->io_size > o->size) {
-		if (f->last_pos[ddir] >= f->io_size + get_start_offset(td, f)) {
+		if (f->last_pos[ddir] >= get_io_end(td, f)) {
 			f->last_pos[ddir] = f->file_offset;
 			loop_cache_invalidate(td, f);
 		}
@@ -617,7 +633,7 @@ static inline bool io_u_fits(struct thread_data *td, struct io_u *io_u,
 {
 	struct fio_file *f = io_u->file;
 
-	return io_u->offset + buflen <= f->io_size + get_start_offset(td, f);
+	return io_u->offset + buflen <= get_io_end(td, f);
 }
 
 static unsigned long long get_next_buflen(struct thread_data *td, struct io_u *io_u,
