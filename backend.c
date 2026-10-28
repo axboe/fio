@@ -1198,6 +1198,7 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 		td->o.time_based) {
 		struct timespec comp_time;
 		struct io_u *io_u;
+		bool drain_trims = false;
 		int full;
 		enum fio_ddir ddir;
 
@@ -1220,12 +1221,24 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 			continue;
 
 		/*
+		 * Trims queued by trim_backlog are only issued when
+		 * io_hist_len reaches a multiple of the backlog. Once all
+		 * regular I/O has been issued, issue the remaining ones in
+		 * one batch instead of leaking them.
+		 */
+		if (td->trim_entries && (td->flags & TD_F_TRIM_BACKLOG) &&
+		    !td->o.time_based && io_issue_bytes_exceeded(td)) {
+			td->trim_batch = td->trim_entries;
+			drain_trims = true;
+		}
+
+		/*
 		 * Break if we exceeded the bytes. The exception is time
 		 * based runs, but we still need to break out of the loop
 		 * for those to run verification, if enabled.
 		 * Jobs read from iolog do not use this stop condition.
 		 */
-		if (bytes_issued >= total_bytes &&
+		if (!drain_trims && bytes_issued >= total_bytes &&
 		    !td->o.read_iolog_file &&
 		    (!td->o.time_based ||
 		     (td->o.time_based && td->o.verify != VERIFY_NONE)))
