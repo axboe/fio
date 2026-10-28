@@ -12,6 +12,7 @@
 #include "minmax.h"
 #include "zbd.h"
 #include "sprandom.h"
+#include "rcio.h"
 
 struct io_completion_data {
 	int nr;				/* input */
@@ -109,7 +110,7 @@ static int __get_next_rand_offset_sprandom(struct thread_data *td, struct fio_fi
 	return 0;
 }
 
-static int __get_next_rand_offset(struct thread_data *td, struct fio_file *f,
+static int __get_next_rand_offset_uniform(struct thread_data *td, struct fio_file *f,
 				  enum fio_ddir ddir, uint64_t *b,
 				  uint64_t lastb)
 {
@@ -194,7 +195,7 @@ static int __get_next_rand_offset_zoned_abs(struct thread_data *td,
 
 	if (!td->o.zone_split_nr[ddir]) {
 bail:
-		return __get_next_rand_offset(td, f, ddir, b, lastb);
+		return __get_next_rand_offset_uniform(td, f, ddir, b, lastb);
 	}
 
 	/*
@@ -230,7 +231,7 @@ bail:
 	/*
 	 * Generate index from 0..send-stotal
 	 */
-	if (__get_next_rand_offset(td, f, ddir, b, send - stotal) == 1)
+	if (__get_next_rand_offset_uniform(td, f, ddir, b, send - stotal) == 1)
 		return 1;
 
 	*b += stotal;
@@ -251,7 +252,7 @@ static int __get_next_rand_offset_zoned(struct thread_data *td,
 
 	if (!td->o.zone_split_nr[ddir]) {
 bail:
-		return __get_next_rand_offset(td, f, ddir, b, lastb);
+		return __get_next_rand_offset_uniform(td, f, ddir, b, lastb);
 	}
 
 	/*
@@ -287,7 +288,7 @@ bail:
 	/*
 	 * Generate index from 0..send-of-lastb
 	 */
-	if (__get_next_rand_offset(td, f, ddir, b, lastb) == 1)
+	if (__get_next_rand_offset_uniform(td, f, ddir, b, lastb) == 1)
 		return 1;
 
 	/*
@@ -333,7 +334,7 @@ static int __get_next_rand_offset_sequence(struct thread_data *td,
 	return 0;
 }
 
-static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
+static int __get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 				enum fio_ddir ddir, uint64_t *b)
 {
 	if (td->o.sprandom && ddir == DDIR_WRITE) {
@@ -345,7 +346,7 @@ static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 		if (!lastb)
 			return 1;
 
-		return __get_next_rand_offset(td, f, ddir, b, lastb);
+		return __get_next_rand_offset_uniform(td, f, ddir, b, lastb);
 	} else if (td->o.random_distribution == FIO_RAND_DIST_ZIPF)
 		return __get_next_rand_offset_zipf(td, f, ddir, b);
 	else if (td->o.random_distribution == FIO_RAND_DIST_PARETO)
@@ -386,17 +387,63 @@ static void loop_cache_invalidate(struct thread_data *td, struct fio_file *f)
 	}
 }
 
+/*
+ * For random I/O with RCIO, pick a target region directly from the
+ * dual-list and override the block number.  Write/trim also move
+ * the region between valid/invalid lists atomically at pick time.
+ *
+ * Returns 0 if the I/O should proceed.  Returns 1 if the
+ * applicable list is empty; the caller (get_next_rand_block()) treats
+ * this as an offset-generation failure, so the file is marked done.
+ */
+static int check_rcio(struct thread_data *td, struct fio_file *f,
+		       enum fio_ddir ddir, uint64_t *b)
+{
+	uint64_t region;
+
+	if (!f->rcio_shared)
+		return 0;
+
+	region = rcio_pick_region(f->rcio_shared, ddir, &td->rcio_state);
+	if (region == UINT64_MAX) {
+		dprint(FD_IO, "rcio: %s list empty for %s\n",
+		       ddir == DDIR_WRITE ? "write" :
+		       ddir == DDIR_TRIM ? "trim" : "read",
+		       f->file_name);
+		return 1;
+	}
+
+	*b = (region * f->rcio_shared->region_size) / td->o.ba[ddir];
+	return 0;
+}
+
+static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
+				enum fio_ddir ddir, uint64_t *b, bool *rcio_eof)
+{
+	*rcio_eof = false;
+	if (__get_next_rand_offset(td, f, ddir, b))
+		return 1;
+
+	*rcio_eof = check_rcio(td, f, ddir, b);
+	return *rcio_eof;
+}
+
 static int get_next_rand_block(struct thread_data *td, struct fio_file *f,
 			       enum fio_ddir ddir, uint64_t *b)
 {
-	if (!get_next_rand_offset(td, f, ddir, b))
+	bool rcio_eof;
+
+	if (!get_next_rand_offset(td, f, ddir, b, &rcio_eof))
 		return 0;
+	/* An exhausted RCIO partition cannot be replenished by a file reset. */
+	if (rcio_eof)
+		return 1;
 
 	if (td->o.time_based ||
 	    (td->o.file_service_type & __FIO_FSERVICE_NONUNIFORM)) {
 		fio_file_reset(td, f);
 		loop_cache_invalidate(td, f);
-		if (!get_next_rand_offset(td, f, ddir, b))
+		if (!get_next_rand_offset(td, f, ddir, b, &rcio_eof))
 			return 0;
 	}
 
@@ -789,7 +836,8 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 	if (td->o.io_submit_mode == IO_MODE_INLINE)
 		io_u_quiesce(td);
 
-	if (td->o.timeout && ((usec + now) > td->o.timeout)) {
+	if (td->o.timeout && ((usec + now) > td->o.timeout) &&
+	    !rcio_run_pending(td)) {
 		/*
 		 * check if the usec is capable of taking negative values
 		 */
@@ -802,7 +850,8 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 	usec_sleep(td, usec);
 
 	now = utime_since_now(&td->epoch);
-	if ((td->o.timeout && (now > td->o.timeout)) || td->terminate)
+	if ((td->o.timeout && now > td->o.timeout &&
+	     !rcio_run_pending(td)) || td->terminate)
 		ddir = DDIR_TIMEOUT;
 
 	return ddir;
@@ -1572,7 +1621,8 @@ static long set_io_u_file(struct thread_data *td, struct io_u *io_u)
 		if (io_u->ddir == DDIR_TIMEOUT)
 			return 1;
 
-		if (td->o.file_service_type & __FIO_FSERVICE_NONUNIFORM)
+		if ((td->o.file_service_type & __FIO_FSERVICE_NONUNIFORM) &&
+		    !f->rcio_shared)
 			fio_file_reset(td, f);
 		else {
 			fio_file_set_done(f);
@@ -2157,6 +2207,18 @@ static void file_log_write_comp(const struct thread_data *td, struct fio_file *f
 		f->last_write = offset + bytes;
 }
 
+static void io_u_account_bytes(struct thread_data *td, struct io_u *io_u,
+			       unsigned long long bytes)
+{
+	enum fio_ddir ddir = io_u->ddir;
+
+	td->io_bytes[ddir] += bytes;
+	if (!(io_u->flags & IO_U_F_VER_LIST))
+		td->this_io_bytes[ddir] += bytes;
+	if (ddir == DDIR_WRITE)
+		file_log_write_comp(td, io_u->file, io_u->offset, bytes);
+}
+
 static bool should_account(struct thread_data *td)
 {
 	return ramp_period_over(td) && (td->runstate == TD_RUNNING ||
@@ -2250,6 +2312,33 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 		unsigned long long bytes = io_u->xfer_buflen - io_u->resid;
 		int ret;
 
+		if (bytes && f && f->rcio_shared && td_random(td) &&
+		    (ddir == DDIR_WRITE || ddir == DDIR_TRIM))
+			rcio_complete_io(f->rcio_shared, bytes);
+
+		/*
+		 * Mark the RCIO region(s) covered by this extent only once
+		 * it has fully completed -- a short completion (to be
+		 * requeued below) must not mark a region valid/free before
+		 * the rest of it has actually been written/trimmed.
+		 * verify_offset/buflen are the original request's start and
+		 * length and, unlike offset/xfer_buflen, are not touched by
+		 * the short-IO requeue below, so they stay valid across the
+		 * whole requeue chain.
+		 *
+		 * Random I/O is already transitioned by rcio_pick_region() at
+		 * pick time; this only handles sequential completions (e.g.
+		 * preconditioning), which never go through check_rcio().
+		 */
+		if (bytes && f && f->rcio_shared && !td_random(td) &&
+		    io_u->offset + bytes - io_u->verify_offset >= io_u->buflen)
+			rcio_mark_region(f->rcio_shared,
+					 io_u->verify_offset - f->file_offset,
+					 io_u->buflen, ddir);
+
+		io_u_account_bytes(td, io_u, bytes);
+		icd->bytes_done[ddir] += bytes;
+
 		/*
 		 * Make sure we notice short IO from here, and requeue them
 		 * appropriately!
@@ -2266,20 +2355,12 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 		}
 
 		td->io_blocks[ddir]++;
-		td->io_bytes[ddir] += bytes;
 
-		if (!(io_u->flags & IO_U_F_VER_LIST)) {
+		if (!(io_u->flags & IO_U_F_VER_LIST))
 			td->this_io_blocks[ddir]++;
-			td->this_io_bytes[ddir] += bytes;
-		}
-
-		if (ddir == DDIR_WRITE)
-			file_log_write_comp(td, f, io_u->offset, bytes);
 
 		if (should_account(td))
 			account_io_completion(td, io_u, icd, ddir, bytes);
-
-		icd->bytes_done[ddir] += bytes;
 
 		if (io_u->end_io) {
 			ret = io_u->end_io(td, io_u_ptr);
@@ -2361,6 +2442,16 @@ static void io_u_update_bytes_done(struct thread_data *td,
 
 	for (ddir = 0; ddir < DDIR_RWDIR_CNT; ddir++)
 		td->bytes_done[ddir] += icd->bytes_done[ddir];
+}
+
+void io_u_sync_complete_partial(struct thread_data *td, struct io_u *io_u,
+				unsigned long long bytes)
+{
+	struct io_completion_data icd = { 0 };
+
+	io_u_account_bytes(td, io_u, bytes);
+	icd.bytes_done[io_u->ddir] = bytes;
+	io_u_update_bytes_done(td, &icd);
 }
 
 /*
