@@ -394,7 +394,11 @@ int fio_gpuaccel_open_file(struct thread_data *td, struct fio_file *f)
 	if (rc)
 		return rc;
 
-	if (o->io_mode == IO_DIRECT) {
+	/*
+	 * setup_files() opens block devices for a size check before ->init has
+	 * set o->backend; the handle is registered on the later real open.
+	 */
+	if (be && o->io_mode == IO_DIRECT) {
 		rc = be->file_handle_register(f->fd, &handle);
 		if (rc != 0) {
 			goto exit_err;
