@@ -3047,6 +3047,17 @@ Example URIs:
 Specify the GPU IDs to use with CUDA. This is a colon-separated list of int.
 GPUs are assigned to workers roundrobin. Default is 0.
 .TP
+.BI (libcufile)gpu_peer_access\fR=\fPstr
+Configure CUDA peer access in \fBcufile\fR mode. Default is \fBnone\fR. Set
+this option to \fBall\fR to enable access from each worker's assigned GPU to
+every other GPU in \fBgpu_dev_ids\fR, or specify directed peer connections
+using \fIsource:peer,peer/source:peer\fR. For example,
+\fI0:1,2/1:0/2:0\fR enables access from GPU 0 to GPUs 1 and 2 and from GPUs 1
+and 2 to GPU 0. Each entry applies to workers assigned its source GPU.
+Connections are unidirectional; include both directions when needed.
+Unsupported connections and peer connection limits cause an initialization
+error. Values other than \fBnone\fR are invalid with \fBcuda_io=posix\fR.
+.TP
 .BI (libcufile)cuda_io\fR=\fPstr
 Specify the type of I/O to use with CUDA. This option
 takes the following values:

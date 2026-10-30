@@ -3326,6 +3326,18 @@ with the caveat that when used on the command line, they must come after the
 	Specify the GPU IDs to use with CUDA. This is a colon-separated list of
 	int. GPUs are assigned to workers roundrobin. Default is 0.
 
+.. option:: gpu_peer_access=str : [libcufile]
+
+	Configure CUDA peer access in **cufile** mode. Default is **none**.
+	Set this option to **all** to enable access from each worker's assigned
+	GPU to every other GPU in :option:`gpu_dev_ids`, or specify directed
+	peer connections using ``source:peer,peer/source:peer``. For example,
+	``0:1,2/1:0/2:0`` enables access from GPU 0 to GPUs 1 and 2 and from
+	GPUs 1 and 2 to GPU 0. Each entry applies to workers assigned its source
+	GPU. Connections are unidirectional; include both directions when needed.
+	Unsupported connections and peer connection limits cause an initialization
+	error. Values other than **none** are invalid with ``cuda_io=posix``.
+
 .. option:: cuda_io=str : [libcufile]
 
 	Specify the type of I/O to use with CUDA. Default is **cufile**.
