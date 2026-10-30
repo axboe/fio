@@ -36,6 +36,7 @@ struct gpuaccel_backend {
 	void (*driver_close)(void);
 
 	int (*set_device)(int gpu_id);
+	int (*enable_peer_access)(int gpu_id, int peer_gpu_id);
 	int (*malloc)(void **mem, size_t size);
 	int (*free)(void *mem);
 	int (*memset)(void *mem, int value, size_t size);
@@ -65,6 +66,8 @@ struct gpuaccel_options {
 					                           with posix I/O write */
 	int                 my_gpu_id;          /* GPU id to use for this job */
 	unsigned int        io_mode;            /* Type of I/O to use */
+	unsigned int        peer_access;        /* Enable all listed peers */
+	char               *peer_map;           /* Directed peer connections */
 	size_t              total_mem;          /* size for gpu_mem_ptr and junk_buf */
 	int                 logged;             /* bitmask of log messages that have
 					                           been output, prevent flood */
