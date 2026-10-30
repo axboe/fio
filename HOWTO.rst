@@ -3324,7 +3324,9 @@ with the caveat that when used on the command line, they must come after the
 .. option:: gpu_dev_ids=str : [libcufile]
 
 	Specify the GPU IDs to use with CUDA. This is a colon-separated list of
-	int. GPUs are assigned to workers roundrobin. Default is 0.
+	int. GPUs are assigned to workers roundrobin. Default is 0. In
+	**cufile** mode, each worker enables CUDA peer access from its assigned
+	GPU to the other listed GPUs when the hardware supports it.
 
 .. option:: cuda_io=str : [libcufile]
 
