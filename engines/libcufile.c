@@ -167,6 +167,70 @@ static int libcufile_stream_sync(void)
 	return rc;
 }
 
+static int libcufile_enable_peer_access(struct gpuaccel_options *o)
+{
+	char *gpu_ids, *peer_ids, *peer_id;
+	int device_count, rc = 0;
+
+	if (!o->gpu_ids)
+		return 0;
+
+	check_cudaruntimecall(cudaGetDeviceCount(&device_count), rc);
+	if (rc)
+		return rc;
+
+	peer_ids = gpu_ids = strdup(o->gpu_ids);
+	if (!gpu_ids) {
+		log_err("strdup(gpu_ids): err=%d\n", errno);
+		return -1;
+	}
+
+	while ((peer_id = strsep(&peer_ids, GPU_ID_SEP))) {
+		cudaError_t status;
+		char *endptr;
+		long id;
+		int can_access_peer;
+
+		errno = 0;
+		id = strtol(peer_id, &endptr, 10);
+		if (errno || endptr == peer_id || *endptr != '\0' ||
+		    id < 0 || id >= device_count) {
+			log_err("invalid GPU ID: %s\n", peer_id);
+			rc = -1;
+			break;
+		}
+
+		if (id == o->my_gpu_id)
+			continue;
+
+		check_cudaruntimecall(cudaDeviceCanAccessPeer(&can_access_peer,
+							 o->my_gpu_id, id), rc);
+		if (rc)
+			break;
+		if (!can_access_peer) {
+			log_info("GPU %d cannot access peer GPU %ld\n",
+				 o->my_gpu_id, id);
+			continue;
+		}
+
+		status = cudaDeviceEnablePeerAccess(id, 0);
+		if (status == cudaErrorPeerAccessAlreadyEnabled) {
+			/* Clear the non-fatal CUDA runtime error. */
+			cudaGetLastError();
+			continue;
+		}
+		if (status != cudaSuccess) {
+			log_err("cudaDeviceEnablePeerAccess(%ld): err=%d:%s\n",
+				id, status, cudaGetErrorName(status));
+			rc = -1;
+			break;
+		}
+	}
+
+	free(gpu_ids);
+	return rc;
+}
+
 static int libcufile_file_handle_register(int fd, void **handle)
 {
 	struct fio_libcufile_data *fcd;
@@ -266,8 +330,14 @@ static const struct gpuaccel_backend libcufile_backend = {
 static int fio_libcufile_init(struct thread_data *td)
 {
 	struct gpuaccel_options *o = td->eo;
+	int rc;
+
 	o->backend = &libcufile_backend;
-	return fio_gpuaccel_init(td);
+	rc = fio_gpuaccel_init(td);
+	if (rc || o->io_mode != IO_DIRECT)
+		return rc;
+
+	return libcufile_enable_peer_access(o);
 }
 
 FIO_STATIC struct ioengine_ops ioengine = {

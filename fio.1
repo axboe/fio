@@ -3045,7 +3045,9 @@ Example URIs:
 .TP
 .BI (libcufile)gpu_dev_ids\fR=\fPstr
 Specify the GPU IDs to use with CUDA. This is a colon-separated list of int.
-GPUs are assigned to workers roundrobin. Default is 0.
+GPUs are assigned to workers roundrobin. Default is 0. In \fBcufile\fR mode,
+each worker enables CUDA peer access from its assigned GPU to the other listed
+GPUs when the hardware supports it.
 .TP
 .BI (libcufile)cuda_io\fR=\fPstr
 Specify the type of I/O to use with CUDA. This option
