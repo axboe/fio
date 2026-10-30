@@ -139,6 +139,35 @@ static int libhipfile_stream_sync(void)
 				       "hipStreamSynchronize");
 }
 
+static int libhipfile_enable_peer_access(int gpu_id, int peer_gpu_id)
+{
+	hipError_t status;
+	int can_access_peer;
+
+	status = hipDeviceCanAccessPeer(&can_access_peer, gpu_id, peer_gpu_id);
+	if (libhipfile_check_runtime(status, "hipDeviceCanAccessPeer"))
+		return -1;
+	if (!can_access_peer) {
+		log_info("GPU %d cannot access peer GPU %d\n", gpu_id,
+			 peer_gpu_id);
+		return 0;
+	}
+
+	status = hipDeviceEnablePeerAccess(peer_gpu_id, 0);
+	if (status == hipErrorPeerAccessAlreadyEnabled) {
+		/* Clear the non-fatal HIP runtime error. */
+		hipGetLastError();
+		return 0;
+	}
+	if (status != hipSuccess) {
+		log_err("hipDeviceEnablePeerAccess(%d): err=%d:%s\n",
+			peer_gpu_id, status, hipGetErrorName(status));
+		return -1;
+	}
+
+	return 0;
+}
+
 static int libhipfile_file_handle_register(int fd, void **handle)
 {
 	struct libhipfile_file_data *fhd;
@@ -224,6 +253,7 @@ static const struct gpuaccel_backend libhipfile_backend = {
 	.driver_open = libhipfile_driver_open,
 	.driver_close = libhipfile_driver_close,
 	.set_device = libhipfile_set_device,
+	.enable_peer_access = libhipfile_enable_peer_access,
 	.malloc = libhipfile_malloc,
 	.free = libhipfile_free,
 	.memset = libhipfile_memset,

@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
+#include <limits.h>
 #include <string.h>
 
 #include "../fio.h"
@@ -72,6 +73,46 @@ static int fio_gpuaccel_find_gpu_id(struct thread_data *td)
 	return gpu_id;
 }
 
+static int fio_gpuaccel_enable_peer_access(struct gpuaccel_options *o)
+{
+	const struct gpuaccel_backend *be = o->backend;
+	char *gpu_ids, *peer_ids, *peer_id;
+	int rc = 0;
+
+	if (!o->gpu_ids || !be->enable_peer_access)
+		return 0;
+
+	peer_ids = gpu_ids = strdup(o->gpu_ids);
+	if (!gpu_ids) {
+		log_err("strdup(gpu_ids): err=%d\n", errno);
+		return -1;
+	}
+
+	while ((peer_id = strsep(&peer_ids, GPU_ID_SEP))) {
+		char *endptr;
+		long id;
+
+		errno = 0;
+		id = strtol(peer_id, &endptr, 10);
+		if (errno || endptr == peer_id || *endptr != '\0' ||
+		    id < 0 || id > INT_MAX) {
+			log_err("invalid GPU ID: %s\n", peer_id);
+			rc = -1;
+			break;
+		}
+
+		if (id == o->my_gpu_id)
+			continue;
+
+		rc = be->enable_peer_access(o->my_gpu_id, (int) id);
+		if (rc)
+			break;
+	}
+
+	free(gpu_ids);
+	return rc;
+}
+
 int fio_gpuaccel_init(struct thread_data *td)
 {
 	struct gpuaccel_options *o = td->eo;
@@ -102,6 +143,8 @@ int fio_gpuaccel_init(struct thread_data *td)
 
 	dprint(FD_MEM, "Subjob %d uses GPU %d\n", td->subjob_number, o->my_gpu_id);
 	if (be->set_device(o->my_gpu_id) != 0)
+		return 1;
+	if (o->io_mode == IO_DIRECT && fio_gpuaccel_enable_peer_access(o))
 		return 1;
 
 	return 0;

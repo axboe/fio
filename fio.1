@@ -3045,7 +3045,9 @@ Example URIs:
 .TP
 .BI (libcufile)gpu_dev_ids\fR=\fPstr
 Specify the GPU IDs to use with CUDA. This is a colon-separated list of int.
-GPUs are assigned to workers roundrobin. Default is 0.
+GPUs are assigned to workers roundrobin. Default is 0. When \fBcuda_io\fR is
+set to \fBcufile\fR, each worker enables CUDA peer access from its assigned GPU
+to the other listed GPUs when the hardware supports it.
 .TP
 .BI (libcufile)cuda_io\fR=\fPstr
 Specify the type of I/O to use with CUDA. This option
@@ -3073,7 +3075,9 @@ the use of cudaMemcpy.
 .TP
 .BI (libhipfile)gpu_dev_ids\fR=\fPstr
 Specify the GPU IDs to use with ROCm. This is a colon-separated list of int.
-GPUs are assigned to workers roundrobin. Default is 0.
+GPUs are assigned to workers roundrobin. Default is 0. When \fBrocm_io\fR is
+set to \fBhipfile\fR, each worker enables HIP peer access from its assigned GPU
+to the other listed GPUs when the hardware supports it.
 .TP
 .BI (libhipfile)rocm_io\fR=\fPstr
 Specify the type of I/O to use with ROCm. This option

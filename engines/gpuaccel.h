@@ -36,6 +36,7 @@ struct gpuaccel_backend {
 	void (*driver_close)(void);
 
 	int (*set_device)(int gpu_id);
+	int (*enable_peer_access)(int gpu_id, int peer_gpu_id);
 	int (*malloc)(void **mem, size_t size);
 	int (*free)(void *mem);
 	int (*memset)(void *mem, int value, size_t size);

@@ -167,6 +167,36 @@ static int libcufile_stream_sync(void)
 	return rc;
 }
 
+static int libcufile_enable_peer_access(int gpu_id, int peer_gpu_id)
+{
+	cudaError_t status;
+	int can_access_peer, rc;
+
+	check_cudaruntimecall(cudaDeviceCanAccessPeer(&can_access_peer,
+						 gpu_id, peer_gpu_id), rc);
+	if (rc)
+		return rc;
+	if (!can_access_peer) {
+		log_info("GPU %d cannot access peer GPU %d\n", gpu_id,
+			 peer_gpu_id);
+		return 0;
+	}
+
+	status = cudaDeviceEnablePeerAccess(peer_gpu_id, 0);
+	if (status == cudaErrorPeerAccessAlreadyEnabled) {
+		/* Clear the non-fatal CUDA runtime error. */
+		cudaGetLastError();
+		return 0;
+	}
+	if (status != cudaSuccess) {
+		log_err("cudaDeviceEnablePeerAccess(%d): err=%d:%s\n",
+			peer_gpu_id, status, cudaGetErrorName(status));
+		return -1;
+	}
+
+	return 0;
+}
+
 static int libcufile_file_handle_register(int fd, void **handle)
 {
 	struct fio_libcufile_data *fcd;
@@ -249,6 +279,7 @@ static const struct gpuaccel_backend libcufile_backend = {
 	.driver_open = libcufile_driver_open,
 	.driver_close = libcufile_driver_close,
 	.set_device = libcufile_set_device,
+	.enable_peer_access = libcufile_enable_peer_access,
 	.malloc = libcufile_malloc,
 	.free = libcufile_free,
 	.memset = libcufile_memset,
@@ -266,6 +297,7 @@ static const struct gpuaccel_backend libcufile_backend = {
 static int fio_libcufile_init(struct thread_data *td)
 {
 	struct gpuaccel_options *o = td->eo;
+
 	o->backend = &libcufile_backend;
 	return fio_gpuaccel_init(td);
 }
