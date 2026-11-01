@@ -825,6 +825,8 @@ static int fixup_options(struct thread_data *td)
 		o->open_files = o->nr_files;
 
 	if (o->rcio_size) {
+		struct fio_file *f;
+		unsigned int i;
 		unsigned int seq_nr = o->ddir_seq_nr ? o->ddir_seq_nr : 1;
 
 		if (fio_option_is_set(o, norandommap)) {
@@ -844,6 +846,30 @@ static int fixup_options(struct thread_data *td)
 #endif
 		if (td_trim(td) && o->num_range > 1) {
 			log_err("fio: rcio_size does not support multi-range trim (num_range > 1).\n");
+			ret |= 1;
+		}
+		if (o->read_iolog_file) {
+			log_err("fio: read_iolog is not supported with rcio_size; "
+				"replayed extents bypass RCIO region validation\n");
+			ret |= 1;
+		}
+		if (td_random(td) && td_write(td) &&
+		    (o->experimental_verify || o->verify_only)) {
+			log_err("fio: random RCIO writes do not support "
+				"experimental_verify or verify_only\n");
+			ret |= 1;
+		}
+		if (td_random(td) &&
+		    ((td_read(td) && o->perc_rand[DDIR_READ] != 100) ||
+		     (td_write(td) && o->perc_rand[DDIR_WRITE] != 100) ||
+		     (td_trim(td) && o->perc_rand[DDIR_TRIM] != 100))) {
+			log_err("fio: rcio_size requires percentage_random=100 for "
+				"every active direction of a random job\n");
+			ret |= 1;
+		}
+		if (o->rcio_state_file && o->nr_files > 1) {
+			log_err("fio: rcio_state_file is not supported with multiple "
+				"files (nrfiles > 1)\n");
 			ret |= 1;
 		}
 		if (o->zone_mode == ZONE_MODE_ZBD ||
@@ -874,6 +900,34 @@ static int fixup_options(struct thread_data *td)
 				"region would stay marked valid and later reads could "
 				"target discarded data\n");
 			ret |= 1;
+		}
+		if (o->bs_is_seq_rand) {
+			log_err("fio: bs_is_seq_rand is not supported with rcio_size; "
+				"block-size validation cannot account for the "
+				"effective read and write sizes\n");
+			ret |= 1;
+		}
+		if (td_random(td) && seq_nr > 1 &&
+		    (o->nr_files > 1 || (td_read(td) && td_write(td)))) {
+			log_err("fio: random RCIO runs longer than one I/O are not "
+				"supported with mixed read/write directions or "
+				"multiple files\n");
+			ret |= 1;
+		}
+		if (!td_random(td) && o->ddir_seq_add &&
+		    (td_write(td) || td_trim(td))) {
+			uint64_t seq_add;
+
+			if (o->ddir_seq_add < 0)
+				seq_add = (uint64_t)(-(o->ddir_seq_add + 1)) + 1;
+			else
+				seq_add = o->ddir_seq_add;
+			if (seq_add % o->rcio_size) {
+				log_err("fio: sequential write/trim skip must be a "
+					"multiple of rcio_size=%llu\n",
+					(unsigned long long)o->rcio_size);
+				ret |= 1;
+			}
 		}
 		if (o->rcio_size % o->ba[DDIR_WRITE] ||
 		    o->rcio_size % o->ba[DDIR_READ] ||
@@ -914,6 +968,13 @@ static int fixup_options(struct thread_data *td)
 				"invalid\n",
 				(unsigned long long)o->rcio_size, seq_nr);
 			ret |= 1;
+		}
+		for_each_file(td, f, i) {
+			if (o->unlink_each_loop && f->filetype == FIO_TYPE_FILE) {
+				log_err("fio: unlink_each_loop is not supported with "
+					"RCIO regular files (%s)\n", f->file_name);
+				ret |= 1;
+			}
 		}
 	}
 
