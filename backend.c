@@ -3000,7 +3000,7 @@ int fio_backend(struct sk_out *sk_out)
 	if (!sk_out)
 		is_local_backend = true;
 	if (startup_sem == NULL) {
-		free_all_shared_rcio();
+		free_all_shared_rcio(false);
 		return 1;
 	}
 
@@ -3045,7 +3045,7 @@ int fio_backend(struct sk_out *sk_out)
 	} end_for_each();
 
 	fio_idle_prof_cleanup();
-	free_all_shared_rcio();
+	free_all_shared_rcio(false);
 	free_disk_util();
 	if (cgroup_list) {
 		cgroup_kill(cgroup_list);
