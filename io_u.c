@@ -836,7 +836,8 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 	if (td->o.io_submit_mode == IO_MODE_INLINE)
 		io_u_quiesce(td);
 
-	if (td->o.timeout && ((usec + now) > td->o.timeout)) {
+	if (td->o.timeout && ((usec + now) > td->o.timeout) &&
+	    !rcio_run_pending(td)) {
 		/*
 		 * check if the usec is capable of taking negative values
 		 */
@@ -849,7 +850,8 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 	usec_sleep(td, usec);
 
 	now = utime_since_now(&td->epoch);
-	if ((td->o.timeout && (now > td->o.timeout)) || td->terminate)
+	if ((td->o.timeout && now > td->o.timeout &&
+	     !rcio_run_pending(td)) || td->terminate)
 		ddir = DDIR_TIMEOUT;
 
 	return ddir;
@@ -1619,7 +1621,8 @@ static long set_io_u_file(struct thread_data *td, struct io_u *io_u)
 		if (io_u->ddir == DDIR_TIMEOUT)
 			return 1;
 
-		if (td->o.file_service_type & __FIO_FSERVICE_NONUNIFORM)
+		if ((td->o.file_service_type & __FIO_FSERVICE_NONUNIFORM) &&
+		    !f->rcio_shared)
 			fio_file_reset(td, f);
 		else {
 			fio_file_set_done(f);
@@ -2296,6 +2299,10 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 	if (!io_u->error && ddir_rw(ddir)) {
 		unsigned long long bytes = io_u->xfer_buflen - io_u->resid;
 		int ret;
+
+		if (bytes && f && f->rcio_shared && td_random(td) &&
+		    (ddir == DDIR_WRITE || ddir == DDIR_TRIM))
+			rcio_complete_io(f->rcio_shared, bytes);
 
 		/*
 		 * Mark the RCIO region(s) covered by this extent only once
