@@ -5406,6 +5406,25 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_IO_BASIC,
 	},
+	{
+		.name	= "rcio_state_file",
+		.lname	= "RCIO state file",
+		.type	= FIO_OPT_STR_STORE,
+		.off1	= offsetof(struct thread_options, rcio_state_file),
+		.help	= "Load/save RCIO region state from/to this file",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IO_BASIC,
+	},
+	{
+		.name	= "rcio_precondition",
+		.lname	= "RCIO precondition job",
+		.type	= FIO_OPT_BOOL,
+		.off1	= offsetof(struct thread_options, rcio_precondition),
+		.help	= "Mark this job as an RCIO precondition (skipped if state file loaded)",
+		.def	= "0",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IO_BASIC,
+	},
 #ifdef FIO_HAVE_DISK_UTIL
 	{
 		.name	= "disk_util",
