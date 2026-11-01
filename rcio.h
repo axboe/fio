@@ -57,6 +57,13 @@ struct shared_rcio_entry {
 	uint64_t busy_count;
 	bool failed;
 
+	char *state_file;
+	bool load_attempted;
+	bool load_succeeded;
+	bool load_failed;
+	bool in_use;
+	bool save_failed;
+
 	pthread_mutex_t mutex;
 	struct flist_head list;
 };
@@ -70,9 +77,16 @@ get_shared_rcio(const char *filename, uint64_t file_offset,
 		uint64_t region_size, uint64_t num_regions);
 
 /*
- * Free all shared RCIO entries (called once at program exit).
+ * Save state and free all shared RCIO entries (called once at program exit).
+ * @save must be false after backend errors or interruption.
+ * Returns nonzero if any snapshot was withheld or could not be saved.
  */
-void free_all_shared_rcio(void);
+int free_all_shared_rcio(bool save);
+
+/* Record the outcome before the job's files are freed. */
+void rcio_finish_job(struct thread_data *td, bool completed);
+/* Retries or unissued sub-blocks remain in the current write/trim region. */
+bool rcio_run_pending(struct thread_data *td);
 
 /*
  * Pick and reserve a random region suitable for @ddir.
