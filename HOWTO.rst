@@ -5991,6 +5991,8 @@ The following combinations are not supported:
   because these modes cannot replay RCIO offsets.
 * :option:`read_iolog`, because replayed offsets and lengths bypass RCIO
   region selection and coverage validation.
+* :option:`unlink_each_loop` for regular files, because recreating a target
+  would leave its tracked regions stale.
 * :option:`trim_backlog`, because backlog trims bypass region selection and
   would leave discarded regions marked as written.
 

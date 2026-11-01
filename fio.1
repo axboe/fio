@@ -5706,6 +5706,9 @@ these modes cannot replay RCIO offsets.
 \fBread_iolog\fR, because replayed offsets and lengths bypass RCIO region
 selection and coverage validation.
 .IP \(bu 2
+\fBunlink_each_loop\fR for regular files, because recreating a target would
+leave its tracked regions stale.
+.IP \(bu 2
 \fBtrim_backlog\fR, because backlog trims bypass region selection and would
 leave discarded regions marked as written.
 .P
