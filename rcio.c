@@ -331,7 +331,8 @@ void rcio_complete_io(struct shared_rcio_entry *entry, uint64_t bytes)
 
 /*
  * Record each job's outcome before its files are freed. Errors, unlinks, or
- * incomplete work prevent saving shared state.
+ * incomplete work prevent saving shared state; skipped preconditioning after
+ * a successful state load is not an incomplete run.
  */
 void rcio_finish_job(struct thread_data *td, bool completed)
 {
@@ -346,7 +347,8 @@ void rcio_finish_job(struct thread_data *td, bool completed)
 		pthread_mutex_lock(&entry->mutex);
 		if (td->error || td->total_err_count ||
 		    (td->o.unlink && f->filetype == FIO_TYPE_FILE) ||
-		    !completed)
+		    (!completed && !(td->o.rcio_precondition &&
+				      entry->load_succeeded && td->done)))
 			entry->save_failed = true;
 		pthread_mutex_unlock(&entry->mutex);
 	}
@@ -906,6 +908,7 @@ int init_rcio(struct thread_data *td)
 {
 	struct fio_file *f;
 	unsigned int i;
+	bool loaded = false, fresh = false;
 
 	if (!td->o.rcio_size)
 		return 0;
@@ -913,6 +916,25 @@ int init_rcio(struct thread_data *td)
 	for_each_file(td, f, i) {
 		if (!setup_rcio_file(td, f))
 			return 1;
+		pthread_mutex_lock(&f->rcio_shared->mutex);
+		if (f->rcio_shared->load_succeeded)
+			loaded = true;
+		else
+			fresh = true;
+		pthread_mutex_unlock(&f->rcio_shared->mutex);
+	}
+
+	if (td->o.rcio_precondition && loaded) {
+		if (fresh) {
+			log_err("fio: precondition job mixes loaded and fresh "
+				"RCIO trackers; use separate jobs\n");
+			return 1;
+		}
+		td->done = 1;
+		td->o.pre_read = 0;
+		if (output_format & FIO_OUTPUT_NORMAL)
+			log_info("rcio: skipping precondition "
+				 "(state loaded)\n");
 	}
 
 	return 0;
