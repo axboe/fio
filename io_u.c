@@ -109,7 +109,7 @@ static int __get_next_rand_offset_sprandom(struct thread_data *td, struct fio_fi
 	return 0;
 }
 
-static int __get_next_rand_offset(struct thread_data *td, struct fio_file *f,
+static int __get_next_rand_offset_uniform(struct thread_data *td, struct fio_file *f,
 				  enum fio_ddir ddir, uint64_t *b,
 				  uint64_t lastb)
 {
@@ -194,7 +194,7 @@ static int __get_next_rand_offset_zoned_abs(struct thread_data *td,
 
 	if (!td->o.zone_split_nr[ddir]) {
 bail:
-		return __get_next_rand_offset(td, f, ddir, b, lastb);
+		return __get_next_rand_offset_uniform(td, f, ddir, b, lastb);
 	}
 
 	/*
@@ -230,7 +230,7 @@ bail:
 	/*
 	 * Generate index from 0..send-stotal
 	 */
-	if (__get_next_rand_offset(td, f, ddir, b, send - stotal) == 1)
+	if (__get_next_rand_offset_uniform(td, f, ddir, b, send - stotal) == 1)
 		return 1;
 
 	*b += stotal;
@@ -251,7 +251,7 @@ static int __get_next_rand_offset_zoned(struct thread_data *td,
 
 	if (!td->o.zone_split_nr[ddir]) {
 bail:
-		return __get_next_rand_offset(td, f, ddir, b, lastb);
+		return __get_next_rand_offset_uniform(td, f, ddir, b, lastb);
 	}
 
 	/*
@@ -287,7 +287,7 @@ bail:
 	/*
 	 * Generate index from 0..send-of-lastb
 	 */
-	if (__get_next_rand_offset(td, f, ddir, b, lastb) == 1)
+	if (__get_next_rand_offset_uniform(td, f, ddir, b, lastb) == 1)
 		return 1;
 
 	/*
@@ -333,7 +333,7 @@ static int __get_next_rand_offset_sequence(struct thread_data *td,
 	return 0;
 }
 
-static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
+static int __get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 				enum fio_ddir ddir, uint64_t *b)
 {
 	if (td->o.sprandom && ddir == DDIR_WRITE) {
@@ -345,7 +345,7 @@ static int get_next_rand_offset(struct thread_data *td, struct fio_file *f,
 		if (!lastb)
 			return 1;
 
-		return __get_next_rand_offset(td, f, ddir, b, lastb);
+		return __get_next_rand_offset_uniform(td, f, ddir, b, lastb);
 	} else if (td->o.random_distribution == FIO_RAND_DIST_ZIPF)
 		return __get_next_rand_offset_zipf(td, f, ddir, b);
 	else if (td->o.random_distribution == FIO_RAND_DIST_PARETO)
@@ -389,14 +389,14 @@ static void loop_cache_invalidate(struct thread_data *td, struct fio_file *f)
 static int get_next_rand_block(struct thread_data *td, struct fio_file *f,
 			       enum fio_ddir ddir, uint64_t *b)
 {
-	if (!get_next_rand_offset(td, f, ddir, b))
+	if (!__get_next_rand_offset(td, f, ddir, b))
 		return 0;
 
 	if (td->o.time_based ||
 	    (td->o.file_service_type & __FIO_FSERVICE_NONUNIFORM)) {
 		fio_file_reset(td, f);
 		loop_cache_invalidate(td, f);
-		if (!get_next_rand_offset(td, f, ddir, b))
+		if (!__get_next_rand_offset(td, f, ddir, b))
 			return 0;
 	}
 
