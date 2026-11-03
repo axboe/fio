@@ -295,7 +295,9 @@ void log_io_piece(struct thread_data *td, struct io_u *io_u)
 
 	io_u->ipo = ipo;
 
-	if (io_u->flags & IO_U_F_ZEROED)
+	if (io_u->flags & IO_U_F_TRIMMED)
+		ipo->flags |= IP_F_TRIMMED;
+	else if (io_u->flags & IO_U_F_ZEROED)
 		ipo->flags |= IP_F_ZEROED;
 	else if (io_u->flags & IO_U_F_ERRORED)
 		ipo->flags |= IP_F_ERRORED;
