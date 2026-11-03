@@ -2439,23 +2439,37 @@ print_config "DAOS File System (dfs) Engine" "$dfs"
 # Check if we have libnfs (for userspace nfs support).
 if test "$libnfs" != "no" ; then
   if $(pkg-config libnfs > /dev/null 2>&1); then
-    libnfs="yes"
     libnfs_cflags=$(pkg-config --cflags libnfs)
     libnfs_libs=$(pkg-config --libs libnfs)
+    cat > $TMPC << EOF
+#include <nfsc/libnfs.h>
 
-    # libnfs >= 6.0.0 on Linux requires gnutls for TLS support
-    libnfs_version=$(pkg-config --modversion libnfs 2>/dev/null)
-    if test -n "$libnfs_version" -a "$targetos" = "Linux" ; then
-      libnfs_major=$(echo $libnfs_version | cut -d. -f1)
-      if test "$libnfs_major" -ge 6 ; then
-        if $(pkg-config gnutls > /dev/null 2>&1); then
-          libnfs_cflags="$libnfs_cflags $(pkg-config --cflags gnutls)"
-          libnfs_libs="$libnfs_libs $(pkg-config --libs gnutls)"
-        else
-          feature_not_found "gnutls" "gnutls (required for libnfs >= 6.0.0)"
-          libnfs="no"
-        fi
+int main(void)
+{
+  struct nfs_context *nfs = nfs_init_context();
+  nfs_destroy_context(nfs);
+  return 0;
+}
+EOF
+    libnfs_found="no"
+    if compile_prog "$libnfs_cflags" "$libnfs_libs" "libnfs"; then
+      libnfs_found="yes"
+    # libnfs >= 6.0.0 may be built with TLS support using gnutls, but
+    # some versions do not list it in their pkg-config file.
+    elif $(pkg-config gnutls > /dev/null 2>&1); then
+      libnfs_cflags="$libnfs_cflags $(pkg-config --cflags gnutls)"
+      libnfs_libs="$libnfs_libs $(pkg-config --libs gnutls)"
+      if compile_prog "$libnfs_cflags" "$libnfs_libs" "libnfs with gnutls"; then
+        libnfs_found="yes"
       fi
+    fi
+    if test "$libnfs_found" = "yes" ; then
+      libnfs="yes"
+    else
+      if test "$libnfs" = "yes" ; then
+        feature_not_found "libnfs" "libnfs"
+      fi
+      libnfs="no"
     fi
   else
     if test "$libnfs" = "yes" ; then
