@@ -1057,7 +1057,17 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 		sqe->ioprio = td->ioprio;
 		sqe->off = io_u->offset;
 	} else if (ddir_sync(io_u->ddir)) {
+		/*
+		 * SQEs are reused across io_u submissions. The kernel rejects
+		 * fsync/sync_file_range with -EINVAL if addr, buf_index or
+		 * splice_fd_in are set, or if fsync_flags (which aliases
+		 * rw_flags) has bits other than IORING_FSYNC_DATASYNC. Clear
+		 * anything a previous read/write may have left behind.
+		 */
 		sqe->ioprio = 0;
+		sqe->addr = 0;
+		sqe->buf_index = 0;
+		sqe->splice_fd_in = 0;
 		if (io_u->ddir == DDIR_SYNC_FILE_RANGE) {
 			sqe->off = f->first_write;
 			sqe->len = f->last_write - f->first_write;
@@ -1065,8 +1075,8 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 			sqe->opcode = IORING_OP_SYNC_FILE_RANGE;
 		} else {
 			sqe->off = 0;
-			sqe->addr = 0;
 			sqe->len = 0;
+			sqe->fsync_flags = 0;
 			if (io_u->ddir == DDIR_DATASYNC)
 				sqe->fsync_flags |= IORING_FSYNC_DATASYNC;
 			sqe->opcode = IORING_OP_FSYNC;
