@@ -610,7 +610,7 @@ static bool read_iolog(struct thread_data *td)
 			ipo_bytes_align(td->o.replay_align, ipo);
 
 			ipo->len = bytes;
-			if (rw != DDIR_INVAL && bytes > td->o.max_bs[rw]) {
+			if (ddir_rw(rw) && bytes > td->o.max_bs[rw]) {
 				realloc = true;
 				td->o.max_bs[rw] = bytes;
 			}
