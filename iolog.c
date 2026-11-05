@@ -452,6 +452,25 @@ int64_t iolog_items_to_fetch(struct thread_data *td)
 					((_td)->io_log_version == 2 && (r) == 2))
 
 /*
+ * Parse one line of a version 2 or 3 iolog. Returns the number of fields
+ * parsed, which io_act() and file_act() use to tell file I/O actions from
+ * file management actions.
+ */
+static int parse_iolog_line(struct thread_data *td, const char *p,
+			    unsigned long long *ttime, char *fname, char *act,
+			    unsigned long long *offset, unsigned int *bytes)
+{
+	switch (td->io_log_version) {
+	case 3:
+		return sscanf(p, "%llu %256s %256s %llu %u", ttime, fname, act,
+			      offset, bytes);
+	default: /* version 2 */
+		return sscanf(p, "%256s %256s %llu %u", fname, act, offset,
+			      bytes);
+	}
+}
+
+/*
  * Read version 2 and 3 iolog data. It is enhanced to include per-file logging,
  * syncs, etc.
  */
@@ -488,9 +507,9 @@ static bool read_iolog(struct thread_data *td)
 		int r;
 		unsigned long long ttime;
 
+		r = parse_iolog_line(td, p, &ttime, rfname, act, &offset,
+				     &bytes);
 		if (td->io_log_version == 3) {
-			r = sscanf(p, "%llu %256s %256s %llu %u", &ttime, rfname, act,
-							&offset, &bytes);
 			delay = delay_since_ttime(td, ttime);
 			td->io_log_last_ttime = ttime;
 			/*
@@ -501,8 +520,7 @@ static bool read_iolog(struct thread_data *td)
 					" version 3 for file %s\n", fname);
 				continue;
 			}
-		} else /* version 2 */
-			r = sscanf(p, "%256s %256s %llu %u", rfname, act, &offset, &bytes);
+		}
 
 		if (td->o.replay_redirect)
 			fname = td->o.replay_redirect;
