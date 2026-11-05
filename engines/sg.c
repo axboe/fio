@@ -58,6 +58,7 @@
 #include "../fio.h"
 #include "../optgroup.h"
 #include "sg.h"
+#include "../lib/pow2.h"
 
 #ifdef FIO_HAVE_SGIO
 
@@ -210,6 +211,7 @@ struct sgio_data {
 	int *fd_flags;
 	void *sgbuf;
 	unsigned int bs;
+	bool bs_pow2;
 	int type_checked;
 	struct sgio_trim **trim_queues;
 	int current_queue;
@@ -539,7 +541,8 @@ static int fio_sgio_prep(struct thread_data *td, struct io_u *io_u)
 	unsigned long long nr_blocks, lba;
 	int offset;
 
-	if (io_u->xfer_buflen & (sd->bs - 1)) {
+	if (sd->bs_pow2 ? (io_u->xfer_buflen & (sd->bs - 1)) :
+			  (io_u->xfer_buflen % sd->bs)) {
 		log_err("read/write not sector aligned\n");
 		return EINVAL;
 	}
@@ -1001,6 +1004,7 @@ static int fio_sgio_type_check(struct thread_data *td, struct fio_file *f)
 	}
 
 	sd->bs = bs;
+	sd->bs_pow2 = is_power_of_2(bs);
 	// Determine size of commands needed based on max_lba
 	if (max_lba >= MAX_10B_LBA) {
 		dprint(FD_IO, "sgio_type_check: using 16 byte read/write "
