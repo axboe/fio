@@ -2467,7 +2467,7 @@ EOF
       libnfs="yes"
     else
       if test "$libnfs" = "yes" ; then
-        feature_not_found "libnfs" "libnfs"
+        feature_not_found "libnfs" "libnfs (and gnutls if libnfs was built with TLS)"
       fi
       libnfs="no"
     fi
