@@ -2123,13 +2123,6 @@ static void *thread_main(void *data)
 	if (fio_pin_memory(td))
 		goto err;
 
-	/*
-	 * May alter parameters that init_io_u() will use, so we need to
-	 * do this first.
-	 */
-	if (!init_iolog(td))
-		goto err;
-
 	/* ioprio_set() has to be done before td_io_init() */
 	if (fio_option_is_set(o, ioprio) ||
 	    fio_option_is_set(o, ioprio_class) ||
@@ -2144,6 +2137,13 @@ static void *thread_main(void *data)
 					  o->ioprio_hint);
 		td->ts.ioprio = td->ioprio;
 	}
+
+	/*
+	 * May alter parameters that init_io_u() will use, so we need to
+	 * do this first.
+	 */
+	if (!init_iolog(td))
+		goto err;
 
 	if (td_io_init(td))
 		goto err;
