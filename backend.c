@@ -54,12 +54,14 @@
 #include "pshared.h"
 #include "zone-dist.h"
 #include "fio_time.h"
+#include "rcio.h"
 
 static struct fio_sem *startup_sem;
 static struct flist_head *cgroup_list;
 static struct cgroup_mnt *cgroup_mnt;
 static int exit_value;
 static volatile bool fio_abort;
+static volatile sig_atomic_t rcio_interrupted;
 static unsigned int nr_process = 0;
 static unsigned int nr_thread = 0;
 
@@ -83,6 +85,7 @@ extern char *write_bw_log_name;
 
 static void sig_int(int sig)
 {
+	rcio_interrupted = 1;
 	if (nr_segments) {
 		if (is_backend)
 			fio_server_got_signal(sig);
@@ -479,6 +482,14 @@ int io_queue_event(struct thread_data *td, struct io_u *io_u, int *ret,
 				clear_io_u(td, io_u);
 				break;
 			}
+
+			if (f->rcio_shared &&
+			    io_u->offset + bytes == f->real_file_size)
+				goto sync_done;
+
+			if (f->rcio_shared && td_random(td) && !from_verify &&
+			    (ddir == DDIR_WRITE || ddir == DDIR_TRIM))
+				rcio_complete_io(f->rcio_shared, bytes);
 
 			io_u->xfer_buflen = io_u->resid;
 			io_u->xfer_buf += bytes;
@@ -1193,14 +1204,17 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 		td->o.number_ios *= 2;
 	}
 
+io_loop:
 	while ((td->o.read_iolog_file && !flist_empty(&td->io_log_list)) ||
 		(!flist_empty(&td->trim_list)) || !io_issue_bytes_exceeded(td) ||
+		(td->o.rcio_size && !io_u_rempty(&td->io_u_requeues)) ||
 		td->o.time_based) {
 		struct timespec comp_time;
 		struct io_u *io_u;
 		bool drain_trims = false;
 		int full;
 		enum fio_ddir ddir;
+		bool finishing_region = false;
 
 		check_update_rusage(td);
 
@@ -1211,13 +1225,24 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 
 		if (runtime_exceeded(td, &td->ts_cache)) {
 			__update_ts_cache(td);
+			/* Normal expiry must finish the current RCIO region. */
 			if (runtime_exceeded(td, &td->ts_cache)) {
-				fio_mark_td_terminate(td);
-				break;
+				if (td->o.rcio_size &&
+				    (td_write(td) || td_trim(td))) {
+					if (td->o.io_submit_mode == IO_MODE_OFFLOAD)
+						workqueue_flush(&td->io_wq);
+					if (io_u_quiesce(td) < 0 || td->error)
+						break;
+				}
+				finishing_region = rcio_run_pending(td);
+				if (!finishing_region) {
+					fio_mark_td_terminate(td);
+					break;
+				}
 			}
 		}
 
-		if (flow_threshold_exceeded(td))
+		if (!finishing_region && flow_threshold_exceeded(td))
 			continue;
 
 		/*
@@ -1239,6 +1264,7 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 		 * Jobs read from iolog do not use this stop condition.
 		 */
 		if (!drain_trims && bytes_issued >= total_bytes &&
+		    !(td->o.rcio_size && !io_u_rempty(&td->io_u_requeues)) &&
 		    !td->o.read_iolog_file &&
 		    (!td->o.time_based ||
 		     (td->o.time_based && td->o.verify != VERIFY_NONE)))
@@ -1431,6 +1457,12 @@ reap:
 			    (td->error == ENOSPC || td->error == EDQUOT))
 				td->error = 0;
 		}
+
+		/* A short final completion can create a retry after the byte limit. */
+		if (td->o.rcio_size && !td->error && ret >= 0 &&
+		    !td->terminate && !td->done &&
+		    !io_u_rempty(&td->io_u_requeues))
+			goto io_loop;
 
 		if (should_fsync(td) &&
 		    (td->o.end_fsync || td->o.end_syncfs ||
@@ -1970,6 +2002,7 @@ static void *thread_main(void *data)
 	uint64_t bytes_done[DDIR_RWDIR_CNT];
 	int deadlock_loop_cnt;
 	bool clear_state;
+	bool rcio_completed = false;
 	int ret;
 
 	sk_out_assign(sk_out);
@@ -2180,6 +2213,11 @@ static void *thread_main(void *data)
 	if (!init_random_map(td))
 		goto err;
 
+	if (init_rcio(td)) {
+		td_verror(td, EIO, "init_rcio");
+		goto err;
+	}
+
 	if (o->exec_prerun && exec_string(o, o->exec_prerun, "prerun"))
 		goto err;
 
@@ -2371,6 +2409,9 @@ static void *thread_main(void *data)
 	if (o->exec_postrun)
 		exec_string(o, o->exec_postrun, "postrun");
 
+	rcio_completed = !o->rcio_precondition ||
+			(!o->loops && io_issue_bytes_exceeded(td));
+
 	if (exitall_on_terminate || (o->exitall_error && td->error))
 		fio_terminate_threads(td->groupid, td->o.exit_what);
 
@@ -2382,6 +2423,20 @@ err:
 	if (o->verify_async)
 		verify_async_exit(td);
 
+	if (!td->error && o->rcio_size && (td_write(td) || td_trim(td))) {
+		struct fio_file *f;
+		unsigned int i;
+
+		for_each_file(td, f, i) {
+			if (f->rcio_shared && f->rcio_shared->state_file &&
+			    fio_file_fsync(td, f)) {
+				log_err("rcio: target flush failed for %s\n",
+					f->file_name);
+				td_verror(td, EIO, "rcio target flush");
+			}
+		}
+	}
+	rcio_finish_job(td, rcio_completed);
 	close_and_free_files(td);
 	prune_io_piece_log(td);
 	cleanup_io_u(td);
@@ -2987,11 +3042,16 @@ int fio_backend(struct sk_out *sk_out)
 		return 1;
 	}
 
+	if (init_shared_rcio())
+		return 1;
+
 	startup_sem = fio_sem_init(FIO_SEM_LOCKED);
 	if (!sk_out)
 		is_local_backend = true;
-	if (startup_sem == NULL)
+	if (startup_sem == NULL) {
+		free_all_shared_rcio(false);
 		return 1;
+	}
 
 	set_genesis_time();
 	stat_init();
@@ -3034,6 +3094,9 @@ int fio_backend(struct sk_out *sk_out)
 	} end_for_each();
 
 	fio_idle_prof_cleanup();
+	if (free_all_shared_rcio(!exit_value && !fio_abort &&
+				 !rcio_interrupted) && !exit_value)
+		exit_value = 1;
 	free_disk_util();
 	if (cgroup_list) {
 		cgroup_kill(cgroup_list);

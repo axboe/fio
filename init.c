@@ -769,15 +769,6 @@ static int fixup_options(struct thread_data *td)
 			o->ba[ddir] = o->min_bs[ddir];
 	}
 
-	if ((o->ba[DDIR_READ] != o->min_bs[DDIR_READ] ||
-	    o->ba[DDIR_WRITE] != o->min_bs[DDIR_WRITE] ||
-	    o->ba[DDIR_TRIM] != o->min_bs[DDIR_TRIM]) &&
-	    !o->norandommap) {
-		log_err("fio: Any use of blockalign= turns off randommap\n");
-		o->norandommap = 1;
-		ret |= warnings_fatal;
-	}
-
 	if (!o->file_size_high)
 		o->file_size_high = o->file_size_low;
 
@@ -789,12 +780,6 @@ static int fixup_options(struct thread_data *td)
 						o->start_delay_high);
 	}
 
-	if (o->norandommap && o->verify != VERIFY_NONE
-	    && !fixed_block_size(o))  {
-		log_err("fio: norandommap given for variable block sizes, "
-			"verify limited\n");
-		ret |= warnings_fatal;
-	}
 	if (o->bs_unaligned && (o->odirect || td_ioengine_flagged(td, FIO_RAWIO)))
 		log_err("fio: bs_unaligned may not work with raw io\n");
 
@@ -838,6 +823,176 @@ static int fixup_options(struct thread_data *td)
 
 	if (o->open_files > o->nr_files || !o->open_files)
 		o->open_files = o->nr_files;
+
+	if (o->rcio_size) {
+		struct fio_file *f;
+		unsigned int i;
+		unsigned int seq_nr = o->ddir_seq_nr ? o->ddir_seq_nr : 1;
+
+		if (fio_option_is_set(o, norandommap)) {
+			if (o->norandommap == 0) {
+				log_err("fio: rcio_size requires norandommap=1\n");
+				ret |= 1;
+			}
+		} else {
+			if (output_format & FIO_OUTPUT_NORMAL)
+				log_info("fio: rcio_size sets norandommap=1\n");
+			o->norandommap = 1;
+		}
+
+#ifdef WIN32
+		log_err("fio: RCIO is not supported on Windows\n");
+		ret |= 1;
+#endif
+		if (td_trim(td) && o->num_range > 1) {
+			log_err("fio: rcio_size does not support multi-range trim (num_range > 1).\n");
+			ret |= 1;
+		}
+		if (o->read_iolog_file) {
+			log_err("fio: read_iolog is not supported with rcio_size; "
+				"replayed extents bypass RCIO region validation\n");
+			ret |= 1;
+		}
+		if (td_random(td) && td_write(td) &&
+		    (o->experimental_verify || o->verify_only)) {
+			log_err("fio: random RCIO writes do not support "
+				"experimental_verify or verify_only\n");
+			ret |= 1;
+		}
+		if (td_random(td) &&
+		    ((td_read(td) && o->perc_rand[DDIR_READ] != 100) ||
+		     (td_write(td) && o->perc_rand[DDIR_WRITE] != 100) ||
+		     (td_trim(td) && o->perc_rand[DDIR_TRIM] != 100))) {
+			log_err("fio: rcio_size requires percentage_random=100 for "
+				"every active direction of a random job\n");
+			ret |= 1;
+		}
+		if (o->rcio_state_file && o->nr_files > 1) {
+			log_err("fio: rcio_state_file is not supported with multiple "
+				"files (nrfiles > 1)\n");
+			ret |= 1;
+		}
+		if (o->zone_mode == ZONE_MODE_ZBD ||
+		    o->zone_mode == ZONE_MODE_STRIDED) {
+			log_err("fio: rcio_size is not supported with zonemode=zbd or "
+				"zonemode=strided\n");
+			ret |= 1;
+		}
+		if (td_trimwrite(td)) {
+			log_err("fio: rcio_size is not supported with "
+				"trimwrite/randtrimwrite: its paired write reuses "
+				"the trim's region directly rather than picking from "
+				"the (disjoint) invalid partition\n");
+			ret |= 1;
+		}
+		if (o->rw_seq == RW_SEQ_IDENT &&
+		    (td_write(td) || td_trim(td)) && seq_nr > 1) {
+			log_err("fio: rcio_size is not supported with "
+				"rw_sequencer=identical and a sequential run length "
+				"greater than 1 for writes/trims: the region is "
+				"picked once per run but only its first sub-block "
+				"would actually be covered\n");
+			ret |= 1;
+		}
+		if (o->trim_backlog) {
+			log_err("fio: rcio_size is not supported with trim_backlog: "
+				"backlog trims bypass region selection, so a trimmed "
+				"region would stay marked valid and later reads could "
+				"target discarded data\n");
+			ret |= 1;
+		}
+		if (o->bs_is_seq_rand) {
+			log_err("fio: bs_is_seq_rand is not supported with rcio_size; "
+				"block-size validation cannot account for the "
+				"effective read and write sizes\n");
+			ret |= 1;
+		}
+		if (td_random(td) && seq_nr > 1 &&
+		    (o->nr_files > 1 || (td_read(td) && td_write(td)))) {
+			log_err("fio: random RCIO runs longer than one I/O are not "
+				"supported with mixed read/write directions or "
+				"multiple files\n");
+			ret |= 1;
+		}
+		if (!td_random(td) && o->ddir_seq_add &&
+		    (td_write(td) || td_trim(td))) {
+			uint64_t seq_add;
+
+			if (o->ddir_seq_add < 0)
+				seq_add = (uint64_t)(-(o->ddir_seq_add + 1)) + 1;
+			else
+				seq_add = o->ddir_seq_add;
+			if (seq_add % o->rcio_size) {
+				log_err("fio: sequential write/trim skip must be a "
+					"multiple of rcio_size=%llu\n",
+					(unsigned long long)o->rcio_size);
+				ret |= 1;
+			}
+		}
+		if (o->rcio_size % o->ba[DDIR_WRITE] ||
+		    o->rcio_size % o->ba[DDIR_READ] ||
+		    o->rcio_size % o->ba[DDIR_TRIM]) {
+			log_err("fio: rcio_size=%llu must "
+				"be a multiple of block alignment\n",
+				(unsigned long long)o->rcio_size);
+			ret |= 1;
+		}
+		if (td_read(td) && o->max_bs[DDIR_READ] > o->rcio_size / seq_nr) {
+			log_err("fio: rcio_size=%llu must be at least the "
+				"maximum read block size times the "
+				"sequential run length (%u), so a run "
+				"started by one RCIO pick cannot cross into "
+				"another region\n",
+				(unsigned long long)o->rcio_size, seq_nr);
+			ret |= 1;
+		}
+		/* A write/trim run must cover the whole region it transitions. */
+		if (td_write(td) &&
+		    (o->min_bs[DDIR_WRITE] != o->max_bs[DDIR_WRITE] ||
+		     (uint64_t)o->max_bs[DDIR_WRITE] * seq_nr != o->rcio_size)) {
+			log_err("fio: rcio_size=%llu requires a fixed write "
+				"block size whose size times the sequential "
+				"run length (%u) exactly equals rcio_size, so "
+				"each write fully covers the region it marks "
+				"valid\n",
+				(unsigned long long)o->rcio_size, seq_nr);
+			ret |= 1;
+		}
+		if (td_trim(td) &&
+		    (o->min_bs[DDIR_TRIM] != o->max_bs[DDIR_TRIM] ||
+		     (uint64_t)o->max_bs[DDIR_TRIM] * seq_nr != o->rcio_size)) {
+			log_err("fio: rcio_size=%llu requires a fixed trim "
+				"block size whose size times the sequential "
+				"run length (%u) exactly equals rcio_size, so "
+				"each trim fully covers the region it marks "
+				"invalid\n",
+				(unsigned long long)o->rcio_size, seq_nr);
+			ret |= 1;
+		}
+		for_each_file(td, f, i) {
+			if (o->unlink_each_loop && f->filetype == FIO_TYPE_FILE) {
+				log_err("fio: unlink_each_loop is not supported with "
+					"RCIO regular files (%s)\n", f->file_name);
+				ret |= 1;
+			}
+		}
+	}
+
+	if ((o->ba[DDIR_READ] != o->min_bs[DDIR_READ] ||
+	    o->ba[DDIR_WRITE] != o->min_bs[DDIR_WRITE] ||
+	    o->ba[DDIR_TRIM] != o->min_bs[DDIR_TRIM]) &&
+	    !o->norandommap) {
+		log_err("fio: Any use of blockalign= turns off randommap\n");
+		o->norandommap = 1;
+		ret |= warnings_fatal;
+	}
+
+	if (o->norandommap && o->verify != VERIFY_NONE
+	    && !fixed_block_size(o))  {
+		log_err("fio: norandommap given for variable block sizes, "
+			"verify limited\n");
+		ret |= warnings_fatal;
+	}
 
 	if (((o->rate[DDIR_READ] + o->rate[DDIR_WRITE] + o->rate[DDIR_TRIM]) &&
 	    (o->rate_iops[DDIR_READ] + o->rate_iops[DDIR_WRITE] + o->rate_iops[DDIR_TRIM])) ||
@@ -1240,6 +1395,7 @@ void td_fill_rand_seeds(struct thread_data *td)
 
 	init_rand_seed(&td->fdp_state, td->rand_seeds[FIO_RAND_FDP_OFF], false);
 	init_rand_seed(&td->sprandom_state, td->rand_seeds[FIO_RAND_SPRANDOM_OFF], false);
+	init_rand_seed(&td->rcio_state, td->rand_seeds[FIO_RAND_RCIO_OFF], true);
 }
 
 static int setup_random_seeds(struct thread_data *td)
