@@ -3324,7 +3324,10 @@ with the caveat that when used on the command line, they must come after the
 .. option:: gpu_dev_ids=str : [libcufile]
 
 	Specify the GPU IDs to use with CUDA. This is a colon-separated list of
-	int. GPUs are assigned to workers roundrobin. Default is 0.
+	int. GPUs are assigned to workers roundrobin. Default is 0. When
+	:option:`cuda_io` is set to **cufile**, each worker enables CUDA peer
+	access from its assigned GPU to the other listed GPUs when the hardware
+	supports it.
 
 .. option:: cuda_io=str : [libcufile]
 
@@ -3346,7 +3349,10 @@ with the caveat that when used on the command line, they must come after the
 .. option:: gpu_dev_ids=str : [libhipfile]
 
 	Specify the GPU IDs to use with ROCm. This is a colon-separated list of
-	int. GPUs are assigned to workers roundrobin. Default is 0.
+	int. GPUs are assigned to workers roundrobin. Default is 0. When
+	:option:`rocm_io` is set to **hipfile**, each worker enables HIP peer
+	access from its assigned GPU to the other listed GPUs when the hardware
+	supports it.
 
 .. option:: rocm_io=str : [libhipfile]
 
