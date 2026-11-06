@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <unistd.h>
 
 #include "lib/output_buffer.h"
@@ -10,12 +11,17 @@
 extern FILE *f_out;
 extern FILE *f_err;
 
+extern bool fio_output_json(void);
+extern FILE *fio_output_secondary(void);
 extern ssize_t log_err(const char *format, ...) __attribute__ ((__format__ (__printf__, 1, 2)));
 extern ssize_t log_info(const char *format, ...) __attribute__ ((__format__ (__printf__, 1, 2)));
+extern ssize_t log_human(const char *format, ...) __attribute__ ((__format__ (__printf__, 1, 2)));
 extern size_t __log_buf(struct buf_output *, const char *format, ...) __attribute__ ((__format__ (__printf__, 2, 3)));
 extern size_t log_valist(const char *str, va_list);
 extern void log_prevalist(int type, const char *str, va_list);
 extern size_t log_info_buf(const char *buf, size_t len);
+extern size_t log_json_buf(const char *buf, size_t len);
+extern size_t log_human_buf(const char *buf, size_t len);
 extern int log_info_flush(void);
 
 #define log_buf(buf, format, args...)			\

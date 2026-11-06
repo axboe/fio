@@ -28,7 +28,7 @@ import platform
 import argparse
 from pathlib import Path
 from fiotestlib import FioJobCmdTest, run_fio_tests
-from fiotestcommon import SUCCESS_NONZERO
+from fiotestcommon import SUCCESS_IGNORE_STDERR
 
 
 class VerifyStateSaveTest(FioJobCmdTest):
@@ -271,6 +271,14 @@ def main():
     else:
         aio = 'posixaio'
         sync = 'psync'
+
+    #
+    # These tests all run with json output: informational messages such as
+    # "Stop verify because seq ..." are now delivered on stderr, so permit a
+    # non-empty stderr capture
+    #
+    for test in TEST_LIST:
+        test['success'] = SUCCESS_IGNORE_STDERR
 
     total = { 'passed':  0, 'failed': 0, 'skipped': 0 }
     for ioengine in [aio, sync]:
