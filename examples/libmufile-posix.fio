@@ -1,0 +1,18 @@
+# musa_io=posix does not register the fd with mtfs. pread/pwrite use the
+# CPU buffer; musaMemcpy accounts for the bounce that a non-GDS app would pay.
+[global]
+ioengine=libmufile
+directory=${FIO_DIR}
+gpu_dev_ids=${GPU_DEV_IDS}
+musa_io=posix
+direct=0
+bs=1m
+size=1G
+numjobs=16
+thread
+
+[read]
+rw=read
+
+[write]
+rw=write
