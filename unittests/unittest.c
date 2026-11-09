@@ -55,6 +55,7 @@ int main(void)
 	fio_unittest_register(fio_unittest_oslib_strndup);
 	fio_unittest_register(fio_unittest_oslib_strcasestr);
 	fio_unittest_register(fio_unittest_oslib_strsep);
+	fio_unittest_register(fio_unittest_libmufile_errno);
 #if defined(__linux__) || defined(__ANDROID__)
 	fio_unittest_register(fio_unittest_cgroup);
 #endif
