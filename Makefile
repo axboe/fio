@@ -465,6 +465,7 @@ UT_OBJS += unittests/oslib/strndup.o
 UT_OBJS += unittests/oslib/strcasestr.o
 UT_OBJS += unittests/oslib/strsep.o
 UT_OBJS += unittests/engines/libmufile_errno.o
+UT_OBJS += unittests/optgroup_libmufile.o
 ifeq ($(CONFIG_TARGET_OS), Linux)
 UT_OBJS += unittests/cgroup.o
 endif

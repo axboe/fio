@@ -190,6 +190,10 @@ static const struct opt_group fio_opt_cat_groups[] = {
 		.mask	= FIO_OPT_G_LIBHIPFILE,
 	},
 	{
+		.name	= "libmufile I/O engine", /* libmufile */
+		.mask	= FIO_OPT_G_LIBMUFILE,
+	},
+	{
 		.name	= NULL,
 	},
 };
