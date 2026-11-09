@@ -126,6 +126,10 @@ ifdef CONFIG_LIBHIPFILE
   SOURCE += engines/libhipfile.c
   SHARED_GPUACCEL_SOURCE = 1
 endif
+ifdef CONFIG_LIBMUFILE
+  SOURCE += engines/libmufile.c
+  SHARED_GPUACCEL_SOURCE = 1
+endif
 ifdef SHARED_GPUACCEL_SOURCE
   SOURCE += engines/gpuaccel.c
 endif
