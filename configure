@@ -183,6 +183,7 @@ cuda="no"
 cuda13="no"
 libcufile="no"
 libhipfile="no"
+libmufile="no"
 disable_lex=""
 disable_pmem="no"
 disable_native="no"
@@ -258,6 +259,8 @@ for opt do
   ;;
   --enable-libhipfile) libhipfile="yes"
   ;;
+  --enable-libmufile) libmufile="yes"
+  ;;
   --disable-native) disable_native="yes"
   ;;
   --with-ime=*) ime_path="$optarg"
@@ -330,6 +333,7 @@ if test "$show_help" = "yes" ; then
   echo "--enable-cuda           Enable GPUDirect RDMA support"
   echo "--enable-libcufile      Enable GPUDirect Storage cuFile support"
   echo "--enable-libhipfile     Enable ROCm hipFile support"
+  echo "--enable-libmufile      Enable Moore Threads libmufile support"
   echo "--disable-native        Don't build for native host"
   echo "--with-ime=             Install path for DDN's Infinite Memory Engine"
   echo "--enable-libiscsi       Enable iscsi support"
@@ -2997,6 +3001,39 @@ fi
 print_config "libhipfile" "$libhipfile"
 
 ##########################################
+# libmufile probe
+if test "$libmufile" != "no" ; then
+  musa_home="${MUSA_HOME:-/usr/local/musa}"
+  cat > $TMPC << EOF
+#include <mufile/mufile_c.h>
+#include <musa_runtime.h>
+int main(void) {
+  unsigned int major = 0, minor = 0, patch = 0;
+  void *buf = NULL;
+  muFileGetAbiVersion(&major, &minor, &patch);
+  muFileRead(NULL, NULL, 0, 0, 0);
+  musaMalloc(&buf, 0);
+  if (major != 1 || minor < 1)
+    return 1;
+  return 0;
+}
+EOF
+  MUFILE_CFLAGS="-I${musa_home}/include"
+  MUFILE_LIBS="-L${musa_home}/lib -Wl,-rpath,${musa_home}/lib -lmusart -lmufile -ludev"
+  if compile_prog "$MUFILE_CFLAGS" "$MUFILE_LIBS" "libmufile probe"; then
+    libmufile="yes"
+    CFLAGS="$MUFILE_CFLAGS $CFLAGS"
+    LIBS="$MUFILE_LIBS $LIBS"
+  else
+    if test "$libmufile" = "yes" ; then
+      feature_not_found "libmufile" "libmufile >= 1.1.0 and libmusart"
+    fi
+    libmufile="no"
+  fi
+fi
+print_config "libmufile" "$libmufile"
+
+##########################################
 # cuda 13 probe
 if test "$cuda" != "no" || test "$libcufile" != "no"; then
 cat > $TMPC << EOF
@@ -3519,6 +3556,9 @@ if test "$libcufile" = "yes" ; then
 fi
 if test "$libhipfile" = "yes" ; then
   output_sym "CONFIG_LIBHIPFILE"
+fi
+if test "$libmufile" = "yes" ; then
+  output_sym "CONFIG_LIBMUFILE"
 fi
 if test "$cuda13" = "yes" ; then
   output_sym "CONFIG_CUDA13"
