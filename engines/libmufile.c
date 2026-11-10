@@ -100,9 +100,25 @@ static int libmufile_set_device(int gpu_id)
 	return libmufile_check_runtime(musaSetDevice(gpu_id), "musaSetDevice");
 }
 
+/*
+ * mtfs maps a registered buffer in 256 KiB units and rejects any other
+ * length, while fio's IO buffer carries a small non-aligned tail. Round
+ * the allocation and the registration up to the same boundary so the
+ * registered range always covers the whole buffer.
+ */
+#define LIBMUFILE_BUF_ALIGN (256 * 1024)
+
+static size_t libmufile_align_size(size_t size)
+{
+	return (size + LIBMUFILE_BUF_ALIGN - 1) &
+	       ~(size_t)(LIBMUFILE_BUF_ALIGN - 1);
+}
+
 static int libmufile_malloc(void **mem, size_t size)
 {
-	return libmufile_check_runtime(musaMalloc(mem, size), "musaMalloc");
+	return libmufile_check_runtime(musaMalloc(mem,
+						  libmufile_align_size(size)),
+				       "musaMalloc");
 }
 
 static int libmufile_free(void *mem)
@@ -172,7 +188,8 @@ static void libmufile_file_handle_deregister(void *handle)
 
 static int libmufile_buf_register(void *mem, size_t size)
 {
-	MUfileError_t status = muFileBufRegister(mem, size, 0);
+	MUfileError_t status = muFileBufRegister(mem, libmufile_align_size(size),
+						 0);
 
 	if (status.err != MU_FILE_SUCCESS) {
 		log_err("muFileBufRegister: err=%d:%s\n", status.err,
