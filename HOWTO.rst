@@ -5498,6 +5498,70 @@ The `timestamp` is relative to the beginning of the run (ie starts at 0). The
 that version 3 does not allow the `wait` action.
 
 
+Trace file format v4
+~~~~~~~~~~~~~~~~~~~~
+
+The fourth version of the trace file format extends version 3 with a
+per-command I/O priority column.
+
+The first line of the trace file has to be::
+
+    fio version 4 iolog
+
+The file management format is identical to version 3::
+
+    timestamp filename action
+
+The file I/O action format::
+
+    timestamp filename action offset length ioprio
+
+The `ioprio` column is required on every file I/O action (`read`, `write`,
+`trim`, `sync` and `datasync`); lines without a hexadecimal `ioprio` value are
+skipped with an error message. It specifies the 16-bit per-command I/O priority
+value in hexadecimal (for example, ``0x2000`` for ``IOPRIO_CLASS_RT`` level 0,
+``0x4004`` for ``IOPRIO_CLASS_BE`` level 4, or ``0x0000`` for none). A value of
+``0`` means no per-command priority: the job's default I/O priority applies and
+`cmdprio` may assign one. A non-zero value is only allowed on `read` and
+`write` actions; other actions must use ``0`` (a non-zero `ioprio` on `trim`,
+`sync` or `datasync` lines is ignored with an error message, and the action is
+still replayed).
+
+:option:`write_iolog` writes version 4 trace files with the `ioprio` column on
+every file I/O action: the I/O priority of the `io_u` (in ``0x%04x`` format)
+for `read` and `write` entries, including a job-level default priority set with
+:option:`prioclass`, :option:`prio` or :option:`priohint` and a per-command
+priority set by `cmdprio`, and ``0x0000`` for all other entries (`trim`,
+`sync` and `datasync`). Such a trace replays with the recorded priorities
+without the original priority options; entries written as ``0x0000`` remain
+eligible for `cmdprio` on replay. :option:`write_iolog`
+always writes the ``fio version 4 iolog`` header, so its traces cannot be
+replayed by older fio versions that only support versions 2 and 3.
+
+The per-command `ioprio` is only submitted by the ``libaio`` and ``io_uring``
+engines. Other engines, including ``io_uring_cmd`` and the synchronous
+engines, ignore the column. Per-priority completion latency statistics are
+grouped by the non-zero `ioprio` requested in the trace (entries with ``0`` are
+counted under the job's default priority), even with engines that do not
+submit it. Each distinct non-zero `ioprio` value in a trace adds a
+per-priority latency histogram, so traces with many distinct values use more
+memory. The per-priority statistics of one data direction have to fit in one
+shared memory pool; with the default :option:`--alloc-size`, roughly 1100
+distinct priorities in one direction make the job fail with ``ENOMEM``.
+
+When :option:`read_iolog` is combined with :option:`cmdprio_percentage` or
+:option:`cmdprio_bssplit`, a non-zero `ioprio` on a trace entry takes
+precedence over `cmdprio`, while trace entries with `ioprio` ``0`` remain
+eligible for `cmdprio`. Note that when a job-level default priority
+(:option:`prioclass`, :option:`prio`, or :option:`priohint`) is set, an
+individual I/O cannot be set back to ``IOPRIO_CLASS_NONE``: ``0`` in the trace
+means the job default applies, and the ``libaio`` and ``io_uring`` engines
+cannot submit it either, because the Linux kernel treats a request priority of
+``0`` (``aio_reqprio = 0`` or an omitted ``IOCB_FLAG_IOPRIO`` for ``libaio``,
+``sqe->ioprio = 0`` for ``io_uring``) as falling back to the submitting task's
+I/O priority.
+
+
 I/O Replay - Merging Traces
 ---------------------------
 

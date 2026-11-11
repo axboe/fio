@@ -5197,6 +5197,74 @@ The `timestamp` is relative to the beginning of the run (ie starts at 0). The
 `filename`, `action`, `offset` and `length`  are identical to version 2, except
 that version 3 does not allow the `wait` action.
 .RE
+.TP
+.B Trace file format v4
+The fourth version of the trace file format extends version 3 with a
+per-command I/O priority column.
+.RS
+.P
+The first line of the trace file has to be:
+.RS
+.P
+"fio version 4 iolog"
+.RE
+.P
+.B
+The file management format is identical to version 3:
+.RS
+timestamp filename action
+.RE
+.P
+.B
+The file I/O action format:
+.RS
+timestamp filename action offset length ioprio
+.RE
+.P
+The `ioprio' column is required on every file I/O action (`read', `write',
+`trim', `sync' and `datasync'); lines without a hexadecimal `ioprio' value are
+skipped with an error message. It specifies the 16-bit per-command I/O priority
+value in hexadecimal (for example, `0x2000' for `IOPRIO_CLASS_RT' level 0,
+`0x4004' for `IOPRIO_CLASS_BE' level 4, or `0x0000' for none). A value of `0'
+means no per-command priority: the job's default I/O priority applies and
+`cmdprio' may assign one. A non-zero value is only allowed on `read' and
+`write' actions; other actions must use `0' (a non-zero `ioprio' on `trim',
+`sync' or `datasync' lines is ignored with an error message, and the action is
+still replayed).
+.P
+\fBwrite_iolog\fR writes version 4 trace files with the `ioprio' column on
+every file I/O action: the I/O priority of the `io_u' (in `0x%04x' format) for
+`read' and `write' entries, including a job-level default priority set with
+\fBprioclass\fR, \fBprio\fR or \fBpriohint\fR and a per-command priority set
+by `cmdprio', and `0x0000' for all other entries (`trim', `sync' and
+`datasync'). Such a trace replays with the recorded priorities without the
+original priority options; entries written as `0x0000' remain eligible for
+`cmdprio' on replay. \fBwrite_iolog\fR always writes the
+"fio version 4 iolog" header, so its traces cannot be replayed by older fio
+versions that only support versions 2 and 3.
+.P
+The per-command `ioprio' is only submitted by the \fBlibaio\fR and
+\fBio_uring\fR engines. Other engines, including \fBio_uring_cmd\fR and the
+synchronous engines, ignore the column. Per-priority completion latency
+statistics are grouped by the non-zero `ioprio' requested in the trace
+(entries with `0' are counted under the job's default priority), even with
+engines that do not submit it. Each distinct non-zero `ioprio' value in a trace
+adds a per-priority latency histogram, so traces with many distinct values use
+more memory. The per-priority statistics of one data direction have to fit in
+one shared memory pool; with the default \fB\-\-alloc\-size\fR, roughly 1100
+distinct priorities in one direction make the job fail with `ENOMEM'.
+.P
+When \fBread_iolog\fR is combined with \fBcmdprio_percentage\fR or
+\fBcmdprio_bssplit\fR, a non-zero `ioprio' on a trace entry takes precedence
+over `cmdprio', while trace entries with `ioprio' `0' remain eligible for
+`cmdprio'. Note that when a job-level default priority (\fBprioclass\fR,
+\fBprio\fR, or \fBpriohint\fR) is set, an individual I/O cannot be set back to
+`IOPRIO_CLASS_NONE': `0' in the trace means the job default applies, and the
+\fBlibaio\fR and \fBio_uring\fR engines cannot submit it either, because the
+Linux kernel treats a request priority of `0' (`aio_reqprio = 0' or an omitted
+`IOCB_FLAG_IOPRIO' for \fBlibaio\fR, `sqe->ioprio = 0' for \fBio_uring\fR) as
+falling back to the submitting task's I/O priority.
+.RE
 .SH I/O REPLAY \- MERGING TRACES
 Colocation is a common practice used to get the most out of a machine.
 Knowing which workloads play nicely with each other and which ones don't is
