@@ -1050,10 +1050,12 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 		 * the IO priority set by ioprio_set() (options prio, prioclass,
 		 * and priohint) to be inherited.
 		 * io_u->ioprio will have the value of the "default prio" (or a
-		 * pre-assigned io_u priority), so set this unconditionally.
-		 * This value might get overridden by fio_ioring_cmdprio_prep()
-		 * if the option cmdprio_percentage or cmdprio_bssplit is used.
+		 * pre-assigned io_u priority), which fio_cmdprio_set_ioprio()
+		 * may override if the option cmdprio_percentage or
+		 * cmdprio_bssplit is used, so set this unconditionally.
 		 */
+		if (ld->cmdprio.mode != CMDPRIO_MODE_NONE)
+			fio_cmdprio_set_ioprio(td, &ld->cmdprio, io_u);
 		sqe->ioprio = io_u->ioprio;
 		sqe->off = io_u->offset;
 	} else if (ddir_sync(io_u->ddir)) {
@@ -1173,6 +1175,9 @@ static int fio_ioring_cmd_prep(struct thread_data *td, struct io_u *io_u)
 		sqe->uring_cmd_flags = IORING_URING_CMD_FIXED;
 		sqe->buf_index = io_u->index;
 	}
+
+	if (ld->cmdprio.mode != CMDPRIO_MODE_NONE)
+		fio_cmdprio_set_ioprio(td, &ld->cmdprio, io_u);
 
 	if (o->cmd_type == FIO_URING_CMD_NVME) {
 		struct nvme_uring_cmd *cmd;
@@ -1472,16 +1477,6 @@ static inline void fio_ioring_setup_pi(struct thread_data *td,
 	}
 }
 
-static inline void fio_ioring_cmdprio_prep(struct thread_data *td,
-					   struct io_u *io_u)
-{
-	struct ioring_data *ld = td->io_ops_data;
-	struct cmdprio *cmdprio = &ld->cmdprio;
-
-	if (fio_cmdprio_set_ioprio(td, cmdprio, io_u))
-		ld->sqes[io_u->index].ioprio = io_u->ioprio;
-}
-
 static enum fio_q_status fio_ioring_queue(struct thread_data *td,
 					  struct io_u *io_u)
 {
@@ -1536,9 +1531,6 @@ static enum fio_q_status fio_ioring_queue(struct thread_data *td,
 		io_u_mark_complete(td, 1);
 		return FIO_Q_COMPLETED;
 	}
-
-	if (ld->cmdprio.mode != CMDPRIO_MODE_NONE)
-		fio_ioring_cmdprio_prep(td, io_u);
 
 	if (o->cmd_type == FIO_URING_CMD_NVME && ld->is_uring_cmd_eng)
 		fio_ioring_cmd_nvme_pi(td, io_u);

@@ -5525,8 +5525,18 @@ value in hexadecimal (for example, ``0x2000`` for ``IOPRIO_CLASS_RT`` level 0,
 `cmdprio` may assign one. A non-zero value is only allowed on `read` and
 `write` actions; other actions must use ``0`` (a non-zero `ioprio` on `trim`,
 `sync` or `datasync` lines is ignored with an error message, and the action is
-still replayed). Version 4 trace files are only supported for replay with
-:option:`read_iolog`; :option:`write_iolog` still writes version 3 trace files.
+still replayed).
+
+:option:`write_iolog` writes version 4 trace files with the `ioprio` column on
+every file I/O action: the I/O priority of the `io_u` (in ``0x%04x`` format)
+for `read` and `write` entries, including a job-level default priority set with
+:option:`prioclass`, :option:`prio` or :option:`priohint` and a per-command
+priority set by `cmdprio`, and ``0x0000`` for all other entries (`trim`,
+`sync` and `datasync`). Such a trace replays with the recorded priorities
+without the original priority options; entries written as ``0x0000`` remain
+eligible for `cmdprio` on replay. :option:`write_iolog`
+always writes the ``fio version 4 iolog`` header, so its traces cannot be
+replayed by older fio versions that only support versions 2 and 3.
 
 The per-command `ioprio` is only submitted by the ``libaio`` and ``io_uring``
 engines. Other engines, including ``io_uring_cmd`` and the synchronous

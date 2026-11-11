@@ -44,15 +44,23 @@ void queue_io_piece(struct thread_data *td, struct io_piece *ipo)
 void log_io_u(const struct thread_data *td, const struct io_u *io_u)
 {
 	struct timespec now;
+	unsigned int ioprio = 0;
 
 	if (!td->o.write_iolog_file)
 		return;
 
+	/*
+	 * Version 4 has an ioprio column on every I/O action, and only
+	 * read/write may carry a priority.
+	 */
+	if (io_u->ddir == DDIR_READ || io_u->ddir == DDIR_WRITE)
+		ioprio = io_u->ioprio;
+
 	fio_gettime(&now, NULL);
-	fprintf(td->iolog_f, "%llu %s %s %llu %llu\n",
+	fprintf(td->iolog_f, "%llu %s %s %llu %llu 0x%04x\n",
 		(unsigned long long) utime_since_now(&td->io_log_start_time),
 		io_u->file->file_name, io_ddir_name(io_u->ddir), io_u->offset,
-		io_u->buflen);
+		io_u->buflen, ioprio);
 
 }
 
@@ -893,7 +901,7 @@ static bool init_iolog_write(struct thread_data *td)
 	/*
 	 * write our version line
 	 */
-	if (fprintf(f, "%s\n", iolog_ver3) < 0) {
+	if (fprintf(f, "%s\n", iolog_ver4) < 0) {
 		perror("iolog init\n");
 		return false;
 	}

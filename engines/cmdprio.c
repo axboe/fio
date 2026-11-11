@@ -295,7 +295,9 @@ static int fio_cmdprio_percentage(struct cmdprio *cmdprio, struct io_u *io_u,
  * value as defined by the cmdprio/cmdprio_hint/cmdprio_class or
  * cmdprio_bssplit options.
  *
- * Return true if the io_u ioprio was changed and false otherwise.
+ * Return true if the io_u ioprio was changed and false otherwise. The return
+ * value is informational: io_u->ioprio always holds the priority to submit,
+ * so callers may ignore it.
  */
 bool fio_cmdprio_set_ioprio(struct thread_data *td, struct cmdprio *cmdprio,
 			    struct io_u *io_u)
@@ -305,8 +307,15 @@ bool fio_cmdprio_set_ioprio(struct thread_data *td, struct cmdprio *cmdprio,
 	uint32_t perc = 0;
 	int i;
 
-	if (io_u->flags & IO_U_F_IOPRIO)
+	if ((io_u->flags & IO_U_F_IOPRIO) ||
+	    (io_u->ddir != DDIR_READ && io_u->ddir != DDIR_WRITE))
 		return false;
+
+	/*
+	 * Evaluate cmdprio at most once per io_u, even if the io_u is
+	 * requeued and prepped again.
+	 */
+	io_u_set(td, io_u, IO_U_F_IOPRIO);
 
 	p = fio_cmdprio_percentage(cmdprio, io_u, &bsprio);
 	if (!p)

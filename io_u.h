@@ -26,7 +26,7 @@ enum {
 	IO_U_F_VER_IN_DEV	= 1 << 10, /* Verify data in device */
 	IO_U_F_ZEROED		= 1 << 11, /* Zeroed data */
 	IO_U_F_ERRORED		= 1 << 12, /* Errored offset */
-	/* ioprio set by iolog; cmdprio must not override */
+	/* ioprio fixed by iolog or already evaluated by cmdprio */
 	IO_U_F_IOPRIO		= 1 << 13,
 };
 

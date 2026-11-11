@@ -148,25 +148,16 @@ static int fio_libaio_prep(struct thread_data *td, struct io_u *io_u)
 	} else if (ddir_sync(io_u->ddir))
 		io_prep_fsync(iocb, f->fd);
 
-	if ((io_u->ddir == DDIR_READ || io_u->ddir == DDIR_WRITE) &&
-	    io_u->ioprio != td->ioprio) {
-		iocb->aio_reqprio = io_u->ioprio;
-		iocb->u.c.flags |= IOCB_FLAG_IOPRIO;
+	if (io_u->ddir == DDIR_READ || io_u->ddir == DDIR_WRITE) {
+		if (ld->cmdprio.mode != CMDPRIO_MODE_NONE)
+			fio_cmdprio_set_ioprio(td, &ld->cmdprio, io_u);
+		if (io_u->ioprio != td->ioprio) {
+			iocb->aio_reqprio = io_u->ioprio;
+			iocb->u.c.flags |= IOCB_FLAG_IOPRIO;
+		}
 	}
 
 	return 0;
-}
-
-static inline void fio_libaio_cmdprio_prep(struct thread_data *td,
-					   struct io_u *io_u)
-{
-	struct libaio_data *ld = td->io_ops_data;
-	struct cmdprio *cmdprio = &ld->cmdprio;
-
-	if (fio_cmdprio_set_ioprio(td, cmdprio, io_u)) {
-		io_u->iocb.aio_reqprio = io_u->ioprio;
-		io_u->iocb.u.c.flags |= IOCB_FLAG_IOPRIO;
-	}
 }
 
 static struct io_u *fio_libaio_event(struct thread_data *td, int event)
@@ -292,9 +283,6 @@ static enum fio_q_status fio_libaio_queue(struct thread_data *td,
 		io_u_mark_complete(td, 1);
 		return FIO_Q_COMPLETED;
 	}
-
-	if (ld->cmdprio.mode != CMDPRIO_MODE_NONE)
-		fio_libaio_cmdprio_prep(td, io_u);
 
 	ld->iocbs[ld->head] = &io_u->iocb;
 	ld->io_us[ld->head] = io_u;
