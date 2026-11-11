@@ -30,7 +30,7 @@ pictures of screenshots as these are not searchable/selectable.
 
 <!-- Definitions -->
 
-[readme]: ../README
+[readme]: ../README.rst
 [reportingbugs]: ../REPORTING-BUGS
 [releases]: ../../../releases
 [quotingcode]: https://docs.github.com/en/free-pro-team@latest/github/writing-on-github/basic-writing-and-formatting-syntax#quoting-code
