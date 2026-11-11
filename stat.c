@@ -2209,9 +2209,9 @@ static int find_clat_prio_index(struct thread_stat *dst, enum fio_ddir ddir,
 	return -1;
 }
 
-static int alloc_or_get_clat_prio_index(struct thread_stat *dst,
-					enum fio_ddir ddir, uint32_t ioprio,
-					int *idx)
+int alloc_or_get_clat_prio_index(struct thread_stat *dst,
+				 enum fio_ddir ddir, uint32_t ioprio,
+				 int *idx)
 {
 	int index = find_clat_prio_index(dst, ddir, ioprio);
 
@@ -2295,6 +2295,28 @@ static int sum_clat_prio_stats_src_single_prio(struct thread_stat *dst,
 
 	return clat_prio_stat_add_samples(dst, dst_ddir, src->ioprio, io_stat,
 					  io_u_plat);
+}
+
+/*
+ * Create ts->clat_prio[ddir] with the job's default priority at index 0, and
+ * move the samples already collected in the single-priority stats into it, so
+ * that a priority first seen mid-run (read_iolog_chunked=1) keeps the earlier
+ * samples.
+ */
+int clat_prio_stat_init_default(struct thread_stat *ts, enum fio_ddir ddir)
+{
+	int idx;
+
+	if (ts->clat_prio[ddir])
+		return 0;
+
+	if (sum_clat_prio_stats_src_single_prio(ts, ts, ddir, ddir))
+		return 1;
+
+	if (!ts->clat_prio[ddir])
+		return alloc_or_get_clat_prio_index(ts, ddir, ts->ioprio, &idx);
+
+	return 0;
 }
 
 static int sum_clat_prio_stats_src_multi_prio(struct thread_stat *dst,

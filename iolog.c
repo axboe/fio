@@ -14,6 +14,7 @@
 
 #include "flist.h"
 #include "fio.h"
+#include "fio_sem.h"
 #include "trim.h"
 #include "filelock.h"
 #include "smalloc.h"
@@ -235,6 +236,7 @@ int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 			get_file(io_u->file);
 			if (ipo->ioprio) {
 				io_u->ioprio = ipo->ioprio;
+				io_u->clat_prio_index = ipo->clat_prio_index;
 				io_u_set(td, io_u, IO_U_F_IOPRIO);
 			}
 			dprint(FD_IO, "iolog: get %llu/%llu/%s\n", io_u->offset,
@@ -457,6 +459,58 @@ int64_t iolog_items_to_fetch(struct thread_data *td)
 #define file_act(_td, _r) (((_td)->io_log_version >= 3 && (r) == 3) || \
 					((_td)->io_log_version == 2 && (r) == 2))
 
+static int iolog_get_clat_prio_index(struct thread_data *td, enum fio_ddir ddir,
+				     unsigned short ioprio,
+				     unsigned short *clat_prio_index)
+{
+	const bool needs_lock = td_async_processing(td);
+	struct thread_stat *ts = &td->ts;
+	int i, idx = 0, ret = 0;
+
+	*clat_prio_index = 0;
+
+	/*
+	 * Only this thread grows ts->clat_prio[ddir], so the lookup of an
+	 * existing entry does not need locks.
+	 */
+	if (!ts->clat_prio[ddir] && ioprio == ts->ioprio)
+		return 0;
+
+	for (i = 0; i < ts->nr_clat_prio[ddir]; i++) {
+		if (ts->clat_prio[ddir][i].ioprio == ioprio) {
+			*clat_prio_index = i;
+			return 0;
+		}
+	}
+
+	/*
+	 * The array is created or grown (reallocated), so serialize against
+	 * the stats output (stat_sem) and against offload completion workers
+	 * that add samples to this td via td->parent (td io_u lock).
+	 */
+	fio_sem_down(stat_sem);
+	if (needs_lock)
+		__td_io_u_lock(td);
+
+	if (clat_prio_stat_init_default(ts, ddir) ||
+	    alloc_or_get_clat_prio_index(ts, ddir, ioprio, &idx))
+		ret = 1;
+	else
+		*clat_prio_index = idx;
+
+	if (needs_lock)
+		__td_io_u_unlock(td);
+	fio_sem_up(stat_sem);
+
+	if (ret) {
+		log_err("fio: failed to allocate clat_prio stats for"
+			" ioprio 0x%04x\n", ioprio);
+		td_verror(td, ENOMEM, "clat_prio alloc");
+	}
+
+	return ret;
+}
+
 /*
  * Parse one line of a version 2, 3 or 4 iolog. Returns the number of fields
  * parsed, which io_act() and file_act() use to tell file I/O actions from
@@ -653,6 +707,15 @@ static bool read_iolog(struct thread_data *td)
 			ipo->fileno = fileno;
 			ipo->file_action = file_action;
 			ipo->ioprio = ioprio;
+			if (ioprio &&
+			    iolog_get_clat_prio_index(td, rw, ioprio,
+						      &ipo->clat_prio_index)) {
+				free(ipo);
+				free(str);
+				free(act);
+				free(rfname);
+				return false;
+			}
 			td->o.size += bytes;
 		}
 

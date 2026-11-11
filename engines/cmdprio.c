@@ -64,16 +64,26 @@ static void assign_clat_prio_index(struct cmdprio_prio *prio,
  * cmdprio_prio during setup. This temporary array is freed after setup.
  */
 static int init_cmdprio_values(struct cmdprio_values *values,
-			       int max_unique_prios, struct thread_stat *ts)
+			       int max_unique_prios, struct thread_stat *ts,
+			       enum fio_ddir ddir)
 {
-	values->prios = calloc(max_unique_prios + 1,
+	int existing = ts->nr_clat_prio[ddir];
+	int i;
+
+	values->prios = calloc(max_unique_prios + (existing ? existing : 1),
 			       sizeof(*values->prios));
 	if (!values->prios)
 		return 1;
 
-	/* td->ioprio/ts->ioprio is always stored at index 0. */
-	values->prios[0] = ts->ioprio;
-	values->nr_prios++;
+	if (existing) {
+		for (i = 0; i < existing; i++)
+			values->prios[i] = ts->clat_prio[ddir][i].ioprio;
+		values->nr_prios = existing;
+	} else {
+		/* td->ioprio/ts->ioprio is always stored at index 0. */
+		values->prios[0] = ts->ioprio;
+		values->nr_prios++;
+	}
 
 	return 0;
 }
@@ -85,15 +95,30 @@ static int init_cmdprio_values(struct cmdprio_values *values,
 static int init_ts_clat_prio(struct thread_stat *ts, enum fio_ddir ddir,
 			     struct cmdprio_values *values)
 {
-	int i;
+	int i, ret = 0;
 
-	if (alloc_clat_prio_stat_ddir(ts, ddir, values->nr_prios))
-		return 1;
+	/*
+	 * ts->clat_prio[ddir] may already hold entries created by read_iolog,
+	 * so serialize the replacement against the stats output.
+	 */
+	fio_sem_down(stat_sem);
+
+	sfree(ts->clat_prio[ddir]);
+	ts->clat_prio[ddir] = NULL;
+	ts->nr_clat_prio[ddir] = 0;
+
+	if (alloc_clat_prio_stat_ddir(ts, ddir, values->nr_prios)) {
+		ret = 1;
+		goto out;
+	}
 
 	for (i = 0; i < values->nr_prios; i++)
 		ts->clat_prio[ddir][i].ioprio = values->prios[i];
 
-	return 0;
+out:
+	fio_sem_up(stat_sem);
+
+	return ret;
 }
 
 static int fio_cmdprio_fill_bsprio(struct cmdprio_bsprio *bsprio,
@@ -339,7 +364,7 @@ static int fio_cmdprio_gen_perc(struct thread_data *td, struct cmdprio *cmdprio)
 		    (ddir == DDIR_WRITE && !td_write(td)))
 			continue;
 
-		ret = init_cmdprio_values(&values[ddir], 1, ts);
+		ret = init_cmdprio_values(&values[ddir], 1, ts, ddir);
 		if (ret)
 			goto err;
 
@@ -364,7 +389,9 @@ static int fio_cmdprio_gen_perc(struct thread_data *td, struct cmdprio *cmdprio)
 err:
 	for (ddir = 0; ddir < CMDPRIO_RWDIR_CNT; ddir++)
 		free(values[ddir].prios);
+	fio_sem_down(stat_sem);
 	free_clat_prio_stats(ts);
+	fio_sem_up(stat_sem);
 
 	return ret;
 }
@@ -400,7 +427,7 @@ static int fio_cmdprio_parse_and_gen_bssplit(struct thread_data *td,
 		}
 
 		ret = init_cmdprio_values(&values[ddir],
-					  parse_res[ddir].nr_entries, ts);
+					  parse_res[ddir].nr_entries, ts, ddir);
 		if (ret)
 			goto err;
 
@@ -435,7 +462,9 @@ err:
 		free(parse_res[ddir].entries);
 		free(values[ddir].prios);
 	}
+	fio_sem_down(stat_sem);
 	free_clat_prio_stats(ts);
+	fio_sem_up(stat_sem);
 	fio_cmdprio_cleanup(cmdprio);
 
 	return ret;

@@ -5530,7 +5530,14 @@ still replayed). Version 4 trace files are only supported for replay with
 
 The per-command `ioprio` is only submitted by the ``libaio`` and ``io_uring``
 engines. Other engines, including ``io_uring_cmd`` and the synchronous
-engines, ignore the column.
+engines, ignore the column. Per-priority completion latency statistics are
+grouped by the non-zero `ioprio` requested in the trace (entries with ``0`` are
+counted under the job's default priority), even with engines that do not
+submit it. Each distinct non-zero `ioprio` value in a trace adds a
+per-priority latency histogram, so traces with many distinct values use more
+memory. The per-priority statistics of one data direction have to fit in one
+shared memory pool; with the default :option:`--alloc-size`, roughly 1100
+distinct priorities in one direction make the job fail with ``ENOMEM``.
 
 When :option:`read_iolog` is combined with :option:`cmdprio_percentage` or
 :option:`cmdprio_bssplit`, a non-zero `ioprio` on a trace entry takes

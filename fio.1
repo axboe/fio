@@ -5235,7 +5235,14 @@ still replayed). Version 4 trace files are only supported for replay with
 .P
 The per-command `ioprio' is only submitted by the \fBlibaio\fR and
 \fBio_uring\fR engines. Other engines, including \fBio_uring_cmd\fR and the
-synchronous engines, ignore the column.
+synchronous engines, ignore the column. Per-priority completion latency
+statistics are grouped by the non-zero `ioprio' requested in the trace
+(entries with `0' are counted under the job's default priority), even with
+engines that do not submit it. Each distinct non-zero `ioprio' value in a trace
+adds a per-priority latency histogram, so traces with many distinct values use
+more memory. The per-priority statistics of one data direction have to fit in
+one shared memory pool; with the default \fB\-\-alloc\-size\fR, roughly 1100
+distinct priorities in one direction make the job fail with `ENOMEM'.
 .P
 When \fBread_iolog\fR is combined with \fBcmdprio_percentage\fR or
 \fBcmdprio_bssplit\fR, a non-zero `ioprio' on a trace entry takes precedence

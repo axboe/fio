@@ -394,6 +394,9 @@ extern void add_sync_clat_sample(struct thread_stat *ts,
 extern int calc_log_samples(void);
 extern void free_clat_prio_stats(struct thread_stat *);
 extern int alloc_clat_prio_stat_ddir(struct thread_stat *, enum fio_ddir, int);
+extern int alloc_or_get_clat_prio_index(struct thread_stat *, enum fio_ddir,
+					uint32_t, int *);
+extern int clat_prio_stat_init_default(struct thread_stat *, enum fio_ddir);
 
 extern void print_disk_util(const struct disk_util_stat *, const struct disk_util_agg *, int terse, struct buf_output *);
 extern void json_array_add_disk_util(const struct disk_util_stat *dus,

@@ -269,6 +269,7 @@ struct io_piece {
 	unsigned long delay;
 	unsigned int file_action;
 	unsigned short ioprio;
+	unsigned short clat_prio_index;
 };
 
 /*
