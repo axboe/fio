@@ -280,6 +280,9 @@ bool fio_cmdprio_set_ioprio(struct thread_data *td, struct cmdprio *cmdprio,
 	uint32_t perc = 0;
 	int i;
 
+	if (io_u->flags & IO_U_F_IOPRIO)
+		return false;
+
 	p = fio_cmdprio_percentage(cmdprio, io_u, &bsprio);
 	if (!p)
 		return false;

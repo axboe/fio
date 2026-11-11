@@ -5498,6 +5498,53 @@ The `timestamp` is relative to the beginning of the run (ie starts at 0). The
 that version 3 does not allow the `wait` action.
 
 
+Trace file format v4
+~~~~~~~~~~~~~~~~~~~~
+
+The fourth version of the trace file format extends version 3 with a
+per-command I/O priority column.
+
+The first line of the trace file has to be::
+
+    fio version 4 iolog
+
+The file management format is identical to version 3::
+
+    timestamp filename action
+
+The file I/O action format::
+
+    timestamp filename action offset length ioprio
+
+The `ioprio` column is required on every file I/O action (`read`, `write`,
+`trim`, `sync` and `datasync`); lines without a hexadecimal `ioprio` value are
+skipped with an error message. It specifies the 16-bit per-command I/O priority
+value in hexadecimal (for example, ``0x2000`` for ``IOPRIO_CLASS_RT`` level 0,
+``0x4004`` for ``IOPRIO_CLASS_BE`` level 4, or ``0x0000`` for none). A value of
+``0`` means no per-command priority: the job's default I/O priority applies and
+`cmdprio` may assign one. A non-zero value is only allowed on `read` and
+`write` actions; other actions must use ``0`` (a non-zero `ioprio` on `trim`,
+`sync` or `datasync` lines is ignored with an error message, and the action is
+still replayed). Version 4 trace files are only supported for replay with
+:option:`read_iolog`; :option:`write_iolog` still writes version 3 trace files.
+
+The per-command `ioprio` is only submitted by the ``libaio`` and ``io_uring``
+engines. Other engines, including ``io_uring_cmd`` and the synchronous
+engines, ignore the column.
+
+When :option:`read_iolog` is combined with :option:`cmdprio_percentage` or
+:option:`cmdprio_bssplit`, a non-zero `ioprio` on a trace entry takes
+precedence over `cmdprio`, while trace entries with `ioprio` ``0`` remain
+eligible for `cmdprio`. Note that when a job-level default priority
+(:option:`prioclass`, :option:`prio`, or :option:`priohint`) is set, an
+individual I/O cannot be set back to ``IOPRIO_CLASS_NONE``: ``0`` in the trace
+means the job default applies, and the ``libaio`` and ``io_uring`` engines
+cannot submit it either, because the Linux kernel treats a request priority of
+``0`` (``aio_reqprio = 0`` or an omitted ``IOCB_FLAG_IOPRIO`` for ``libaio``,
+``sqe->ioprio = 0`` for ``io_uring``) as falling back to the submitting task's
+I/O priority.
+
+
 I/O Replay - Merging Traces
 ---------------------------
 

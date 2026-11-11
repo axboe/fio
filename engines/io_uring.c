@@ -1049,12 +1049,12 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 		 * that is different from the process context, we cannot rely on
 		 * the IO priority set by ioprio_set() (options prio, prioclass,
 		 * and priohint) to be inherited.
-		 * td->ioprio will have the value of the "default prio", so set
-		 * this unconditionally. This value might get overridden by
-		 * fio_ioring_cmdprio_prep() if the option cmdprio_percentage or
-		 * cmdprio_bssplit is used.
+		 * io_u->ioprio will have the value of the "default prio" (or a
+		 * pre-assigned io_u priority), so set this unconditionally.
+		 * This value might get overridden by fio_ioring_cmdprio_prep()
+		 * if the option cmdprio_percentage or cmdprio_bssplit is used.
 		 */
-		sqe->ioprio = td->ioprio;
+		sqe->ioprio = io_u->ioprio;
 		sqe->off = io_u->offset;
 	} else if (ddir_sync(io_u->ddir)) {
 		/*

@@ -148,6 +148,12 @@ static int fio_libaio_prep(struct thread_data *td, struct io_u *io_u)
 	} else if (ddir_sync(io_u->ddir))
 		io_prep_fsync(iocb, f->fd);
 
+	if ((io_u->ddir == DDIR_READ || io_u->ddir == DDIR_WRITE) &&
+	    io_u->ioprio != td->ioprio) {
+		iocb->aio_reqprio = io_u->ioprio;
+		iocb->u.c.flags |= IOCB_FLAG_IOPRIO;
+	}
+
 	return 0;
 }
 

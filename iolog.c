@@ -32,6 +32,7 @@ static int iolog_flush(struct io_log *log);
 
 static const char iolog_ver2[] = "fio version 2 iolog";
 static const char iolog_ver3[] = "fio version 3 iolog";
+static const char iolog_ver4[] = "fio version 4 iolog";
 
 void queue_io_piece(struct thread_data *td, struct io_piece *ipo)
 {
@@ -232,6 +233,10 @@ int read_iolog_get(struct thread_data *td, struct io_u *io_u)
 			io_u->buflen = ipo->len;
 			io_u->file = td->files[ipo->fileno];
 			get_file(io_u->file);
+			if (ipo->ioprio) {
+				io_u->ioprio = ipo->ioprio;
+				io_u_set(td, io_u, IO_U_F_IOPRIO);
+			}
 			dprint(FD_IO, "iolog: get %llu/%llu/%s\n", io_u->offset,
 						io_u->buflen, io_u->file->file_name);
 			if (ipo->delay)
@@ -446,21 +451,26 @@ int64_t iolog_items_to_fetch(struct thread_data *td)
 	return items_to_fetch;
 }
 
-#define io_act(_td, _r) (((_td)->io_log_version == 3 && (r) == 5) || \
+#define io_act(_td, _r) (((_td)->io_log_version == 4 && (r) == 6) || \
+					((_td)->io_log_version == 3 && (r) == 5) || \
 					((_td)->io_log_version == 2 && (r) == 4))
-#define file_act(_td, _r) (((_td)->io_log_version == 3 && (r) == 3) || \
+#define file_act(_td, _r) (((_td)->io_log_version >= 3 && (r) == 3) || \
 					((_td)->io_log_version == 2 && (r) == 2))
 
 /*
- * Parse one line of a version 2 or 3 iolog. Returns the number of fields
+ * Parse one line of a version 2, 3 or 4 iolog. Returns the number of fields
  * parsed, which io_act() and file_act() use to tell file I/O actions from
  * file management actions.
  */
 static int parse_iolog_line(struct thread_data *td, const char *p,
 			    unsigned long long *ttime, char *fname, char *act,
-			    unsigned long long *offset, unsigned int *bytes)
+			    unsigned long long *offset, unsigned int *bytes,
+			    unsigned short *ioprio)
 {
 	switch (td->io_log_version) {
+	case 4:
+		return sscanf(p, "%llu %256s %256s %llu %u %hx", ttime, fname,
+			      act, offset, bytes, ioprio);
 	case 3:
 		return sscanf(p, "%llu %256s %256s %llu %u", ttime, fname, act,
 			      offset, bytes);
@@ -471,8 +481,8 @@ static int parse_iolog_line(struct thread_data *td, const char *p,
 }
 
 /*
- * Read version 2 and 3 iolog data. It is enhanced to include per-file logging,
- * syncs, etc.
+ * Read version 2, 3, and 4 iolog data. It is enhanced to include per-file
+ * logging, syncs, per-command ioprio (version 4), etc.
  */
 static bool read_iolog(struct thread_data *td)
 {
@@ -506,18 +516,20 @@ static bool read_iolog(struct thread_data *td)
 		struct io_piece *ipo;
 		int r;
 		unsigned long long ttime;
+		unsigned short ioprio = 0;
 
 		r = parse_iolog_line(td, p, &ttime, rfname, act, &offset,
-				     &bytes);
-		if (td->io_log_version == 3) {
+				     &bytes, &ioprio);
+		if (td->io_log_version >= 3) {
 			delay = delay_since_ttime(td, ttime);
 			td->io_log_last_ttime = ttime;
 			/*
-			 * "wait" is not allowed with version 3
+			 * "wait" is not allowed with version 3 and later
 			 */
 			if (!strcmp(act, "wait")) {
 				log_err("iolog: ignoring wait command with"
-					" version 3 for file %s\n", fname);
+					" version %d for file %s\n",
+					td->io_log_version, fname);
 				continue;
 			}
 		}
@@ -553,6 +565,12 @@ static bool read_iolog(struct thread_data *td)
 				log_err("fio: bad iolog file action: %s\n",
 									act);
 				continue;
+			}
+			if (ioprio && rw != DDIR_READ && rw != DDIR_WRITE) {
+				log_err("fio: iolog ioprio must be 0 for non"
+					" read/write actions, ignoring"
+					" it: %s\n", act);
+				ioprio = 0;
 			}
 			fileno = get_fileno(td, fname);
 		} else if (file_act(td, r)) {
@@ -616,7 +634,7 @@ static bool read_iolog(struct thread_data *td)
 		ipo = calloc(1, sizeof(*ipo));
 		init_ipo(ipo);
 		ipo->ddir = rw;
-		if (td->io_log_version == 3)
+		if (td->io_log_version >= 3)
 			ipo->delay = delay;
 		if (rw == DDIR_WAIT) {
 			ipo->delay = offset;
@@ -634,6 +652,7 @@ static bool read_iolog(struct thread_data *td)
 			}
 			ipo->fileno = fileno;
 			ipo->file_action = file_action;
+			ipo->ioprio = ioprio;
 			td->o.size += bytes;
 		}
 
@@ -765,13 +784,15 @@ static bool init_iolog_read(struct thread_data *td, char *fname)
 	}
 
 	/*
-	 * versions 2 and 3 of the iolog store a specific string as the
+	 * versions 2, 3, and 4 of the iolog store a specific string as the
 	 * first line, check for that
 	 */
 	if (!strncmp(iolog_ver2, buffer, strlen(iolog_ver2)))
 		td->io_log_version = 2;
 	else if (!strncmp(iolog_ver3, buffer, strlen(iolog_ver3)))
 		td->io_log_version = 3;
+	else if (!strncmp(iolog_ver4, buffer, strlen(iolog_ver4)))
+		td->io_log_version = 4;
 	else {
 		log_err("fio: iolog version 1 is no longer supported\n");
 		fclose(f);
