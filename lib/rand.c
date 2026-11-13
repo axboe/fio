@@ -112,8 +112,8 @@ void __fill_random_buf_small(void *buf, unsigned int len, uint64_t seed)
 
 void __fill_random_buf(void *buf, unsigned int len, uint64_t seed)
 {
-	static uint64_t prime[] = {1, 2, 3, 5, 7, 11, 13, 17,
-				   19, 23, 29, 31, 37, 41, 43, 47};
+	static uint64_t prime[] = {1, 3, 5, 7, 11, 13, 17, 19,
+				   23, 29, 31, 37, 41, 43, 47, 53};
 	uint64_t *b, *e, s[CONFIG_SEED_BUCKETS];
 	unsigned int rest;
 	int p;
@@ -128,6 +128,14 @@ void __fill_random_buf(void *buf, unsigned int len, uint64_t seed)
 
 	rest = len - (rest * sizeof(*b));
 
+	/*
+	 * Each bucket advances by s *= GOLDEN_RATIO_64, which preserves the
+	 * number of trailing zero bits in s. Start every bucket odd (an odd
+	 * seed times an odd multiplier), otherwise a seed with several
+	 * trailing zeros leaves the low byte of every word with only a few
+	 * distinct values and the buffer becomes compressible.
+	 */
+	seed |= 1;
 	for (p = 0; p < CONFIG_SEED_BUCKETS; p++)
 		s[p] = seed * prime[p];
 
