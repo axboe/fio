@@ -126,6 +126,10 @@ ifdef CONFIG_LIBHIPFILE
   SOURCE += engines/libhipfile.c
   SHARED_GPUACCEL_SOURCE = 1
 endif
+ifdef CONFIG_LIBMUFILE
+  SOURCE += engines/libmufile.c
+  SHARED_GPUACCEL_SOURCE = 1
+endif
 ifdef SHARED_GPUACCEL_SOURCE
   SOURCE += engines/gpuaccel.c
 endif
@@ -464,6 +468,8 @@ UT_OBJS += unittests/oslib/strlcat.o
 UT_OBJS += unittests/oslib/strndup.o
 UT_OBJS += unittests/oslib/strcasestr.o
 UT_OBJS += unittests/oslib/strsep.o
+UT_OBJS += unittests/engines/libmufile_errno.o
+UT_OBJS += unittests/optgroup_libmufile.o
 ifeq ($(CONFIG_TARGET_OS), Linux)
 UT_OBJS += unittests/cgroup.o
 endif

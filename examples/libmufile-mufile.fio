@@ -1,0 +1,24 @@
+# musa_io=mufile talks to mtfs. The directory must be on a release-supported
+# filesystem: NVMe, NFS over RDMA, or Lustre. direct=1 and a page-multiple
+# bs are required. Use threads; musaMalloc fails when too many processes
+# attach to one GPU.
+[global]
+ioengine=libmufile
+directory=${FIO_DIR}
+gpu_dev_ids=${GPU_DEV_IDS}
+musa_io=mufile
+direct=1
+bs=1m
+size=1m
+numjobs=16
+thread
+
+[read]
+rw=read
+
+[write]
+rw=write
+
+[verify]
+rw=write
+verify=md5

@@ -2176,6 +2176,13 @@ not be \fBcudamalloc\fR. This ioengine defines engine specific options.
 (See \fIhttps://rocm.docs.amd.com\fR for information on ROCm hipFile
 and how to install the ROCm stack.)
 .TP
+.B libmufile
+I/O engine supporting synchronous access to a GPUDirect-style path from
+Moore Threads GPUs via libmufile and the mtfs kernel module. This engine
+performs I/O without a user/kernel bounce buffer, unless \fBverify\fR is
+set or \fBmusa_io\fR is \fBposix\fR. \fBiomem\fR must not be
+\fBcudamalloc\fR. This ioengine defines engine specific options.
+.TP
 .B dfs
 I/O engine supporting asynchronous read and write operations to the DAOS File
 System (DFS) via libdfs.
@@ -3096,6 +3103,36 @@ hipMemcpy to transfer data between RAM and the GPU(s).
 Data is copied from GPU to RAM before a write and copied
 from RAM to GPU after a read. \fBverify\fR does not affect
 the use of hipMemcpy.
+.RE
+.RE
+.TP
+.BI (libmufile)gpu_dev_ids\fR=\fPstr
+Specify the GPU IDs to use with MUSA. This is a colon-separated list of int.
+GPUs are assigned to workers roundrobin. Default is 0.
+.TP
+.BI (libmufile)musa_io\fR=\fPstr
+Specify the type of I/O to use with MUSA. This option
+takes the following values:
+.RS
+.RS
+.TP
+.B mufile (default)
+Use libmufile and mtfs. This option performs I/O directly
+between a supported filesystem and GPU buffers,
+avoiding use of a bounce buffer. If \fBverify\fR is set,
+musaMemcpy is used to copy verification data between RAM and GPU(s).
+Verification data is copied from RAM to GPU before a write
+and from GPU to RAM after a read.
+\fBdirect\fR must be 1.
+\fBbs\fR must be a multiple of the page size. With libmufile compat mode
+disabled, an unaligned block size fails with a libmufile error.
+.TP
+.BI posix
+Use POSIX to perform I/O with a RAM buffer, and use
+musaMemcpy to transfer data between RAM and the GPU(s).
+Data is copied from GPU to RAM before a write and copied
+from RAM to GPU after a read. \fBverify\fR does not affect
+the use of musaMemcpy.
 .RE
 .RE
 .TP
