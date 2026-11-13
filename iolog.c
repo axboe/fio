@@ -446,10 +446,10 @@ int64_t iolog_items_to_fetch(struct thread_data *td)
 	return items_to_fetch;
 }
 
-#define io_act(_td, _r) (((_td)->io_log_version == 3 && (r) == 5) || \
-					((_td)->io_log_version == 2 && (r) == 4))
-#define file_act(_td, _r) (((_td)->io_log_version == 3 && (r) == 3) || \
-					((_td)->io_log_version == 2 && (r) == 2))
+#define io_act(_td, _r) (((_td)->io_log_version == 3 && (_r) == 5) || \
+					((_td)->io_log_version == 2 && (_r) == 4))
+#define file_act(_td, _r) (((_td)->io_log_version == 3 && (_r) == 3) || \
+					((_td)->io_log_version == 2 && (_r) == 2))
 
 /*
  * Parse one line of a version 2 or 3 iolog. Returns the number of fields
