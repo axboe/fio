@@ -161,6 +161,28 @@ static void json_free_value(struct json_value *value)
 	free(value);
 }
 
+/*
+ * Free a value that could not be added to its parent. An object or array
+ * passed in by the caller is not freed, because the caller still owns it
+ * and may keep using it after the add fails.
+ */
+static void json_release_value(struct json_value *value)
+{
+	switch (value->type) {
+	case JSON_TYPE_OBJECT:
+		value->object->parent = NULL;
+		free(value);
+		break;
+	case JSON_TYPE_ARRAY:
+		value->array->parent = NULL;
+		free(value);
+		break;
+	default:
+		json_free_value(value);
+		break;
+	}
+}
+
 static int json_array_add_value(struct json_array *array, struct json_value *value)
 {
 	struct json_value **values = realloc(array->values,
@@ -222,12 +244,14 @@ int json_object_add_value_type(struct json_object *obj, const char *name,
 
 	pair = json_create_pair(name, value);
 	if (!pair) {
-		json_free_value(value);
+		json_release_value(value);
 		return ENOMEM;
 	}
 	ret = json_object_add_pair(obj, pair);
 	if (ret) {
-		json_free_pair(pair);
+		free(pair->name);
+		free(pair);
+		json_release_value(value);
 		return ENOMEM;
 	}
 	return 0;
@@ -263,7 +287,7 @@ int json_array_add_value_type(struct json_array *array,
 
 	ret = json_array_add_value(array, value);
 	if (ret) {
-		json_free_value(value);
+		json_release_value(value);
 		return ENOMEM;
 	}
 	return 0;
