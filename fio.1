@@ -31,6 +31,12 @@ Set the reporting \fIformat\fR to `normal', `terse', `json', or
 `json+'. Multiple formats can be selected, separate by a comma. `terse'
 is a CSV based format. `json+' is like `json', except it adds a full
 dump of the latency buckets.
+When `json' or `json+' is among the selected formats, the json document is the
+only thing ever written to the stream carrying it (the \fB\-\-output\fR file,
+or standard output when no output file was given), so that stream always stays
+parseable. Informational and error messages go to standard error instead. Other
+selected formats are written to standard output, or to standard error when
+standard output already carries the json output.
 .TP
 .BI \-\-bandwidth\-log
 Generate aggregate bandwidth logs. `filename` is an optional argument.
