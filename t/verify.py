@@ -517,6 +517,20 @@ TEST_LIST = [
         # the write instance. See failure here:
         # https://github.com/vincentkfu/fio/actions/runs/13683127191/job/38260091800#step:14:258
     },
+    {
+        # Reopening a completed file for backlog verification must free its slot.
+        "test_id": 7,
+        "fio_opts": {
+            "ioengine": "psync",
+            "filesize": "4K",
+            "nrfiles": 3,
+            "openfiles": 1,
+            "bs": 4096,
+            "verify_backlog": 2,
+            "verify_backlog_batch": 2,
+            },
+        "test_class": VerifyTest,
+    },
 ]
 
 
