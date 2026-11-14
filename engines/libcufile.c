@@ -63,6 +63,25 @@ static struct fio_option options[] = {
 		.group	  = FIO_OPT_G_LIBCUFILE,
 	},
 	{
+		.name	  = "gpu_peer_access",
+		.lname	  = "Enable CUDA peer access",
+		.type	  = FIO_OPT_BOOL,
+		.off1	  = offsetof(struct gpuaccel_options, peer_access),
+		.def	  = "0",
+		.help	  = "Enable peer access to all listed GPUs",
+		.category = FIO_OPT_C_ENGINE,
+		.group	  = FIO_OPT_G_LIBCUFILE,
+	},
+	{
+		.name	  = "enable_peer",
+		.lname	  = "CUDA peer connections",
+		.type	  = FIO_OPT_STR_STORE,
+		.off1	  = offsetof(struct gpuaccel_options, peer_map),
+		.help	  = "Directed peers: source:peer,peer/source:peer",
+		.category = FIO_OPT_C_ENGINE,
+		.group	  = FIO_OPT_G_LIBCUFILE,
+	},
+	{
 		.name	 = NULL,
 	},
 };
@@ -167,6 +186,43 @@ static int libcufile_stream_sync(void)
 	return rc;
 }
 
+static int libcufile_enable_peer_access(int gpu_id, int peer_gpu_id)
+{
+	cudaError_t can_access_status, status;
+	int can_access_peer, rc;
+
+	can_access_status = cudaDeviceCanAccessPeer(&can_access_peer,
+						    gpu_id, peer_gpu_id);
+	check_cudaruntimecall(can_access_status, rc);
+	if (rc)
+		return rc;
+	if (!can_access_peer) {
+		log_err("GPU %d cannot access peer GPU %d\n", gpu_id,
+			peer_gpu_id);
+		return -1;
+	}
+
+	status = cudaDeviceEnablePeerAccess(peer_gpu_id, 0);
+	if (status == cudaErrorPeerAccessAlreadyEnabled) {
+		/* Clear the non-fatal CUDA runtime error. */
+		cudaGetLastError();
+		return 0;
+	}
+	if (status == cudaErrorTooManyPeers) {
+		log_err("GPU %d peer connection limit reached while enabling "
+			"GPU %d: %s\n", gpu_id, peer_gpu_id,
+			cudaGetErrorName(status));
+		return -1;
+	}
+	if (status != cudaSuccess) {
+		log_err("cudaDeviceEnablePeerAccess(%d): err=%d:%s\n",
+			peer_gpu_id, status, cudaGetErrorName(status));
+		return -1;
+	}
+
+	return 0;
+}
+
 static int libcufile_file_handle_register(int fd, void **handle)
 {
 	struct fio_libcufile_data *fcd;
@@ -249,6 +305,7 @@ static const struct gpuaccel_backend libcufile_backend = {
 	.driver_open = libcufile_driver_open,
 	.driver_close = libcufile_driver_close,
 	.set_device = libcufile_set_device,
+	.enable_peer_access = libcufile_enable_peer_access,
 	.malloc = libcufile_malloc,
 	.free = libcufile_free,
 	.memset = libcufile_memset,

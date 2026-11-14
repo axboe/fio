@@ -3047,6 +3047,23 @@ Example URIs:
 Specify the GPU IDs to use with CUDA. This is a colon-separated list of int.
 GPUs are assigned to workers roundrobin. Default is 0.
 .TP
+.BI (libcufile)gpu_peer_access\fR=\fPbool
+Enable CUDA peer access in \fBcufile\fR mode. Default is \fB0\fR. When set to
+\fB1\fR, each worker enables access from its assigned GPU to every other GPU
+in \fBgpu_dev_ids\fR. Unsupported connections and peer connection limits
+cause an initialization error and abort the test.
+.TP
+.BI (libcufile)enable_peer\fR=\fPstr
+Explicitly enable directed peer connections in \fBcufile\fR mode using
+\fIsource:peer,peer/source:peer\fR. For example, \fI0:1,2/1:0/2:0\fR enables
+access from GPU 0 to GPUs 1 and 2 and from GPUs 1 and 2 to GPU 0. Each entry
+applies to workers assigned its source GPU. This option enables peer setup
+and overrides the all-peer list selected by \fBgpu_peer_access\fR.
+Connections are unidirectional; include both directions when needed.
+A semicolon may also separate entries on the command line; quote the value
+so the shell does not interpret it. In job files, use \fB/\fR because
+\fB;\fR starts a comment.
+.TP
 .BI (libcufile)cuda_io\fR=\fPstr
 Specify the type of I/O to use with CUDA. This option
 takes the following values:

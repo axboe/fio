@@ -3326,6 +3326,25 @@ with the caveat that when used on the command line, they must come after the
 	Specify the GPU IDs to use with CUDA. This is a colon-separated list of
 	int. GPUs are assigned to workers roundrobin. Default is 0.
 
+.. option:: gpu_peer_access=bool : [libcufile]
+
+	Enable CUDA peer access in **cufile** mode. Default is **0**. When set
+	to **1**, each worker enables access from its assigned GPU to every
+	other GPU in :option:`gpu_dev_ids`. Unsupported connections and peer
+	connection limits cause an initialization error and abort the test.
+
+.. option:: enable_peer=str : [libcufile]
+
+	Explicitly enable directed peer connections in **cufile** mode using
+	``source:peer,peer/source:peer``. For example,
+	``0:1,2/1:0/2:0`` enables access from GPU 0 to GPUs 1 and 2 and from
+	GPUs 1 and 2 to GPU 0. Each entry applies to workers assigned its source
+	GPU. This option enables peer setup and overrides the all-peer list
+	selected by :option:`gpu_peer_access`. Connections are unidirectional;
+	include both directions when needed. A semicolon may also separate
+	entries on the command line; quote the value so the shell does not
+	interpret it. In job files, use ``/`` because ``;`` starts a comment.
+
 .. option:: cuda_io=str : [libcufile]
 
 	Specify the type of I/O to use with CUDA. Default is **cufile**.
