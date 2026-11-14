@@ -1598,7 +1598,8 @@ int verify_async_init(struct thread_data *td)
 	pthread_attr_t attr;
 
 	pthread_attr_init(&attr);
-	pthread_attr_setstacksize(&attr, 2 * PTHREAD_STACK_MIN);
+	pthread_attr_setstacksize(&attr, max((size_t) 256 * 1024,
+					   (size_t) PTHREAD_STACK_MIN * 2));
 
 	td->verify_thread_exit = 0;
 
