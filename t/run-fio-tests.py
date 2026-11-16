@@ -1248,6 +1248,14 @@ TEST_LIST = [
         'success':          SUCCESS_DEFAULT,
         'requirements':     [Requirements.linux, Requirements.nvmebdev],
     },
+    {
+        'test_id':          1026,
+        'test_class':       FioExeTest,
+        'exe':              't/rcio.py',
+        'parameters':       ['-f', '{fio_path}'],
+        'success':          SUCCESS_DEFAULT,
+        'requirements':     [Requirements.linux],
+    },
 ]
 
 
