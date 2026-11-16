@@ -388,6 +388,7 @@ int convert_thread_options_to_cpu(struct thread_options *o,
 	o->dp_nr_ids = le32_to_cpu(top->dp_nr_ids);
 	for (i = 0; i < o->dp_nr_ids; i++)
 		o->dp_ids[i] = le16_to_cpu(top->dp_ids[i]);
+	o->rcio_size = le64_to_cpu(top->rcio_size);
 #if 0
 	uint8_t cpumask[FIO_TOP_STR_MAX];
 	uint8_t verify_cpumask[FIO_TOP_STR_MAX];
@@ -715,6 +716,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->dp_nr_ids = cpu_to_le32(o->dp_nr_ids);
 	for (i = 0; i < o->dp_nr_ids; i++)
 		top->dp_ids[i] = cpu_to_le16(o->dp_ids[i]);
+	top->rcio_size = cpu_to_le64(o->rcio_size);
 #if 0
 	uint8_t cpumask[FIO_TOP_STR_MAX];
 	uint8_t verify_cpumask[FIO_TOP_STR_MAX];

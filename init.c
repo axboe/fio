@@ -769,6 +769,80 @@ static int fixup_options(struct thread_data *td)
 			o->ba[ddir] = o->min_bs[ddir];
 	}
 
+	if (o->rcio_size) {
+		if (fio_option_is_set(o, norandommap)) {
+			if (!o->norandommap) {
+				log_err("fio: rcio_size requires norandommap=1\n");
+				ret |= 1;
+			}
+		} else {
+			if (output_format & FIO_OUTPUT_NORMAL)
+				log_info("fio: rcio_size sets norandommap=1\n");
+			o->norandommap = 1;
+		}
+
+		if (!td_random(td) || td_trimwrite(td) || o->ddir_seq_nr > 1) {
+			log_err("fio: rcio_size requires random I/O without "
+				"multi-I/O runs or trimwrite\n");
+			ret |= 1;
+		}
+		if (!o->use_thread || o->io_submit_mode != IO_MODE_INLINE ||
+		    !o->create_serialize || o->create_on_open) {
+			log_err("fio: rcio_size requires thread=1 and "
+				"io_submit_mode=inline, create_serialize=1, "
+				"and create_on_open=0\n");
+			ret |= 1;
+		}
+		if (o->nr_files != 1 || td->files_index != 1) {
+			log_err("fio: rcio_size requires a single target\n");
+			ret |= 1;
+		}
+		if (o->latency_target && !o->latency_run && o->iodepth > 1) {
+			log_err("fio: rcio_size with latency_target and "
+				"iodepth>1 requires latency_run=1\n");
+			ret |= 1;
+		}
+		if (o->zone_mode != ZONE_MODE_NONE || o->num_range > 1 ||
+		    o->trim_backlog || o->sprandom || o->read_iolog_file ||
+		    o->pre_read || o->verify != VERIFY_NONE ||
+		    o->verify_only || o->bs_unaligned || o->bs_is_seq_rand ||
+		    o->file_append ||
+		    o->unlink || o->unlink_each_loop || o->fill_device ||
+		    td_ioengine_flagged(td, FIO_NOIO) ||
+		    o->random_generator == FIO_RAND_GEN_LFSR ||
+		    o->random_distribution != FIO_RAND_DIST_RANDOM) {
+			log_err("fio: rcio_size is incompatible with zoned I/O, "
+				"multi-range trim, trim backlog, sprandom, "
+				"I/O replay, pre_read, verify, bs_unaligned, "
+				"bs_is_seq_rand, lfsr, "
+				"append, unlink, fill_device, pseudo I/O, "
+				"and nonuniform random distributions\n");
+			ret |= 1;
+		}
+		for_each_rw_ddir(ddir) {
+			if ((ddir == DDIR_READ && !td_read(td)) ||
+			    (ddir == DDIR_WRITE && !td_write(td)) ||
+			    (ddir == DDIR_TRIM && !td_trim(td)))
+				continue;
+			if (o->min_bs[ddir] != o->rcio_size ||
+			    o->max_bs[ddir] != o->rcio_size ||
+			    o->ba[ddir] != o->rcio_size ||
+			    o->perc_rand[ddir] != 100) {
+				log_err("fio: rcio_size requires fixed full-region "
+					"blocks, matching alignment, and 100%% "
+					"random I/O for %s\n", io_ddir_name(ddir));
+				ret |= 1;
+			}
+		}
+#ifdef WIN32
+		log_err("fio: RCIO is not supported on Windows\n");
+		ret |= 1;
+#endif
+		/* Do not run untracked I/O before RCIO integration is added. */
+		log_err("fio: rcio_size is not yet available for I/O\n");
+		ret |= 1;
+	}
+
 	if ((o->ba[DDIR_READ] != o->min_bs[DDIR_READ] ||
 	    o->ba[DDIR_WRITE] != o->min_bs[DDIR_WRITE] ||
 	    o->ba[DDIR_TRIM] != o->min_bs[DDIR_TRIM]) &&
