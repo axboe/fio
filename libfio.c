@@ -141,8 +141,11 @@ static void update_thinktime_blocks_counter(struct thread_data *td)
 {
 	unsigned long long b;
 
-	/* an offload worker has no thinktime blocks counters initialized */
-	if (!td->thinktime_blocks_counter)
+	/*
+	 * An offload worker has no thinktime blocks counters initialized.
+	 * io_issues is not reset below, so only rebase for io_blocks.
+	 */
+	if (td->thinktime_blocks_counter != td->io_blocks)
 		return;
 
 	b = ddir_rw_sum(td->thinktime_blocks_counter);
@@ -157,10 +160,19 @@ void reset_all_stats(struct thread_data *td)
 
 	update_thinktime_blocks_counter(td);
 
+	/*
+	 * io_issues[] is deliberately not reset. It supplies the numberio
+	 * sequence used by verify (verify headers, the inflight log, failed
+	 * write tracking and the verify state file), which must increase
+	 * monotonically for the life of the job. It also sets the cadence
+	 * of fsync/fdatasync/sync_file_range/write_barrier, and resetting
+	 * it mid-interval would stretch the interval spanning the ramp
+	 * boundary. Finally, an in-flight io_u that is requeued decrements
+	 * it. It is not used for reported stats.
+	 */
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		td->io_bytes[i] = 0;
 		td->io_blocks[i] = 0;
-		td->io_issues[i] = 0;
 		td->ts.total_io_u[i] = 0;
 		td->ts.runtime[i] = 0;
 	}
