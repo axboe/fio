@@ -678,6 +678,21 @@ class FioJobFileTest_t0039(FioJobFileTest):
             self.passed = False
 
 
+class FioJobFileTest_t0040(FioJobFileTest):
+    """Check that backlog verification does not prevent opening later files."""
+
+    def check_result(self):
+        super().check_result()
+        if not self.passed:
+            return
+
+        job = self.json_data['jobs'][0]
+        for direction in ('read', 'write'):
+            if job[direction]['io_bytes'] != 3 * 64 * 1024:
+                self.passed = False
+                self.failure_reason += f" unexpected {direction} byte count"
+
+
 TEST_LIST = [
     {
         'test_id':          1,
@@ -1033,6 +1048,16 @@ TEST_LIST = [
         'test_id':          39,
         'test_class':       FioJobFileTest_t0039,
         'job':              't0039.fio',
+        'success':          SUCCESS_DEFAULT,
+        'pre_job':          None,
+        'pre_success':      None,
+        'requirements':     [],
+    },
+    {
+        'test_id':          40,
+        'test_class':       FioJobFileTest_t0040,
+        'job':              't0040.fio',
+        'output_format':    'json',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
         'pre_success':      None,
