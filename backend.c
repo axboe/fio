@@ -481,6 +481,7 @@ int io_queue_event(struct thread_data *td, struct io_u *io_u, int *ret,
 				break;
 			}
 
+			rcio_account_short(td, io_u, bytes);
 			io_u->xfer_buflen = io_u->resid;
 			io_u->xfer_buf += bytes;
 			io_u->offset += bytes;
@@ -533,6 +534,8 @@ sync_done:
 	default:
 		assert(*ret < 0);
 		td_verror(td, -(*ret), "td_io_queue");
+		if (io_u->flags & IO_U_F_RCIO)
+			clear_io_u(td, io_u);
 		break;
 	}
 
@@ -1194,8 +1197,10 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 		td->o.number_ios *= 2;
 	}
 
+io_loop:
 	while ((td->o.read_iolog_file && !flist_empty(&td->io_log_list)) ||
 		(!flist_empty(&td->trim_list)) || !io_issue_bytes_exceeded(td) ||
+		(td->o.rcio_size && !io_u_rempty(&td->io_u_requeues)) ||
 		td->o.time_based) {
 		struct timespec comp_time;
 		struct io_u *io_u;
@@ -1213,8 +1218,17 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 		if (runtime_exceeded(td, &td->ts_cache)) {
 			__update_ts_cache(td);
 			if (runtime_exceeded(td, &td->ts_cache)) {
-				fio_mark_td_terminate(td);
-				break;
+				if (td->o.rcio_size) {
+					if (io_u_quiesce(td) < 0 || td->error)
+						break;
+					if (io_u_rempty(&td->io_u_requeues)) {
+						fio_mark_td_terminate(td);
+						break;
+					}
+				} else {
+					fio_mark_td_terminate(td);
+					break;
+				}
 			}
 		}
 
@@ -1239,7 +1253,8 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 		 * for those to run verification, if enabled.
 		 * Jobs read from iolog do not use this stop condition.
 		 */
-		if (!drain_trims && bytes_issued >= total_bytes &&
+		/* RCIO accounts retries in io_issue_bytes, not bytes_issued. */
+		if (!td->o.rcio_size && !drain_trims && bytes_issued >= total_bytes &&
 		    !td->o.read_iolog_file &&
 		    (!td->o.time_based ||
 		     (td->o.time_based && td->o.verify != VERIFY_NONE)))
@@ -1251,7 +1266,18 @@ static void do_io(struct thread_data *td, uint64_t *bytes_done)
 
 			io_u = NULL;
 			ddir = DDIR_INVAL;
+			if (td->o.rcio_size && td->error)
+				break;
 			if (err == -EBUSY) {
+				if (td->o.rcio_size) {
+					if (td->cur_depth)
+						ret = io_u_quiesce(td);
+					else
+						usec_sleep(td, 1000);
+					if (ret < 0 || td->error)
+						break;
+					continue;
+				}
 				ret = FIO_Q_BUSY;
 				goto reap;
 			}
@@ -1427,13 +1453,22 @@ reap:
 			i = td->cur_depth;
 
 		if (i) {
-			ret = io_u_queued_complete(td, i);
+			if (td->o.rcio_size)
+				ret = io_u_quiesce(td);
+			else
+				ret = io_u_queued_complete(td, i);
 			if (td->o.fill_device &&
 			    (td->error == ENOSPC || td->error == EDQUOT))
 				td->error = 0;
 		}
 
-		if (should_fsync(td) &&
+		if (td->o.rcio_size && !td->error && ret >= 0 &&
+		    !td->terminate && !td->done &&
+		    !io_u_rempty(&td->io_u_requeues))
+			goto io_loop;
+
+		rcio_cleanup_io(td);
+		if ((!td->o.rcio_size || !td->error) && should_fsync(td) &&
 		    (td->o.end_fsync || td->o.end_syncfs ||
 		     td->o.fsync_on_close)) {
 			td_set_runstate(td, TD_FSYNCING);
@@ -1454,6 +1489,7 @@ reap:
 		if (td->o.io_submit_mode == IO_MODE_OFFLOAD)
 			workqueue_flush(&td->io_wq);
 		ret = io_u_queued_complete(td, td->cur_depth);
+		rcio_cleanup_io(td);
 	}
 
 	/*

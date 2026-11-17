@@ -838,9 +838,6 @@ static int fixup_options(struct thread_data *td)
 		log_err("fio: RCIO is not supported on Windows\n");
 		ret |= 1;
 #endif
-		/* Do not run untracked I/O before RCIO integration is added. */
-		log_err("fio: rcio_size is not yet available for I/O\n");
-		ret |= 1;
 	}
 
 	if ((o->ba[DDIR_READ] != o->min_bs[DDIR_READ] ||

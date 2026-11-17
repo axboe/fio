@@ -26,6 +26,7 @@ enum {
 	IO_U_F_VER_IN_DEV	= 1 << 10, /* Verify data in device */
 	IO_U_F_ZEROED		= 1 << 11, /* Zeroed data */
 	IO_U_F_ERRORED		= 1 << 12, /* Errored offset */
+	IO_U_F_RCIO		= 1 << 13,
 };
 
 /*
@@ -38,6 +39,8 @@ struct io_u {
 	struct fio_file *file;
 	unsigned int flags;
 	enum fio_ddir ddir;
+	uint64_t rcio_region;
+	uint64_t rcio_bytes;
 
 	/*
 	 * For replay workloads, we may want to account as a different
@@ -164,6 +167,9 @@ extern int __must_check io_u_sync_complete(struct thread_data *, struct io_u *);
 extern int __must_check io_u_queued_complete(struct thread_data *, int);
 extern void io_u_queued(struct thread_data *, struct io_u *);
 extern int io_u_quiesce(struct thread_data *);
+extern void rcio_account_short(struct thread_data *, struct io_u *,
+			       unsigned long long);
+extern void rcio_cleanup_io(struct thread_data *);
 extern void io_u_log_error(struct thread_data *, struct io_u *);
 extern void io_u_mark_depth(struct thread_data *, unsigned int);
 extern void fill_io_buffer(struct thread_data *, void *, unsigned long long, unsigned long long);
