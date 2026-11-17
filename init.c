@@ -1314,6 +1314,7 @@ void td_fill_rand_seeds(struct thread_data *td)
 
 	init_rand_seed(&td->fdp_state, td->rand_seeds[FIO_RAND_FDP_OFF], false);
 	init_rand_seed(&td->sprandom_state, td->rand_seeds[FIO_RAND_SPRANDOM_OFF], false);
+	init_rand_seed(&td->rcio_state, td->rand_seeds[FIO_RAND_RCIO_OFF], use64);
 }
 
 static int setup_random_seeds(struct thread_data *td)

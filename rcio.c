@@ -9,8 +9,10 @@
 
 #ifndef WIN32
 #include <errno.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #include "io_ddir.h"
 #include "lib/rand.h"
@@ -25,6 +27,25 @@ static struct {
 
 int init_shared_rcio(void)
 {
+	bool needed = false;
+
+	for_each_td(td) {
+		if (td->o.rcio_size) {
+			needed = true;
+			break;
+		}
+	} end_for_each();
+	if (!needed)
+		return 0;
+
+	for_each_td(td) {
+		if (!td->o.rcio_size && td->o.read_iolog_file) {
+			log_err("fio: non-RCIO read_iolog jobs may access the "
+				"RCIO target outside the tracker\n");
+			return 1;
+		}
+	} end_for_each();
+
 	if (shared_rcio)
 		return 0;
 
@@ -293,5 +314,133 @@ void rcio_fail(struct shared_rcio_entry *entry)
 			entry->filename);
 	entry->failed = true;
 	pthread_mutex_unlock(&entry->mutex);
+}
+
+static int same_rcio_target(const char *first, const char *second)
+{
+	struct stat a, b;
+
+	if (!strcmp(first, second))
+		return 1;
+	if (stat(first, &a)) {
+		if (errno == ENOENT || errno == ENOTDIR)
+			return 0;
+		log_err("fio: cannot stat RCIO target %s: %s\n", first,
+			strerror(errno));
+		return -1;
+	}
+	if (stat(second, &b)) {
+		if (errno == ENOENT || errno == ENOTDIR)
+			return 0;
+		log_err("fio: cannot stat target %s: %s\n", second,
+			strerror(errno));
+		return -1;
+	}
+	if ((S_ISBLK(a.st_mode) && S_ISBLK(b.st_mode)) ||
+	    (S_ISCHR(a.st_mode) && S_ISCHR(b.st_mode)))
+		return a.st_rdev == b.st_rdev;
+	return a.st_dev == b.st_dev && a.st_ino == b.st_ino;
+}
+
+int init_rcio_jobs(void)
+{
+	struct shared_rcio_entry *entry = NULL;
+
+	if (!shared_rcio)
+		return 0;
+
+	for_each_td(td) {
+		struct fio_file *f;
+		uint64_t available, size;
+
+		if (!td->o.rcio_size)
+			continue;
+		if (td->runstate == TD_REAPED) {
+			log_err("fio: RCIO job file setup failed\n");
+			return 1;
+		}
+		f = td->files[0];
+		if (f->file_offset >= f->real_file_size) {
+			log_err("fio: invalid RCIO offset for %s\n", f->file_name);
+			return 1;
+		}
+		available = f->real_file_size - f->file_offset;
+		size = f->io_size < available ? f->io_size : available;
+		if (!size || size % td->o.rcio_size ||
+		    f->file_offset % td->o.rcio_size) {
+			log_err("fio: RCIO range for %s must contain whole, "
+				"aligned regions\n", f->file_name);
+			return 1;
+		}
+		if (td->o.random_generator == FIO_RAND_GEN_TAUSWORTHE &&
+		    size / td->o.rcio_size > INT_MAX) {
+			log_err("fio: RCIO region count requires "
+				"random_generator=tausworthe64\n");
+			return 1;
+		}
+		entry = get_shared_rcio(f->file_name, f->file_offset,
+					td->o.rcio_size, size / td->o.rcio_size);
+		if (!entry)
+			return 1;
+		f->rcio_shared = entry;
+	} end_for_each();
+
+	if (!entry)
+		return 0;
+	for_each_td(td) {
+		struct fio_file *f;
+		unsigned int i;
+
+		if (td->o.rcio_size)
+			continue;
+		for_each_file(td, f, i) {
+			int same = same_rcio_target(entry->filename, f->file_name);
+
+			if (same < 0)
+				return 1;
+			if (same) {
+				log_err("fio: non-RCIO job shares the RCIO "
+					"target %s\n", f->file_name);
+				return 1;
+			}
+		}
+	} end_for_each();
+	return 0;
+}
+
+#else
+
+int init_shared_rcio(void)
+{
+	return 0;
+}
+
+int init_rcio_jobs(void)
+{
+	return 0;
+}
+
+int free_all_shared_rcio(void)
+{
+	return 0;
+}
+
+uint64_t rcio_pick_region(struct shared_rcio_entry *entry, int ddir,
+			  struct frand_state *rs)
+{
+	log_err("fio: RCIO is not supported on Windows\n");
+	return RCIO_REGION_FAILED;
+}
+
+int rcio_complete_region(struct shared_rcio_entry *entry, uint64_t region,
+			 int ddir)
+{
+	log_err("fio: RCIO is not supported on Windows\n");
+	return -1;
+}
+
+void rcio_fail(struct shared_rcio_entry *entry)
+{
+	log_err("fio: RCIO is not supported on Windows\n");
 }
 #endif
