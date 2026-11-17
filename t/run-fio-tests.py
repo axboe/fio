@@ -48,6 +48,7 @@ import shutil
 import logging
 import argparse
 import re
+import zlib
 from pathlib import Path
 from statsmodels.sandbox.stats.runs import runstest_1samp
 from fiotestlib import FioExeTest, FioJobFileTest, run_fio_tests
@@ -637,6 +638,46 @@ class FioJobFileTest_t0038(FioJobFileTest):
         shutil.copy(src, self.paths['test_dir'])
 
 
+class FioJobFileTest_t0039(FioJobFileTest):
+    """
+    Make sure random buffers are not compressible. Compress each 8 KiB
+    block written by t0039.fio on its own and count the blocks that
+    shrink by at least 128 bytes. With the bug about 11% of blocks do; with
+    the fix almost none do.
+    """
+    BLOCK_SIZE = 8192
+    MIN_SAVING = 128
+    MAX_FRACTION = 0.01
+
+    def check_result(self):
+        super().check_result()
+
+        if not self.passed:
+            return
+
+        output_file = os.path.join(self.paths['test_dir'], "t0039file")
+        with open(output_file, "rb") as f:
+            data = f.read()
+
+        blocks = len(data) // self.BLOCK_SIZE
+        if blocks == 0:
+            self.failure_reason += " no data written,"
+            self.passed = False
+            return
+
+        compressible = 0
+        for i in range(blocks):
+            block = data[i * self.BLOCK_SIZE:(i + 1) * self.BLOCK_SIZE]
+            if len(zlib.compress(block, 1)) <= self.BLOCK_SIZE - self.MIN_SAVING:
+                compressible += 1
+
+        logging.debug("Test %d: %d/%d blocks compressible", self.testnum,
+                      compressible, blocks)
+        if compressible > blocks * self.MAX_FRACTION:
+            self.failure_reason += f" {compressible}/{blocks} blocks compressible,"
+            self.passed = False
+
+
 TEST_LIST = [
     {
         'test_id':          1,
@@ -983,6 +1024,15 @@ TEST_LIST = [
         'test_id':          38,
         'test_class':       FioJobFileTest_t0038,
         'job':              't0038-397f1338.fio',
+        'success':          SUCCESS_DEFAULT,
+        'pre_job':          None,
+        'pre_success':      None,
+        'requirements':     [],
+    },
+    {
+        'test_id':          39,
+        'test_class':       FioJobFileTest_t0039,
+        'job':              't0039.fio',
         'success':          SUCCESS_DEFAULT,
         'pre_job':          None,
         'pre_success':      None,

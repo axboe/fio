@@ -1,0 +1,21 @@
+#
+# Make sure buffers filled with random data are not compressible.
+#
+# A weakness in __fill_random_buf() (GitHub issue #2157) let seeds with
+# several trailing zero bits carry those zeros into every 64-bit word,
+# leaving the low byte of each word with only a few distinct values.
+# About 11% of 8 KiB buffers then compressed by hundreds of bytes.
+#
+# Expected result: (almost) no 8 KiB block compresses by >= 128 bytes
+# Buggy result: roughly 11% of blocks compress by >= 128 bytes
+#
+# run-fio-tests.py checks the contents of the written file.
+#
+
+[test]
+filename=t0039file
+rw=write
+bs=8k
+size=16M
+refill_buffers=1
+buffer_compress_percentage=0
