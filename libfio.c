@@ -287,9 +287,20 @@ void fio_terminate_threads(unsigned int group_id, unsigned int terminate)
 			 */
 			if (!td->pid || pid == td->pid)
 				continue;
-			else if (td->runstate < TD_RAMP)
+			else if (td->runstate < TD_RAMP) {
+				/*
+				 * A job at TD_INITIALIZED is parked on its own
+				 * semaphore, waiting for the main thread to let
+				 * it past the startup barrier. SIGTERM cannot
+				 * interrupt that pthread_cond_wait(), so release
+				 * the gate here as well: the job then observes
+				 * the terminate flag and exits through its
+				 * normal error path.
+				 */
+				if (td->runstate == TD_INITIALIZED)
+					fio_sem_up(td->sem);
 				kill(td->pid, SIGTERM);
-			else {
+			} else {
 				struct ioengine_ops *ops = td->io_ops;
 
 				if (ops && ops->terminate)
