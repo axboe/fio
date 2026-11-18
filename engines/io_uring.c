@@ -1197,6 +1197,26 @@ static int fio_ioring_cmd_prep(struct thread_data *td, struct io_u *io_u)
 					o->nonvectored ? NULL : &ld->iovecs[io_u->index]);
 		}
 
+		/*
+		 * Single write opcode case. Set these per write prep, like
+		 * the split case above, rather than once at io_u init:
+		 * __get_io_u() clears IO_U_F_TRIMMED on every io_u reuse, so
+		 * a flag set at init time never survives to the write that
+		 * needs it, and flagging at init time also leaves
+		 * IO_U_F_ZEROED/IO_U_F_ERRORED set on io_us used for reads.
+		 */
+		if (io_u->ddir == DDIR_WRITE) {
+			io_u_clear(td, io_u, IO_U_F_TRIMMED | IO_U_F_ZEROED | IO_U_F_ERRORED);
+			if (ld->write_opcode == nvme_cmd_write_zeroes) {
+				if (o->deac)
+					io_u_set(td, io_u, IO_U_F_TRIMMED);
+				else
+					io_u_set(td, io_u, IO_U_F_ZEROED);
+			} else if (ld->write_opcode == nvme_cmd_write_uncor) {
+				io_u_set(td, io_u, IO_U_F_ERRORED);
+			}
+		}
+
 		return fio_nvme_uring_cmd_prep(cmd, io_u,
 				o->nonvectored ? NULL : &ld->iovecs[io_u->index],
 				dsm, read_opcode, ld->write_opcode,
@@ -2255,17 +2275,6 @@ static int fio_ioring_io_u_init(struct thread_data *td, struct io_u *io_u)
 			pi_data->apptag_mask = o->apptag_mask;
 			pi_data->apptag = o->apptag;
 			io_u->engine_data = pi_data;
-		}
-	}
-
-	if (ld->is_uring_cmd_eng && o->wmode_split_nr <= 1) {
-		if (ld->write_opcode == nvme_cmd_write_zeroes) {
-			if (o->deac)
-				io_u_set(td, io_u, IO_U_F_TRIMMED);
-			else
-				io_u_set(td, io_u, IO_U_F_ZEROED);
-		} else if (ld->write_opcode == nvme_cmd_write_uncor) {
-			io_u_set(td, io_u, IO_U_F_ERRORED);
 		}
 	}
 
