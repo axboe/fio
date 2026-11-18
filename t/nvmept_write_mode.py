@@ -54,7 +54,7 @@ class WriteModeTest(FioJobCmdTest):
                     'iodepth', 'iodepth_batch', 'iodepth_batch_complete',
                     'size', 'rate', 'bs', 'bssplit', 'bsrange', 'randrepeat',
                     'buffer_pattern', 'verify_pattern', 'verify', 'offset',
-                    'filesize', 'write_mode', 'debug', ]:
+                    'filesize', 'write_mode', 'debug', 'deac', ]:
             if opt in self.fio_opts:
                 option = f"--{opt}={self.fio_opts[opt]}"
                 fio_args.append(option)
@@ -507,6 +507,49 @@ TEST_LIST = [
             "debug": "io,verify",
             },
         "test_class": WriteModeVerify,
+    },
+
+    #
+    # Make sure verify also handles write zeroes and write uncorrectable
+    # when only a single write opcode is in use
+    #
+    {
+        # write zeroes with deac=1 is reported as trimmed, not zeroed, so
+        # verify has to recognize that instead of expecting a normal
+        # write's verify header
+        "test_id": 80,
+        "fio_opts": {
+            "rw": 'write',
+            "filesize": TEST_SIZE,
+            "write_mode": "zeroes",
+            "deac": 1,
+            "verify": "crc32c",
+            "output-format": "json",
+            },
+        "test_class": WriteModeTest,
+    },
+    {
+        "test_id": 81,
+        "fio_opts": {
+            "rw": 'write',
+            "filesize": TEST_SIZE,
+            "write_mode": "zeroes",
+            "verify": "crc32c",
+            "output-format": "json",
+            },
+        "test_class": WriteModeTest,
+    },
+    {
+        # reads of uncorrectable blocks fail by design and account no
+        # bytes, so skip the json data direction checking here
+        "test_id": 82,
+        "fio_opts": {
+            "rw": 'write',
+            "filesize": TEST_SIZE,
+            "write_mode": "uncor",
+            "verify": "crc32c",
+            },
+        "test_class": WriteModeTest,
     },
 ]
 
