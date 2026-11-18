@@ -237,32 +237,33 @@ static unsigned long long __get_mult_bytes(const char *p, void *data,
 
 	/* If kb_base is 1000, use true units.
 	 * If kb_base is 1024, use opposite units.
+	 *
 	 */
-	if (!strncmp("pib", c, 3)) {
+	if (!strncmp("pib", c, 3) || !strncmp("pi", c, 2)) {
 		pow = 5;
 		if (kb_base == 1000)
 			mult = 1024;
 		else if (kb_base == 1024)
 			mult = 1000;
-	} else if (!strncmp("tib", c, 3)) {
+	} else if (!strncmp("tib", c, 3) || !strncmp("ti", c, 2)) {
 		pow = 4;
 		if (kb_base == 1000)
 			mult = 1024;
 		else if (kb_base == 1024)
 			mult = 1000;
-	} else if (!strncmp("gib", c, 3)) {
+	} else if (!strncmp("gib", c, 3) || !strncmp("gi", c, 2)) {
 		pow = 3;
 		if (kb_base == 1000)
 			mult = 1024;
 		else if (kb_base == 1024)
 			mult = 1000;
-	} else if (!strncmp("mib", c, 3)) {
+	} else if (!strncmp("mib", c, 3) || !strncmp("mi", c, 2)) {
 		pow = 2;
 		if (kb_base == 1000)
 			mult = 1024;
 		else if (kb_base == 1024)
 			mult = 1000;
-	} else if (!strncmp("kib", c, 3)) {
+	} else if (!strncmp("kib", c, 3) || !strncmp("ki", c, 2)) {
 		pow = 1;
 		if (kb_base == 1000)
 			mult = 1024;
