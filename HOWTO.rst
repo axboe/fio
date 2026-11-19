@@ -3876,6 +3876,20 @@ I/O replay
 	the original IO rate in the trace. If set to 200, run at twice the
 	original IO rate. Defaults to 100.
 
+.. option:: replay_sleep_usec=int
+
+	When replaying I/O with :option:`read_iolog`, fio waits for each entry's
+	timestamp by repeatedly reaping completions without blocking, which keeps
+	one CPU busy per job for the whole wait. If set to a non-zero value, fio
+	reaps completions and sleeps in slices of at most this many microseconds
+	while more than this much time remains before the deadline, then
+	busy-waits the remaining tail. This saves CPU on longer waits, especially
+	with more replay jobs than CPUs, while avoiding sleep overhead and timer
+	slack on short waits and on the final tail, at the cost of noticing a
+	completion up to this long (plus timer slack) after it happens during a
+	sleep slice. 100 is a reasonable value for HDD traces. Defaults to 0
+	(spin).
+
 .. option:: replay_redirect=str
 
 	While replaying I/O patterns using :option:`read_iolog` the default behavior

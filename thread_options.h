@@ -393,6 +393,7 @@ struct thread_options {
 	unsigned int replay_scale;
 	unsigned int replay_time_scale;
 	unsigned int replay_skip;
+	unsigned int replay_sleep_usec;
 
 	unsigned int per_job_logs;
 
@@ -732,6 +733,7 @@ struct thread_options_pack {
 	uint32_t replay_scale;
 	uint32_t replay_time_scale;
 	uint32_t replay_skip;
+	uint32_t replay_sleep_usec;
 
 	uint32_t per_job_logs;
 
