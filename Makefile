@@ -126,6 +126,10 @@ ifdef CONFIG_LIBHIPFILE
   SOURCE += engines/libhipfile.c
   SHARED_GPUACCEL_SOURCE = 1
 endif
+ifdef CONFIG_LIBMUFILE
+  SOURCE += engines/libmufile.c
+  SHARED_GPUACCEL_SOURCE = 1
+endif
 ifdef SHARED_GPUACCEL_SOURCE
   SOURCE += engines/gpuaccel.c
 endif
@@ -464,6 +468,7 @@ UT_OBJS += unittests/oslib/strlcat.o
 UT_OBJS += unittests/oslib/strndup.o
 UT_OBJS += unittests/oslib/strcasestr.o
 UT_OBJS += unittests/oslib/strsep.o
+UT_OBJS += unittests/engines/libmufile_errno.o
 ifeq ($(CONFIG_TARGET_OS), Linux)
 UT_OBJS += unittests/cgroup.o
 endif
@@ -677,6 +682,15 @@ doc: tools/plot/fio2gnuplot.1
 
 test: fio
 	./fio --minimal --thread --exitall_on_error --runtime=1s --name=nulltest --ioengine=null --rw=randrw --iodepth=2 --norandommap --random_generator=tausworthe64 --size=16T --name=verifyfstest --filename=fiotestfile.tmp --unlink=1 --rw=write --verify=crc32c --verify_state_save=0 --size=16K
+
+test-libmufile: fio
+	FIO_BIN="$(CURDIR)/fio" python3 $(SRCDIR)/t/libmufile-test.py
+	FIO_BIN="$(CURDIR)/fio" sh $(SRCDIR)/t/libmufile-configure.sh
+
+test-libmufile-hardware: fio
+	FIO_BIN="$(CURDIR)/fio" sh $(SRCDIR)/t/libmufile-smoke.sh
+
+.PHONY: test-libmufile test-libmufile-hardware
 
 
 mock-tests:

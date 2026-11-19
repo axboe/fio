@@ -45,6 +45,7 @@ struct gpuaccel_backend {
 	int (*file_handle_register)(int fd, void **handle);
 	void (*file_handle_deregister)(void *handle);
 
+	size_t (*buf_register_size)(struct thread_data *td, size_t size);
 	int (*buf_register)(void *mem, size_t size);
 	void (*buf_deregister)(void *mem);
 

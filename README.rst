@@ -170,6 +170,34 @@ are detected on the system. For Ubuntu, these packages are libcurl4-openssl-dev
 and libssl-dev.
 
 
+Building with libmufile
+~~~~~~~~~~~~~~~~~~~~~~~
+
+The optional ``libmufile`` engine requires Linux, MUSA runtime development
+headers and libraries, and libmufile >= 1.1.0. Runtime use requires a supported
+Moore Threads GPU and driver; direct mode also requires compatible mtfs and
+filesystem support. Obtain matching packages and installation instructions from the
+`Moore Threads developer portal <https://developer.mthreads.com/>`_.
+
+Configure requires pkg-config metadata supplying both libmufile and MUSA
+compiler/linker flags. For a nonstandard prefix, set ``PKG_CONFIG_PATH`` to the
+directory containing ``libmufile.pc``. Missing metadata, an unsupported library
+version or missing link dependencies cause an explicit enable request to fail::
+
+ $ ./configure --enable-libmufile
+ $ make
+ $ ./fio --enghelp=libmufile
+
+Configuration does not execute GPU calls. The engine is disabled unless
+explicitly enabled; ensure the runtime loader can find the installed libraries.
+See HOWTO.rst for engine options and buffer ownership restrictions.
+
+Run CPU-only regressions with ``make test-libmufile``. For the manual hardware
+smoke test, use a writable directory on a supported filesystem and GPU IDs::
+
+ $ FIO_DIR=/path/to/test-storage GPU_DEV_IDS=0 make test-libmufile-hardware
+
+
 Windows
 ~~~~~~~
 

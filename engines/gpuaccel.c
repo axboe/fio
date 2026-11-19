@@ -475,7 +475,11 @@ int fio_gpuaccel_iomem_alloc(struct thread_data *td, size_t total_mem)
 			goto exit_error;
 	}
 	if (o->io_mode == IO_DIRECT) {
-		rc = be->buf_register(o->gpu_mem_ptr, total_mem);
+		size_t register_size = total_mem;
+
+		if (be->buf_register_size)
+			register_size = be->buf_register_size(td, total_mem);
+		rc = be->buf_register(o->gpu_mem_ptr, register_size);
 		if (rc != 0)
 			goto exit_error;
 	}
