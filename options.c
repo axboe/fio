@@ -3857,6 +3857,18 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_IOLOG,
 	},
 	{
+		.name	= "replay_sleep_usec",
+		.lname	= "Replay sleep slice",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct thread_options, replay_sleep_usec),
+		.def	= "0",
+		.parent	= "read_iolog",
+		.help	= "Sleep up to this many usec per slice on longer"
+			" trace waits and spin the final tail (0 = spin)",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IOLOG,
+	},
+	{
 		.name	= "replay_skip",
 		.lname	= "Replay Skip",
 		.type	= FIO_OPT_STR,
