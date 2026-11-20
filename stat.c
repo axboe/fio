@@ -2581,7 +2581,12 @@ void __show_run_stats(void)
 		ts->slat_percentiles = td->o.slat_percentiles;
 		ts->percentile_precision = td->o.percentile_precision;
 		memcpy(ts->percentile_list, td->o.percentile_list, sizeof(td->o.percentile_list));
-		opt_lists[j] = &td->opt_list;
+		/*
+		 * Report the options of the first job in the group, so they
+		 * match the job name and job_start taken from that job.
+		 */
+		if (!idx)
+			opt_lists[j] = &td->opt_list;
 
 		idx++;
 
