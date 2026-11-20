@@ -93,7 +93,8 @@ static struct fio_option options[] = {
 
 static const char *fio_libcufile_get_cuda_error(CUfileError_t st)
 {
-	if (IS_CUFILE_ERR(st.err))
+	/* cast the error to int to avoid a clang -Wabsolute-value warning */
+	if (IS_CUFILE_ERR((int) st.err))
 		return cufileop_status_error(st.err);
 	return "unknown";
 }
