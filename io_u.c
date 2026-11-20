@@ -1519,6 +1519,7 @@ static struct fio_file *get_next_file_rr(struct thread_data *td, int goodf,
 static struct fio_file *__get_next_file(struct thread_data *td)
 {
 	struct fio_file *f;
+	unsigned int i;
 
 	assert(td->o.nr_files <= td->files_index);
 
@@ -1531,7 +1532,8 @@ static struct fio_file *__get_next_file(struct thread_data *td)
 	}
 
 	f = td->file_service_file;
-	if (f && fio_file_open(f) && !fio_file_closing(f)) {
+	if (f && fio_file_open(f) && !fio_file_closing(f) &&
+	    !fio_file_done(f)) {
 		if (td->o.file_service_type == FIO_FSERVICE_SEQ)
 			goto out;
 		if (td->file_service_left) {
@@ -1540,14 +1542,33 @@ static struct fio_file *__get_next_file(struct thread_data *td)
 		}
 	}
 
+retry:
 	if (td->o.file_service_type == FIO_FSERVICE_RR ||
 	    td->o.file_service_type == FIO_FSERVICE_SEQ)
 		f = get_next_file_rr(td, FIO_FILE_open, FIO_FILE_closing);
 	else
 		f = get_next_file_rand(td, FIO_FILE_open, FIO_FILE_closing);
 
-	if (IS_ERR(f))
-		return f;
+	if (IS_ERR(f)) {
+		if (PTR_ERR(f) != -EBUSY || !td->nr_done_files)
+			return f;
+
+		for_each_file(td, f, i) {
+			int err;
+
+			if (!fio_file_done(f) || !fio_file_open(f) ||
+			    fio_file_closing(f))
+				continue;
+			err = td_io_close_file(td, f);
+			if (err) {
+				td_verror(td, err, "file close");
+				return NULL;
+			}
+			if (td->nr_open_files < td->o.open_files)
+				goto retry;
+		}
+		return ERR_PTR(-EBUSY);
+	}
 
 	td->file_service_file = f;
 	td->file_service_left = td->file_service_nr - 1;
