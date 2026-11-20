@@ -34,6 +34,7 @@ main() {
                 "x86_64")
                     configure_flags+=(
                         "--enable-cuda"
+                        "--enable-libcufile"
                     )
                     ;;
 	    esac

@@ -71,6 +71,7 @@ DPKGCFG
 	        # Only for Ubuntu
 		pkgs+=(
 		   nvidia-cuda-dev
+		   libcufile-dev
 		)
 	    fi
             ;;
