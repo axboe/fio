@@ -1672,6 +1672,12 @@ I/O type
 	depth > 1, header write sequence number verification will be disabled. See
 	:option:`verify_write_sequence`.
 
+.. option:: rcio_size=int
+
+	Enable region-constrained I/O (RCIO) with the given region size in bytes.
+	The default is 0, which disables RCIO. See `Region-constrained I/O`_ for
+	the workload, setup, and restrictions.
+
 .. option:: softrandommap=bool
 
 	See :option:`norandommap`. If fio runs with the random block map enabled and
@@ -5810,3 +5816,73 @@ aggregate summary report assumes that options affecting reporting like
 :option:`unified_rw_reporting` and :option:`percentile_list` are identical
 across all the jobs summarized. Having different values for these options is an
 unsupported configuration.
+
+
+Region-constrained I/O
+---------------------
+
+A valid region is one whose last completed state-changing operation was a
+write. Region-constrained I/O (RCIO) directs random reads and trims to valid
+regions and random writes to free regions. This permits workloads that control
+the proportion of the tested range considered valid, rather than overwriting
+arbitrary regions or reading free regions.
+
+Fio divides the target range into regions of :option:`rcio_size` bytes. Each
+region starts free. A completed write makes it valid, a completed trim makes it
+free, and a read leaves its state unchanged. Fio reserves a region until its
+I/O has completed, including any short-I/O retries. If suitable regions are
+temporarily reserved, the job waits and retries. If no suitable or reserved
+regions remain, the job stops; a mixed job does not switch directions to avoid
+exhaustion. An I/O failure that leaves region state uncertain fails the tracker.
+
+The tracker starts empty on each fio invocation, even if the target already
+contains data. A free region is not necessarily trimmed, and tracker state is
+neither a query of the device nor persisted between invocations.
+
+Preparing a workload
+~~~~~~~~~~~~~~~~~~~~
+
+Use ``rw=randwrite`` to populate the desired number of valid regions, then use
+:option:`stonewall` to start dependent jobs after preconditioning completes.
+Set :option:`size` to the full target range and :option:`io_size` to the amount
+to write. Each I/O covers a whole region, so the amount may exceed a limit that
+is not a multiple of the region size.
+
+For example, writing 90 MiB of a 100 MiB range with 1 MiB regions establishes
+90 valid regions. Equal write and trim I/O counts then keep the number of valid
+regions approximately constant. :file:`examples/rcio.fio` demonstrates this
+with a simulated five-minute workload. Its null engine does not issue device
+I/O; using a real trim-capable target can overwrite and discard data.
+
+Supported configuration
+~~~~~~~~~~~~~~~~~~~~~~~
+
+RCIO requires ``thread=1``, ``io_submit_mode=inline``,
+``create_serialize=1``, and ``create_on_open=0``. Each job must use one target,
+random I/O, a fixed block size and block alignment equal to ``rcio_size``, and
+``percentage_random=100`` for every active direction. The offset and effective
+range must be aligned to the region size and the range must contain whole
+regions. All RCIO jobs in a fio invocation must use the same filename, offset,
+region size, and effective range. A non-RCIO job may not share the target.
+No job may use ``read_iolog`` while RCIO is active. Do not modify the target
+outside the tracked jobs while they run.
+
+Fio checks the target and range after file setup, so a file may be created or
+sized before these checks fail. Fio sets :option:`norandommap` for RCIO;
+explicitly setting ``norandommap=0`` is an error.
+With ``latency_target`` and ``iodepth`` greater than 1, RCIO requires
+``latency_run=1`` so outstanding I/O can drain before the job stops.
+
+RCIO supports the uniform random distribution and the ``tausworthe`` and
+``tausworthe64`` generators. The former is limited to ``INT_MAX`` regions, and
+the tracker supports at most ``UINT32_MAX`` regions. Tracker storage uses fio's
+shared-memory pool and grows with the number of regions. Its arrays use
+approximately 12 bytes per region on systems with a 4-byte ``int``, plus
+overhead. Large ranges with small regions may require increasing
+:option:`--alloc-size`.
+
+RCIO is not supported on Windows. It is incompatible with sequential I/O,
+multi-I/O runs, trimwrite, zoned I/O, ``num_range`` greater than 1,
+``trim_backlog``, ``sprandom``, ``read_iolog``, ``pre_read``, ``verify``,
+``verify_only``, ``bs_unaligned``, ``bs_is_seq_rand``, ``file_append``,
+``unlink``, ``unlink_each_loop``, ``fill_device``, and no-I/O engines.

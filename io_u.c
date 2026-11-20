@@ -12,6 +12,7 @@
 #include "minmax.h"
 #include "zbd.h"
 #include "sprandom.h"
+#include "rcio.h"
 
 struct io_completion_data {
 	int nr;				/* input */
@@ -508,6 +509,31 @@ static int get_next_block(struct thread_data *td, struct io_u *io_u,
 
 	assert(ddir_rw(ddir));
 
+	if (f->rcio_shared) {
+		uint64_t region;
+
+		region = rcio_pick_region(f->rcio_shared, ddir, &td->rcio_state);
+		if (region == RCIO_REGION_RESERVED) {
+			dprint(FD_IO, "rcio: eligible regions temporarily reserved\n");
+			return -EBUSY;
+		}
+		if (region == RCIO_REGION_FAILED) {
+			td_verror(td, EIO, "rcio tracker failed");
+			return -EIO;
+		}
+		if (region == UINT64_MAX) {
+			fio_mark_td_terminate(td);
+			return 1;
+		}
+		io_u->rcio_region = region;
+		io_u->rcio_bytes = 0;
+		io_u_set(td, io_u, IO_U_F_RCIO);
+		io_u->offset = region * f->rcio_shared->region_size;
+		io_u->verify_offset = io_u->offset;
+		*is_random = true;
+		return 0;
+	}
+
 	b = offset = -1ULL;
 
 	if (td_randtrimwrite(td) && ddir == DDIR_WRITE) {
@@ -580,6 +606,7 @@ static int get_next_offset(struct thread_data *td, struct io_u *io_u,
 	struct fio_file *f = io_u->file;
 	enum fio_ddir ddir = io_u->ddir;
 	int rw_seq_hit = 0;
+	int ret;
 
 	assert(ddir_rw(ddir));
 
@@ -588,8 +615,9 @@ static int get_next_offset(struct thread_data *td, struct io_u *io_u,
 		td->ddir_seq_nr = td->o.ddir_seq_nr;
 	}
 
-	if (get_next_block(td, io_u, ddir, rw_seq_hit, is_random))
-		return 1;
+	ret = get_next_block(td, io_u, ddir, rw_seq_hit, is_random);
+	if (ret)
+		return ret;
 
 	if (io_u->offset >= f->io_size) {
 		dprint(FD_IO, "get_next_offset: offset %llu >= io_size %llu\n",
@@ -922,10 +950,68 @@ void put_file_log(struct thread_data *td, struct fio_file *f)
 		td_verror(td, ret, "file close");
 }
 
+static int rcio_finish_io(struct thread_data *td, struct io_u *io_u,
+			  bool completed)
+{
+	struct shared_rcio_entry *entry;
+	int ret;
+
+	if (!(io_u->flags & IO_U_F_RCIO))
+		return 0;
+	io_u_clear(td, io_u, IO_U_F_RCIO);
+	entry = io_u->file->rcio_shared;
+	if (!completed) {
+		rcio_fail(entry);
+		td_verror(td, EIO, "rcio incomplete I/O");
+		return -EIO;
+	}
+	ret = rcio_complete_region(entry, io_u->rcio_region, io_u->ddir);
+	if (ret) {
+		rcio_fail(entry);
+		td_verror(td, EIO, "rcio completion");
+	}
+	return ret;
+}
+
+void rcio_account_short(struct thread_data *td, struct io_u *io_u,
+			unsigned long long bytes)
+{
+	enum fio_ddir ddir = acct_ddir(io_u);
+
+	if (!(io_u->flags & IO_U_F_RCIO))
+		return;
+	/* A reissue will account for the residual bytes again. */
+	io_u->rcio_bytes += bytes;
+	td->io_issue_bytes[ddir] -= io_u->resid;
+	td->rate_io_issue_bytes[ddir] -= io_u->resid;
+}
+
+void rcio_cleanup_io(struct thread_data *td)
+{
+	struct io_u *io_u;
+
+	if (!td->o.rcio_size)
+		return;
+	while ((io_u = io_u_rpop(&td->io_u_requeues)) != NULL) {
+		io_u_clear(td, io_u, IO_U_F_IN_CUR_DEPTH);
+		put_io_u(td, io_u);
+	}
+	if (td->io_u_in_flight || td->io_u_queued) {
+		struct fio_file *f;
+		unsigned int i;
+
+		for_each_file(td, f, i)
+			if (f->rcio_shared)
+				rcio_fail(f->rcio_shared);
+		td_verror(td, EIO, "rcio outstanding I/O");
+	}
+}
+
 void put_io_u(struct thread_data *td, struct io_u *io_u)
 {
 	const bool needs_lock = td_async_processing(td);
 
+	rcio_finish_io(td, io_u, false);
 	zbd_put_io_u(td, io_u);
 
 	if (td->parent)
@@ -1104,6 +1190,7 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	bool is_random;
 	uint64_t offset;
 	enum io_u_action ret;
+	int offset_ret;
 
 	if (td_ioengine_flagged(td, FIO_NOIO))
 		goto out;
@@ -1133,9 +1220,10 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 		 * No log, let the seq/rand engine retrieve the next buflen and
 		 * position.
 		 */
-		if (get_next_offset(td, io_u, &is_random)) {
+		offset_ret = get_next_offset(td, io_u, &is_random);
+		if (offset_ret) {
 			dprint(FD_IO, "io_u %p, failed getting offset\n", io_u);
-			return 1;
+			return offset_ret;
 		}
 
 		io_u->buflen = get_next_buflen(td, io_u, is_random);
@@ -1170,6 +1258,13 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	 */
 	if (!multi_range_trim(td, io_u) && td_random(td) && file_randommap(td, io_u->file))
 		io_u->buflen = mark_random_map(td, io_u, offset, io_u->buflen);
+
+	if ((io_u->flags & IO_U_F_RCIO) &&
+	    io_u->buflen != io_u->file->rcio_shared->region_size) {
+		log_err("fio: RCIO I/O does not cover its region\n");
+		td_verror(td, EIO, "rcio I/O size");
+		return -EIO;
+	}
 
 out:
 	if (!multi_range_trim(td, io_u))
@@ -1567,6 +1662,7 @@ static struct fio_file *get_next_file(struct thread_data *td)
 static long set_io_u_file(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f;
+	int ret;
 
 	do {
 		f = get_next_file(td);
@@ -1576,19 +1672,27 @@ static long set_io_u_file(struct thread_data *td, struct io_u *io_u)
 		io_u->file = f;
 		get_file(f);
 
-		if (!fill_io_u(td, io_u))
+		ret = fill_io_u(td, io_u);
+		if (!ret)
 			break;
 
 		zbd_put_io_u(td, io_u);
 
+		rcio_finish_io(td, io_u, false);
 		put_file_log(td, f);
-		td_io_close_file(td, f);
 		io_u->file = NULL;
+
+		if (ret == -EBUSY)
+			return ret;
+		td_io_close_file(td, f);
+		if (ret < 0 || (td->o.rcio_size && td->error))
+			return -EIO;
 
 		if (io_u->ddir == DDIR_TIMEOUT)
 			return 1;
 
-		if (td->o.file_service_type & __FIO_FSERVICE_NONUNIFORM)
+		if (!td->o.rcio_size &&
+		    (td->o.file_service_type & __FIO_FSERVICE_NONUNIFORM))
 			fio_file_reset(td, f);
 		else {
 			fio_file_set_done(f);
@@ -1975,10 +2079,14 @@ struct io_u *get_io_u(struct thread_data *td)
 	if (td->flags & TD_F_READ_IOLOG) {
 		if (read_iolog_get(td, io_u))
 			goto err_put;
-	} else if (set_io_u_file(td, io_u)) {
-		ret = -EBUSY;
-		dprint(FD_IO, "io_u %p, setting file failed\n", io_u);
-		goto err_put;
+	} else {
+		ret = set_io_u_file(td, io_u);
+		if (ret) {
+			if (ret > 0 || !td->o.rcio_size)
+				ret = -EBUSY;
+			dprint(FD_IO, "io_u %p, setting file failed\n", io_u);
+			goto err_put;
+		}
 	}
 
 	f = io_u->file;
@@ -2185,6 +2293,7 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 	struct io_u *io_u = *io_u_ptr;
 	enum fio_ddir ddir = io_u->ddir;
 	struct fio_file *f = io_u->file;
+	bool rcio_io = io_u->flags & IO_U_F_RCIO;
 
 	dprint_io_u(io_u, "complete");
 
@@ -2271,14 +2380,29 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 		 * appropriately!
 		 */
 		if (bytes && io_u->resid) {
+			rcio_account_short(td, io_u, bytes);
 			io_u->xfer_buflen = io_u->resid;
 			io_u->xfer_buf += bytes;
 			io_u->offset += bytes;
 			td->ts.short_io_u[io_u->ddir]++;
 			if (io_u->offset < io_u->file->real_file_size) {
+				if (rcio_io)
+					td->io_issues[acct_ddir(io_u)]--;
 				requeue_io_u(td, io_u_ptr);
 				return;
 			}
+		}
+
+		if (io_u->flags & IO_U_F_RCIO) {
+			bool completed = !io_u->resid &&
+				io_u->offset >= io_u->verify_offset &&
+				io_u->offset - io_u->verify_offset + bytes ==
+				io_u->buflen;
+
+			if (rcio_finish_io(td, io_u, completed))
+				icd->error = EIO;
+			else
+				bytes += io_u->rcio_bytes;
 		}
 
 		td->io_blocks[ddir]++;
@@ -2290,7 +2414,9 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 		}
 
 		if (ddir == DDIR_WRITE)
-			file_log_write_comp(td, f, io_u->offset, bytes);
+			file_log_write_comp(td, f, rcio_io ?
+					    io_u->verify_offset : io_u->offset,
+					    bytes);
 
 		if (should_account(td))
 			account_io_completion(td, io_u, icd, ddir, bytes);
