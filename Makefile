@@ -4,6 +4,8 @@ endif
 
 VPATH := $(SRCDIR)
 
+PYTHON ?= python3
+
 all: fio
 
 config-host.mak: configure
@@ -15,7 +17,7 @@ config-host.mak: configure
 	  sed -n "/.*Configured with/s/[^:]*: //p" "$@" | sh;	\
 	fi
 
-ifneq ($(MAKECMDGOALS),clean)
+ifneq ($(filter-out clean style,$(if $(MAKECMDGOALS),$(MAKECMDGOALS),all)),)
 include config-host.mak
 endif
 
@@ -311,7 +313,9 @@ endif
 
 FIO-VERSION-FILE: FORCE
 	@$(SHELL) $(SRCDIR)/FIO-VERSION-GEN
+ifneq ($(filter-out style,$(if $(MAKECMDGOALS),$(MAKECMDGOALS),all)),)
 -include FIO-VERSION-FILE
+endif
 
 override CFLAGS := -DFIO_VERSION='"$(FIO_VERSION)"' $(FIO_CFLAGS) $(CFLAGS)
 
@@ -329,7 +333,9 @@ FIO_OBJS += lex.yy.o y.tab.o
 GFIO_OBJS += lex.yy.o y.tab.o
 endif
 
+ifneq ($(filter-out style,$(if $(MAKECMDGOALS),$(MAKECMDGOALS),all)),)
 -include $(OBJS:.o=.d) $(T_OBJS:.o=.d) $(UT_OBJS:.o=.d)
+endif
 
 T_SMALLOC_OBJS = t/stest.o
 T_SMALLOC_OBJS += gettime.o fio_sem.o pshared.o smalloc.o t/log.o t/debug.o \
@@ -675,6 +681,9 @@ doc: tools/plot/fio2gnuplot.1
 	@man -t tools/plot/fio2gnuplot.1 | ps2pdf - fio2gnuplot.pdf
 	@man -t tools/hist/fiologparser_hist.py.1 | ps2pdf - fiologparser_hist.pdf
 
+style:
+	@$(PYTHON) $(SRCDIR)/tools/check_style.py $(if $(filter 1,$(FORMAT)),--format) $(STYLE_FLAGS)
+
 test: fio
 	./fio --minimal --thread --exitall_on_error --runtime=1s --name=nulltest --ioengine=null --rw=randrw --iodepth=2 --norandommap --random_generator=tausworthe64 --size=16T --name=verifyfstest --filename=fiotestfile.tmp --unlink=1 --rw=write --verify=crc32c --verify_state_save=0 --size=16K
 
@@ -713,4 +722,4 @@ endif
 	$(INSTALL) -m 755 -d $(DESTDIR)$(sharedir)
 	$(INSTALL) -m 644 $(SRCDIR)/tools/plot/*gpm $(DESTDIR)$(sharedir)/
 
-.PHONY: test fulltest
+.PHONY: test fulltest style
