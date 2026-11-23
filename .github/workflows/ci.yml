@@ -121,17 +121,19 @@ jobs:
       if: ${{ startsWith(matrix.build, 'windows-msys2') }}
       uses: msys2/setup-msys2@v2
       with:
+        msystem: CLANG64
+        update: true
         install: >
           git
           base-devel
-          mingw-w64-${{matrix.arch}}-clang
-          mingw-w64-${{matrix.arch}}-cunit
-          mingw-w64-${{matrix.arch}}-toolchain
-          mingw-w64-${{matrix.arch}}-lld
-          mingw-w64-${{matrix.arch}}-python-scipy
-          mingw-w64-${{matrix.arch}}-python-six
-          mingw-w64-${{matrix.arch}}-python-statsmodels
-          mingw-w64-${{matrix.arch}}-python-sphinx
+          mingw-w64-clang-${{matrix.arch}}-clang
+          mingw-w64-clang-${{matrix.arch}}-cunit
+          mingw-w64-clang-${{matrix.arch}}-toolchain
+          mingw-w64-clang-${{matrix.arch}}-lld
+          mingw-w64-clang-${{matrix.arch}}-python-scipy
+          mingw-w64-clang-${{matrix.arch}}-python-six
+          mingw-w64-clang-${{matrix.arch}}-python-statsmodels
+          mingw-w64-clang-${{matrix.arch}}-python-sphinx
 
     - name: install bash 4 (macOS)
       if: ${{ contains( matrix.build, 'macOS' ) }}
