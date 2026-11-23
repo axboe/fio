@@ -1235,6 +1235,11 @@ if compile_prog "" "" "clock_gettime"; then
 elif compile_prog "" "-lrt" "clock_gettime"; then
     clock_gettime="yes"
     LIBS="-lrt $LIBS"
+elif compile_prog "" "-lpthread" "clock_gettime"; then
+    # MinGW provides clock_gettime() in libwinpthread. GCC links it
+    # implicitly but clang (e.g. MSYS2 CLANG64) does not.
+    clock_gettime="yes"
+    LIBS="-lpthread $LIBS"
 else
   fatal "clock_gettime is not supported"
 fi
