@@ -852,7 +852,8 @@ option is ignored.
 .TP
 .BI zoneskip \fR=\fPint[z]
 For \fBzonemode\fR=strided, the number of bytes to skip after \fBzonesize\fR
-bytes of data have been transferred.
+bytes of data have been transferred. This parameter must be zero for
+\fBzonemode\fR=zbd.
 
 For \fBzonemode\fR=zbd, the \fBzonesize\fR aligned number of bytes to skip
 once a zone is fully written (write workloads) or all written data in the

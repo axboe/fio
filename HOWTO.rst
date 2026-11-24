@@ -1077,7 +1077,7 @@ Target file/device
 	capacity is obtained from the device information and this option is
 	ignored.
 
-.. option:: zoneskip=int
+.. option:: zoneskip=int[z]
 
 	For :option:`zonemode` =strided, the number of bytes to skip after
 	:option:`zonesize` bytes of data have been transferred. This parameter
@@ -2114,7 +2114,10 @@ I/O size
 	will perform I/O within the first 20GiB but exit when 5GiB have been
 	done. The opposite is also possible -- if :option:`size` is set to 20GiB,
 	and :option:`io_size` is set to 40GiB, then fio will do 40GiB of I/O within
-	the 0..20GiB region.
+        the 0..20GiB region. Value can be set as percentage:
+        :option:`io_size` =N%. In this case :option:`io_size` multiplies
+        :option:`size` value. In ZBD mode, value can also be set as number of
+        zones using 'z'.
 
 .. option:: filesize=irange(int)
 
