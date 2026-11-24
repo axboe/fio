@@ -1433,7 +1433,7 @@ I/O type
 	The values are all relative to each other, and no absolute meaning
 	should be associated with them.
 
-.. option:: offset=int
+.. option:: offset=int[%|z]
 
 	Start I/O at the provided offset in the file, given as either a fixed size in
 	bytes, zones or a percentage. If a percentage is given, the generated offset will be
@@ -1451,7 +1451,7 @@ I/O type
 	is aligned upwards to this value. Defaults to 0 meaning that a percentage
 	offset is aligned to the minimum block size.
 
-.. option:: offset_increment=int
+.. option:: offset_increment=int[%|z]
 
 	If this is provided, then the real offset becomes `offset + offset_increment
 	* thread_number`, where the thread number is a counter that starts at 0 and
@@ -2084,7 +2084,7 @@ Buffers and memory
 I/O size
 ~~~~~~~~
 
-.. option:: size=int
+.. option:: size=int[%|z]
 
 	The total size of file I/O for each thread of this job. Fio will run until
 	this many bytes has been transferred, unless runtime is altered by other means
@@ -2104,7 +2104,7 @@ I/O size
 	Can be combined with :option:`offset` to constrain the start and end range
 	that I/O will be done within.
 
-.. option:: io_size=int, io_limit=int
+.. option:: io_size=int[%|z], io_limit=int[%|z]
 
 	Normally fio operates within the region set by :option:`size`, which means
 	that the :option:`size` option sets both the region and size of I/O to be
