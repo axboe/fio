@@ -767,6 +767,7 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 	enum fio_ddir odir = ddir ^ 1;
 	uint64_t usec;
 	uint64_t now;
+	uint64_t timeout = in_ramp_period(td) ? 0 : td->o.timeout;
 
 	assert(ddir_rw(ddir));
 	now = utime_since_now(&td->epoch);
@@ -805,20 +806,20 @@ static enum fio_ddir rate_ddir(struct thread_data *td, enum fio_ddir ddir)
 	if (td->o.io_submit_mode == IO_MODE_INLINE)
 		io_u_quiesce(td);
 
-	if (td->o.timeout && ((usec + now) > td->o.timeout)) {
+	if (timeout && ((usec + now) > timeout)) {
 		/*
 		 * check if the usec is capable of taking negative values
 		 */
-		if (now > td->o.timeout) {
+		if (now > timeout) {
 			ddir = DDIR_TIMEOUT;
 			return ddir;
 		}
-		usec = td->o.timeout - now;
+		usec = timeout - now;
 	}
 	usec_sleep(td, usec);
 
 	now = utime_since_now(&td->epoch);
-	if ((td->o.timeout && (now > td->o.timeout)) || td->terminate)
+	if ((timeout && (now > timeout)) || td->terminate)
 		ddir = DDIR_TIMEOUT;
 
 	return ddir;
