@@ -1,0 +1,15 @@
+# The backlog retains writes from the first file until the second is full.
+# Verification reopens the completed first file before the third can be opened.
+[verify]
+ioengine=sync
+rw=write
+filesize=64k
+nrfiles=3
+openfiles=1
+file_service_type=sequential
+bs=4k
+norandommap=1
+verify=crc32c
+verify_backlog=32
+verify_backlog_batch=32
+verify_state_save=0
