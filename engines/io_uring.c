@@ -1434,6 +1434,16 @@ static int fio_ioring_getevents(struct thread_data *td, unsigned int min,
 				return r;
 			}
 		}
+
+		/*
+		 * min == 0 is a non-blocking poll, possibly with no I/O in
+		 * flight. If the CQ ring was empty above, we still needed
+		 * one io_uring_enter() call so DEFER_TASKRUN or IOPOLL can
+		 * post pending completions. Reap whatever is now available
+		 * and return instead of looping for an event.
+		 */
+		if (!min)
+			return fio_ioring_cqring_reap(td, max);
 	}
 }
 
