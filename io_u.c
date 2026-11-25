@@ -1886,6 +1886,9 @@ static bool check_get_verify(struct thread_data *td, struct io_u *io_u)
 		}
 
 		if (get_verify && !get_next_verify(td, io_u)) {
+			if (fio_file_done(io_u->file) &&
+			    !fio_file_closing(io_u->file))
+				td_io_close_file(td, io_u->file);
 			td->verify_batch--;
 			return true;
 		}
