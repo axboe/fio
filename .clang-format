@@ -1,0 +1,129 @@
+# SPDX-License-Identifier: GPL-2.0
+#
+# clang-format configuration for fio. Requires clang-format >= 21.
+#
+# Derived from the Linux kernel's .clang-format, with C++/ObjC/Java-only
+# options removed and these fio-specific changes:
+#
+#   ForEachMacros           fio's own iterator macros
+#   SpaceAfterCStyleCast    fio mostly writes "(type) value"
+#   AlignConsecutive*      keep values in columns within consecutive groups
+#   AlignTrailingComments  keep trailing comments in columns
+#
+# It is meant for checking changed lines only ("make style FORMAT=1");
+# existing code is not expected to conform. clang-format cannot keep
+# tab-aligned designated initializers (e.g. ".name\t\t\t= ..." in struct
+# ioengine_ops); wrap such blocks in /* clang-format off */ and
+# /* clang-format on */ if needed. OneLineFormatOffRegex preserves fio's
+# "} end_for_each();" closing convention and fixed-width integer declaration
+# lines, including their hand-aligned member comments.
+#
+# For more information, see:
+#
+#   https://clang.llvm.org/docs/ClangFormat.html
+#   https://clang.llvm.org/docs/ClangFormatStyleOptions.html
+#
+---
+AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: AcrossEmptyLines
+AlignConsecutiveDeclarations: false
+AlignConsecutiveMacros: Consecutive
+AlignEscapedNewlines: Left
+AlignOperands: true
+AlignTrailingComments:
+  Kind: Always
+  OverEmptyLines: 0
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowShortBlocksOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakAfterDefinitionReturnType: None
+AlwaysBreakAfterReturnType: None
+AlwaysBreakBeforeMultilineStrings: false
+BinPackArguments: true
+BinPackParameters: true
+BraceWrapping:
+  AfterControlStatement: false
+  AfterEnum: false
+  AfterFunction: true
+  AfterStruct: false
+  AfterUnion: false
+  AfterExternBlock: false
+  BeforeElse: false
+  IndentBraces: false
+  SplitEmptyFunction: true
+  SplitEmptyRecord: true
+BreakBeforeBinaryOperators: None
+BreakBeforeBraces: Custom
+BreakBeforeTernaryOperators: false
+BreakStringLiterals: false
+# Preserve existing line breaks and allow aligned comments beyond 80 columns.
+ColumnLimit: 0
+ContinuationIndentWidth: 8
+Cpp11BracedListStyle: false
+DerivePointerAlignment: false
+DisableFormat: false
+
+# Iterator macros defined in flist.h, fio.h and io_ddir.h. To regenerate:
+#   git grep -h '^#define [^[:space:]]*for_each[^[:space:]]*(' \
+#   | sed "s,^#define \([^[:space:]]*for_each[^[:space:]]*\)(.*$,  - '\1'," \
+#   | LC_ALL=C sort -u
+# and drop end_for_each, which closes a loop rather than starting one.
+ForEachMacros:
+  - 'flist_for_each'
+  - 'flist_for_each_safe'
+  - 'for_each_file'
+  - 'for_each_rw_ddir'
+  - 'for_each_td'
+  - 'for_each_td_index'
+
+IncludeBlocks: Preserve
+IncludeCategories:
+  - Regex: '.*'
+    Priority: 1
+IndentCaseLabels: false
+IndentGotoLabels: false
+IndentPPDirectives: None
+IndentWidth: 8
+IndentWrappedFunctionNames: false
+KeepEmptyLinesAtTheStartOfBlocks: false
+MacroBlockBegin: ''
+MacroBlockEnd: ''
+MaxEmptyLinesToKeep: 1
+
+# Preserve the iterator closer and hand-aligned fixed-width integer fields.
+# Matches tokens, not C scopes: all lines containing these type names are skipped,
+# including non-member declarations and function signatures using these types.
+OneLineFormatOffRegex: '^end_for_each$|^u?int(8|16|32|64)_t$'
+
+# Taken from git's rules (via the kernel)
+PenaltyBreakAssignment: 10
+PenaltyBreakBeforeFirstCallParameter: 30
+PenaltyBreakComment: 10
+PenaltyBreakFirstLessLess: 0
+PenaltyBreakString: 10
+PenaltyExcessCharacter: 10
+PenaltyReturnTypeOnItsOwnLine: 0
+
+PointerAlignment: Right
+ReflowComments: false
+SortIncludes: false
+SpaceAfterCStyleCast: true
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeParens: ControlStatementsExceptForEachMacros
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 1
+SpacesInCStyleCastParentheses: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+TabWidth: 8
+UseTab: Always
+
+# Preserve hand-wrapped diagnostics and debug output.
+# This disables argument formatting inside log_err and dprint.
+WhitespaceSensitiveMacros:
+  - 'log_err'
+  - 'dprint'
+...
