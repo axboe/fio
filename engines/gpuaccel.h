@@ -45,6 +45,12 @@ struct gpuaccel_backend {
 	int (*file_handle_register)(int fd, void **handle);
 	void (*file_handle_deregister)(void *handle);
 
+	/*
+	 * Optional. NULL registers the allocation size, including the tail
+	 * added by allocate_io_mem(). A backend sets this when that tail
+	 * must not be registered.
+	 */
+	size_t (*buf_register_size)(struct thread_data *td, size_t size);
 	int (*buf_register)(void *mem, size_t size);
 	void (*buf_deregister)(void *mem);
 
