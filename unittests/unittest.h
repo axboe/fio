@@ -22,6 +22,7 @@ CU_ErrorCode fio_unittest_oslib_strlcat(void);
 CU_ErrorCode fio_unittest_oslib_strndup(void);
 CU_ErrorCode fio_unittest_oslib_strcasestr(void);
 CU_ErrorCode fio_unittest_oslib_strsep(void);
+CU_ErrorCode fio_unittest_libmufile_errno(void);
 #if defined(__linux__) || defined(__ANDROID__)
 CU_ErrorCode fio_unittest_cgroup(void);
 #endif

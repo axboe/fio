@@ -198,6 +198,9 @@ writable directory on a supported filesystem::
 
  $ FIO_DIR=/path/to/test-storage GPU_DEV_IDS=0 sh t/libmufile-smoke.sh
 
+Both paths run the same workload. The default size writes 16 GiB. Set
+``LIBMUFILE_SMOKE_SIZE`` to a smaller per-thread size when less space is free.
+
 
 Windows
 ~~~~~~~
