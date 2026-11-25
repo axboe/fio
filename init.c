@@ -2296,12 +2296,8 @@ static int __parse_jobs_ini(struct thread_data *td,
 			num_opts++;
 		}
 
-		if (nested) {
-			*popts = opts;
-			*aopts = alloc_opts;
-			*nopts = num_opts;
+		if (nested)
 			goto out;
-		}
 
 		ret = fio_options_parse(td, opts, num_opts);
 
@@ -2333,6 +2329,13 @@ static int __parse_jobs_ini(struct thread_data *td,
 		num_opts = 0;
 	} while (!ret);
 
+	/*
+	 * opts and job_sections belong to the including parser; do not
+	 * free them when an included file ends without any options.
+	 */
+	if (nested)
+		goto out;
+
 	if (dump_cmdline)
 		log_info("\n");
 
@@ -2348,6 +2351,15 @@ static int __parse_jobs_ini(struct thread_data *td,
 
 	free(opts);
 out:
+	/*
+	 * opts may have been reallocated; hand it back to the including
+	 * parser on every exit path, errors included.
+	 */
+	if (nested) {
+		*popts = opts;
+		*aopts = alloc_opts;
+		*nopts = num_opts;
+	}
 	free(string);
 	if (!nested)
 		free(name);
