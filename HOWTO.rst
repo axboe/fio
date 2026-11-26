@@ -2382,7 +2382,7 @@ I/O engine
 			engine specific options. See `ROCm hipFile API`_ for information on
 			ROCm hipFile and how to install the ROCm stack.
 
-			.. _ROCm hipFile API: https://rocm.docs.amd.com/projects/hip/en/latest/reference/hip_runtime_api/modules/file_apis.html
+			.. _ROCm hipFile API: https://rocm.docs.amd.com/projects/hipFile/en/latest/
 
 		**dfs**
 			I/O engine supporting asynchronous read and write operations to the
