@@ -1,0 +1,9 @@
+# Test that an empty included job file does not free the options array
+# of the including file (heap-use-after-free in opt_cmp, OSS-Fuzz 42491834)
+[global]
+ioengine=null
+size=4k
+
+[job]
+rw=read
+include t0040-inc.fio
