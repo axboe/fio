@@ -2384,6 +2384,19 @@ I/O engine
 
 			.. _ROCm hipFile API: https://rocm.docs.amd.com/projects/hip/en/latest/reference/hip_runtime_api/modules/file_apis.html
 
+		**libmufile**
+			Synchronous I/O for Moore Threads GPUs using the libmufile C API.
+			``musa_io=mufile`` requests the mtfs direct-storage path;
+			``musa_io=posix`` uses POSIX I/O and musaMemcpy as a control.
+			This engine allocates its own buffers. Do not set
+			:option:`iomem` or ``mem``.
+			See the ``Building with libmufile`` section in README.rst for
+			installation prerequisites and tests, and the
+			`Moore Threads developer portal`_ for vendor software and
+			documentation. This ioengine defines engine specific options.
+
+			.. _Moore Threads developer portal: https://developer.mthreads.com/
+
 		**dfs**
 			I/O engine supporting asynchronous read and write operations to the
 			DAOS File System (DFS) via libdfs.
@@ -3324,10 +3337,11 @@ with the caveat that when used on the command line, they must come after the
 	nbd+unix:///?socket=/tmp/socket
 	nbds://tlshost/exportname
 
-.. option:: gpu_dev_ids=str : [libcufile]
+.. option:: gpu_dev_ids=str : [libcufile,libhipfile,libmufile]
 
-	Specify the GPU IDs to use with CUDA. This is a colon-separated list of
-	int. GPUs are assigned to workers roundrobin. Default is 0.
+	Specify the GPU IDs to use. This is a colon-separated list of int.
+	GPUs are assigned to workers roundrobin. Default is 0.
+	libcufile, libhipfile, and libmufile share this option.
 
 .. option:: gpu_peer_access=str : [libcufile]
 
@@ -3358,11 +3372,6 @@ with the caveat that when used on the command line, they must come after the
 		GPU to RAM before a write and copied from RAM to GPU after a
 		read. :option:`verify` does not affect use of cudaMemcpy.
 
-.. option:: gpu_dev_ids=str : [libhipfile]
-
-	Specify the GPU IDs to use with ROCm. This is a colon-separated list of
-	int. GPUs are assigned to workers roundrobin. Default is 0.
-
 .. option:: rocm_io=str : [libhipfile]
 
 	Specify the type of I/O to use with ROCm. Default is **hipfile**.
@@ -3379,6 +3388,25 @@ with the caveat that when used on the command line, they must come after the
 		to transfer data between RAM and the GPUs. Data is copied from
 		GPU to RAM before a write and copied from RAM to GPU after a
 		read. :option:`verify` does not affect use of hipMemcpy.
+
+.. option:: musa_io=str : [libmufile]
+
+	Specify the type of I/O to use with MUSA. Default is **mufile**.
+
+	**mufile**
+		Use libmufile and mtfs to transfer data between a supported filesystem
+		and GPU buffers. The direct path avoids host staging, but library
+		compatibility mode may use it.
+		If :option:`verify` is set, musaMemcpy copies verification data from
+		RAM to GPU before a write and from GPU to RAM after a read.
+		:option:`direct` must be 1. Use page-aligned file offsets and a
+		:option:`bs` that is a multiple of the page size. With compatibility
+		mode disabled, unaligned I/O fails with a libmufile error.
+	**posix**
+		Use POSIX I/O with a RAM buffer and musaMemcpy to model transfers
+		between RAM and GPU. A GPU-to-RAM copy is performed before writes;
+		a RAM-to-GPU copy is performed after reads. :option:`verify` does
+		not change these control-path copies.
 
 .. option:: nfs_url=str : [nfs]
 

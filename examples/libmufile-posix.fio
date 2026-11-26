@@ -1,0 +1,45 @@
+# Example libmufile job, using POSIX I/O
+#
+# Required environment variables:
+#     GPU_DEV_IDS : refer to option 'gpu_dev_ids'
+#     FIO_DIR     : 'directory'. musa_io=posix, so the path(s) may point to
+#                   any POSIX filesystem(s)
+#
+# musa_io=posix does not register the fd with mtfs. pread/pwrite use the
+# CPU buffer; musaMemcpy accounts for the bounce that a non-GDS app would pay.
+# 'direct' and 'size' differ from libmufile-mufile.fio. Compare the paths with
+# t/libmufile-smoke.sh.
+[global]
+ioengine=libmufile
+directory=${FIO_DIR}
+gpu_dev_ids=${GPU_DEV_IDS}
+musa_io=posix
+# 'direct' may be 1 or 0 when using musa_io=posix
+direct=0
+bs=1m
+size=1G
+numjobs=16
+# musaMalloc fails when too many processes attach to one GPU, use threads
+thread
+# Do not leave verify-state files in the current directory.
+verify_state_save=0
+
+[read]
+rw=read
+
+[write]
+rw=write
+
+[randread]
+rw=randread
+
+[randwrite]
+rw=randwrite
+
+[verify]
+rw=write
+verify=md5
+
+[randverify]
+rw=randwrite
+verify=md5

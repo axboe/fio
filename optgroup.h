@@ -74,6 +74,7 @@ enum opt_category_group {
 	__FIO_OPT_G_XNVME,
 	__FIO_OPT_G_LIBBLKIO,
 	__FIO_OPT_G_LIBHIPFILE,
+	__FIO_OPT_G_LIBMUFILE,
 
 	FIO_OPT_G_RATE		= (1ULL << __FIO_OPT_G_RATE),
 	FIO_OPT_G_ZONE		= (1ULL << __FIO_OPT_G_ZONE),
@@ -122,6 +123,7 @@ enum opt_category_group {
 	FIO_OPT_G_XNVME         = (1ULL << __FIO_OPT_G_XNVME),
 	FIO_OPT_G_LIBBLKIO	= (1ULL << __FIO_OPT_G_LIBBLKIO),
 	FIO_OPT_G_LIBHIPFILE	= (1ULL << __FIO_OPT_G_LIBHIPFILE),
+	FIO_OPT_G_LIBMUFILE	= (1ULL << __FIO_OPT_G_LIBMUFILE),
 };
 
 extern const struct opt_group *opt_group_from_mask(uint64_t *mask);
