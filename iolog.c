@@ -420,22 +420,37 @@ void write_iolog_close(struct thread_data *td)
 
 int64_t iolog_items_to_fetch(struct thread_data *td)
 {
+	/*
+	 * Flexible minimum number of items to fetch with consideration of iodepth.
+	 */
+	const int64_t min_items_to_fetch = max((int64_t)td->o.iodepth, (int64_t)10);
 	struct timespec now;
 	uint64_t elapsed;
-	uint64_t for_1s;
+	uint64_t items_consumed_per_sec;
 	int64_t items_to_fetch;
 
+	/*
+	 * Lift the highmark to 2 * iodepth or 20, whichever is larger.
+	 */
 	if (!td->io_log_highmark)
-		return 10;
+		return min_items_to_fetch * 2;
 
 
 	fio_gettime(&now, NULL);
 	elapsed = ntime_since(&td->io_log_highmark_time, &now);
 	if (elapsed) {
-		for_1s = (td->io_log_highmark - td->io_log_current) * 1000000000 / elapsed;
-		items_to_fetch = for_1s - td->io_log_current;
-		if (items_to_fetch < 0)
-			items_to_fetch = 0;
+		items_consumed_per_sec = (td->io_log_highmark - td->io_log_current) * 1000000000 / elapsed;
+		items_to_fetch = items_consumed_per_sec - td->io_log_current;
+		/*
+		 * iolog_items_to_fetch() is only called when io_log_current drops down to
+		 * io_log_checkmark (half of highmark). Clamping items_to_fetch to
+		 * min_items_to_fetch keeps highmark at least 2 * min_items_to_fetch
+		 * (unless lifted higher by a burst) and prevents running out of the log
+		 * buffer when consumption rate is low (e.g. < 1 log/sec).
+		 */
+		if (items_to_fetch < min_items_to_fetch) {
+			items_to_fetch = min_items_to_fetch;
+		}
 	} else
 		items_to_fetch = 0;
 
