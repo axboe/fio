@@ -81,6 +81,7 @@ void log_file(struct thread_data *td, struct fio_file *f,
 static void iolog_delay(struct thread_data *td, unsigned long delay)
 {
 	uint64_t usec = utime_since_now(&td->last_issue);
+	uint64_t sleep_usec = td->o.replay_sleep_usec;
 	unsigned long orig_delay = delay;
 	struct timespec ts;
 	int ret = 0;
@@ -99,13 +100,34 @@ static void iolog_delay(struct thread_data *td, unsigned long delay)
 	fio_gettime(&ts, NULL);
 
 	while (delay && !td->terminate) {
+		uint64_t elapsed, rem;
+
 		ret = io_u_queued_complete(td, 0);
 		if (ret < 0)
 			td_verror(td, -ret, "io_u_queued_complete");
 		if (td->flags & TD_F_REGROW_LOGS)
 			regrow_logs(td);
-		if (utime_since_now(&ts) > delay)
+		elapsed = utime_since_now(&ts);
+		if (elapsed > delay)
 			break;
+		/*
+		 * Sleep in bounded slices only while more than
+		 * replay_sleep_usec remains, then busy-wait the tail. Each
+		 * slice stops replay_sleep_usec short of the deadline, so
+		 * timer slack lands in the busy-wait window instead of past
+		 * the deadline. Completions are still reaped between slices.
+		 */
+		rem = delay - elapsed;
+		if (sleep_usec && rem > sleep_usec) {
+			const uint64_t usecs_per_sec = 1000000ULL;
+			uint64_t nap = min(rem - sleep_usec, sleep_usec);
+			struct timespec req = {
+				.tv_sec = nap / usecs_per_sec,
+				.tv_nsec = (nap % usecs_per_sec) * 1000,
+			};
+
+			nanosleep(&req, NULL);
+		}
 	}
 
 	usec = utime_since_now(&ts);
