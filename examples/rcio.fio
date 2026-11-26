@@ -1,0 +1,40 @@
+# This example simulates I/O with the null engine. To use a real target,
+# choose a suitable engine and a disposable device that supports trim.
+[global]
+filename=rcio-example.dat
+ioengine=null
+thread=1
+size=100M
+bs=1M
+rcio_size=1M
+
+# Populate 90% of the tracked regions.
+[precondition]
+rw=randwrite
+io_size=90%
+
+# Equal write and trim weights aim to maintain the initial occupancy.
+[randtrim]
+stonewall
+rw=randtrim
+flow_id=1
+flow=30
+flow_sleep=1000
+time_based=1
+runtime=300
+
+[randwrite]
+rw=randwrite
+flow_id=1
+flow=30
+flow_sleep=1000
+time_based=1
+runtime=300
+
+[randread]
+rw=randread
+flow_id=1
+flow=70
+flow_sleep=1000
+time_based=1
+runtime=300

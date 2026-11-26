@@ -2908,6 +2908,17 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_RANDOM,
 	},
 	{
+		.name	= "rcio_size",
+		.lname	= "RCIO region size",
+		.type	= FIO_OPT_STR_VAL,
+		.off1	= offsetof(struct thread_options, rcio_size),
+		.help	= "Region size for region-constrained I/O (0=disabled)",
+		.def	= "0",
+		.interval = 4096,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_IO_BASIC,
+	},
+	{
 		.name	= "percentage_sequential",
 		.lname	= "Percentage Sequential",
 		.type	= FIO_OPT_DEPRECATED,
