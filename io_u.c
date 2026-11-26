@@ -1804,13 +1804,19 @@ again:
 		io_u->buflen = 0;
 		io_u->resid = 0;
 		io_u->end_io = NULL;
+
+		/*
+		 * Only clear these for a brand new IO.  A requeued io_u must
+		 * keep them: get_next_verify() skips re-deriving them when
+		 * io_u->file is already set, assuming they're still correct.
+		 */
+		io_u_clear(td, io_u, IO_U_F_TRIMMED | IO_U_F_BARRIER |
+				 IO_U_F_VER_LIST);
 	}
 
 	if (io_u) {
 		assert(io_u->flags & IO_U_F_FREE);
-		io_u_clear(td, io_u, IO_U_F_FREE | IO_U_F_NO_FILE_PUT |
-				 IO_U_F_TRIMMED | IO_U_F_BARRIER |
-				 IO_U_F_VER_LIST);
+		io_u_clear(td, io_u, IO_U_F_FREE | IO_U_F_NO_FILE_PUT);
 
 		io_u->error = 0;
 		io_u->acct_ddir = -1;
